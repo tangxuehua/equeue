@@ -32,27 +32,48 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConsumeContext.cs" />
-    <Compile Include="IConsumer.cs" />
-    <Compile Include="IMessageListener.cs" />
-    <Compile Include="IProducer.cs" />
-    <Compile Include="Message.cs" />
-    <Compile Include="MessageQueue.cs" />
+    <Compile Include="Client\Consumer\ConsumerBase.cs" />
+    <Compile Include="Client\Consumer\IConsumer.cs" />
+    <Compile Include="Client\Consumer\IMessageHandler.cs" />
+    <Compile Include="Client\Consumer\IOffsetStore.cs" />
+    <Compile Include="Client\Consumer\DefaultPullMessageService.cs" />
+    <Compile Include="Client\Consumer\DefaultRebalanceService.cs" />
+    <Compile Include="Client\Consumer\IAllocateMessageQueueStrategy.cs" />
+    <Compile Include="Client\Consumer\AverageAllocateMessageQueueStrategy.cs" />
+    <Compile Include="Client\DefaultClient.cs" />
+    <Compile Include="Client\Producer\IProducer.cs" />
+    <Compile Include="Client\Consumer\IPullMessageService.cs" />
+    <Compile Include="Client\ClientConfig.cs" />
+    <Compile Include="Common\ComponentAttribute.cs" />
+    <Compile Include="Common\IObjectContainer.cs" />
+    <Compile Include="Common\Logging\EmptyLogger.cs" />
+    <Compile Include="Common\Logging\EmptyLoggerFactory.cs" />
+    <Compile Include="Common\Logging\ILogger.cs" />
+    <Compile Include="Common\Logging\ILoggerFactory.cs" />
+    <Compile Include="Common\Message.cs" />
+    <Compile Include="Common\MessageQueue.cs" />
+    <Compile Include="Client\Consumer\ProcessQueue.cs" />
+    <Compile Include="Common\ObjectContainer.cs" />
+    <Compile Include="Common\Extensions\TaskSchedulerExtensions.cs" />
+    <Compile Include="Common\Worker.cs" />
+    <Compile Include="Common\MessageModel.cs" />
+    <Compile Include="Common\TopicRouteData.cs" />
+    <Compile Include="Common\QueueData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="PullResult.cs" />
-    <Compile Include="PullStatus.cs" />
-    <Compile Include="SendResult.cs" />
-    <Compile Include="SendStatus.cs" />
+    <Compile Include="Client\Consumer\PullRequest.cs" />
+    <Compile Include="Client\Consumer\PullResult.cs" />
+    <Compile Include="Client\Consumer\PullStatus.cs" />
+    <Compile Include="Client\Producer\SendResult.cs" />
+    <Compile Include="Client\Producer\SendStatus.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Broker\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
