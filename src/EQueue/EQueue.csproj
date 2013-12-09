@@ -49,6 +49,8 @@
     <Compile Include="Client\Consumer\IPullMessageService.cs" />
     <Compile Include="Client\ClientConfig.cs" />
     <Compile Include="Common\ComponentAttribute.cs" />
+    <Compile Include="Common\DefaultScheduleService.cs" />
+    <Compile Include="Common\IScheduleService.cs" />
     <Compile Include="Common\IObjectContainer.cs" />
     <Compile Include="Common\Logging\EmptyLogger.cs" />
     <Compile Include="Common\Logging\EmptyLoggerFactory.cs" />

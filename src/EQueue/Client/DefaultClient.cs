@@ -16,24 +16,32 @@ namespace EQueue.Client
         private readonly ConcurrentDictionary<string, TopicRouteData> _topicRouteDataDict = new ConcurrentDictionary<string, TopicRouteData>();
         private readonly ILogger _logger;
         private readonly ClientConfig _config;
-        private Timer _timer;
+        private readonly IScheduleService _scheduleService;
 
         public string ClientId { get; private set; }
         public IPullMessageService PullMessageService { get; private set; }
 
-        public DefaultClient(string clientId, ClientConfig config, IPullMessageService pullMessageService, ILoggerFactory loggerFactory)
+        public DefaultClient(
+            string clientId,
+            ClientConfig config,
+            IPullMessageService pullMessageService,
+            IScheduleService scheduleService,
+            ILoggerFactory loggerFactory)
         {
             ClientId = clientId;
             _config = config;
             PullMessageService = pullMessageService;
+            _scheduleService = scheduleService;
             _logger = loggerFactory.Create(GetType().Name);
             _logger.InfoFormat("A new mq client create, ClinetID: {0}, Config:{1}", ClientId, _config);
         }
 
         public void Start()
         {
+            StartScheduledTask();
             PullMessageService.Start();
-            StartRebalance();
+
+            _logger.InfoFormat("The client [{0}] start OK", ClientId);
         }
 
         public IConsumer SelectConsumer(string consumerGroup)
@@ -52,24 +60,48 @@ namespace EQueue.Client
         }
 
 
-        private void StartRebalance()
+        private void StartScheduledTask()
         {
-            if (_timer == null)
+            _scheduleService.ScheduleTask(Rebalance, 1000 * 10, 1000 * 10);
+            _scheduleService.ScheduleTask(UpdateTopicRouteInfoFromNameServer, 1000 * 30, 1000 * 30);
+            _scheduleService.ScheduleTask(SendHeartbeatToBroker, 1000 * 30, 1000 * 30);
+            _scheduleService.ScheduleTask(PersistAllConsumerOffset, 1000 * 5, 1000 * 5);
+        }
+
+        private void Rebalance()
+        {
+            foreach (var consumer in _consumerDict.Values)
             {
-                _timer = new Timer((obj) =>
+                try
                 {
-                    foreach (var consumer in _consumerDict.Values)
-                    {
-                        try
-                        {
-                            consumer.DoRebalance();
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.Error("Rebalance has exception.", ex);
-                        }
-                    }
-                }, null, 1000 * 10, 1000 * 10);
+                    consumer.DoRebalance();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("Rebalance has exception.", ex);
+                }
+            }
+        }
+        private void UpdateTopicRouteInfoFromNameServer()
+        {
+
+        }
+        private void SendHeartbeatToBroker()
+        {
+            //TODO
+        }
+        private void PersistAllConsumerOffset()
+        {
+            foreach (var consumer in _consumerDict.Values)
+            {
+                try
+                {
+                    consumer.PersistOffset();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("PersistConsumerOffset has exception.", ex);
+                }
             }
         }
     }
