@@ -8,6 +8,7 @@ namespace EQueue.Client
     {
         public string InstanceName { get; set; }
         public string ClientIP { get; set; }
+        public string BrokerAddress { get; set; }
         public string NameServerAddress { get; set; }
         public int PollNameServerInterval { get; set; }
         public int HeartbeatBrokerInterval { get; set; }

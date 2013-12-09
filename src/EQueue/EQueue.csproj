@@ -40,7 +40,8 @@
     <Compile Include="Client\Consumer\IMessageHandler.cs" />
     <Compile Include="Client\Consumer\IOffsetStore.cs" />
     <Compile Include="Client\Consumer\DefaultPullMessageService.cs" />
-    <Compile Include="Client\Consumer\DefaultRebalanceService.cs" />
+    <Compile Include="Client\Consumer\OffsetReadType.cs" />
+    <Compile Include="Client\Consumer\RebalanceService.cs" />
     <Compile Include="Client\Consumer\IAllocateMessageQueueStrategy.cs" />
     <Compile Include="Client\Consumer\AverageAllocateMessageQueueStrategy.cs" />
     <Compile Include="Client\DefaultClient.cs" />

@@ -24,7 +24,7 @@ namespace EQueue.Client.Consumer
                 if (pullRequest == null) return;
                 try
                 {
-                    _client.SelectConsumer(pullRequest).PullMessage(pullRequest);
+                    _client.SelectConsumer(pullRequest.ConsumerGroup).PullMessage(pullRequest);
                 }
                 catch (Exception ex)
                 {
