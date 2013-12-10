@@ -5,7 +5,7 @@ using System.Linq;
 using EQueue.Common;
 using EQueue.Common.Logging;
 
-namespace EQueue.Client.Consumer
+namespace EQueue
 {
     public class RebalanceService
     {
@@ -13,14 +13,14 @@ namespace EQueue.Client.Consumer
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicSubscribeInfoDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
         private readonly ConcurrentDictionary<string, IEnumerable<string>> _subscriptionDict = new ConcurrentDictionary<string, IEnumerable<string>>();
         private readonly ILogger _logger;
-        private readonly DefaultClient _client;
+        private readonly Client _client;
         private readonly string _consumerGroup;
         private readonly MessageModel _messageModel;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly IOffsetStore _offsetStore;
 
         public RebalanceService(
-            DefaultClient client,
+            Client client,
             string consumerGroup,
             MessageModel messageModel,
             IAllocateMessageQueueStrategy allocateMessageQueueStrategy,

@@ -3,15 +3,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using EQueue.Client.Consumer;
-using EQueue.Client.Producer;
 using EQueue.Common;
 using EQueue.Common.Extensions;
 using EQueue.Common.Logging;
 
-namespace EQueue.Client
+namespace EQueue
 {
-    public class DefaultClient
+    public class Client
     {
         private readonly ConcurrentDictionary<string, IProducer> _producerDict = new ConcurrentDictionary<string, IProducer>();
         private readonly ConcurrentDictionary<string, IConsumer> _consumerDict = new ConcurrentDictionary<string, IConsumer>();
@@ -24,7 +22,7 @@ namespace EQueue.Client
 
         public string ClientId { get; private set; }
 
-        public DefaultClient(
+        public Client(
             string clientId,
             ClientConfig config,
             IScheduleService scheduleService,

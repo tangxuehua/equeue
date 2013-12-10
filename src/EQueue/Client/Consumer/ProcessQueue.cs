@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using EQueue.Common;
 
-namespace EQueue.Client.Consumer
+namespace EQueue
 {
     public class ProcessQueue
     {

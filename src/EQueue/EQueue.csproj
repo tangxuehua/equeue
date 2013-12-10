@@ -35,7 +35,7 @@
     <Reference Include="System.Data" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Client\Consumer\DefaultConsumer.cs" />
+    <Compile Include="Client\Consumer\Consumer.cs" />
     <Compile Include="Client\Consumer\IConsumer.cs" />
     <Compile Include="Client\Consumer\IMessageHandler.cs" />
     <Compile Include="Client\Consumer\IOffsetStore.cs" />
@@ -43,7 +43,7 @@
     <Compile Include="Client\Consumer\RebalanceService.cs" />
     <Compile Include="Client\Consumer\IAllocateMessageQueueStrategy.cs" />
     <Compile Include="Client\Consumer\AverageAllocateMessageQueueStrategy.cs" />
-    <Compile Include="Client\DefaultClient.cs" />
+    <Compile Include="Client\Client.cs" />
     <Compile Include="Client\Producer\IProducer.cs" />
     <Compile Include="Client\ClientConfig.cs" />
     <Compile Include="Common\ComponentAttribute.cs" />
@@ -77,7 +77,8 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Broker\" />
+    <Folder Include="MessageServer\" />
+    <Folder Include="NameServer\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

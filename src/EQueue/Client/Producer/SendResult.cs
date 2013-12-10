@@ -1,7 +1,7 @@
 ﻿using System;
 using EQueue.Common;
 
-namespace EQueue.Client.Producer
+namespace EQueue
 {
     public class SendResult
     {

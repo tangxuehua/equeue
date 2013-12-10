@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 using EQueue.Common;
 using EQueue.Common.Logging;
 
-namespace EQueue.Client.Consumer
+namespace EQueue
 {
-    public class DefaultConsumer : IConsumer
+    public class Consumer : IConsumer
     {
-        private readonly DefaultClient _client;
+        private readonly Client _client;
         private readonly IMessageHandler _messageHandler;
         private readonly IOffsetStore _offsetStore;
         private readonly ILogger _logger;
@@ -28,7 +28,7 @@ namespace EQueue.Client.Consumer
             get { throw new NotImplementedException(); }
         }
 
-        public DefaultConsumer(DefaultClient client, IMessageHandler messageHandler, IOffsetStore offsetStore, ILoggerFactory loggerFactory)
+        public Consumer(Client client, IMessageHandler messageHandler, IOffsetStore offsetStore, ILoggerFactory loggerFactory)
         {
             _client = client;
             _messageHandler = messageHandler;
