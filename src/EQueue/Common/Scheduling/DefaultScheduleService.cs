@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using EQueue.Common.Logging;
 
-namespace EQueue.Common
+namespace EQueue.Common.Scheduling
 {
     public class DefaultScheduleService : IScheduleService
     {

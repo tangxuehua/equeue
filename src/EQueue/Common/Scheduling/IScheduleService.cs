@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EQueue.Common
+namespace EQueue.Common.Scheduling
 {
     public interface IScheduleService
     {

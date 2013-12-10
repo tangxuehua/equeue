@@ -5,7 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using EQueue.Common;
 using EQueue.Common.Extensions;
+using EQueue.Common.IoC;
 using EQueue.Common.Logging;
+using EQueue.Common.Scheduling;
 
 namespace EQueue
 {
@@ -22,17 +24,13 @@ namespace EQueue
 
         public string ClientId { get; private set; }
 
-        public Client(
-            string clientId,
-            ClientConfig config,
-            IScheduleService scheduleService,
-            ILoggerFactory loggerFactory)
+        public Client(string clientId, ClientConfig config, IScheduleService scheduleService)
         {
             ClientId = clientId;
             _config = config;
             _fetchPullReqeustWorker = new Worker(FetchAndExecutePullRequest);
             _scheduleService = scheduleService;
-            _logger = loggerFactory.Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
         public void Start()
