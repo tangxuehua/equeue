@@ -6,12 +6,12 @@ using EQueue.Common.Logging;
 
 namespace EQueue.Client.Consumer
 {
-    public abstract class ConsumerBase : IConsumer
+    public class DefaultConsumer : IConsumer
     {
-        private readonly IPullMessageService _pullMessageService;
+        private readonly DefaultClient _client;
+        private readonly IMessageHandler _messageHandler;
         private readonly IOffsetStore _offsetStore;
         private readonly ILogger _logger;
-        private IMessageHandler _messageHandler;
 
         public string GroupName
         {
@@ -28,28 +28,22 @@ namespace EQueue.Client.Consumer
             get { throw new NotImplementedException(); }
         }
 
-        public ConsumerBase(IPullMessageService pullMessageService, IOffsetStore offsetStore)
+        public DefaultConsumer(DefaultClient client, IMessageHandler messageHandler, IOffsetStore offsetStore, ILoggerFactory loggerFactory)
         {
-            _pullMessageService = pullMessageService;
+            _client = client;
+            _messageHandler = messageHandler;
             _offsetStore = offsetStore;
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            _logger = loggerFactory.Create(GetType().Name);
         }
 
         public virtual void Start()
         {
-            _messageHandler = GetMessageHandler();
-
-            _pullMessageService.Start();
-
-            _logger.Info("Consumer started...");
+            _logger.Info("consumer started...");
         }
-
         public virtual void Shutdown()
         {
             //TODO
         }
-
-        protected abstract IMessageHandler GetMessageHandler();
 
         public void PullMessage(PullRequest pullRequest)
         {
@@ -85,7 +79,7 @@ namespace EQueue.Client.Consumer
             pullRequest.NextOffset = pullResult.NextBeginOffset;
             pullRequest.ProcessQueue.AddMessages(pullResult.Messages);
             StartConsumeTask(pullRequest, pullResult);
-            _pullMessageService.ExecutePullRequestImmediately(pullRequest);
+            _client.EnqueuePullRequest(pullRequest);
         }
         private void StartConsumeTask(PullRequest pullRequest, PullResult pullResult)
         {

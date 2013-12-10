@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
+using System.Linq;
+using System.Threading.Tasks;
 using EQueue.Client.Consumer;
 using EQueue.Client.Producer;
 using EQueue.Common;
+using EQueue.Common.Extensions;
 using EQueue.Common.Logging;
 
 namespace EQueue.Client
@@ -14,51 +16,49 @@ namespace EQueue.Client
         private readonly ConcurrentDictionary<string, IProducer> _producerDict = new ConcurrentDictionary<string, IProducer>();
         private readonly ConcurrentDictionary<string, IConsumer> _consumerDict = new ConcurrentDictionary<string, IConsumer>();
         private readonly ConcurrentDictionary<string, TopicRouteData> _topicRouteDataDict = new ConcurrentDictionary<string, TopicRouteData>();
+        private readonly BlockingCollection<PullRequest> _pullRequestBlockingQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
         private readonly ILogger _logger;
         private readonly ClientConfig _config;
         private readonly IScheduleService _scheduleService;
+        private readonly Worker _fetchPullReqeustWorker;
 
         public string ClientId { get; private set; }
-        public IPullMessageService PullMessageService { get; private set; }
 
         public DefaultClient(
             string clientId,
             ClientConfig config,
-            IPullMessageService pullMessageService,
             IScheduleService scheduleService,
             ILoggerFactory loggerFactory)
         {
             ClientId = clientId;
             _config = config;
-            PullMessageService = pullMessageService;
+            _fetchPullReqeustWorker = new Worker(FetchAndExecutePullRequest);
             _scheduleService = scheduleService;
             _logger = loggerFactory.Create(GetType().Name);
-            _logger.InfoFormat("A new mq client create, ClinetID: {0}, Config:{1}", ClientId, _config);
         }
 
         public void Start()
         {
             StartScheduledTask();
-            PullMessageService.Start();
+            _fetchPullReqeustWorker.Start();
 
-            _logger.InfoFormat("The client [{0}] start OK", ClientId);
+            _logger.InfoFormat("client [{0}] start OK, Config:{1}", ClientId, _config);
         }
 
-        public IConsumer SelectConsumer(string consumerGroup)
+        public void EnqueuePullRequest(PullRequest pullRequest)
         {
-            IConsumer consumer;
-            if (_consumerDict.TryGetValue(consumerGroup, out consumer))
-            {
-                return consumer;
-            }
-            return null;
+            _pullRequestBlockingQueue.Add(pullRequest);
         }
+        public void EnqueuePullRequest(PullRequest pullRequest, int millisecondsDelay)
+        {
+            Task.Factory.StartDelayedTask(millisecondsDelay, () => _pullRequestBlockingQueue.Add(pullRequest));
+        }
+
         public IEnumerable<string> FindConsumerIdList(string consumerGroup)
         {
             //TODO
             return null;
         }
-
 
         private void StartScheduledTask()
         {
@@ -88,7 +88,39 @@ namespace EQueue.Client
         }
         private void SendHeartbeatToBroker()
         {
-            //TODO
+            var heartbeatData = BuildHeartbeatData();
+
+            if (heartbeatData.ProducerDatas.Count() == 0 && heartbeatData.ConsumerDatas.Count() == 0)
+            {
+                _logger.Warn("sending hearbeat, but no consumer and no producer");
+                return;
+            }
+
+            try
+            {
+                //this.mQClientAPIImpl.sendHearbeat(addr, heartbeatData, 3000);
+                _logger.InfoFormat("send heart beat to broker[{0}] success, heartbeatData:[{1}]", _config.BrokerAddress, heartbeatData);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("send heart beat to broker exception", ex);
+            }
+        }
+        private HeartbeatData BuildHeartbeatData()
+        {
+            var producerDataList = new List<ProducerData>();
+            var consumerDataList = new List<ConsumerData>();
+
+            foreach (var producerGroup in _producerDict.Keys)
+            {
+                producerDataList.Add(new ProducerData(producerGroup));
+            }
+            foreach (var consumer in _consumerDict.Values)
+            {
+                consumerDataList.Add(new ConsumerData(consumer.GroupName, consumer.MessageModel, consumer.SubscriptionTopics));
+            }
+
+            return new HeartbeatData(ClientId, producerDataList, consumerDataList);
         }
         private void PersistAllConsumerOffset()
         {
@@ -102,6 +134,24 @@ namespace EQueue.Client
                 {
                     _logger.Error("PersistConsumerOffset has exception.", ex);
                 }
+            }
+        }
+        private void FetchAndExecutePullRequest()
+        {
+            var pullRequest = _pullRequestBlockingQueue.Take();
+            try
+            {
+                IConsumer consumer;
+                if (_consumerDict.TryGetValue(pullRequest.ConsumerGroup, out consumer))
+                {
+                    consumer.PullMessage(pullRequest);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(string.Format("pull message exception. PullRequest: {0}.", pullRequest), ex);
+                //TODO, to check if we need this code here.
+                //_pullRequestQueue.Add(pullRequest);
             }
         }
     }

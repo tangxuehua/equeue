@@ -35,27 +35,28 @@
     <Reference Include="System.Data" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Client\Consumer\ConsumerBase.cs" />
+    <Compile Include="Client\Consumer\DefaultConsumer.cs" />
     <Compile Include="Client\Consumer\IConsumer.cs" />
     <Compile Include="Client\Consumer\IMessageHandler.cs" />
     <Compile Include="Client\Consumer\IOffsetStore.cs" />
-    <Compile Include="Client\Consumer\DefaultPullMessageService.cs" />
     <Compile Include="Client\Consumer\OffsetReadType.cs" />
     <Compile Include="Client\Consumer\RebalanceService.cs" />
     <Compile Include="Client\Consumer\IAllocateMessageQueueStrategy.cs" />
     <Compile Include="Client\Consumer\AverageAllocateMessageQueueStrategy.cs" />
     <Compile Include="Client\DefaultClient.cs" />
     <Compile Include="Client\Producer\IProducer.cs" />
-    <Compile Include="Client\Consumer\IPullMessageService.cs" />
     <Compile Include="Client\ClientConfig.cs" />
     <Compile Include="Common\ComponentAttribute.cs" />
     <Compile Include="Common\DefaultScheduleService.cs" />
+    <Compile Include="Common\ConsumerData.cs" />
+    <Compile Include="Common\ProducerData.cs" />
     <Compile Include="Common\IScheduleService.cs" />
     <Compile Include="Common\IObjectContainer.cs" />
     <Compile Include="Common\Logging\EmptyLogger.cs" />
     <Compile Include="Common\Logging\EmptyLoggerFactory.cs" />
     <Compile Include="Common\Logging\ILogger.cs" />
     <Compile Include="Common\Logging\ILoggerFactory.cs" />
+    <Compile Include="Common\HeartbeatData.cs" />
     <Compile Include="Common\Message.cs" />
     <Compile Include="Common\MessageQueue.cs" />
     <Compile Include="Client\Consumer\ProcessQueue.cs" />

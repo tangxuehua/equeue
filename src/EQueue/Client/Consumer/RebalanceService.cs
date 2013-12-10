@@ -192,7 +192,7 @@ namespace EQueue.Client.Consumer
         {
             foreach (var pullRequest in pullRequestList)
             {
-                _client.PullMessageService.ExecutePullRequestImmediately(pullRequest);
+                _client.EnqueuePullRequest(pullRequest);
                 _logger.InfoFormat("doRebalance, consumerGroup:{0}, add a new pull request {1}", _consumerGroup, pullRequest);
             }
         }
