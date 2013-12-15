@@ -5,7 +5,7 @@ using System.Linq;
 using EQueue.Common;
 using EQueue.Common.Logging;
 
-namespace EQueue
+namespace EQueue.Clients.Consumers
 {
     public class RebalanceService
     {

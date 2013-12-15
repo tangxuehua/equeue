@@ -2,7 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace EQueue
+namespace EQueue.Clients
 {
     public class ClientConfig
     {

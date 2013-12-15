@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using EQueue.Common;
 
-namespace EQueue
+namespace EQueue.Clients.Producers
 {
     public interface IProducer
     {

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using EQueue.Common;
 
-namespace EQueue
+namespace EQueue.Clients.Consumers
 {
     public class PullRequest
     {

@@ -1,6 +1,6 @@
 ﻿using EQueue.Common;
 
-namespace EQueue
+namespace EQueue.Clients.Consumers
 {
     public interface IMessageHandler
     {

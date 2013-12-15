@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using EQueue.Common;
 using EQueue.Common.Logging;
 
-namespace EQueue
+namespace EQueue.Clients.Consumers
 {
     public class Consumer : IConsumer
     {

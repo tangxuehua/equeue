@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using EQueue.Common;
 
-namespace EQueue
+namespace EQueue.Clients.Consumers
 {
     public interface IOffsetStore
     {

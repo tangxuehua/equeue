@@ -3,13 +3,15 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using EQueue.Clients.Consumers;
+using EQueue.Clients.Producers;
 using EQueue.Common;
 using EQueue.Common.Extensions;
 using EQueue.Common.IoC;
 using EQueue.Common.Logging;
 using EQueue.Common.Scheduling;
 
-namespace EQueue
+namespace EQueue.Clients
 {
     public class Client
     {

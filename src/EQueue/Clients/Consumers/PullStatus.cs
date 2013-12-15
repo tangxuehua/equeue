@@ -1,4 +1,4 @@
-﻿namespace EQueue
+﻿namespace EQueue.Clients.Consumers
 {
     public enum PullStatus
     {

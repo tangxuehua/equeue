@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace EQueue
+namespace EQueue.Clients.Producers
 {
     public enum SendStatus
     {
