@@ -7,11 +7,11 @@ using EQueue.Common.Logging;
 
 namespace EQueue.Clients.Consumers
 {
-    public class RebalanceService
+    public class RebalanceService : IRebalanceService
     {
         private readonly ConcurrentDictionary<MessageQueue, ProcessQueue> _processQueueDict = new ConcurrentDictionary<MessageQueue, ProcessQueue>();
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicSubscribeInfoDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
-        private readonly ConcurrentDictionary<string, IEnumerable<string>> _subscriptionDict = new ConcurrentDictionary<string, IEnumerable<string>>();
+        private readonly List<string> _subscriptionTopics = new List<string>();
         private readonly ILogger _logger;
         private readonly Client _client;
         private readonly string _consumerGroup;
@@ -35,11 +35,31 @@ namespace EQueue.Clients.Consumers
             _logger = loggerFactory.Create(GetType().Name);
         }
 
+        public IEnumerable<string> SubscriptionTopics
+        {
+            get { return _subscriptionTopics.ToList(); }
+        }
+        public IEnumerable<MessageQueue> ProcessingMessageQueues
+        {
+            get { return _processQueueDict.Keys.ToList(); }
+        }
+
+        public void RegisterSubscriptionTopic(string topic)
+        {
+            if (!_subscriptionTopics.Contains(topic))
+            {
+                _subscriptionTopics.Add(topic);
+            }
+        }
+        public void UpdateTopicSubscribeInfo(string topic, IEnumerable<MessageQueue> messageQueues)
+        {
+            _topicSubscribeInfoDict[topic] = messageQueues.ToList();
+        }
         public void Rebalance()
         {
             if (_messageModel == MessageModel.BROADCASTING)
             {
-                foreach (var topic in _subscriptionDict.Keys)
+                foreach (var topic in _subscriptionTopics)
                 {
                     try
                     {
@@ -53,7 +73,7 @@ namespace EQueue.Clients.Consumers
             }
             else if (_messageModel == MessageModel.CLUSTERING)
             {
-                foreach (var topic in _subscriptionDict.Keys)
+                foreach (var topic in _subscriptionTopics)
                 {
                     try
                     {
@@ -172,7 +192,7 @@ namespace EQueue.Clients.Consumers
             var shouldRemoveQueues = new List<MessageQueue>();
             foreach (var messageQueue in _processQueueDict.Keys)
             {
-                if (!_subscriptionDict.ContainsKey(messageQueue.Topic))
+                if (!_subscriptionTopics.Contains(messageQueue.Topic))
                 {
                     shouldRemoveQueues.Add(messageQueue);
                 }

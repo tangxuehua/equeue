@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using EQueue.Common;
 using EQueue.Common.Logging;
@@ -11,67 +12,74 @@ namespace EQueue.Clients.Consumers
         private readonly Client _client;
         private readonly IMessageHandler _messageHandler;
         private readonly IOffsetStore _offsetStore;
+        private readonly IRebalanceService _rebalanceService;
         private readonly ILogger _logger;
 
-        public string GroupName
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public MessageModel MessageModel
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public string GroupName { get; private set; }
+        public MessageModel MessageModel { get; private set; }
 
         public IEnumerable<string> SubscriptionTopics
         {
-            get { throw new NotImplementedException(); }
+            get { return _rebalanceService.SubscriptionTopics; }
         }
 
-        public Consumer(Client client, IMessageHandler messageHandler, IOffsetStore offsetStore, ILoggerFactory loggerFactory)
+        public Consumer(string groupName, MessageModel messageModel, Client client, IRebalanceService rebalanceService, IMessageHandler messageHandler, IOffsetStore offsetStore, ILoggerFactory loggerFactory)
         {
+            GroupName = groupName;
+            MessageModel = messageModel;
             _client = client;
+            _rebalanceService = rebalanceService;
             _messageHandler = messageHandler;
             _offsetStore = offsetStore;
             _logger = loggerFactory.Create(GetType().Name);
         }
 
-        public virtual void Start()
+        public void Start()
         {
             _logger.Info("consumer started...");
         }
-        public virtual void Shutdown()
+        public void Subscribe(string topic)
+        {
+            _rebalanceService.RegisterSubscriptionTopic(topic);
+        }
+        public void Shutdown()
         {
             //TODO
         }
-
         public void PullMessage(PullRequest pullRequest)
         {
             StartPullMessageTask(pullRequest).ContinueWith((task) => ProcessPullResult(pullRequest, task.Result));
         }
-
         public void UpdateTopicSubscribeInfo(string topic, IEnumerable<MessageQueue> messageQueues)
         {
-            throw new NotImplementedException();
+            _rebalanceService.UpdateTopicSubscribeInfo(topic, messageQueues);
         }
-
         public bool IsSubscribeTopicNeedUpdate(string topic)
         {
-            throw new NotImplementedException();
+            return !_rebalanceService.SubscriptionTopics.Any(x => x == topic);
         }
-
         public void DoRebalance()
         {
-            throw new NotImplementedException();
+            _rebalanceService.Rebalance();
         }
-
         public void PersistOffset()
         {
-            throw new NotImplementedException();
+            foreach (var messageQueue in _rebalanceService.ProcessingMessageQueues)
+            {
+                try
+                {
+                    _offsetStore.Persist(messageQueue);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("PersistOffset exception.", ex);
+                }
+            }
         }
 
         private Task<PullResult> StartPullMessageTask(PullRequest pullRequest)
         {
+            //TODO
             return null;
         }
         private void ProcessPullResult(PullRequest pullRequest, PullResult pullResult)

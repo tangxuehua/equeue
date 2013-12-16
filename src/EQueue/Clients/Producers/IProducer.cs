@@ -6,6 +6,7 @@ namespace EQueue.Clients.Producers
 {
     public interface IProducer
     {
+        string GroupName { get; }
         IEnumerable<string> PublishTopics { get; }
         void Start();
         void Shutdown();

@@ -43,6 +43,22 @@ namespace EQueue.Clients
             _logger.InfoFormat("client [{0}] start OK, Config:{1}", ClientId, _config);
         }
 
+        public void RegisterProducer(IProducer producer)
+        {
+            if (_producerDict.ContainsKey(producer.GroupName))
+            {
+                throw new Exception(string.Format("The producer group[{0}] has been registered before, specify another name please.", producer.GroupName));
+            }
+            _producerDict[producer.GroupName] = producer;
+        }
+        public void RegisterConsumer(IConsumer consumer)
+        {
+            if (_consumerDict.ContainsKey(consumer.GroupName))
+            {
+                throw new Exception(string.Format("The consumer group[{0}] has been registered before, specify another name please.", consumer.GroupName));
+            }
+            _consumerDict[consumer.GroupName] = consumer;
+        }
         public void EnqueuePullRequest(PullRequest pullRequest)
         {
             _pullRequestBlockingQueue.Add(pullRequest);
@@ -65,7 +81,6 @@ namespace EQueue.Clients
             _scheduleService.ScheduleTask(SendHeartbeatToBroker, 1000 * 30, 1000 * 30);
             _scheduleService.ScheduleTask(PersistAllConsumerOffset, 1000 * 5, 1000 * 5);
         }
-
         private void Rebalance()
         {
             foreach (var consumer in _consumerDict.Values)
@@ -82,7 +97,58 @@ namespace EQueue.Clients
         }
         private void UpdateTopicRouteInfoFromNameServer()
         {
+            var topicList = new List<string>();
+            foreach (var consumer in _consumerDict.Values)
+            {
+                topicList.AddRange(consumer.SubscriptionTopics);
+            }
+            foreach (var producer in _producerDict.Values)
+            {
+                topicList.AddRange(producer.PublishTopics);
+            }
+            var distinctTopics = topicList.Distinct();
 
+            foreach (var topic in distinctTopics)
+            {
+                UpdateTopicRouteInfoFromNameServer(topic);
+            }
+
+        }
+        private void UpdateTopicRouteInfoFromNameServer(string topic)
+        {
+            var topicRouteData = GetTopicRouteInfoFromNameServer(topic);
+            var oldTopicRouteData = _topicRouteDataDict[topic];
+            var changed = IsTopicRouteDataChanged(oldTopicRouteData, topicRouteData);
+
+            if (!changed)
+            {
+                changed = IsNeedUpdateTopicRouteInfo(topic);
+            }
+
+            if (changed)
+            {
+                var publishMessageQueues = new List<MessageQueue>();
+                var consumeMessageQueues = new List<MessageQueue>();
+                for (var index = 0; index < topicRouteData.PublishQueueCount; index++)
+                {
+                    publishMessageQueues.Add(new MessageQueue(topic, _config.BrokerAddress, index));
+                }
+
+                for (var index = 0; index < topicRouteData.ConsumeQueueCount; index++)
+                {
+                    consumeMessageQueues.Add(new MessageQueue(topic, _config.BrokerAddress, index));
+                }
+
+                foreach (var producer in _producerDict.Values)
+                {
+                    producer.UpdateTopicPublishInfo(topic, publishMessageQueues);
+                }
+                foreach (var consumer in _consumerDict.Values)
+                {
+                    consumer.UpdateTopicSubscribeInfo(topic, consumeMessageQueues);
+                }
+                _topicRouteDataDict[topic] = topicRouteData;
+            }
         }
         private void SendHeartbeatToBroker()
         {
@@ -96,6 +162,7 @@ namespace EQueue.Clients
 
             try
             {
+                //TODO
                 //this.mQClientAPIImpl.sendHearbeat(addr, heartbeatData, 3000);
                 _logger.InfoFormat("send heart beat to broker[{0}] success, heartbeatData:[{1}]", _config.BrokerAddress, heartbeatData);
             }
@@ -124,14 +191,7 @@ namespace EQueue.Clients
         {
             foreach (var consumer in _consumerDict.Values)
             {
-                try
-                {
-                    consumer.PersistOffset();
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error("PersistConsumerOffset has exception.", ex);
-                }
+                consumer.PersistOffset();
             }
         }
         private void FetchAndExecutePullRequest()
@@ -147,10 +207,35 @@ namespace EQueue.Clients
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("pull message exception. PullRequest: {0}.", pullRequest), ex);
-                //TODO, to check if we need this code here.
-                //_pullRequestQueue.Add(pullRequest);
+                _logger.Error(string.Format("FetchAndExecutePullRequest exception. PullRequest: {0}.", pullRequest), ex);
             }
+        }
+        private TopicRouteData GetTopicRouteInfoFromNameServer(string topic)
+        {
+            //TODO
+            return null;
+        }
+        private bool IsTopicRouteDataChanged(TopicRouteData oldData, TopicRouteData newData)
+        {
+            return oldData != newData;
+        }
+        private bool IsNeedUpdateTopicRouteInfo(string topic)
+        {
+            foreach (var producer in _producerDict.Values)
+            {
+                if (producer.IsPublishTopicNeedUpdate(topic))
+                {
+                    return true;
+                }
+            }
+            foreach (var consumer in _consumerDict.Values)
+            {
+                if (consumer.IsSubscribeTopicNeedUpdate(topic))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

@@ -9,6 +9,7 @@ namespace EQueue.Clients.Consumers
         MessageModel MessageModel { get; }
         IEnumerable<string> SubscriptionTopics { get; }
         void Start();
+        void Subscribe(string topic);
         void Shutdown();
         void DoRebalance();
         void PersistOffset();
