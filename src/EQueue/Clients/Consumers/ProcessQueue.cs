@@ -49,6 +49,10 @@ namespace EQueue.Clients.Consumers
         {
             return _messageDict.Count;
         }
+        public long GetMessageSpan()
+        {
+            return _messageDict.Keys.LastOrDefault() - _messageDict.Keys.FirstOrDefault();
+        }
 
         private static void AtomWrite(ReaderWriterLockSlim readerWriterLockSlim, Action action)
         {

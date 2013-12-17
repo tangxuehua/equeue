@@ -18,14 +18,20 @@ namespace EQueue.Clients.Consumers
         private readonly IOffsetStore _offsetStore;
         private readonly IMessageHandler _messageHandler;
         private readonly ILogger _logger;
+        private long flowControlTimes1 = 0;
+        private long flowControlTimes2 = 0;
 
         public string GroupName { get; private set; }
         public MessageModel MessageModel { get; private set; }
-
+        public int PullThresholdForQueue { get; set; }
+        public int ConsumeMaxSpan { get; set; }
+        public int PullTimeDelayMillsWhenFlowControl { get; set; }
         public IEnumerable<string> SubscriptionTopics
         {
             get { return _subscriptionTopics; }
         }
+
+        #region Constructors
 
         public Consumer(
             Client client,
@@ -43,7 +49,12 @@ namespace EQueue.Clients.Consumers
             _offsetStore = offsetStore;
             _allocateMessageQueueStragegy = allocateMessageQueueStrategy;
             _logger = loggerFactory.Create(GetType().Name);
+            PullThresholdForQueue = 1000;
+            ConsumeMaxSpan = 2000;
+            PullTimeDelayMillsWhenFlowControl = 100;
         }
+
+        #endregion
 
         public void Start()
         {
@@ -63,7 +74,29 @@ namespace EQueue.Clients.Consumers
         }
         public void PullMessage(PullRequest pullRequest)
         {
-            StartPullMessageTask(pullRequest).ContinueWith((task) => ProcessPullResult(pullRequest, task.Result));
+            var messageCount = pullRequest.ProcessQueue.GetMessageCount();
+            var messageSpan = pullRequest.ProcessQueue.GetMessageSpan();
+
+            if (messageCount >= PullThresholdForQueue)
+            {
+                _client.EnqueuePullRequest(pullRequest, PullTimeDelayMillsWhenFlowControl);
+                if ((flowControlTimes1++ % 3000) == 0)
+                {
+                    _logger.WarnFormat("The consumer message buffer is full, so do flow control, [messageCount={0},pullRequest={1},flowControlTimes={2}]", messageCount, pullRequest, flowControlTimes1);
+                }
+            }
+            else if (messageSpan >= ConsumeMaxSpan)
+            {
+                _client.EnqueuePullRequest(pullRequest, PullTimeDelayMillsWhenFlowControl);
+                if ((flowControlTimes2++ % 3000) == 0)
+                {
+                    _logger.WarnFormat("The consumer message span too long, so do flow control, [messageSpan={0},pullRequest={1},flowControlTimes={2}]", messageSpan, pullRequest, flowControlTimes2);
+                }
+            }
+            else
+            {
+                StartPullMessageTask(pullRequest).ContinueWith((task) => ProcessPullResult(pullRequest, task.Result));
+            }
         }
         public void UpdateTopicSubscribeInfo(string topic, IEnumerable<MessageQueue> messageQueues)
         {
