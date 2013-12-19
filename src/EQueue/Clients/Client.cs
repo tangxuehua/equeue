@@ -87,7 +87,7 @@ namespace EQueue.Clients
             {
                 try
                 {
-                    consumer.DoRebalance();
+                    consumer.Rebalance();
                 }
                 catch (Exception ex)
                 {
@@ -101,10 +101,6 @@ namespace EQueue.Clients
             foreach (var consumer in _consumerDict.Values)
             {
                 topicList.AddRange(consumer.SubscriptionTopics);
-            }
-            foreach (var producer in _producerDict.Values)
-            {
-                topicList.AddRange(producer.PublishTopics);
             }
             var distinctTopics = topicList.Distinct();
 
@@ -131,18 +127,14 @@ namespace EQueue.Clients
                 var consumeMessageQueues = new List<MessageQueue>();
                 for (var index = 0; index < topicRouteData.PublishQueueCount; index++)
                 {
-                    publishMessageQueues.Add(new MessageQueue(topic, _config.BrokerAddress, index));
+                    publishMessageQueues.Add(new MessageQueue(topic, index));
                 }
 
                 for (var index = 0; index < topicRouteData.ConsumeQueueCount; index++)
                 {
-                    consumeMessageQueues.Add(new MessageQueue(topic, _config.BrokerAddress, index));
+                    consumeMessageQueues.Add(new MessageQueue(topic, index));
                 }
 
-                foreach (var producer in _producerDict.Values)
-                {
-                    producer.UpdateTopicPublishInfo(topic, publishMessageQueues);
-                }
                 foreach (var consumer in _consumerDict.Values)
                 {
                     consumer.UpdateTopicSubscribeInfo(topic, consumeMessageQueues);
@@ -221,13 +213,6 @@ namespace EQueue.Clients
         }
         private bool IsNeedUpdateTopicRouteInfo(string topic)
         {
-            foreach (var producer in _producerDict.Values)
-            {
-                if (producer.IsPublishTopicNeedUpdate(topic))
-                {
-                    return true;
-                }
-            }
             foreach (var consumer in _consumerDict.Values)
             {
                 if (consumer.IsSubscribeTopicNeedUpdate(topic))

@@ -10,6 +10,8 @@ namespace EQueue.Clients.Consumers
 {
     public class Consumer : IConsumer
     {
+        private long flowControlTimes1;
+        private long flowControlTimes2;
         private readonly ConcurrentDictionary<MessageQueue, ProcessQueue> _processQueueDict = new ConcurrentDictionary<MessageQueue, ProcessQueue>();
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicSubscribeInfoDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
         private readonly List<string> _subscriptionTopics = new List<string>();
@@ -18,8 +20,6 @@ namespace EQueue.Clients.Consumers
         private readonly IOffsetStore _offsetStore;
         private readonly IMessageHandler _messageHandler;
         private readonly ILogger _logger;
-        private long flowControlTimes1 = 0;
-        private long flowControlTimes2 = 0;
 
         public string GroupName { get; private set; }
         public MessageModel MessageModel { get; private set; }
@@ -34,21 +34,23 @@ namespace EQueue.Clients.Consumers
         #region Constructors
 
         public Consumer(
-            Client client,
             string groupName,
             MessageModel messageModel,
+            Client client,
             IMessageHandler messageHandler,
             IOffsetStore offsetStore,
             IAllocateMessageQueueStrategy allocateMessageQueueStrategy,
             ILoggerFactory loggerFactory)
         {
-            _client = client;
             GroupName = groupName;
             MessageModel = messageModel;
+
+            _client = client;
             _messageHandler = messageHandler;
             _offsetStore = offsetStore;
             _allocateMessageQueueStragegy = allocateMessageQueueStrategy;
             _logger = loggerFactory.Create(GetType().Name);
+
             PullThresholdForQueue = 1000;
             ConsumeMaxSpan = 2000;
             PullTimeDelayMillsWhenFlowControl = 100;
@@ -106,7 +108,7 @@ namespace EQueue.Clients.Consumers
         {
             return !_subscriptionTopics.Any(x => x == topic);
         }
-        public void DoRebalance()
+        public void Rebalance()
         {
             if (MessageModel == MessageModel.BROADCASTING)
             {

@@ -4,7 +4,7 @@ namespace EQueue.Clients.Producers
 {
     public enum SendStatus
     {
-        SEND_OK = 1,
-        FLUSH_DISK_TIMEOUT
+        Success = 1,
+        FlushDiskTimeout
     }
 }

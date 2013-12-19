@@ -11,7 +11,7 @@ namespace EQueue.Clients.Consumers
         void Start();
         void Subscribe(string topic);
         void Shutdown();
-        void DoRebalance();
+        void Rebalance();
         void PersistOffset();
         void PullMessage(PullRequest pullRequest);
         void UpdateTopicSubscribeInfo(string topic, IEnumerable<MessageQueue> messageQueues);
