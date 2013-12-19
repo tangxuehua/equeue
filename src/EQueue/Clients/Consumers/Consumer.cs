@@ -15,7 +15,7 @@ namespace EQueue.Clients.Consumers
         private readonly ConcurrentDictionary<MessageQueue, ProcessQueue> _processQueueDict = new ConcurrentDictionary<MessageQueue, ProcessQueue>();
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicSubscribeInfoDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
         private readonly List<string> _subscriptionTopics = new List<string>();
-        private readonly Client _client;
+        private readonly ConsumerClient _client;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly IOffsetStore _offsetStore;
         private readonly IMessageHandler _messageHandler;
@@ -36,7 +36,7 @@ namespace EQueue.Clients.Consumers
         public Consumer(
             string groupName,
             MessageModel messageModel,
-            Client client,
+            ConsumerClient client,
             IMessageHandler messageHandler,
             IOffsetStore offsetStore,
             IAllocateMessageQueueStrategy allocateMessageQueueStrategy,
@@ -110,7 +110,7 @@ namespace EQueue.Clients.Consumers
         }
         public void Rebalance()
         {
-            if (MessageModel == MessageModel.BROADCASTING)
+            if (MessageModel == MessageModel.BroadCasting)
             {
                 foreach (var topic in _subscriptionTopics)
                 {
@@ -124,7 +124,7 @@ namespace EQueue.Clients.Consumers
                     }
                 }
             }
-            else if (MessageModel == MessageModel.CLUSTERING)
+            else if (MessageModel == MessageModel.Clustering)
             {
                 foreach (var topic in _subscriptionTopics)
                 {
@@ -218,7 +218,7 @@ namespace EQueue.Clients.Consumers
                 IEnumerable<MessageQueue> allocatedMessageQueues = new List<MessageQueue>();
                 try
                 {
-                    allocatedMessageQueues = _allocateMessageQueueStragegy.Allocate(_client.ClientId, messageQueueList, consumerIdList);
+                    allocatedMessageQueues = _allocateMessageQueueStragegy.Allocate(_client.Id, messageQueueList, consumerIdList);
                 }
                 catch (Exception ex)
                 {

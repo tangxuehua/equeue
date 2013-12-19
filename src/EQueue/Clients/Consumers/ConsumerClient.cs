@@ -3,33 +3,35 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using EQueue.Clients.Consumers;
-using EQueue.Clients.Producers;
 using EQueue.Common;
 using EQueue.Common.Extensions;
 using EQueue.Common.IoC;
 using EQueue.Common.Logging;
 using EQueue.Common.Scheduling;
 
-namespace EQueue.Clients
+namespace EQueue.Clients.Consumers
 {
-    public class Client
+    public class ConsumerClient
     {
-        private readonly ConcurrentDictionary<string, IProducer> _producerDict = new ConcurrentDictionary<string, IProducer>();
-        private readonly ConcurrentDictionary<string, IConsumer> _consumerDict = new ConcurrentDictionary<string, IConsumer>();
-        private readonly ConcurrentDictionary<string, TopicRouteData> _topicRouteDataDict = new ConcurrentDictionary<string, TopicRouteData>();
+        private readonly IDictionary<string, IConsumer> _consumerDict = new Dictionary<string, IConsumer>();
+        private readonly IDictionary<string, TopicRouteData> _topicRouteDataDict = new Dictionary<string, TopicRouteData>();
         private readonly BlockingCollection<PullRequest> _pullRequestBlockingQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
-        private readonly ILogger _logger;
-        private readonly ClientConfig _config;
         private readonly IScheduleService _scheduleService;
         private readonly Worker _fetchPullReqeustWorker;
+        private readonly ILogger _logger;
 
-        public string ClientId { get; private set; }
+        public string Id { get; private set; }
+        public ConsumerSettings Settings { get; private set; }
 
-        public Client(string clientId, ClientConfig config, IScheduleService scheduleService)
+        public ConsumerClient(ConsumerSettings settings, IScheduleService scheduleService)
+            : this(string.Format("{0}@{1}", "Default", Utils.GetLocalIPV4()), settings, scheduleService)
         {
-            ClientId = clientId;
-            _config = config;
+        }
+        public ConsumerClient(string clientId, ConsumerSettings settings, IScheduleService scheduleService)
+        {
+            Id = clientId;
+            Settings = settings;
+
             _fetchPullReqeustWorker = new Worker(FetchAndExecutePullRequest);
             _scheduleService = scheduleService;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
@@ -40,24 +42,17 @@ namespace EQueue.Clients
             StartScheduledTask();
             _fetchPullReqeustWorker.Start();
 
-            _logger.InfoFormat("client [{0}] start OK, Config:{1}", ClientId, _config);
+            _logger.InfoFormat("Consumer client [{0}] start OK, settings:{1}", Id, Settings);
         }
 
-        public void RegisterProducer(IProducer producer)
-        {
-            if (_producerDict.ContainsKey(producer.GroupName))
-            {
-                throw new Exception(string.Format("The producer group[{0}] has been registered before, specify another name please.", producer.GroupName));
-            }
-            _producerDict[producer.GroupName] = producer;
-        }
-        public void RegisterConsumer(IConsumer consumer)
+        public ConsumerClient RegisterConsumer(IConsumer consumer)
         {
             if (_consumerDict.ContainsKey(consumer.GroupName))
             {
                 throw new Exception(string.Format("The consumer group[{0}] has been registered before, specify another name please.", consumer.GroupName));
             }
             _consumerDict[consumer.GroupName] = consumer;
+            return this;
         }
         public void EnqueuePullRequest(PullRequest pullRequest)
         {
@@ -102,13 +97,10 @@ namespace EQueue.Clients
             {
                 topicList.AddRange(consumer.SubscriptionTopics);
             }
-            var distinctTopics = topicList.Distinct();
-
-            foreach (var topic in distinctTopics)
+            foreach (var topic in topicList.Distinct())
             {
                 UpdateTopicRouteInfoFromNameServer(topic);
             }
-
         }
         private void UpdateTopicRouteInfoFromNameServer(string topic)
         {
@@ -123,13 +115,7 @@ namespace EQueue.Clients
 
             if (changed)
             {
-                var publishMessageQueues = new List<MessageQueue>();
                 var consumeMessageQueues = new List<MessageQueue>();
-                for (var index = 0; index < topicRouteData.PublishQueueCount; index++)
-                {
-                    publishMessageQueues.Add(new MessageQueue(topic, index));
-                }
-
                 for (var index = 0; index < topicRouteData.ConsumeQueueCount; index++)
                 {
                     consumeMessageQueues.Add(new MessageQueue(topic, index));
@@ -146,9 +132,9 @@ namespace EQueue.Clients
         {
             var heartbeatData = BuildHeartbeatData();
 
-            if (heartbeatData.ProducerDatas.Count() == 0 && heartbeatData.ConsumerDatas.Count() == 0)
+            if (heartbeatData.ConsumerDatas.Count() == 0)
             {
-                _logger.Warn("sending hearbeat, but no consumer and no producer");
+                _logger.Warn("Sending hearbeat, but no consumer.");
                 return;
             }
 
@@ -156,7 +142,7 @@ namespace EQueue.Clients
             {
                 //TODO
                 //this.mQClientAPIImpl.sendHearbeat(addr, heartbeatData, 3000);
-                _logger.InfoFormat("send heart beat to broker[{0}] success, heartbeatData:[{1}]", _config.BrokerAddress, heartbeatData);
+                _logger.InfoFormat("send heart beat to broker[{0}] success, heartbeatData:[{1}]", Settings.BrokerAddress, heartbeatData);
             }
             catch (Exception ex)
             {
@@ -165,19 +151,13 @@ namespace EQueue.Clients
         }
         private HeartbeatData BuildHeartbeatData()
         {
-            var producerDataList = new List<ProducerData>();
             var consumerDataList = new List<ConsumerData>();
-
-            foreach (var producerGroup in _producerDict.Keys)
-            {
-                producerDataList.Add(new ProducerData(producerGroup));
-            }
             foreach (var consumer in _consumerDict.Values)
             {
                 consumerDataList.Add(new ConsumerData(consumer.GroupName, consumer.MessageModel, consumer.SubscriptionTopics));
             }
 
-            return new HeartbeatData(ClientId, producerDataList, consumerDataList);
+            return new HeartbeatData(Id, consumerDataList);
         }
         private void PersistAllConsumerOffset()
         {

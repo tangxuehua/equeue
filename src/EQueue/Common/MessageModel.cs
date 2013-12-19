@@ -4,7 +4,7 @@ namespace EQueue.Common
 {
     public enum MessageModel
     {
-        BROADCASTING,
-        CLUSTERING
+        BroadCasting,
+        Clustering
     }
 }
