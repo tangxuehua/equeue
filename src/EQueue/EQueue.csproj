@@ -37,15 +37,19 @@
   <ItemGroup>
     <Compile Include="Clients\Consumers\Consumer.cs" />
     <Compile Include="Clients\Consumers\IConsumer.cs" />
+    <Compile Include="Clients\Consumers\IConsumerClient.cs" />
     <Compile Include="Clients\Consumers\IMessageHandler.cs" />
     <Compile Include="Clients\Consumers\IOffsetStore.cs" />
+    <Compile Include="Clients\Consumers\IPullMessageService.cs" />
     <Compile Include="Clients\Consumers\OffsetReadType.cs" />
     <Compile Include="Clients\Consumers\IAllocateMessageQueueStrategy.cs" />
     <Compile Include="Clients\Consumers\AverageAllocateMessageQueueStrategy.cs" />
     <Compile Include="Clients\Consumers\ConsumerClient.cs" />
+    <Compile Include="Clients\Consumers\PullMessageService.cs" />
     <Compile Include="Clients\Producers\IProducer.cs" />
     <Compile Include="Clients\Consumers\ConsumerSettings.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
+    <Compile Include="Common\INameServerService.cs" />
     <Compile Include="Common\IoC\ComponentAttribute.cs" />
     <Compile Include="Common\Utils.cs" />
     <Compile Include="Common\QueueMessage.cs" />
@@ -76,9 +80,7 @@
   <ItemGroup>
     <None Include="README.md" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="MessageServer\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

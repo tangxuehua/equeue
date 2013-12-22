@@ -4,52 +4,56 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using EQueue.Common;
+using EQueue.Common.IoC;
 using EQueue.Common.Logging;
 
 namespace EQueue.Clients.Consumers
 {
     public class Consumer : IConsumer
     {
+        #region Private Members
+
         private long flowControlTimes1;
         private long flowControlTimes2;
         private readonly ConcurrentDictionary<MessageQueue, ProcessQueue> _processQueueDict = new ConcurrentDictionary<MessageQueue, ProcessQueue>();
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicSubscribeInfoDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
         private readonly List<string> _subscriptionTopics = new List<string>();
         private readonly ConsumerClient _client;
+        private readonly INameServerService _nameServerService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly IOffsetStore _offsetStore;
         private readonly IMessageHandler _messageHandler;
         private readonly ILogger _logger;
 
+        #endregion
+
+        #region Public Properties
+
         public string GroupName { get; private set; }
         public MessageModel MessageModel { get; private set; }
-        public int PullThresholdForQueue { get; set; }
-        public int ConsumeMaxSpan { get; set; }
-        public int PullTimeDelayMillsWhenFlowControl { get; set; }
         public IEnumerable<string> SubscriptionTopics
         {
             get { return _subscriptionTopics; }
         }
+        public int PullThresholdForQueue { get; set; }
+        public int ConsumeMaxSpan { get; set; }
+        public int PullTimeDelayMillsWhenFlowControl { get; set; }
+
+        #endregion
 
         #region Constructors
 
-        public Consumer(
-            string groupName,
-            MessageModel messageModel,
-            ConsumerClient client,
-            IMessageHandler messageHandler,
-            IOffsetStore offsetStore,
-            IAllocateMessageQueueStrategy allocateMessageQueueStrategy,
-            ILoggerFactory loggerFactory)
+        public Consumer(string groupName, MessageModel messageModel, ConsumerClient client, IMessageHandler messageHandler)
         {
             GroupName = groupName;
             MessageModel = messageModel;
 
             _client = client;
             _messageHandler = messageHandler;
-            _offsetStore = offsetStore;
-            _allocateMessageQueueStragegy = allocateMessageQueueStrategy;
-            _logger = loggerFactory.Create(GetType().Name);
+            _nameServerService = ObjectContainer.Resolve<INameServerService>();
+            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
+            _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
 
             PullThresholdForQueue = 1000;
             ConsumeMaxSpan = 2000;
@@ -58,21 +62,14 @@ namespace EQueue.Clients.Consumers
 
         #endregion
 
-        public void Start()
-        {
-            _logger.Info("consumer started...");
-        }
+        #region Public Methods
+
         public void Subscribe(string topic)
         {
             if (!_subscriptionTopics.Contains(topic))
             {
                 _subscriptionTopics.Add(topic);
             }
-        }
-        public void Shutdown()
-        {
-            //TODO
-            _logger.Info("consumer shutdown...");
         }
         public void PullMessage(PullRequest pullRequest)
         {
@@ -100,13 +97,13 @@ namespace EQueue.Clients.Consumers
                 StartPullMessageTask(pullRequest).ContinueWith((task) => ProcessPullResult(pullRequest, task.Result));
             }
         }
-        public void UpdateTopicSubscribeInfo(string topic, IEnumerable<MessageQueue> messageQueues)
-        {
-            _topicSubscribeInfoDict[topic] = messageQueues.ToList();
-        }
         public bool IsSubscribeTopicNeedUpdate(string topic)
         {
             return !_subscriptionTopics.Any(x => x == topic);
+        }
+        public void UpdateTopicSubscribeInfo(string topic, IEnumerable<MessageQueue> messageQueues)
+        {
+            _topicSubscribeInfoDict[topic] = messageQueues.ToList();
         }
         public void Rebalance()
         {
@@ -155,6 +152,10 @@ namespace EQueue.Clients.Consumers
                 }
             }
         }
+
+        #endregion
+
+        #region Private Methods
 
         private Task<PullResult> StartPullMessageTask(PullRequest pullRequest)
         {
@@ -208,17 +209,16 @@ namespace EQueue.Clients.Consumers
             if (_topicSubscribeInfoDict.ContainsKey(topic))
             {
                 var messageQueues = _topicSubscribeInfoDict[topic];
-                var consumerIds = _client.FindConsumerClientIdList(GroupName);
-
+                var consumerClientIds = _nameServerService.FindConsumerClients(GroupName);
                 var messageQueueList = messageQueues.ToList();
-                var consumerIdList = consumerIds.ToList();
+                var consumerClientIdList = consumerClientIds.ToList();
                 messageQueueList.Sort();
-                consumerIdList.Sort();
+                consumerClientIdList.Sort();
 
                 IEnumerable<MessageQueue> allocatedMessageQueues = new List<MessageQueue>();
                 try
                 {
-                    allocatedMessageQueues = _allocateMessageQueueStragegy.Allocate(_client.Id, messageQueueList, consumerIdList);
+                    allocatedMessageQueues = _allocateMessageQueueStragegy.Allocate(_client.Id, messageQueueList, consumerClientIdList);
                 }
                 catch (Exception ex)
                 {
@@ -229,7 +229,7 @@ namespace EQueue.Clients.Consumers
                 var changed = UpdateProcessQueueDict(topic, allocatedMessageQueueList);
                 if (changed)
                 {
-                    _logger.InfoFormat("messageQueueChanged [consumerGroup:{0}, topic:{1}, allocatedMessageQueues:{2}, consumerIds:{3}]", GroupName, topic, string.Join("|", allocatedMessageQueueList), string.Join("|", consumerIdList));
+                    _logger.InfoFormat("messageQueueChanged [consumerGroup:{0}, topic:{1}, allocatedMessageQueues:{2}, consumerClientIds:{3}]", GroupName, topic, string.Join("|", allocatedMessageQueueList), string.Join("|", consumerClientIdList));
                 }
             }
             else
@@ -250,7 +250,7 @@ namespace EQueue.Clients.Consumers
                         changed = true;
                         ProcessQueue processQueue;
                         _processQueueDict.TryRemove(messageQueue, out processQueue);
-                        RemoveUnnecessaryMessageQueue(messageQueue, processQueue);
+                        PersistRemovedMessageQueueOffset(messageQueue);
                     }
                 }
             }
@@ -301,7 +301,7 @@ namespace EQueue.Clients.Consumers
                 _processQueueDict.TryRemove(queue, out removedQueue);
             }
         }
-        private void RemoveUnnecessaryMessageQueue(MessageQueue messageQueue, ProcessQueue processQueue)
+        private void PersistRemovedMessageQueueOffset(MessageQueue messageQueue)
         {
             _offsetStore.Persist(messageQueue);
             _offsetStore.RemoveOffset(messageQueue);
@@ -330,5 +330,7 @@ namespace EQueue.Clients.Consumers
 
             return offset;
         }
+
+        #endregion
     }
 }

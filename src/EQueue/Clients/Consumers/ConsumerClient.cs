@@ -1,49 +1,57 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using EQueue.Common;
-using EQueue.Common.Extensions;
 using EQueue.Common.IoC;
 using EQueue.Common.Logging;
 using EQueue.Common.Scheduling;
 
 namespace EQueue.Clients.Consumers
 {
-    public class ConsumerClient
+    public class ConsumerClient : IConsumerClient
     {
+        #region Private Members
+
         private readonly IDictionary<string, IConsumer> _consumerDict = new Dictionary<string, IConsumer>();
         private readonly IDictionary<string, TopicRouteData> _topicRouteDataDict = new Dictionary<string, TopicRouteData>();
-        private readonly BlockingCollection<PullRequest> _pullRequestBlockingQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
+        private readonly IPullMessageService _pullMessageService;
         private readonly IScheduleService _scheduleService;
-        private readonly Worker _executePullReqeustWorker;
         private readonly ILogger _logger;
+
+        #endregion
+
+        #region Public Properties
 
         public string Id { get; private set; }
         public ConsumerSettings Settings { get; private set; }
 
-        public ConsumerClient(ConsumerSettings settings, IScheduleService scheduleService) : this(string.Format("{0}@{1}", "Default", Utils.GetLocalIPV4()), settings, scheduleService)
-        {
-        }
-        public ConsumerClient(string clientId, ConsumerSettings settings, IScheduleService scheduleService)
-        {
-            Id = clientId;
-            Settings = settings;
+        #endregion
 
-            _executePullReqeustWorker = new Worker(ExecutePullRequest);
-            _scheduleService = scheduleService;
+        #region Constructors
+
+        public ConsumerClient(ConsumerSettings settings) : this(string.Format("{0}@{1}", "Default", Utils.GetLocalIPV4()), settings) { }
+        public ConsumerClient(string id, ConsumerSettings settings)
+        {
+            Id = id;
+            Settings = settings;
+            _pullMessageService = ObjectContainer.Resolve<IPullMessageService>();
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
+        #endregion
+
+        #region Public Methods
+
         public void Start()
         {
-            StartScheduledTask();
-            _executePullReqeustWorker.Start();
-
+            _scheduleService.ScheduleTask(Rebalance, 1000 * 10, 1000 * 10);
+            _scheduleService.ScheduleTask(UpdateAllTopicRouteData, 1000 * 30, 1000 * 30);
+            _scheduleService.ScheduleTask(SendHeartbeatToBroker, 1000 * 30, 1000 * 30);
+            _scheduleService.ScheduleTask(PersistAllConsumerOffset, 1000 * 5, 1000 * 5);
+            _pullMessageService.Start(this);
             _logger.InfoFormat("Consumer client [{0}] start OK, settings:{1}", Id, Settings);
         }
-
         public ConsumerClient RegisterConsumer(IConsumer consumer)
         {
             if (_consumerDict.ContainsKey(consumer.GroupName))
@@ -53,28 +61,27 @@ namespace EQueue.Clients.Consumers
             _consumerDict[consumer.GroupName] = consumer;
             return this;
         }
+        public IConsumer GetConsumer(string consumerGroup)
+        {
+            IConsumer consumer;
+            if (_consumerDict.TryGetValue(consumerGroup, out consumer))
+            {
+                return consumer;
+            }
+            return null;
+        }
         public void EnqueuePullRequest(PullRequest pullRequest)
         {
-            _pullRequestBlockingQueue.Add(pullRequest);
+            _pullMessageService.EnqueuePullRequest(pullRequest);
         }
         public void EnqueuePullRequest(PullRequest pullRequest, int millisecondsDelay)
         {
-            Task.Factory.StartDelayedTask(millisecondsDelay, () => _pullRequestBlockingQueue.Add(pullRequest));
+            _pullMessageService.EnqueuePullRequest(pullRequest, millisecondsDelay);
         }
 
-        public IEnumerable<string> FindConsumerClientIdList(string consumerGroup)
-        {
-            //TODO
-            return null;
-        }
+        #endregion
 
-        private void StartScheduledTask()
-        {
-            _scheduleService.ScheduleTask(Rebalance, 1000 * 10, 1000 * 10);
-            _scheduleService.ScheduleTask(UpdateAllTopicRouteData, 1000 * 30, 1000 * 30);
-            _scheduleService.ScheduleTask(SendHeartbeatToBroker, 1000 * 30, 1000 * 30);
-            _scheduleService.ScheduleTask(PersistAllConsumerOffset, 1000 * 5, 1000 * 5);
-        }
+        #region Private Methods
 
         #region Rebalance
 
@@ -206,21 +213,6 @@ namespace EQueue.Clients.Consumers
 
         #endregion
 
-        private void ExecutePullRequest()
-        {
-            var pullRequest = _pullRequestBlockingQueue.Take();
-            try
-            {
-                IConsumer consumer;
-                if (_consumerDict.TryGetValue(pullRequest.ConsumerGroup, out consumer))
-                {
-                    consumer.PullMessage(pullRequest);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(string.Format("ExecutePullRequest exception. PullRequest: {0}.", pullRequest), ex);
-            }
-        }
+        #endregion
     }
 }

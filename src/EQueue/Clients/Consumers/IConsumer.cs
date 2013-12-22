@@ -8,13 +8,10 @@ namespace EQueue.Clients.Consumers
         string GroupName { get; }
         MessageModel MessageModel { get; }
         IEnumerable<string> SubscriptionTopics { get; }
-        void Start();
-        void Subscribe(string topic);
-        void Shutdown();
+        void PullMessage(PullRequest pullRequest);
+        bool IsSubscribeTopicNeedUpdate(string topic);
+        void UpdateTopicSubscribeInfo(string topic, IEnumerable<MessageQueue> messageQueues);
         void Rebalance();
         void PersistOffset();
-        void PullMessage(PullRequest pullRequest);
-        void UpdateTopicSubscribeInfo(string topic, IEnumerable<MessageQueue> messageQueues);
-        bool IsSubscribeTopicNeedUpdate(string topic);
     }
 }
