@@ -208,7 +208,7 @@ namespace EQueue.Clients.Consumers
             if (_topicSubscribeInfoDict.ContainsKey(topic))
             {
                 var messageQueues = _topicSubscribeInfoDict[topic];
-                var consumerIds = _client.FindConsumerIdList(GroupName);
+                var consumerIds = _client.FindConsumerClientIdList(GroupName);
 
                 var messageQueueList = messageQueues.ToList();
                 var consumerIdList = consumerIds.ToList();

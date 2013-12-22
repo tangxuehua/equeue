@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace EQueue.Common
 {
     [Serializable]
     public class TopicRouteData
     {
-        public int PublishQueueCount { get; private set; }
         public int ConsumeQueueCount { get; private set; }
 
-        public TopicRouteData(int publishQueueCount, int consumeQueueCount)
+        public TopicRouteData(int consumeQueueCount)
         {
-            PublishQueueCount = publishQueueCount;
             ConsumeQueueCount = consumeQueueCount;
         }
 
@@ -20,7 +17,6 @@ namespace EQueue.Common
             var prime = 31;
             var result = 1;
             result = prime * result + ConsumeQueueCount;
-            result = prime * result + PublishQueueCount;
             return result;
         }
         public override bool Equals(object obj)
@@ -46,16 +42,11 @@ namespace EQueue.Common
                 return false;
             }
 
-            if (PublishQueueCount != other.PublishQueueCount)
-            {
-                return false;
-            }
-
             return true;
         }
         public override string ToString()
         {
-            return string.Format("TopicRouteData[PublishQueueCount={0}, ConsumeQueueCount={1}]", PublishQueueCount, ConsumeQueueCount);
+            return string.Format("TopicRouteData[ConsumeQueueCount={0}]", ConsumeQueueCount);
         }
     }
 }

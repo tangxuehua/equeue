@@ -9,6 +9,6 @@ namespace EQueue.Clients.Consumers
         public long NextBeginOffset { get; set; }
         public long MinOffset { get; set; }
         public long MaxOffset { get; set; }
-        public IEnumerable<PersistedMessage> Messages { get; set; }
+        public IEnumerable<QueueMessage> Messages { get; set; }
     }
 }

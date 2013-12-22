@@ -48,7 +48,7 @@
     <Compile Include="Clients\Producers\Producer.cs" />
     <Compile Include="Common\IoC\ComponentAttribute.cs" />
     <Compile Include="Common\Utils.cs" />
-    <Compile Include="Common\PersistedMessage.cs" />
+    <Compile Include="Common\QueueMessage.cs" />
     <Compile Include="Common\Scheduling\DefaultScheduleService.cs" />
     <Compile Include="Common\ConsumerData.cs" />
     <Compile Include="Common\Scheduling\IScheduleService.cs" />
@@ -78,7 +78,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="MessageServer\" />
-    <Folder Include="NameServer\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

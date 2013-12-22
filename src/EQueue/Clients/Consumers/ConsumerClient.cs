@@ -17,14 +17,13 @@ namespace EQueue.Clients.Consumers
         private readonly IDictionary<string, TopicRouteData> _topicRouteDataDict = new Dictionary<string, TopicRouteData>();
         private readonly BlockingCollection<PullRequest> _pullRequestBlockingQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
         private readonly IScheduleService _scheduleService;
-        private readonly Worker _fetchPullReqeustWorker;
+        private readonly Worker _executePullReqeustWorker;
         private readonly ILogger _logger;
 
         public string Id { get; private set; }
         public ConsumerSettings Settings { get; private set; }
 
-        public ConsumerClient(ConsumerSettings settings, IScheduleService scheduleService)
-            : this(string.Format("{0}@{1}", "Default", Utils.GetLocalIPV4()), settings, scheduleService)
+        public ConsumerClient(ConsumerSettings settings, IScheduleService scheduleService) : this(string.Format("{0}@{1}", "Default", Utils.GetLocalIPV4()), settings, scheduleService)
         {
         }
         public ConsumerClient(string clientId, ConsumerSettings settings, IScheduleService scheduleService)
@@ -32,7 +31,7 @@ namespace EQueue.Clients.Consumers
             Id = clientId;
             Settings = settings;
 
-            _fetchPullReqeustWorker = new Worker(FetchAndExecutePullRequest);
+            _executePullReqeustWorker = new Worker(ExecutePullRequest);
             _scheduleService = scheduleService;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
@@ -40,7 +39,7 @@ namespace EQueue.Clients.Consumers
         public void Start()
         {
             StartScheduledTask();
-            _fetchPullReqeustWorker.Start();
+            _executePullReqeustWorker.Start();
 
             _logger.InfoFormat("Consumer client [{0}] start OK, settings:{1}", Id, Settings);
         }
@@ -63,7 +62,7 @@ namespace EQueue.Clients.Consumers
             Task.Factory.StartDelayedTask(millisecondsDelay, () => _pullRequestBlockingQueue.Add(pullRequest));
         }
 
-        public IEnumerable<string> FindConsumerIdList(string consumerGroup)
+        public IEnumerable<string> FindConsumerClientIdList(string consumerGroup)
         {
             //TODO
             return null;
@@ -72,10 +71,13 @@ namespace EQueue.Clients.Consumers
         private void StartScheduledTask()
         {
             _scheduleService.ScheduleTask(Rebalance, 1000 * 10, 1000 * 10);
-            _scheduleService.ScheduleTask(UpdateTopicRouteInfoFromNameServer, 1000 * 30, 1000 * 30);
+            _scheduleService.ScheduleTask(UpdateAllTopicRouteData, 1000 * 30, 1000 * 30);
             _scheduleService.ScheduleTask(SendHeartbeatToBroker, 1000 * 30, 1000 * 30);
             _scheduleService.ScheduleTask(PersistAllConsumerOffset, 1000 * 5, 1000 * 5);
         }
+
+        #region Rebalance
+
         private void Rebalance()
         {
             foreach (var consumer in _consumerDict.Values)
@@ -90,7 +92,12 @@ namespace EQueue.Clients.Consumers
                 }
             }
         }
-        private void UpdateTopicRouteInfoFromNameServer()
+
+        #endregion
+
+        #region Update topic route data
+
+        private void UpdateAllTopicRouteData()
         {
             var topicList = new List<string>();
             foreach (var consumer in _consumerDict.Values)
@@ -99,24 +106,24 @@ namespace EQueue.Clients.Consumers
             }
             foreach (var topic in topicList.Distinct())
             {
-                UpdateTopicRouteInfoFromNameServer(topic);
+                UpdateTopicRouteData(topic);
             }
         }
-        private void UpdateTopicRouteInfoFromNameServer(string topic)
+        private void UpdateTopicRouteData(string topic)
         {
-            var topicRouteData = GetTopicRouteInfoFromNameServer(topic);
-            var oldTopicRouteData = _topicRouteDataDict[topic];
-            var changed = IsTopicRouteDataChanged(oldTopicRouteData, topicRouteData);
+            var topicRouteDataFromServer = GetTopicRouteDataFromServer(topic);
+            var topicRouteDataOnLocal = _topicRouteDataDict[topic];
+            var changed = IsTopicRouteDataChanged(topicRouteDataOnLocal, topicRouteDataFromServer);
 
             if (!changed)
             {
-                changed = IsNeedUpdateTopicRouteInfo(topic);
+                changed = IsNeedUpdateTopicRouteData(topic);
             }
 
             if (changed)
             {
                 var consumeMessageQueues = new List<MessageQueue>();
-                for (var index = 0; index < topicRouteData.ConsumeQueueCount; index++)
+                for (var index = 0; index < topicRouteDataFromServer.ConsumeQueueCount; index++)
                 {
                     consumeMessageQueues.Add(new MessageQueue(topic, index));
                 }
@@ -125,9 +132,34 @@ namespace EQueue.Clients.Consumers
                 {
                     consumer.UpdateTopicSubscribeInfo(topic, consumeMessageQueues);
                 }
-                _topicRouteDataDict[topic] = topicRouteData;
+                _topicRouteDataDict[topic] = topicRouteDataFromServer;
             }
         }
+        private TopicRouteData GetTopicRouteDataFromServer(string topic)
+        {
+            //TODO
+            return null;
+        }
+        private bool IsTopicRouteDataChanged(TopicRouteData oldData, TopicRouteData newData)
+        {
+            return oldData != newData;
+        }
+        private bool IsNeedUpdateTopicRouteData(string topic)
+        {
+            foreach (var consumer in _consumerDict.Values)
+            {
+                if (consumer.IsSubscribeTopicNeedUpdate(topic))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        #endregion
+
+        #region Send heartbeat to broker
+
         private void SendHeartbeatToBroker()
         {
             var heartbeatData = BuildHeartbeatData();
@@ -142,11 +174,11 @@ namespace EQueue.Clients.Consumers
             {
                 //TODO
                 //this.mQClientAPIImpl.sendHearbeat(addr, heartbeatData, 3000);
-                _logger.InfoFormat("send heart beat to broker[{0}] success, heartbeatData:[{1}]", Settings.BrokerAddress, heartbeatData);
+                _logger.InfoFormat("Send heart beat to broker[{0}] success, heartbeatData:[{1}]", Settings.BrokerAddress, heartbeatData);
             }
             catch (Exception ex)
             {
-                _logger.Error("send heart beat to broker exception", ex);
+                _logger.Error("Send heart beat to broker exception", ex);
             }
         }
         private HeartbeatData BuildHeartbeatData()
@@ -159,6 +191,11 @@ namespace EQueue.Clients.Consumers
 
             return new HeartbeatData(Id, consumerDataList);
         }
+
+        #endregion
+
+        #region Persist all consumer offset
+
         private void PersistAllConsumerOffset()
         {
             foreach (var consumer in _consumerDict.Values)
@@ -166,7 +203,10 @@ namespace EQueue.Clients.Consumers
                 consumer.PersistOffset();
             }
         }
-        private void FetchAndExecutePullRequest()
+
+        #endregion
+
+        private void ExecutePullRequest()
         {
             var pullRequest = _pullRequestBlockingQueue.Take();
             try
@@ -179,28 +219,8 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("FetchAndExecutePullRequest exception. PullRequest: {0}.", pullRequest), ex);
+                _logger.Error(string.Format("ExecutePullRequest exception. PullRequest: {0}.", pullRequest), ex);
             }
-        }
-        private TopicRouteData GetTopicRouteInfoFromNameServer(string topic)
-        {
-            //TODO
-            return null;
-        }
-        private bool IsTopicRouteDataChanged(TopicRouteData oldData, TopicRouteData newData)
-        {
-            return oldData != newData;
-        }
-        private bool IsNeedUpdateTopicRouteInfo(string topic)
-        {
-            foreach (var consumer in _consumerDict.Values)
-            {
-                if (consumer.IsSubscribeTopicNeedUpdate(topic))
-                {
-                    return true;
-                }
-            }
-            return false;
         }
     }
 }

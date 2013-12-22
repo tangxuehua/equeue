@@ -12,7 +12,7 @@ namespace EQueue.Clients.Consumers
         private IDictionary<long, Message> _messageDict = new SortedDictionary<long, Message>();
         private long _queueOffsetMax = 0L;
 
-        public void AddMessages(IEnumerable<PersistedMessage> messages)
+        public void AddMessages(IEnumerable<QueueMessage> messages)
         {
             AtomWrite(_lock, () =>
             {
@@ -23,7 +23,7 @@ namespace EQueue.Clients.Consumers
                 }
             });
         }
-        public long RemoveMessages(IEnumerable<PersistedMessage> messages)
+        public long RemoveMessages(IEnumerable<QueueMessage> messages)
         {
             var result = -1L;
 
