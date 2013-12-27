@@ -20,11 +20,11 @@ namespace EQueue.Clients.Producers
 
         #endregion
 
-        public SendResult Send(Message message, object hashKey)
+        public SendResult Send(Message message, object arg)
         {
             throw new NotImplementedException();
         }
-        public Task<SendResult> SendAsync(Message message, object hashKey)
+        public Task<SendResult> SendAsync(Message message, object arg)
         {
             throw new NotImplementedException();
         }

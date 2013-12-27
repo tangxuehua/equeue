@@ -4,6 +4,6 @@ namespace EQueue.Broker
 {
     public interface IMessageStore
     {
-        MessageStoreResult StoreMessage(Message message);
+        MessageStoreResult StoreMessage(Message message, int queueId, long queueOffset);
     }
 }
