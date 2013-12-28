@@ -12,6 +12,7 @@ namespace EQueue.Common
 
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
+        public long CurrentOffset { get { return _currentOffset; } }
 
         public ConsumeQueue(string topic, int queueId)
         {

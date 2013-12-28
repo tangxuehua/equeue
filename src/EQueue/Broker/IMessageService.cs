@@ -6,5 +6,6 @@ namespace EQueue.Broker
     {
         MessageStoreResult StoreMessage(Message message, object arg);
         QueueMessage GetMessage(string topic, int queueId, long queueOffset);
+        long GetQueueCurrentOffset(string topic, int queueId);
     }
 }

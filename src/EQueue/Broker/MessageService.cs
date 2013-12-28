@@ -40,6 +40,16 @@ namespace EQueue.Broker
             }
             return null;
         }
+        public long GetQueueCurrentOffset(string topic, int queueId)
+        {
+            var consumeQueues = GetConsumeQueues(topic);
+            var consumeQueue = consumeQueues.SingleOrDefault(x => x.QueueId == queueId);
+            if (consumeQueue != null)
+            {
+                return consumeQueue.CurrentOffset;
+            }
+            return -1;
+        }
 
         private IList<ConsumeQueue> GetConsumeQueues(string topic)
         {
