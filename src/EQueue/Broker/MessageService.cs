@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using EQueue.Common;
 
 namespace EQueue.Broker
@@ -24,6 +25,20 @@ namespace EQueue.Broker
             var consumeQueue = _messageQueueSelector.SelectQueue(consumeQueues, message, arg);
             var queueOffset = consumeQueue.GetNextOffset();
             return _messageStore.StoreMessage(message, consumeQueue.QueueId, queueOffset);
+        }
+        public QueueMessage GetMessage(string topic, int queueId, long queueOffset)
+        {
+            var consumeQueues = GetConsumeQueues(topic);
+            var consumeQueue = consumeQueues.SingleOrDefault(x => x.QueueId == queueId);
+            if (consumeQueue != null)
+            {
+                var messageOffset = consumeQueue.GetMessageOffset(queueOffset);
+                if (messageOffset >= 0)
+                {
+                    return _messageStore.GetMessage(messageOffset);
+                }
+            }
+            return null;
         }
 
         private IList<ConsumeQueue> GetConsumeQueues(string topic)

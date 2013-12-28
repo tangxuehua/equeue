@@ -23,5 +23,14 @@ namespace EQueue.Common
         {
             return Interlocked.Increment(ref _currentOffset);
         }
+        public long GetMessageOffset(long queueOffset)
+        {
+            long offset;
+            if (_queueOffsetMappingDict.TryGetValue(queueOffset, out offset))
+            {
+                return offset;
+            }
+            return -1;
+        }
     }
 }
