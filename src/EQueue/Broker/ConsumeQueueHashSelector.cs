@@ -4,7 +4,7 @@ using EQueue.Common;
 
 namespace EQueue.Broker
 {
-    public class MessageQueueHashSelector : IMessageQueueSelector
+    public class ConsumeQueueHashSelector : IConsumeQueueSelector
     {
         public ConsumeQueue SelectQueue(IList<ConsumeQueue> totalQueues, Message message, object arg)
         {

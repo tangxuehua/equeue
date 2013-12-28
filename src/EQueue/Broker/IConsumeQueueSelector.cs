@@ -3,7 +3,7 @@ using EQueue.Common;
 
 namespace EQueue.Broker
 {
-    public interface IMessageQueueSelector
+    public interface IConsumeQueueSelector
     {
         ConsumeQueue SelectQueue(IList<ConsumeQueue> totalQueues, Message message, object arg);
     }

@@ -39,8 +39,8 @@
     <Compile Include="Broker\ConsumeQueue.cs" />
     <Compile Include="Broker\MessageService.cs" />
     <Compile Include="Broker\IMessageService.cs" />
-    <Compile Include="Broker\MessageQueueHashSelector.cs" />
-    <Compile Include="Broker\IMessageQueueSelector.cs" />
+    <Compile Include="Broker\ConsumeQueueHashSelector.cs" />
+    <Compile Include="Broker\IConsumeQueueSelector.cs" />
     <Compile Include="Broker\InMemoryMessageStore.cs" />
     <Compile Include="Broker\IMessageStore.cs" />
     <Compile Include="Broker\MessageStoreResult.cs" />

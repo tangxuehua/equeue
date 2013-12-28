@@ -10,10 +10,10 @@ namespace EQueue.Broker
         private const int DefaultConsumeQueueCount = 4;
         private ConcurrentDictionary<string, long> _queueCurrentOffsetDict = new ConcurrentDictionary<string, long>();
         private ConcurrentDictionary<string, IList<ConsumeQueue>> _consumeQueueDict = new ConcurrentDictionary<string, IList<ConsumeQueue>>();
-        private IMessageQueueSelector _messageQueueSelector;
+        private IConsumeQueueSelector _messageQueueSelector;
         private IMessageStore _messageStore;
 
-        public MessageService(IMessageQueueSelector messageQueueSelector, IMessageStore messageStore)
+        public MessageService(IConsumeQueueSelector messageQueueSelector, IMessageStore messageStore)
         {
             _messageQueueSelector = messageQueueSelector;
             _messageStore = messageStore;
