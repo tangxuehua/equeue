@@ -24,7 +24,9 @@ namespace EQueue.Broker
             var consumeQueues = GetConsumeQueues(message.Topic);
             var consumeQueue = _messageQueueSelector.SelectQueue(consumeQueues, message, arg);
             var queueOffset = consumeQueue.GetNextOffset();
-            return _messageStore.StoreMessage(message, consumeQueue.QueueId, queueOffset);
+            var storeResult = _messageStore.StoreMessage(message, consumeQueue.QueueId, queueOffset);
+            consumeQueue.SetMessageOffset(queueOffset, storeResult.MessageOffset);
+            return storeResult;
         }
         public QueueMessage GetMessage(string topic, int queueId, long queueOffset)
         {
