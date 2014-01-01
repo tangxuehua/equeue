@@ -19,7 +19,7 @@ namespace EQueue.Broker
             _messageStore = messageStore;
         }
 
-        public MessageStoreResult StoreMessage(Message message, object arg)
+        public MessageStoreResult StoreMessage(Message message, string arg)
         {
             var consumeQueues = GetConsumeQueues(message.Topic);
             var consumeQueue = _messageQueueSelector.SelectQueue(consumeQueues, message, arg);

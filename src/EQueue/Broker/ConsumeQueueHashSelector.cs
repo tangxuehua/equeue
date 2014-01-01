@@ -6,7 +6,7 @@ namespace EQueue.Broker
 {
     public class ConsumeQueueHashSelector : IConsumeQueueSelector
     {
-        public ConsumeQueue SelectQueue(IList<ConsumeQueue> totalQueues, Message message, object arg)
+        public ConsumeQueue SelectQueue(IList<ConsumeQueue> totalQueues, Message message, string arg)
         {
             var value = arg.GetHashCode();
             if (value < 0)

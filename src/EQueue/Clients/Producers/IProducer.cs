@@ -5,7 +5,7 @@ namespace EQueue.Clients.Producers
 {
     public interface IProducer
     {
-        SendResult Send(Message message, object arg);
-        Task<SendResult> SendAsync(Message message, object arg);
+        SendResult Send(Message message, string arg);
+        Task<SendResult> SendAsync(Message message, string arg);
     }
 }
