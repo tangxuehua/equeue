@@ -68,6 +68,13 @@
     <Compile Include="Common\INameServerService.cs" />
     <Compile Include="Common\IoC\ComponentAttribute.cs" />
     <Compile Include="Common\ObjectId.cs" />
+    <Compile Include="Common\Socketing\ClientSocket.cs" />
+    <Compile Include="Common\Socketing\ServerSocket.cs" />
+    <Compile Include="Common\Socketing\SocketService.cs" />
+    <Compile Include="Common\Socketing\ReceiveContext.cs" />
+    <Compile Include="Common\Socketing\ReceiveState.cs" />
+    <Compile Include="Common\Socketing\SendContext.cs" />
+    <Compile Include="Common\Socketing\SocketUtils.cs" />
     <Compile Include="Common\Utils.cs" />
     <Compile Include="Common\QueueMessage.cs" />
     <Compile Include="Common\Scheduling\DefaultScheduleService.cs" />
@@ -105,6 +112,7 @@
     <Compile Include="Remoting\ResponseCode.cs" />
     <Compile Include="Remoting\ResponseFuture.cs" />
     <Compile Include="Remoting\Responses\SendMessageResponse.cs" />
+    <Compile Include="Remoting\SocketRemotingClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
