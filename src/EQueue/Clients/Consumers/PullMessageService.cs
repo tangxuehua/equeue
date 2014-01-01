@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using EQueue.Common.Extensions;
-using EQueue.Common.IoC;
-using EQueue.Common.Logging;
-using EQueue.Common.Scheduling;
+using EQueue.Infrastructure.Extensions;
+using EQueue.Infrastructure.IoC;
+using EQueue.Infrastructure.Logging;
+using EQueue.Infrastructure.Scheduling;
 
 namespace EQueue.Clients.Consumers
 {

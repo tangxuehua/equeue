@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EQueue.Common.IoC
+namespace EQueue.Infrastructure.IoC
 {
     /// <summary>An attribute to indicate a class is a component.
     /// </summary>

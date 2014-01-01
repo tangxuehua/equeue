@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Net.Sockets;
 using System.Text;
-using EQueue.Common.Logging;
+using EQueue.Infrastructure.Logging;
 
-namespace EQueue.Common.Socketing
+namespace EQueue.Infrastructure.Socketing
 {
     public class SocketService
     {

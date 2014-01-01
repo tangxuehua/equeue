@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 
-namespace EQueue.Common
+namespace EQueue.Infrastructure
 {
     /// <summary>Represents an ObjectId
     /// </summary>

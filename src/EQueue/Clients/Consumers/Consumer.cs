@@ -3,9 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using EQueue.Common;
-using EQueue.Common.IoC;
-using EQueue.Common.Logging;
+using EQueue.Infrastructure;
+using EQueue.Infrastructure.IoC;
+using EQueue.Infrastructure.Logging;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers

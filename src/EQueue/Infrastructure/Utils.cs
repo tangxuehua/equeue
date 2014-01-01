@@ -2,7 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace EQueue.Common
+namespace EQueue.Infrastructure
 {
     public class Utils
     {

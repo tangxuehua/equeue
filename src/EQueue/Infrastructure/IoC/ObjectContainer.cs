@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EQueue.Common.IoC
+namespace EQueue.Infrastructure.IoC
 {
     /// <summary>Represents an object container.
     /// </summary>

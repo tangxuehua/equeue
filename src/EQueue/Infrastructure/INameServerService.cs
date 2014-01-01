@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace EQueue.Common
+namespace EQueue.Infrastructure
 {
     public interface INameServerService
     {

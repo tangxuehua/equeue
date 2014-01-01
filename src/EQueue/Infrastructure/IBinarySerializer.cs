@@ -1,5 +1,6 @@
 ﻿using System;
-namespace EQueue.Common
+
+namespace EQueue.Infrastructure
 {
     public interface IBinarySerializer
     {

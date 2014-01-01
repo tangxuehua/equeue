@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using EQueue.Common;
 using EQueue.Remoting;
 
 namespace EQueue.Broker.LongPolling

@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace EQueue.Common.Extensions
+namespace EQueue.Infrastructure.Extensions
 {
     public static class TaskExtensions
     {

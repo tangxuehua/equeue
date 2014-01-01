@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading;
-using EQueue.Common.IoC;
-using EQueue.Common.Logging;
+using EQueue.Infrastructure.IoC;
+using EQueue.Infrastructure.Logging;
 
-namespace EQueue.Common.Scheduling
+namespace EQueue.Infrastructure.Scheduling
 {
     /// <summary>Represent a background worker that will repeatedly execute a specific method.
     /// </summary>

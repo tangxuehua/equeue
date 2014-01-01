@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EQueue.Common.Logging
+namespace EQueue.Infrastructure.Logging
 {
     /// <summary>Represents a logger factory.
     /// </summary>

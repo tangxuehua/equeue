@@ -2,8 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
-using EQueue.Broker.LongPolling;
-using EQueue.Common.Scheduling;
+using EQueue.Infrastructure.Scheduling;
 
 namespace EQueue.Broker.LongPolling
 {

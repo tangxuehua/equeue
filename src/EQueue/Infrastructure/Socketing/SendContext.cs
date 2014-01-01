@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
 
-namespace EQueue.Common.Socketing
+namespace EQueue.Infrastructure.Socketing
 {
     public class SendContext
     {

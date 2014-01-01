@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace EQueue.Common.Socketing
+namespace EQueue.Infrastructure.Socketing
 {
     public class SocketUtils
     {

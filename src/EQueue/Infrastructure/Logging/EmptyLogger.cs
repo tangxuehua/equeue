@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EQueue.Common.Logging
+namespace EQueue.Infrastructure.Logging
 {
     /// <summary>An empty logger which log nothing.
     /// </summary>

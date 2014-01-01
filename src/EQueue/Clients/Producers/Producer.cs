@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using EQueue.Common;
-using EQueue.Common.Extensions;
-using EQueue.Common.Logging;
+using EQueue.Infrastructure;
+using EQueue.Infrastructure.Extensions;
+using EQueue.Infrastructure.Logging;
 using EQueue.Protocols;
 using EQueue.Remoting;
 using EQueue.Remoting.Requests;

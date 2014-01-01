@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace EQueue.Common.Socketing
+namespace EQueue.Infrastructure.Socketing
 {
     public class ClientSocket
     {

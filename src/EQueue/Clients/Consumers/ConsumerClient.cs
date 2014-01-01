@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using EQueue.Common;
-using EQueue.Common.IoC;
-using EQueue.Common.Logging;
-using EQueue.Common.Scheduling;
+using EQueue.Infrastructure;
+using EQueue.Infrastructure.IoC;
+using EQueue.Infrastructure.Logging;
+using EQueue.Infrastructure.Scheduling;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers

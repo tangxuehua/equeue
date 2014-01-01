@@ -2,9 +2,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
-using EQueue.Common.Logging;
+using EQueue.Infrastructure.Logging;
 
-namespace EQueue.Common.Scheduling
+namespace EQueue.Infrastructure.Scheduling
 {
     public class ScheduleService : IScheduleService
     {

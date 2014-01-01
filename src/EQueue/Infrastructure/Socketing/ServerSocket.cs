@@ -2,9 +2,9 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using EQueue.Common.Logging;
+using EQueue.Infrastructure.Logging;
 
-namespace EQueue.Common.Socketing
+namespace EQueue.Infrastructure.Socketing
 {
     public class ServerSocket
     {
