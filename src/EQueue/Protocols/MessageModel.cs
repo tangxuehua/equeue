@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace EQueue.Common
+namespace EQueue.Protocols
 {
     public enum MessageModel
     {
-        BroadCasting,
+        BroadCasting = 1,
         Clustering
     }
 }

@@ -2,6 +2,7 @@
 using EQueue.Common;
 using EQueue.Common.Extensions;
 using EQueue.Common.Logging;
+using EQueue.Protocols;
 using EQueue.Remoting;
 using EQueue.Remoting.Requests;
 using EQueue.Remoting.Responses;
@@ -42,7 +43,7 @@ namespace EQueue.Clients.Producers
                 var remotingResponse = requestTask.Result;
                 var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
                 var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
-                var result = new SendResult(sendStatus, response.MessageId, response.MessageOffset, response.Topic, response.QueueId, response.QueueOffset);
+                var result = new SendResult(sendStatus, response.MessageId, response.MessageOffset, response.MessageQueue, response.QueueOffset);
                 taskCompletionSource.SetResult(result);
             });
             return taskCompletionSource.Task;

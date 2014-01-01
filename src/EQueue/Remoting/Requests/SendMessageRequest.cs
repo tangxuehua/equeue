@@ -1,4 +1,5 @@
 ﻿using EQueue.Common;
+using EQueue.Protocols;
 
 namespace EQueue.Remoting.Requests
 {

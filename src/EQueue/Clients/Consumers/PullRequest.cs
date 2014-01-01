@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using EQueue.Common;
+﻿using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {

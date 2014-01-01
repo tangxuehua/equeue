@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace EQueue.Common
+namespace EQueue.Protocols
 {
     [Serializable]
     public class HeartbeatData

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using EQueue.Common;
 using EQueue.Common.IoC;
 using EQueue.Common.Logging;
+using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {

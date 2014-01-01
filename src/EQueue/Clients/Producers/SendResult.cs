@@ -1,5 +1,4 @@
-﻿using System;
-using EQueue.Common;
+﻿using EQueue.Protocols;
 
 namespace EQueue.Clients.Producers
 {
@@ -11,12 +10,12 @@ namespace EQueue.Clients.Producers
         public long QueueOffset { get; private set; }
         public long MessageOffset { get; private set; }
 
-        public SendResult(SendStatus sendStatus, string messageId, long messageOffset, string topic, int queueId, long queueOffset)
+        public SendResult(SendStatus sendStatus, string messageId, long messageOffset, MessageQueue messageQueue, long queueOffset)
         {
             SendStatus = sendStatus;
             MessageId = messageId;
             MessageOffset = messageOffset;
-            MessageQueue = new MessageQueue(topic, queueId);
+            MessageQueue = messageQueue;
             QueueOffset = queueOffset;
         }
     }

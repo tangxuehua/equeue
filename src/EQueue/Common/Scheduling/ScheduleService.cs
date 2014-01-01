@@ -6,13 +6,13 @@ using EQueue.Common.Logging;
 
 namespace EQueue.Common.Scheduling
 {
-    public class DefaultScheduleService : IScheduleService
+    public class ScheduleService : IScheduleService
     {
         private readonly IDictionary<int, Timer> _timerDict = new ConcurrentDictionary<int, Timer>();
         private int _timerCount;
         private readonly ILogger _logger;
 
-        public DefaultScheduleService(ILoggerFactory loggerFactory)
+        public ScheduleService(ILoggerFactory loggerFactory)
         {
             _logger = loggerFactory.Create(GetType().Name);
         }

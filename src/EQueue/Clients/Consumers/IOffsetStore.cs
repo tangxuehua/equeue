@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using EQueue.Common;
+﻿using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {

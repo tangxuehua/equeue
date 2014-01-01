@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EQueue.Common
+namespace EQueue.Protocols
 {
     [Serializable]
     public class TopicRouteData

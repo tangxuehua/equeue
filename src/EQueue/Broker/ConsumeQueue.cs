@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading;
 
-namespace EQueue.Common
+namespace EQueue.Broker
 {
     [Serializable]
     public class ConsumeQueue
