@@ -5,6 +5,7 @@ namespace EQueue.Clients.Producers
     public enum SendStatus
     {
         Success = 1,
-        FlushDiskTimeout
+        FlushDiskTimeout = 2,
+        Failed = 1000
     }
 }

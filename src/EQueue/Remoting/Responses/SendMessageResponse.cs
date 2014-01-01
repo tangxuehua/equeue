@@ -1,4 +1,5 @@
 ﻿using EQueue.Protocols;
+
 namespace EQueue.Remoting.Responses
 {
     public class SendMessageResponse

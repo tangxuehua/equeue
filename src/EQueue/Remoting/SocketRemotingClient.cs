@@ -82,6 +82,7 @@ namespace EQueue.Remoting
                     responseFuture.SendRequestSuccess = sendResult.Success;
                     if (!sendResult.Success)
                     {
+                        responseFuture.CompleteRequestTask(null);
                         _responseFutureDict.Remove(request.Sequence);
                         _logger.ErrorFormat("Send request [{0}] to channel <{1}> failed, exception:{2}", request, address, sendResult.Exception);
                     }

@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using EQueue.Infrastructure;
-using EQueue.Infrastructure.Extensions;
 using EQueue.Infrastructure.Logging;
 using EQueue.Protocols;
 using EQueue.Remoting;
@@ -30,23 +29,40 @@ namespace EQueue.Clients.Producers
 
         public SendResult Send(Message message, string arg)
         {
-            return SendAsync(message, arg).WaitResult<SendResult>();
+            var remotingRequest = BuildSendMessageRequest(message, arg);
+            var remotingResponse = _remotingClient.InvokeSync(BrokerAddress, remotingRequest, 3000);
+            var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
+            var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
+            return new SendResult(sendStatus, response.MessageId, response.MessageOffset, response.MessageQueue, response.QueueOffset);
         }
         public Task<SendResult> SendAsync(Message message, string arg)
         {
-            var request = new SendMessageRequest { Message = message, Arg = arg };
-            var data = _binarySerializer.Serialize(request);
-            var remotingRequest = new RemotingRequest((int)RequestCode.SendMessage, data);
+            var remotingRequest = BuildSendMessageRequest(message, arg);
             var taskCompletionSource = new TaskCompletionSource<SendResult>();
             _remotingClient.InvokeAsync(BrokerAddress, remotingRequest, 3000).ContinueWith((requestTask) =>
             {
                 var remotingResponse = requestTask.Result;
-                var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
-                var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
-                var result = new SendResult(sendStatus, response.MessageId, response.MessageOffset, response.MessageQueue, response.QueueOffset);
-                taskCompletionSource.SetResult(result);
+                if (remotingResponse != null)
+                {
+                    var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
+                    var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
+                    var result = new SendResult(sendStatus, response.MessageId, response.MessageOffset, response.MessageQueue, response.QueueOffset);
+                    taskCompletionSource.SetResult(result);
+                }
+                else
+                {
+                    var result = new SendResult(SendStatus.Failed, "Send message request failed or wait for response timeout.");
+                    taskCompletionSource.SetResult(result);
+                }
             });
             return taskCompletionSource.Task;
+        }
+
+        private RemotingRequest BuildSendMessageRequest(Message message, string arg)
+        {
+            var request = new SendMessageRequest { Message = message, Arg = arg };
+            var data = _binarySerializer.Serialize(request);
+            return new RemotingRequest((int)RequestCode.SendMessage, data);
         }
     }
 }
