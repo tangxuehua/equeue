@@ -28,7 +28,7 @@ namespace EQueue.Remoting
             _requestProcessorDict = new Dictionary<int, IRequestProcessor>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType());
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _clientSocket.Connect(address, port);
         }
 

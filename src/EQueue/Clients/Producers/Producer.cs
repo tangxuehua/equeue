@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using EQueue.Infrastructure;
+using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
 using EQueue.Protocols;
 using EQueue.Remoting;
@@ -17,12 +18,12 @@ namespace EQueue.Clients.Producers
 
         #region Constructors
 
-        public Producer(string brokerAddress, IRemotingClient remotingClient, IBinarySerializer binarySerializer, ILoggerFactory loggerFactory)
+        public Producer(string brokerAddress)
         {
             BrokerAddress = brokerAddress;
-            _remotingClient = remotingClient;
-            _binarySerializer = binarySerializer;
-            _logger = loggerFactory.Create(GetType().Name);
+            _remotingClient = ObjectContainer.Resolve<IRemotingClient>();
+            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
         #endregion
