@@ -62,6 +62,7 @@
     <Compile Include="Clients\Producers\IProducer.cs" />
     <Compile Include="Clients\Consumers\ConsumerSettings.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
+    <Compile Include="Infrastructure\Extensions\ConcurrentDictionaryExtensions.cs" />
     <Compile Include="Infrastructure\Extensions\TaskExtensions.cs" />
     <Compile Include="Infrastructure\IBinarySerializer.cs" />
     <Compile Include="Infrastructure\IJsonSerializer.cs" />
@@ -69,6 +70,7 @@
     <Compile Include="Infrastructure\IoC\ComponentAttribute.cs" />
     <Compile Include="Infrastructure\ObjectId.cs" />
     <Compile Include="Infrastructure\Socketing\ClientSocket.cs" />
+    <Compile Include="Infrastructure\Socketing\SendResult.cs" />
     <Compile Include="Infrastructure\Socketing\ServerSocket.cs" />
     <Compile Include="Infrastructure\Socketing\SocketService.cs" />
     <Compile Include="Infrastructure\Socketing\ReceiveContext.cs" />
@@ -101,11 +103,14 @@
     <Compile Include="Clients\Producers\SendResult.cs" />
     <Compile Include="Clients\Producers\SendStatus.cs" />
     <Compile Include="Remoting\Channel.cs" />
+    <Compile Include="Remoting\Exceptions\RemotingSendRequestException.cs" />
+    <Compile Include="Remoting\Exceptions\RemotingTimeoutException.cs" />
     <Compile Include="Remoting\IRemotingServer.cs" />
     <Compile Include="Remoting\IRemotingClient.cs" />
     <Compile Include="Remoting\IRequestHandlerContext.cs" />
     <Compile Include="Remoting\IRequestProcessor.cs" />
     <Compile Include="Remoting\RemotingRequest.cs" />
+    <Compile Include="Remoting\RemotingMessage.cs" />
     <Compile Include="Remoting\RemotingResponse.cs" />
     <Compile Include="Remoting\RequestCode.cs" />
     <Compile Include="Remoting\Requests\SendMessageRequest.cs" />

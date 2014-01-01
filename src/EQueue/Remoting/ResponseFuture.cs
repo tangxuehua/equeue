@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace EQueue.Remoting
 {
@@ -6,22 +7,29 @@ namespace EQueue.Remoting
     {
         private long _timeoutMillis;
         private DateTime _beginTime;
+        private TaskCompletionSource<RemotingResponse> _requestTaskCompletionSource;
 
-        public RemotingResponse Response { get; set; }
-        public long RequestSequence { get; private set; }
-        public Action<RemotingResponse> RequestCompleteCallback { get; private set; }
+        public bool SendRequestSuccess { get; set; }
+        public Exception SendException { get; set; }
+        public RemotingRequest Request { get; private set; }
 
-        public ResponseFuture(long requestSequence, long timeoutMillis, Action<RemotingResponse> requestCompleteCallback)
+
+        public ResponseFuture(RemotingRequest request, long timeoutMillis, TaskCompletionSource<RemotingResponse> requestTaskCompletionSource)
         {
-            RequestSequence = requestSequence;
             _beginTime = DateTime.Now;
             _timeoutMillis = timeoutMillis;
-            RequestCompleteCallback = requestCompleteCallback;
+            _requestTaskCompletionSource = requestTaskCompletionSource;
+            SendRequestSuccess = false;
+            Request = request;
         }
 
         public bool IsTimeout()
         {
             return (DateTime.Now - _beginTime).TotalMilliseconds > _timeoutMillis;
+        }
+        public void CompleteRequestTask(RemotingResponse response)
+        {
+            _requestTaskCompletionSource.SetResult(response);
         }
     }
 }

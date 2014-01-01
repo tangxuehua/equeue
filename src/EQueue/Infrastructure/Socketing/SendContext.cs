@@ -7,13 +7,13 @@ namespace EQueue.Infrastructure.Socketing
     {
         public Socket TargetSocket { get; private set; }
         public byte[] Message { get; private set; }
-        public Action<byte[]> MessageSentCallback { get; private set; }
+        public Action<SendResult> MessageSendCallback { get; private set; }
 
-        public SendContext(Socket targetSocket, byte[] message, Action<byte[]> messageSentCallback)
+        public SendContext(Socket targetSocket, byte[] message, Action<SendResult> messageSendCallback)
         {
             TargetSocket = targetSocket;
             Message = message;
-            MessageSentCallback = messageSentCallback;
+            MessageSendCallback = messageSendCallback;
         }
     }
 }

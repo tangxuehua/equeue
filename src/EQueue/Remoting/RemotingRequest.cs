@@ -1,19 +1,14 @@
-﻿using System.Threading;
-namespace EQueue.Remoting
+﻿namespace EQueue.Remoting
 {
-    public class RemotingRequest
+    public class RemotingRequest : RemotingMessage
     {
-        private static long _sequenceCounter;
+        public bool IsOneway { get; set; }
 
-        public int Code { get; private set; }
-        public long Sequence { get; private set; }
-        public byte[] Body { get; private set; }
+        public RemotingRequest(int code, byte[] body) : base(code, body) { }
 
-        public RemotingRequest(int code, byte[] body)
+        public override string ToString()
         {
-            Code = code;
-            Sequence = Interlocked.Increment(ref _sequenceCounter);
-            Body = body;
+            return string.Format("[Code:{0}, Sequence:{1}]", Code, Sequence);
         }
     }
 }

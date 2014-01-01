@@ -30,7 +30,7 @@ namespace EQueue.Clients.Producers
 
         public SendResult Send(Message message, string arg)
         {
-            return SendAsync(message, arg).Wait<SendResult>();
+            return SendAsync(message, arg).WaitResult<SendResult>();
         }
         public Task<SendResult> SendAsync(Message message, string arg)
         {

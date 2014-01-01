@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Net.Sockets;
-using System.Text;
+using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
 
 namespace EQueue.Infrastructure.Socketing
@@ -9,11 +9,11 @@ namespace EQueue.Infrastructure.Socketing
     {
         private ILogger _logger;
 
-        public SocketService(ILoggerFactory loggerFactory)
+        public SocketService()
         {
-            _logger = loggerFactory.Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
-        public void SendMessage(Socket targetSocket, byte[] message, Action<byte[]> messageSentCallback)
+        public void SendMessage(Socket targetSocket, byte[] message, Action<SendResult> messageSentCallback)
         {
             if (message.Length > 0)
             {
@@ -37,19 +37,21 @@ namespace EQueue.Infrastructure.Socketing
         }
         private void SendCallback(IAsyncResult asyncResult)
         {
+            var sendContext = (SendContext)asyncResult.AsyncState;
             try
             {
-                var sendContext = (SendContext)asyncResult.AsyncState;
                 sendContext.TargetSocket.EndSend(asyncResult);
-                sendContext.MessageSentCallback(sendContext.Message);
+                sendContext.MessageSendCallback(new SendResult(true, null));
             }
             catch (SocketException socketException)
             {
                 _logger.ErrorFormat("Socket send exception, ErrorCode:{0}", socketException.SocketErrorCode);
+                sendContext.MessageSendCallback(new SendResult(false, socketException));
             }
             catch (Exception ex)
             {
                 _logger.ErrorFormat("Unknown socket send exception:{0}", ex);
+                sendContext.MessageSendCallback(new SendResult(false, ex));
             }
         }
         private void ReceiveCallback(IAsyncResult asyncResult)

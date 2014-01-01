@@ -11,10 +11,10 @@ namespace EQueue.Infrastructure.Socketing
         private Socket _innerSocket;
         private SocketService _socketService;
 
-        public ClientSocket(SocketService socketService)
+        public ClientSocket()
         {
             _innerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _socketService = socketService;
+            _socketService = new SocketService();
         }
 
         public ClientSocket Connect(string address, int port)
@@ -47,9 +47,9 @@ namespace EQueue.Infrastructure.Socketing
             _innerSocket.Close();
             return this;
         }
-        public ClientSocket SendMessage(byte[] messageContent, Action<byte[]> messageSentCallback)
+        public ClientSocket SendMessage(byte[] messageContent, Action<SendResult> messageSendCallback)
         {
-            _socketService.SendMessage(_innerSocket, messageContent, messageSentCallback);
+            _socketService.SendMessage(_innerSocket, messageContent, messageSendCallback);
             return this;
         }
     }
