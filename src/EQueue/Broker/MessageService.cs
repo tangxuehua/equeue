@@ -7,34 +7,34 @@ namespace EQueue.Broker
 {
     public class MessageService : IMessageService
     {
-        private const int DefaultConsumeQueueCount = 4;
+        private const int DefaultTopicQueueCount = 4;
         private ConcurrentDictionary<string, long> _queueCurrentOffsetDict = new ConcurrentDictionary<string, long>();
-        private ConcurrentDictionary<string, IList<ConsumeQueue>> _consumeQueueDict = new ConcurrentDictionary<string, IList<ConsumeQueue>>();
-        private IConsumeQueueSelector _messageQueueSelector;
+        private ConcurrentDictionary<string, IList<Queue>> _queueDict = new ConcurrentDictionary<string, IList<Queue>>();
+        private IQueueSelector _queueSelector;
         private IMessageStore _messageStore;
 
-        public MessageService(IConsumeQueueSelector messageQueueSelector, IMessageStore messageStore)
+        public MessageService(IQueueSelector messageQueueSelector, IMessageStore messageStore)
         {
-            _messageQueueSelector = messageQueueSelector;
+            _queueSelector = messageQueueSelector;
             _messageStore = messageStore;
         }
 
         public MessageStoreResult StoreMessage(Message message, string arg)
         {
-            var consumeQueues = GetConsumeQueues(message.Topic);
-            var consumeQueue = _messageQueueSelector.SelectQueue(consumeQueues, message, arg);
-            var queueOffset = consumeQueue.GetNextOffset();
-            var storeResult = _messageStore.StoreMessage(message, consumeQueue.QueueId, queueOffset);
-            consumeQueue.SetMessageOffset(queueOffset, storeResult.MessageOffset);
+            var queues = GetQueues(message.Topic);
+            var queue = _queueSelector.SelectQueue(queues, message, arg);
+            var queueOffset = queue.GetNextOffset();
+            var storeResult = _messageStore.StoreMessage(message, queue.QueueId, queueOffset);
+            queue.SetMessageOffset(queueOffset, storeResult.MessageOffset);
             return storeResult;
         }
         public QueueMessage GetMessage(string topic, int queueId, long queueOffset)
         {
-            var consumeQueues = GetConsumeQueues(topic);
-            var consumeQueue = consumeQueues.SingleOrDefault(x => x.QueueId == queueId);
-            if (consumeQueue != null)
+            var queues = GetQueues(topic);
+            var queue = queues.SingleOrDefault(x => x.QueueId == queueId);
+            if (queue != null)
             {
-                var messageOffset = consumeQueue.GetMessageOffset(queueOffset);
+                var messageOffset = queue.GetMessageOffset(queueOffset);
                 if (messageOffset >= 0)
                 {
                     return _messageStore.GetMessage(messageOffset);
@@ -44,23 +44,23 @@ namespace EQueue.Broker
         }
         public long GetQueueCurrentOffset(string topic, int queueId)
         {
-            var consumeQueues = GetConsumeQueues(topic);
-            var consumeQueue = consumeQueues.SingleOrDefault(x => x.QueueId == queueId);
-            if (consumeQueue != null)
+            var queues = GetQueues(topic);
+            var queue = queues.SingleOrDefault(x => x.QueueId == queueId);
+            if (queue != null)
             {
-                return consumeQueue.CurrentOffset;
+                return queue.CurrentOffset;
             }
             return -1;
         }
 
-        private IList<ConsumeQueue> GetConsumeQueues(string topic)
+        private IList<Queue> GetQueues(string topic)
         {
-            return _consumeQueueDict.GetOrAdd(topic, (x) =>
+            return _queueDict.GetOrAdd(topic, (x) =>
             {
-                var queues = new List<ConsumeQueue>();
-                for (var index = 0; index < DefaultConsumeQueueCount; index++)
+                var queues = new List<Queue>();
+                for (var index = 0; index < DefaultTopicQueueCount; index++)
                 {
-                    queues.Add(new ConsumeQueue(x, index));
+                    queues.Add(new Queue(x, index));
                 }
                 return queues;
             });

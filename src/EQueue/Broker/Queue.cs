@@ -5,7 +5,7 @@ using System.Threading;
 namespace EQueue.Broker
 {
     [Serializable]
-    public class ConsumeQueue
+    public class Queue
     {
         private ConcurrentDictionary<long, long> _queueOffsetMappingDict = new ConcurrentDictionary<long, long>();
         private long _currentOffset = -1;
@@ -14,7 +14,7 @@ namespace EQueue.Broker
         public int QueueId { get; private set; }
         public long CurrentOffset { get { return _currentOffset; } }
 
-        public ConsumeQueue(string topic, int queueId)
+        public Queue(string topic, int queueId)
         {
             Topic = topic;
             QueueId = queueId;

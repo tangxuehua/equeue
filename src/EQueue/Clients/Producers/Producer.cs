@@ -58,6 +58,14 @@ namespace EQueue.Clients.Producers
             });
             return taskCompletionSource.Task;
         }
+        public SendResult Send(Message message, string arg, Broker.IQueueSelector queueSelector)
+        {
+            throw new System.NotImplementedException();
+        }
+        public Task<SendResult> SendAsync(Message message, string arg, Broker.IQueueSelector queueSelector)
+        {
+            throw new System.NotImplementedException();
+        }
 
         private RemotingRequest BuildSendMessageRequest(Message message, string arg)
         {

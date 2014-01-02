@@ -4,9 +4,9 @@ using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
-    public class ConsumeQueueHashSelector : IConsumeQueueSelector
+    public class QueueHashSelector : IQueueSelector
     {
-        public ConsumeQueue SelectQueue(IList<ConsumeQueue> totalQueues, Message message, string arg)
+        public Queue SelectQueue(IList<Queue> totalQueues, Message message, string arg)
         {
             var value = arg.GetHashCode();
             if (value < 0)
