@@ -24,5 +24,16 @@ namespace EQueue.Clients.Producers
             MessageQueue = messageQueue;
             QueueOffset = queueOffset;
         }
+
+        public override string ToString()
+        {
+            return string.Format("[SendStatus={0}, MessageId={1}, MessageQueue={2}, QueueOffset={3}, MessageOffset={4}, ErrorMessage={5}]",
+                SendStatus,
+                MessageId,
+                MessageQueue,
+                QueueOffset,
+                MessageOffset,
+                ErrorMessage);
+        }
     }
 }

@@ -9,29 +9,28 @@ using EQueue.Remoting.Responses;
 
 namespace EQueue.Clients.Producers
 {
-    public class Producer : IProducer
+    public class Producer
     {
-        private readonly string BrokerAddress;
-        private readonly IRemotingClient _remotingClient;
+        private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly ILogger _logger;
 
-        #region Constructors
-
-        public Producer(string brokerAddress)
+        public Producer(string brokerAddress = "127.0.0.1", int brokerPort = 5000)
         {
-            BrokerAddress = brokerAddress;
-            _remotingClient = ObjectContainer.Resolve<IRemotingClient>();
+            _remotingClient = new SocketRemotingClient(brokerAddress, brokerPort);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        #endregion
-
+        public Producer Start()
+        {
+            _remotingClient.Start();
+            return this;
+        }
         public SendResult Send(Message message, string arg)
         {
             var remotingRequest = BuildSendMessageRequest(message, arg);
-            var remotingResponse = _remotingClient.InvokeSync(BrokerAddress, remotingRequest, 3000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
             var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
             var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
             return new SendResult(sendStatus, response.MessageId, response.MessageOffset, response.MessageQueue, response.QueueOffset);
@@ -40,7 +39,7 @@ namespace EQueue.Clients.Producers
         {
             var remotingRequest = BuildSendMessageRequest(message, arg);
             var taskCompletionSource = new TaskCompletionSource<SendResult>();
-            _remotingClient.InvokeAsync(BrokerAddress, remotingRequest, 3000).ContinueWith((requestTask) =>
+            _remotingClient.InvokeAsync(remotingRequest, 3000).ContinueWith((requestTask) =>
             {
                 var remotingResponse = requestTask.Result;
                 if (remotingResponse != null)

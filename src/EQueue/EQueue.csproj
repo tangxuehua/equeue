@@ -51,17 +51,11 @@
     <Compile Include="Broker\IMessageStore.cs" />
     <Compile Include="Broker\MessageStoreResult.cs" />
     <Compile Include="Clients\Consumers\Consumer.cs" />
-    <Compile Include="Clients\Consumers\IConsumer.cs" />
-    <Compile Include="Clients\Consumers\IConsumerClient.cs" />
     <Compile Include="Clients\Consumers\IMessageHandler.cs" />
     <Compile Include="Clients\Consumers\IOffsetStore.cs" />
-    <Compile Include="Clients\Consumers\IPullMessageService.cs" />
     <Compile Include="Clients\Consumers\OffsetReadType.cs" />
     <Compile Include="Clients\Consumers\IAllocateMessageQueueStrategy.cs" />
     <Compile Include="Clients\Consumers\AverageAllocateMessageQueueStrategy.cs" />
-    <Compile Include="Clients\Consumers\ConsumerClient.cs" />
-    <Compile Include="Clients\Consumers\PullMessageService.cs" />
-    <Compile Include="Clients\Producers\IProducer.cs" />
     <Compile Include="Clients\Consumers\ConsumerSettings.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
     <Compile Include="Infrastructure\Extensions\ConcurrentDictionaryExtensions.cs" />
@@ -108,7 +102,6 @@
     <Compile Include="Remoting\Exceptions\RemotingSendRequestException.cs" />
     <Compile Include="Remoting\Exceptions\RemotingTimeoutException.cs" />
     <Compile Include="Remoting\IRemotingServer.cs" />
-    <Compile Include="Remoting\IRemotingClient.cs" />
     <Compile Include="Remoting\IRequestHandlerContext.cs" />
     <Compile Include="Remoting\IRequestProcessor.cs" />
     <Compile Include="Remoting\RemotingRequest.cs" />

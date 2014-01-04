@@ -4,22 +4,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using EQueue.Infrastructure;
+using EQueue.Infrastructure.Extensions;
 using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
+using EQueue.Infrastructure.Scheduling;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {
-    public class Consumer : IConsumer
+    public class Consumer
     {
         #region Private Members
 
         private long flowControlTimes1;
         private long flowControlTimes2;
+        private readonly IDictionary<string, TopicRouteData> _topicRouteDataDict = new Dictionary<string, TopicRouteData>();
         private readonly ConcurrentDictionary<MessageQueue, ProcessQueue> _processQueueDict = new ConcurrentDictionary<MessageQueue, ProcessQueue>();
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicSubscribeInfoDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
         private readonly List<string> _subscriptionTopics = new List<string>();
-        private readonly ConsumerClient _client;
+        private readonly BlockingCollection<PullRequest> _pullRequestBlockingQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
+        private readonly Worker _executePullReqeustWorker;
+        private readonly IScheduleService _scheduleService;
         private readonly INameServerService _nameServerService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly IOffsetStore _offsetStore;
@@ -30,6 +35,8 @@ namespace EQueue.Clients.Consumers
 
         #region Public Properties
 
+        public string Id { get; private set; }
+        public ConsumerSettings Settings { get; private set; }
         public string GroupName { get; private set; }
         public MessageModel MessageModel { get; private set; }
         public IEnumerable<string> SubscriptionTopics
@@ -44,16 +51,23 @@ namespace EQueue.Clients.Consumers
 
         #region Constructors
 
-        public Consumer(string groupName, MessageModel messageModel, ConsumerClient client, IMessageHandler messageHandler)
+        public Consumer(ConsumerSettings settings, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
+            : this(string.Format("{0}@{1}", "Consumer", Utils.GetLocalIPV4()), settings, groupName, messageModel, messageHandler)
         {
+        }
+        public Consumer(string id, ConsumerSettings settings, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
+        {
+            Id = id;
+            Settings = settings;
             GroupName = groupName;
             MessageModel = messageModel;
 
-            _client = client;
             _messageHandler = messageHandler;
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _nameServerService = ObjectContainer.Resolve<INameServerService>();
             _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
+            _executePullReqeustWorker = new Worker(ExecutePullRequest);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
 
             PullThresholdForQueue = 1000;
@@ -65,21 +79,37 @@ namespace EQueue.Clients.Consumers
 
         #region Public Methods
 
-        public void Subscribe(string topic)
+        public Consumer Start()
+        {
+            _scheduleService.ScheduleTask(Rebalance, 1000 * 10, 1000 * 10);
+            _scheduleService.ScheduleTask(UpdateAllTopicRouteData, 1000 * 30, 1000 * 30);
+            _scheduleService.ScheduleTask(SendHeartbeatToBroker, 1000 * 30, 1000 * 30);
+            _scheduleService.ScheduleTask(PersistOffset, 1000 * 5, 1000 * 5);
+            _executePullReqeustWorker.Start();
+            _logger.InfoFormat("Consumer [{0}] start OK, settings:{1}", Id, Settings);
+            return this;
+        }
+        public Consumer Subscribe(string topic)
         {
             if (!_subscriptionTopics.Contains(topic))
             {
                 _subscriptionTopics.Add(topic);
             }
+            return this;
         }
-        public void PullMessage(PullRequest pullRequest)
+
+        #endregion
+
+        #region Private Methods
+
+        private void PullMessage(PullRequest pullRequest)
         {
             var messageCount = pullRequest.ProcessQueue.GetMessageCount();
             var messageSpan = pullRequest.ProcessQueue.GetMessageSpan();
 
             if (messageCount >= PullThresholdForQueue)
             {
-                _client.EnqueuePullRequest(pullRequest, PullTimeDelayMillsWhenFlowControl);
+                EnqueuePullRequest(pullRequest, PullTimeDelayMillsWhenFlowControl);
                 if ((flowControlTimes1++ % 3000) == 0)
                 {
                     _logger.WarnFormat("The consumer message buffer is full, so do flow control, [messageCount={0},pullRequest={1},flowControlTimes={2}]", messageCount, pullRequest, flowControlTimes1);
@@ -87,7 +117,7 @@ namespace EQueue.Clients.Consumers
             }
             else if (messageSpan >= ConsumeMaxSpan)
             {
-                _client.EnqueuePullRequest(pullRequest, PullTimeDelayMillsWhenFlowControl);
+                EnqueuePullRequest(pullRequest, PullTimeDelayMillsWhenFlowControl);
                 if ((flowControlTimes2++ % 3000) == 0)
                 {
                     _logger.WarnFormat("The consumer message span too long, so do flow control, [messageSpan={0},pullRequest={1},flowControlTimes={2}]", messageSpan, pullRequest, flowControlTimes2);
@@ -98,66 +128,26 @@ namespace EQueue.Clients.Consumers
                 StartPullMessageTask(pullRequest).ContinueWith((task) => ProcessPullResult(pullRequest, task.Result));
             }
         }
-        public bool IsSubscribeTopicNeedUpdate(string topic)
+        private void EnqueuePullRequest(PullRequest pullRequest)
         {
-            return !_subscriptionTopics.Any(x => x == topic);
+            _pullRequestBlockingQueue.Add(pullRequest);
         }
-        public void UpdateTopicSubscribeInfo(string topic, IEnumerable<MessageQueue> messageQueues)
+        private void EnqueuePullRequest(PullRequest pullRequest, int millisecondsDelay)
         {
-            _topicSubscribeInfoDict[topic] = messageQueues.ToList();
+            Task.Factory.StartDelayedTask(millisecondsDelay, () => _pullRequestBlockingQueue.Add(pullRequest));
         }
-        public void Rebalance()
+        private void ExecutePullRequest()
         {
-            if (MessageModel == MessageModel.BroadCasting)
+            var pullRequest = _pullRequestBlockingQueue.Take();
+            try
             {
-                foreach (var topic in _subscriptionTopics)
-                {
-                    try
-                    {
-                        RebalanceBroadCasting(topic);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error("RebalanceBroadCasting has exception", ex);
-                    }
-                }
+                PullMessage(pullRequest);
             }
-            else if (MessageModel == MessageModel.Clustering)
+            catch (Exception ex)
             {
-                foreach (var topic in _subscriptionTopics)
-                {
-                    try
-                    {
-                        RebalanceClustering(topic);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error("RebalanceClustering has exception", ex);
-                    }
-                }
-            }
-
-            TruncateMessageQueueNotMyTopic();
-        }
-        public void PersistOffset()
-        {
-            foreach (var messageQueue in _processQueueDict.Keys)
-            {
-                try
-                {
-                    _offsetStore.Persist(messageQueue);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error("PersistOffset exception.", ex);
-                }
+                _logger.Error(string.Format("ExecutePullRequest exception. PullRequest: {0}.", pullRequest), ex);
             }
         }
-
-        #endregion
-
-        #region Private Methods
-
         private Task<PullResult> StartPullMessageTask(PullRequest pullRequest)
         {
             //TODO
@@ -168,7 +158,7 @@ namespace EQueue.Clients.Consumers
             pullRequest.NextOffset = pullResult.NextBeginOffset;
             pullRequest.ProcessQueue.AddMessages(pullResult.Messages);
             StartConsumeTask(pullRequest, pullResult);
-            _client.EnqueuePullRequest(pullRequest);
+            EnqueuePullRequest(pullRequest);
         }
         private void StartConsumeTask(PullRequest pullRequest, PullResult pullResult)
         {
@@ -219,7 +209,7 @@ namespace EQueue.Clients.Consumers
                 IEnumerable<MessageQueue> allocatedMessageQueues = new List<MessageQueue>();
                 try
                 {
-                    allocatedMessageQueues = _allocateMessageQueueStragegy.Allocate(_client.Id, messageQueueList, consumerClientIdList);
+                    allocatedMessageQueues = _allocateMessageQueueStragegy.Allocate(Id, messageQueueList, consumerClientIdList);
                 }
                 catch (Exception ex)
                 {
@@ -311,7 +301,7 @@ namespace EQueue.Clients.Consumers
         {
             foreach (var pullRequest in pullRequestList)
             {
-                _client.EnqueuePullRequest(pullRequest);
+                EnqueuePullRequest(pullRequest);
                 _logger.InfoFormat("doRebalance, consumerGroup:{0}, add a new pull request {1}", GroupName, pullRequest);
             }
         }
@@ -331,6 +321,120 @@ namespace EQueue.Clients.Consumers
 
             return offset;
         }
+        private void Rebalance()
+        {
+            if (MessageModel == MessageModel.BroadCasting)
+            {
+                foreach (var topic in _subscriptionTopics)
+                {
+                    try
+                    {
+                        RebalanceBroadCasting(topic);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error("RebalanceBroadCasting has exception", ex);
+                    }
+                }
+            }
+            else if (MessageModel == MessageModel.Clustering)
+            {
+                foreach (var topic in _subscriptionTopics)
+                {
+                    try
+                    {
+                        RebalanceClustering(topic);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error("RebalanceClustering has exception", ex);
+                    }
+                }
+            }
+
+            TruncateMessageQueueNotMyTopic();
+        }
+        private void PersistOffset()
+        {
+            foreach (var messageQueue in _processQueueDict.Keys)
+            {
+                try
+                {
+                    _offsetStore.Persist(messageQueue);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("PersistOffset exception.", ex);
+                }
+            }
+        }
+        private void SendHeartbeatToBroker()
+        {
+            var heartbeatData = new HeartbeatData(Id, new ConsumerData(GroupName, MessageModel, SubscriptionTopics));
+
+            try
+            {
+                //TODO
+                //this.mQClientAPIImpl.sendHearbeat(addr, heartbeatData, 3000);
+                _logger.InfoFormat("Send heart beat to broker[{0}] success, heartbeatData:[{1}]", Settings.BrokerAddress, heartbeatData);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("Send heart beat to broker exception", ex);
+            }
+        }
+
+        #region Update topic route data
+
+        private void UpdateAllTopicRouteData()
+        {
+            foreach (var topic in SubscriptionTopics)
+            {
+                UpdateTopicRouteData(topic);
+            }
+        }
+        private void UpdateTopicRouteData(string topic)
+        {
+            var topicRouteDataFromServer = GetTopicRouteDataFromServer(topic);
+            var topicRouteDataOnLocal = _topicRouteDataDict[topic];
+            var changed = IsTopicRouteDataChanged(topicRouteDataOnLocal, topicRouteDataFromServer);
+
+            if (!changed)
+            {
+                changed = IsNeedUpdateTopicRouteData(topic);
+            }
+
+            if (changed)
+            {
+                var consumeMessageQueues = new List<MessageQueue>();
+                for (var index = 0; index < topicRouteDataFromServer.ConsumeQueueCount; index++)
+                {
+                    consumeMessageQueues.Add(new MessageQueue(topic, index));
+                }
+
+                _topicSubscribeInfoDict[topic] = consumeMessageQueues.ToList();
+                _topicRouteDataDict[topic] = topicRouteDataFromServer;
+            }
+        }
+        private TopicRouteData GetTopicRouteDataFromServer(string topic)
+        {
+            //TODO
+            return null;
+        }
+        private bool IsTopicRouteDataChanged(TopicRouteData oldData, TopicRouteData newData)
+        {
+            return oldData != newData;
+        }
+        private bool IsNeedUpdateTopicRouteData(string topic)
+        {
+            if (!_subscriptionTopics.Any(x => x == topic))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        #endregion
 
         #endregion
     }

@@ -2,13 +2,19 @@
 {
     public class ConsumerSettings
     {
+        private static ConsumerSettings _default = new ConsumerSettings();
         public string BrokerAddress { get; set; }
+        public int BrokerPort { get; set; }
         public int UpdateTopicRouteDataInterval { get; set; }
         public int HeartbeatBrokerInterval { get; set; }
         public int PersistConsumerOffsetInterval { get; set; }
 
+        public static ConsumerSettings Default { get { return _default; } }
+
         public ConsumerSettings()
         {
+            BrokerAddress = "127.0.0.1";
+            BrokerPort = 5000;
             HeartbeatBrokerInterval = 1000 * 30;
             UpdateTopicRouteDataInterval = 1000 * 30;
             PersistConsumerOffsetInterval = 1000 * 5;

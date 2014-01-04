@@ -7,17 +7,17 @@ namespace EQueue.Protocols
     public class HeartbeatData
     {
         public string ClientId { get; private set; }
-        public IEnumerable<ConsumerData> ConsumerDatas { get; private set; }
+        public ConsumerData ConsumerData { get; private set; }
 
-        public HeartbeatData(string clientId, IEnumerable<ConsumerData> consumerDatas)
+        public HeartbeatData(string clientId, ConsumerData consumerData)
         {
             ClientId = clientId;
-            ConsumerDatas = consumerDatas;
+            ConsumerData = consumerData;
         }
 
         public override string ToString()
         {
-            return string.Format("[ClientId:{0}, ConsumerData:{1}]", ClientId, string.Join(",", ConsumerDatas));
+            return string.Format("[ClientId:{0}, ConsumerData:{1}]", ClientId, ConsumerData);
         }
     }
 }

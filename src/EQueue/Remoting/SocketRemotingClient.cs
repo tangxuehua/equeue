@@ -12,8 +12,10 @@ using EQueue.Remoting.Exceptions;
 
 namespace EQueue.Remoting
 {
-    public class SocketRemotingClient : IRemotingClient
+    public class SocketRemotingClient
     {
+        private readonly string _address;
+        private readonly int _port;
         private readonly ClientSocket _clientSocket;
         private readonly ConcurrentDictionary<long, ResponseFuture> _responseFutureDict;
         private readonly Dictionary<int, IRequestProcessor> _requestProcessorDict;
@@ -23,6 +25,8 @@ namespace EQueue.Remoting
 
         public SocketRemotingClient(string address = "127.0.0.1", int port = 5000)
         {
+            _address = address;
+            _port = port;
             _clientSocket = new ClientSocket();
             _responseFutureDict = new ConcurrentDictionary<long, ResponseFuture>();
             _requestProcessorDict = new Dictionary<int, IRequestProcessor>();
@@ -41,7 +45,7 @@ namespace EQueue.Remoting
         {
             _clientSocket.Shutdown();
         }
-        public RemotingResponse InvokeSync(string address, RemotingRequest request, int timeoutMillis)
+        public RemotingResponse InvokeSync(RemotingRequest request, int timeoutMillis)
         {
             var message = _binarySerializer.Serialize(request);
             var taskCompletionSource = new TaskCompletionSource<RemotingResponse>();
@@ -49,27 +53,27 @@ namespace EQueue.Remoting
             _responseFutureDict.TryAdd(request.Sequence, responseFuture);
             try
             {
-                _clientSocket.SendMessage(message, sendResult => SendMessageCallback(responseFuture, request, address, sendResult));
+                _clientSocket.SendMessage(message, sendResult => SendMessageCallback(responseFuture, request, _address, sendResult));
                 var response = taskCompletionSource.Task.WaitResult<RemotingResponse>(timeoutMillis);
                 if (response == null)
                 {
                     if (responseFuture.SendRequestSuccess)
                     {
-                        throw new RemotingTimeoutException(address, request, timeoutMillis);
+                        throw new RemotingTimeoutException(_address, request, timeoutMillis);
                     }
                     else
                     {
-                        throw new RemotingSendRequestException(address, request, responseFuture.SendException);
+                        throw new RemotingSendRequestException(_address, request, responseFuture.SendException);
                     }
                 }
                 return response;
             }
             catch (Exception ex)
             {
-                throw new RemotingSendRequestException(address, request, ex);
+                throw new RemotingSendRequestException(_address, request, ex);
             }
         }
-        public Task<RemotingResponse> InvokeAsync(string address, RemotingRequest request, int timeoutMillis)
+        public Task<RemotingResponse> InvokeAsync(RemotingRequest request, int timeoutMillis)
         {
             var message = _binarySerializer.Serialize(request);
             var taskCompletionSource = new TaskCompletionSource<RemotingResponse>();
@@ -77,16 +81,16 @@ namespace EQueue.Remoting
             _responseFutureDict.TryAdd(request.Sequence, responseFuture);
             try
             {
-                _clientSocket.SendMessage(message, sendResult => SendMessageCallback(responseFuture, request, address, sendResult));
+                _clientSocket.SendMessage(message, sendResult => SendMessageCallback(responseFuture, request, _address, sendResult));
             }
             catch (Exception ex)
             {
-                throw new RemotingSendRequestException(address, request, ex);
+                throw new RemotingSendRequestException(_address, request, ex);
             }
 
             return taskCompletionSource.Task;
         }
-        public void InvokeOneway(string address, RemotingRequest request, int timeoutMillis)
+        public void InvokeOneway(RemotingRequest request, int timeoutMillis)
         {
             request.IsOneway = true;
             try
@@ -96,7 +100,7 @@ namespace EQueue.Remoting
             }
             catch (Exception ex)
             {
-                throw new RemotingSendRequestException(address, request, ex);
+                throw new RemotingSendRequestException(_address, request, ex);
             }
         }
         public void RegisterRequestProcessor(int requestCode, IRequestProcessor requestProcessor)

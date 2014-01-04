@@ -16,7 +16,7 @@ namespace EQueue.Protocols
 
         public override string ToString()
         {
-            return string.Format("MessageQueue [Topic={0}, QueueId={1}]", Topic, QueueId);
+            return string.Format("[Topic={0}, QueueId={1}]", Topic, QueueId);
         }
     }
 }
