@@ -40,6 +40,8 @@
     <Compile Include="Broker\LongPolling\PullRequest.cs" />
     <Compile Include="Broker\LongPolling\PullRequestHoldService.cs" />
     <Compile Include="Broker\BrokerController.cs" />
+    <Compile Include="Broker\Processors\PullMessageRequestProcessor.cs" />
+    <Compile Include="Broker\Processors\SendMessageRequestProcessor.cs" />
     <Compile Include="Broker\Queue.cs" />
     <Compile Include="Broker\MessageService.cs" />
     <Compile Include="Broker\IMessageService.cs" />
