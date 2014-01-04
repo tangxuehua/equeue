@@ -49,7 +49,7 @@ namespace EQueue.Remoting
             _responseFutureDict.TryAdd(request.Sequence, responseFuture);
             try
             {
-                _clientSocket.SendMessage(message, x => responseFuture.SendRequestSuccess = true);
+                _clientSocket.SendMessage(message, sendResult => SendMessageCallback(responseFuture, request, address, sendResult));
                 var response = taskCompletionSource.Task.WaitResult<RemotingResponse>(timeoutMillis);
                 if (response == null)
                 {
@@ -77,16 +77,7 @@ namespace EQueue.Remoting
             _responseFutureDict.TryAdd(request.Sequence, responseFuture);
             try
             {
-                _clientSocket.SendMessage(message, sendResult =>
-                {
-                    responseFuture.SendRequestSuccess = sendResult.Success;
-                    if (!sendResult.Success)
-                    {
-                        responseFuture.CompleteRequestTask(null);
-                        _responseFutureDict.Remove(request.Sequence);
-                        _logger.ErrorFormat("Send request [{0}] to channel <{1}> failed, exception:{2}", request, address, sendResult.Exception);
-                    }
-                });
+                _clientSocket.SendMessage(message, sendResult => SendMessageCallback(responseFuture, request, address, sendResult));
             }
             catch (Exception ex)
             {
@@ -137,6 +128,17 @@ namespace EQueue.Remoting
             {
                 _responseFutureDict.Remove(request.Sequence);
                 _logger.WarnFormat("Removed timeout request:{0}", request);
+            }
+        }
+        private void SendMessageCallback(ResponseFuture responseFuture, RemotingRequest request, string address, SendResult sendResult)
+        {
+            responseFuture.SendRequestSuccess = sendResult.Success;
+            responseFuture.SendException = sendResult.Exception;
+            if (!sendResult.Success)
+            {
+                responseFuture.CompleteRequestTask(null);
+                _responseFutureDict.Remove(request.Sequence);
+                _logger.ErrorFormat("Send request [{0}] to channel <{1}> failed, exception:{2}", request, address, sendResult.Exception);
             }
         }
     }
