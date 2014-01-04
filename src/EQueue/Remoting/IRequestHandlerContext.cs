@@ -1,7 +1,9 @@
-﻿namespace EQueue.Remoting
+﻿using System;
+
+namespace EQueue.Remoting
 {
     public interface IRequestHandlerContext
     {
-        Channel Channel { get; }
+        Action<RemotingResponse> SendRemotingResponse { get; }
     }
 }

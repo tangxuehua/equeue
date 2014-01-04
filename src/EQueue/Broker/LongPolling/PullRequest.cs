@@ -9,11 +9,11 @@ namespace EQueue.Broker.LongPolling
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
         public long QueueOffset { get; private set; }
-        public Channel ClientChannel { get; private set; }
+        public IChannel ClientChannel { get; private set; }
         public DateTime SuspendTime { get; private set; }
         public long TimeoutMilliseconds { get; private set; }
 
-        public PullRequest(string consumerGroup, string topic, int queueId, long queueOffset, Channel clientChannel, DateTime suspendTime, long timeoutMilliseconds)
+        public PullRequest(string consumerGroup, string topic, int queueId, long queueOffset, IChannel clientChannel, DateTime suspendTime, long timeoutMilliseconds)
         {
             ConsumerGroup = consumerGroup;
             Topic = topic;

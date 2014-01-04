@@ -102,7 +102,7 @@
     <Compile Include="Clients\Consumers\PullStatus.cs" />
     <Compile Include="Clients\Producers\SendResult.cs" />
     <Compile Include="Clients\Producers\SendStatus.cs" />
-    <Compile Include="Remoting\Channel.cs" />
+    <Compile Include="Remoting\IChannel.cs" />
     <Compile Include="Remoting\Exceptions\RemotingSendRequestException.cs" />
     <Compile Include="Remoting\Exceptions\RemotingTimeoutException.cs" />
     <Compile Include="Remoting\IRemotingServer.cs" />
@@ -118,6 +118,8 @@
     <Compile Include="Remoting\ResponseFuture.cs" />
     <Compile Include="Remoting\Responses\SendMessageResponse.cs" />
     <Compile Include="Remoting\SocketRemotingClient.cs" />
+    <Compile Include="Remoting\SocketRemotingServer.cs" />
+    <Compile Include="Remoting\SocketRequestHandlerContext.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />

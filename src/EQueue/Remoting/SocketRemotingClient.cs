@@ -21,7 +21,7 @@ namespace EQueue.Remoting
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
 
-        public SocketRemotingClient(string address, int port)
+        public SocketRemotingClient(string address = "127.0.0.1", int port = 5000)
         {
             _clientSocket = new ClientSocket();
             _responseFutureDict = new ConcurrentDictionary<long, ResponseFuture>();
@@ -106,12 +106,15 @@ namespace EQueue.Remoting
 
         private void ProcessRemotingResponse(byte[] responseMessage)
         {
-            var remotingResponse = _binarySerializer.Deserialize<RemotingResponse>(responseMessage);
-            ResponseFuture responseFuture;
-            if (_responseFutureDict.TryGetValue(remotingResponse.Sequence, out responseFuture))
+            Task.Factory.StartNew(() =>
             {
-                responseFuture.CompleteRequestTask(remotingResponse);
-            }
+                var remotingResponse = _binarySerializer.Deserialize<RemotingResponse>(responseMessage);
+                ResponseFuture responseFuture;
+                if (_responseFutureDict.TryGetValue(remotingResponse.Sequence, out responseFuture))
+                {
+                    responseFuture.CompleteRequestTask(remotingResponse);
+                }
+            });
         }
         private void ScanTimeoutRequest()
         {

@@ -10,7 +10,7 @@ namespace EQueue.Broker.Client
     {
         private string _groupName;
         private MessageModel _messageModel;
-        private ConcurrentDictionary<Channel, ClientChannelInfo> _clientChannelDict = new ConcurrentDictionary<Channel, ClientChannelInfo>();
+        private ConcurrentDictionary<IChannel, ClientChannelInfo> _clientChannelDict = new ConcurrentDictionary<IChannel, ClientChannelInfo>();
 
         public ConsumerGroupInfo(string groupName, MessageModel messageModel)
         {
@@ -18,7 +18,7 @@ namespace EQueue.Broker.Client
             _messageModel = messageModel;
         }
 
-        public IEnumerable<Channel> GetAllChannels()
+        public IEnumerable<IChannel> GetAllChannels()
         {
             return _clientChannelDict.Keys.ToArray();
         }
