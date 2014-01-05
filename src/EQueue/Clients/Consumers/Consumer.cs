@@ -19,6 +19,7 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Members
 
+        private const int PullRequestTimeoutMilliseconds = 30 * 1000;
         private long flowControlTimes1;
         private long flowControlTimes2;
         private readonly SocketRemotingClient _remotingClient;
@@ -167,7 +168,7 @@ namespace EQueue.Clients.Consumers
             var data = _binarySerializer.Serialize(request);
             var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);
             var taskCompletionSource = new TaskCompletionSource<PullResult>();
-            _remotingClient.InvokeAsync(remotingRequest, 3000).ContinueWith((requestTask) =>
+            _remotingClient.InvokeAsync(remotingRequest, PullRequestTimeoutMilliseconds).ContinueWith((requestTask) =>
             {
                 var remotingResponse = requestTask.Result;
                 if (remotingResponse != null)

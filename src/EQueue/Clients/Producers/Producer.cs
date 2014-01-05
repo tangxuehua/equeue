@@ -11,6 +11,7 @@ namespace EQueue.Clients.Producers
 {
     public class Producer
     {
+        private const int SendMessageTimeoutMilliseconds = 3 * 1000;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly ILogger _logger;
@@ -30,7 +31,7 @@ namespace EQueue.Clients.Producers
         public SendResult Send(Message message, string arg)
         {
             var remotingRequest = BuildSendMessageRequest(message, arg);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, SendMessageTimeoutMilliseconds);
             var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
             var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
             return new SendResult(sendStatus, response.MessageId, response.MessageOffset, response.MessageQueue, response.QueueOffset);
@@ -39,7 +40,7 @@ namespace EQueue.Clients.Producers
         {
             var remotingRequest = BuildSendMessageRequest(message, arg);
             var taskCompletionSource = new TaskCompletionSource<SendResult>();
-            _remotingClient.InvokeAsync(remotingRequest, 3000).ContinueWith((requestTask) =>
+            _remotingClient.InvokeAsync(remotingRequest, SendMessageTimeoutMilliseconds).ContinueWith((requestTask) =>
             {
                 var remotingResponse = requestTask.Result;
                 if (remotingResponse != null)

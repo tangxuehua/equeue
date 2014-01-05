@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
+using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Scheduling;
 
 namespace EQueue.Broker.LongPolling
@@ -13,16 +14,15 @@ namespace EQueue.Broker.LongPolling
         private readonly IScheduleService _scheduleService;
         private readonly IMessageService _messageService;
 
-        public PullRequestHoldService(IScheduleService scheduleService, IMessageService messageService)
+        public PullRequestHoldService()
         {
-            _scheduleService = scheduleService;
-            _messageService = messageService;
-
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
+            _messageService = ObjectContainer.Resolve<IMessageService>();
         }
 
         public void SuspendPullRequest(PullRequest pullRequest)
         {
-            var key = BuildKey(pullRequest.Topic, pullRequest.QueueId);
+            var key = BuildKey(pullRequest.PullMessageRequest.MessageQueue.Topic, pullRequest.PullMessageRequest.MessageQueue.QueueId);
             _queueRequestDict.AddOrUpdate(key,
             (x) =>
             {
@@ -70,9 +70,13 @@ namespace EQueue.Broker.LongPolling
                 PullRequest request;
                 while (queue.TryDequeue(out request))
                 {
-                    if (queueOffset >= request.QueueOffset)
+                    if (queueOffset >= request.PullMessageRequest.QueueOffset)
                     {
-                        //TODO, execute pull request
+                        request.NewMessageArrivedAction(request);
+                    }
+                    else if (DateTime.Now > request.SuspendTime.AddMilliseconds(request.SuspendMilliseconds))
+                    {
+                        request.SuspendTimeoutAction(request);
                     }
                     else
                     {

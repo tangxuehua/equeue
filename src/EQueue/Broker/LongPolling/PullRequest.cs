@@ -1,27 +1,35 @@
 ﻿using System;
 using EQueue.Remoting;
+using EQueue.Remoting.Requests;
 
 namespace EQueue.Broker.LongPolling
 {
     public class PullRequest
     {
-        public string ConsumerGroup { get; set; }
-        public string Topic { get; private set; }
-        public int QueueId { get; private set; }
-        public long QueueOffset { get; private set; }
-        public IChannel ClientChannel { get; private set; }
+        public long RemotingRequestSequence { get; private set; }
+        public PullMessageRequest PullMessageRequest { get; private set; }
+        public IRequestHandlerContext RequestHandlerContext { get; private set; }
         public DateTime SuspendTime { get; private set; }
-        public long TimeoutMilliseconds { get; private set; }
+        public long SuspendMilliseconds { get; private set; }
+        public Action<PullRequest> NewMessageArrivedAction { get; private set; }
+        public Action<PullRequest> SuspendTimeoutAction { get; private set; }
 
-        public PullRequest(string consumerGroup, string topic, int queueId, long queueOffset, IChannel clientChannel, DateTime suspendTime, long timeoutMilliseconds)
+        public PullRequest(
+            long remotingRequestSequence,
+            PullMessageRequest pullMessageRequest,
+            IRequestHandlerContext requestHandlerContext,
+            DateTime suspendTime,
+            long suspendMilliseconds,
+            Action<PullRequest> newMessageArrivedAction,
+            Action<PullRequest> suspendTimeoutAction)
         {
-            ConsumerGroup = consumerGroup;
-            Topic = topic;
-            QueueId = queueId;
-            QueueOffset = queueOffset;
-            ClientChannel = clientChannel;
+            RemotingRequestSequence = remotingRequestSequence;
+            PullMessageRequest = pullMessageRequest;
+            RequestHandlerContext = requestHandlerContext;
             SuspendTime = suspendTime;
-            TimeoutMilliseconds = timeoutMilliseconds;
+            SuspendMilliseconds = suspendMilliseconds;
+            NewMessageArrivedAction = newMessageArrivedAction;
+            SuspendTimeoutAction = suspendTimeoutAction;
         }
     }
 }

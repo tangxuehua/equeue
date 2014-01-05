@@ -2,6 +2,6 @@
 {
     public interface IRequestProcessor
     {
-        RemotingResponse ProcessRequest(IRequestHandlerContext requestContext, RemotingRequest request);
+        RemotingResponse ProcessRequest(IRequestHandlerContext context, RemotingRequest request);
     }
 }

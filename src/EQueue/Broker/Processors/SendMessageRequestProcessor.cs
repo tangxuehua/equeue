@@ -21,7 +21,7 @@ namespace EQueue.Broker.Processors
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        public RemotingResponse ProcessRequest(IRequestHandlerContext requestContext, RemotingRequest request)
+        public RemotingResponse ProcessRequest(IRequestHandlerContext context, RemotingRequest request)
         {
             var sendMessageRequest = _binarySerializer.Deserialize<SendMessageRequest>(request.Body);
             var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.Arg);
