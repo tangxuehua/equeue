@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using EQueue.Broker.Processors;
+﻿using EQueue.Broker.Processors;
 using EQueue.Infrastructure.IoC;
 using EQueue.Remoting;
 
@@ -19,10 +15,11 @@ namespace EQueue.Broker
             _remotingServer = ObjectContainer.Resolve<IRemotingServer>();
         }
 
-        public void Initialize()
+        public BrokerController Initialize()
         {
             _remotingServer.RegisterRequestProcessor((int)RequestCode.SendMessage, new SendMessageRequestProcessor());
             _remotingServer.RegisterRequestProcessor((int)RequestCode.PullMessage, new PullMessageRequestProcessor());
+            return this;
         }
         public void Start()
         {

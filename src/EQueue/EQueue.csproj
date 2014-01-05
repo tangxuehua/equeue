@@ -52,6 +52,7 @@
     <Compile Include="Broker\MessageStoreResult.cs" />
     <Compile Include="Clients\Consumers\Consumer.cs" />
     <Compile Include="Clients\Consumers\IMessageHandler.cs" />
+    <Compile Include="Clients\Consumers\InMemoryOffsetStore.cs" />
     <Compile Include="Clients\Consumers\IOffsetStore.cs" />
     <Compile Include="Clients\Consumers\OffsetReadType.cs" />
     <Compile Include="Clients\Consumers\IAllocateMessageQueueStrategy.cs" />

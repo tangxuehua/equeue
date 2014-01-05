@@ -2,6 +2,7 @@
 using System.Text;
 using EQueue;
 using EQueue.Autofac;
+using EQueue.Broker;
 using EQueue.JsonNet;
 using EQueue.Log4Net;
 using EQueue.Protocols;
@@ -13,6 +14,8 @@ namespace QuickStart.BrokerServer
         static void Main(string[] args)
         {
             InitializeEQueue();
+            new BrokerController().Initialize().Start();
+            Console.ReadLine();
         }
 
         static void InitializeEQueue()

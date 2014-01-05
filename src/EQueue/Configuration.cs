@@ -42,6 +42,9 @@ namespace EQueue
         {
             ObjectContainer.Register<IScheduleService, ScheduleService>();
             ObjectContainer.Register<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
+            ObjectContainer.Register<IQueueSelector, QueueHashSelector>();
+            ObjectContainer.Register<IOffsetStore, InMemoryOffsetStore>();
+            ObjectContainer.Register<IMessageStore, InMemoryMessageStore>();
             ObjectContainer.Register<IMessageService, MessageService>();
             return this;
         }
