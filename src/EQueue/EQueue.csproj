@@ -80,8 +80,6 @@
     <Compile Include="Protocols\ConsumerData.cs" />
     <Compile Include="Infrastructure\Scheduling\IScheduleService.cs" />
     <Compile Include="Infrastructure\IoC\IObjectContainer.cs" />
-    <Compile Include="Infrastructure\Logging\EmptyLogger.cs" />
-    <Compile Include="Infrastructure\Logging\EmptyLoggerFactory.cs" />
     <Compile Include="Infrastructure\Logging\ILogger.cs" />
     <Compile Include="Infrastructure\Logging\ILoggerFactory.cs" />
     <Compile Include="Protocols\HeartbeatData.cs" />

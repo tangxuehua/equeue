@@ -28,9 +28,9 @@ namespace QuickStart.ProducerClient
             Configuration
                 .Create()
                 .UseAutofac()
-                .RegisterFrameworkComponents()
                 .UseLog4Net()
-                .UseJsonNet();
+                .UseJsonNet()
+                .RegisterFrameworkComponents();
         }
     }
 }

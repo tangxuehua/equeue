@@ -27,9 +27,9 @@ namespace QuickStart.ConsumerClient
             Configuration
                 .Create()
                 .UseAutofac()
-                .RegisterFrameworkComponents()
                 .UseLog4Net()
-                .UseJsonNet();
+                .UseJsonNet()
+                .RegisterFrameworkComponents();
         }
     }
 

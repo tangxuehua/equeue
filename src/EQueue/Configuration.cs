@@ -40,7 +40,6 @@ namespace EQueue
 
         public Configuration RegisterFrameworkComponents()
         {
-            ObjectContainer.Register<ILoggerFactory, EmptyLoggerFactory>();
             ObjectContainer.Register<IScheduleService, ScheduleService>();
             ObjectContainer.Register<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             ObjectContainer.Register<IMessageService, MessageService>();
