@@ -29,7 +29,7 @@ namespace EQueue.Log4Net
             }
             else
             {
-                BasicConfigurator.Configure(new TraceAppender { Layout = new PatternLayout() });
+                BasicConfigurator.Configure(new ConsoleAppender { Layout = new PatternLayout() });
             }
         }
         /// <summary>Create a new Log4NetLogger instance.

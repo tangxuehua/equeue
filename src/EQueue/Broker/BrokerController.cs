@@ -7,12 +7,12 @@ namespace EQueue.Broker
     public class BrokerController
     {
         private readonly IMessageService _messageService;
-        private readonly IRemotingServer _remotingServer;
+        private readonly SocketRemotingServer _remotingServer;
 
         public BrokerController()
         {
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _remotingServer = ObjectContainer.Resolve<IRemotingServer>();
+            _remotingServer = new SocketRemotingServer();
         }
 
         public BrokerController Initialize()

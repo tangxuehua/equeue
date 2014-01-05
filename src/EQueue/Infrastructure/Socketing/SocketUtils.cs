@@ -14,9 +14,8 @@ namespace EQueue.Infrastructure.Socketing
             }
             return BitConverter.ToInt32(data, 0);
         }
-        public static byte[] BuildMessage(string content, Encoding encoding)
+        public static byte[] BuildMessage(byte[] data)
         {
-            var data = encoding.GetBytes(content);
             var header = BitConverter.GetBytes(data.Length);
             var message = new byte[header.Length + data.Length];
             header.CopyTo(message, 0);

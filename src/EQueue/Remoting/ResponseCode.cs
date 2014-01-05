@@ -2,5 +2,6 @@
 {
     public enum ResponseCode
     {
+        Success = 100
     }
 }

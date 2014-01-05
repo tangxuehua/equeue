@@ -64,7 +64,6 @@
     <Compile Include="Infrastructure\Extensions\TaskExtensions.cs" />
     <Compile Include="Infrastructure\IBinarySerializer.cs" />
     <Compile Include="Infrastructure\IJsonSerializer.cs" />
-    <Compile Include="Infrastructure\INameServerService.cs" />
     <Compile Include="Infrastructure\IoC\ComponentAttribute.cs" />
     <Compile Include="Infrastructure\JsonBasedBinarySerializer.cs" />
     <Compile Include="Infrastructure\ObjectId.cs" />
@@ -102,7 +101,6 @@
     <Compile Include="Remoting\IChannel.cs" />
     <Compile Include="Remoting\Exceptions\RemotingSendRequestException.cs" />
     <Compile Include="Remoting\Exceptions\RemotingTimeoutException.cs" />
-    <Compile Include="Remoting\IRemotingServer.cs" />
     <Compile Include="Remoting\IRequestHandlerContext.cs" />
     <Compile Include="Remoting\IRequestProcessor.cs" />
     <Compile Include="Remoting\RemotingRequest.cs" />

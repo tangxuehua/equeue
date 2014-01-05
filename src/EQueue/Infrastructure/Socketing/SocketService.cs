@@ -15,15 +15,16 @@ namespace EQueue.Infrastructure.Socketing
         }
         public void SendMessage(Socket targetSocket, byte[] message, Action<SendResult> messageSentCallback)
         {
-            if (message.Length > 0)
+            var wrappedMessage = SocketUtils.BuildMessage(message);
+            if (wrappedMessage.Length > 0)
             {
                 targetSocket.BeginSend(
-                    message,
+                    wrappedMessage,
                     0,
-                    message.Length,
-                    0,
+                    wrappedMessage.Length,
+                    SocketFlags.None,
                     new AsyncCallback(SendCallback),
-                    new SendContext(targetSocket, message, messageSentCallback));
+                    new SendContext(targetSocket, wrappedMessage, messageSentCallback));
             }
         }
         public void ReceiveMessage(Socket sourceSocket, Action<byte[]> messageReceivedCallback)

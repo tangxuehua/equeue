@@ -7,7 +7,7 @@ namespace EQueue.Remoting
         private static long _sequenceCounter;
 
         public int Code { get; private set; }
-        public long Sequence { get; private set; }
+        public long Sequence { get; set; }
         public byte[] Body { get; private set; }
 
         public RemotingMessage(int code, byte[] body)

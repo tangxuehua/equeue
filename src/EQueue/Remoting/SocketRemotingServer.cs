@@ -7,7 +7,7 @@ using EQueue.Infrastructure.Socketing;
 
 namespace EQueue.Remoting
 {
-    public class SocketRemotingServer : IRemotingServer
+    public class SocketRemotingServer
     {
         private readonly ServerSocket _serverSocket;
         private readonly Dictionary<int, IRequestProcessor> _requestProcessorDict;

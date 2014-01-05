@@ -114,7 +114,7 @@ namespace EQueue.Remoting
             {
                 var remotingResponse = _binarySerializer.Deserialize<RemotingResponse>(responseMessage);
                 ResponseFuture responseFuture;
-                if (_responseFutureDict.TryGetValue(remotingResponse.Sequence, out responseFuture))
+                if (_responseFutureDict.TryRemove(remotingResponse.Sequence, out responseFuture))
                 {
                     responseFuture.CompleteRequestTask(remotingResponse);
                 }

@@ -16,10 +16,16 @@ namespace QuickStart.ProducerClient
             InitializeEQueue();
 
             var producer = new Producer().Start();
-            //var message1 = new Message("topic1", Encoding.UTF8.GetBytes("Message1"));
-            //var message2 = new Message("topic2", Encoding.UTF8.GetBytes("Message2"));
-            //producer.Send(message1, "1");
-            //producer.Send(message2, "2");
+
+            for (var index = 1; index <= 10; index++)
+            {
+                producer.SendAsync(new Message("topic1", Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(task =>
+                {
+                    Console.WriteLine(task.Result);
+                });
+            }
+
+            Console.WriteLine("Producer started...");
             Console.ReadLine();
         }
 

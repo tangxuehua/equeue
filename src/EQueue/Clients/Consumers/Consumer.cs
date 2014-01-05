@@ -25,7 +25,6 @@ namespace EQueue.Clients.Consumers
         private readonly BlockingCollection<PullRequest> _pullRequestBlockingQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
         private readonly Worker _executePullReqeustWorker;
         private readonly IScheduleService _scheduleService;
-        private readonly INameServerService _nameServerService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly IOffsetStore _offsetStore;
         private readonly IMessageHandler _messageHandler;
@@ -64,7 +63,6 @@ namespace EQueue.Clients.Consumers
 
             _messageHandler = messageHandler;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _nameServerService = ObjectContainer.Resolve<INameServerService>();
             _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
             _executePullReqeustWorker = new Worker(ExecutePullRequest);
@@ -200,7 +198,7 @@ namespace EQueue.Clients.Consumers
             if (_topicSubscribeInfoDict.ContainsKey(topic))
             {
                 var messageQueues = _topicSubscribeInfoDict[topic];
-                var consumerIds = _nameServerService.FindConsumers(GroupName);
+                var consumerIds = FindConsumers(GroupName);
                 var messageQueueList = messageQueues.ToList();
                 var consumerClientIdList = consumerIds.ToList();
                 messageQueueList.Sort();
@@ -227,6 +225,10 @@ namespace EQueue.Clients.Consumers
             {
                 _logger.WarnFormat("DoRebalance of clustering, consumerGroup: {0}, but the topic[{1}] not exist.", GroupName, topic);
             }
+        }
+        private IEnumerable<string> FindConsumers(string consumerGroup)
+        {
+            return new string[0];
         }
         private bool UpdateProcessQueueDict(string topic, IList<MessageQueue> messageQueues)
         {

@@ -16,5 +16,10 @@ namespace EQueue.Remoting.Responses
             MessageQueue = messageQueue;
             QueueOffset = queueOffset;
         }
+
+        public override string ToString()
+        {
+            return string.Format("[MessageId={0}, MessageOffset={1}, MessageQueue={2}, QueueOffset={3}]", MessageId, MessageOffset, MessageQueue, QueueOffset);
+        }
     }
 }
