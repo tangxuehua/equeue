@@ -66,6 +66,7 @@
     <Compile Include="Infrastructure\IJsonSerializer.cs" />
     <Compile Include="Infrastructure\INameServerService.cs" />
     <Compile Include="Infrastructure\IoC\ComponentAttribute.cs" />
+    <Compile Include="Infrastructure\JsonBasedBinarySerializer.cs" />
     <Compile Include="Infrastructure\ObjectId.cs" />
     <Compile Include="Infrastructure\Socketing\ClientSocket.cs" />
     <Compile Include="Infrastructure\Socketing\SendResult.cs" />

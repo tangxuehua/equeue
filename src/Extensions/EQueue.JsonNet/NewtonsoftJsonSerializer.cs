@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using EQueue.Infrastructure;
 using Newtonsoft.Json;
@@ -14,7 +15,6 @@ namespace EQueue.JsonNet
     {
         private static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
         {
-            TypeNameHandling = TypeNameHandling.All,
             Converters = new List<JsonConverter> { new IsoDateTimeConverter() },
             ContractResolver = new SisoJsonDefaultContractResolver()
         };
@@ -26,13 +26,14 @@ namespace EQueue.JsonNet
         {
             return obj == null ? null : JsonConvert.SerializeObject(obj, Settings);
         }
-        /// <summary>Deserialize a json string to object.
+        /// <summary>Deserialize a json string to an object.
         /// </summary>
         /// <param name="value"></param>
+        /// <param name="type"></param>
         /// <returns></returns>
-        public object Deserialize(string value)
+        public object Deserialize(string value, Type type)
         {
-            return JsonConvert.DeserializeObject(value, Settings);
+            return JsonConvert.DeserializeObject(value, type);
         }
         /// <summary>Deserialize a json string to a strong type object.
         /// </summary>

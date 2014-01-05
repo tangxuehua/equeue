@@ -1,6 +1,7 @@
 ﻿using System;
 using EQueue.Broker;
 using EQueue.Clients.Consumers;
+using EQueue.Infrastructure;
 using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
 using EQueue.Infrastructure.Scheduling;
@@ -40,6 +41,7 @@ namespace EQueue
 
         public Configuration RegisterFrameworkComponents()
         {
+            ObjectContainer.Register<IBinarySerializer, JsonBasedBinarySerializer>();
             ObjectContainer.Register<IScheduleService, ScheduleService>();
             ObjectContainer.Register<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             ObjectContainer.Register<IQueueSelector, QueueHashSelector>();
