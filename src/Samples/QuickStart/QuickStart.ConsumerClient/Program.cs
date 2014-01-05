@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Text;
+using EQueue;
+using EQueue.Autofac;
 using EQueue.Clients.Consumers;
+using EQueue.JsonNet;
+using EQueue.Log4Net;
 using EQueue.Protocols;
 
 namespace QuickStart.ConsumerClient
@@ -9,11 +13,23 @@ namespace QuickStart.ConsumerClient
     {
         static void Main(string[] args)
         {
+            InitializeEQueue();
+
             var consumer = new Consumer(ConsumerSettings.Default, "group1", MessageModel.Clustering, new MessageHandler())
                 .Subscribe("topic1")
                 .Subscribe("topic2")
                 .Start();
             Console.ReadLine();
+        }
+
+        static void InitializeEQueue()
+        {
+            Configuration
+                .Create()
+                .UseAutofac()
+                .RegisterFrameworkComponents()
+                .UseLog4Net()
+                .UseJsonNet();
         }
     }
 

@@ -4,16 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{D93C0587-356F-4243-A039-F998F36D4DA6}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <ProjectGuid>{C69CF480-4B6B-4006-8C17-43054C1EBE1C}</ProjectGuid>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>QuickStart.Producer</RootNamespace>
-    <AssemblyName>QuickStart.Producer</AssemblyName>
+    <RootNamespace>EQueue.Log4Net</RootNamespace>
+    <AssemblyName>EQueue.Log4Net</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -23,7 +22,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -32,14 +30,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Autofac">
-      <HintPath>..\..\..\packages\Autofac.3.3.0\lib\net40\Autofac.dll</HintPath>
-    </Reference>
     <Reference Include="log4net">
-      <HintPath>..\..\..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\packages\Newtonsoft.Json.5.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -47,25 +39,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
+    <Compile Include="ConfigurationExtensions.cs" />
+    <Compile Include="Log4NetLogger.cs" />
+    <Compile Include="Log4NetLoggerFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\EQueue\EQueue.csproj">
+    <ProjectReference Include="..\..\EQueue\EQueue.csproj">
       <Project>{ce352ffb-7034-4f71-8d93-78eced099125}</Project>
       <Name>EQueue</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\Extensions\EQueue.Autofac\EQueue.Autofac.csproj">
-      <Project>{1c523165-5cc7-497a-99d0-9e59e3110c54}</Project>
-      <Name>EQueue.Autofac</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\Extensions\EQueue.JsonNet\EQueue.JsonNet.csproj">
-      <Project>{a118c5a4-52c3-4659-860a-31ee526b0877}</Project>
-      <Name>EQueue.JsonNet</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\Extensions\EQueue.Log4Net\EQueue.Log4Net.csproj">
-      <Project>{c69cf480-4b6b-4006-8c17-43054c1ebe1c}</Project>
-      <Name>EQueue.Log4Net</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

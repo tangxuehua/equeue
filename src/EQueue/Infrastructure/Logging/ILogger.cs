@@ -6,9 +6,6 @@ namespace EQueue.Infrastructure.Logging
     /// </summary>
     public interface ILogger
     {
-        /// <summary>Indicates whether the logger can write debug level log messages.
-        /// </summary>
-        bool IsDebugEnabled { get; }
         /// <summary>Write a debug level log message.
         /// </summary>
         /// <param name="message"></param>

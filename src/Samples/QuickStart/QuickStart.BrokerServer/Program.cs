@@ -1,7 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
+using EQueue;
+using EQueue.Autofac;
+using EQueue.JsonNet;
+using EQueue.Log4Net;
+using EQueue.Protocols;
 
 namespace QuickStart.BrokerServer
 {
@@ -9,6 +12,17 @@ namespace QuickStart.BrokerServer
     {
         static void Main(string[] args)
         {
+            InitializeEQueue();
+        }
+
+        static void InitializeEQueue()
+        {
+            Configuration
+                .Create()
+                .UseAutofac()
+                .RegisterFrameworkComponents()
+                .UseLog4Net()
+                .UseJsonNet();
         }
     }
 }

@@ -32,11 +32,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Autofac">
+      <HintPath>..\..\..\packages\Autofac.3.3.0\lib\net40\Autofac.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net">
+      <HintPath>..\..\..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\..\packages\Newtonsoft.Json.5.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
@@ -49,6 +55,21 @@
       <Project>{ce352ffb-7034-4f71-8d93-78eced099125}</Project>
       <Name>EQueue</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\Extensions\EQueue.Autofac\EQueue.Autofac.csproj">
+      <Project>{1c523165-5cc7-497a-99d0-9e59e3110c54}</Project>
+      <Name>EQueue.Autofac</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Extensions\EQueue.JsonNet\EQueue.JsonNet.csproj">
+      <Project>{a118c5a4-52c3-4659-860a-31ee526b0877}</Project>
+      <Name>EQueue.JsonNet</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Extensions\EQueue.Log4Net\EQueue.Log4Net.csproj">
+      <Project>{c69cf480-4b6b-4006-8c17-43054c1ebe1c}</Project>
+      <Name>EQueue.Log4Net</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -58,6 +58,7 @@
     <Compile Include="Clients\Consumers\AverageAllocateMessageQueueStrategy.cs" />
     <Compile Include="Clients\Consumers\ConsumerSettings.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
+    <Compile Include="Configuration.cs" />
     <Compile Include="Infrastructure\Extensions\ConcurrentDictionaryExtensions.cs" />
     <Compile Include="Infrastructure\Extensions\TaskExtensions.cs" />
     <Compile Include="Infrastructure\IBinarySerializer.cs" />
