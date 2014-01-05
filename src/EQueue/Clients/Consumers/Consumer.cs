@@ -9,6 +9,9 @@ using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
 using EQueue.Infrastructure.Scheduling;
 using EQueue.Protocols;
+using EQueue.Remoting;
+using EQueue.Remoting.Requests;
+using EQueue.Remoting.Responses;
 
 namespace EQueue.Clients.Consumers
 {
@@ -18,6 +21,8 @@ namespace EQueue.Clients.Consumers
 
         private long flowControlTimes1;
         private long flowControlTimes2;
+        private readonly SocketRemotingClient _remotingClient;
+        private readonly IBinarySerializer _binarySerializer;
         private readonly IDictionary<string, TopicRouteData> _topicRouteDataDict = new Dictionary<string, TopicRouteData>();
         private readonly ConcurrentDictionary<MessageQueue, ProcessQueue> _processQueueDict = new ConcurrentDictionary<MessageQueue, ProcessQueue>();
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicSubscribeInfoDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
@@ -45,6 +50,7 @@ namespace EQueue.Clients.Consumers
         public int PullThresholdForQueue { get; set; }
         public int ConsumeMaxSpan { get; set; }
         public int PullTimeDelayMillsWhenFlowControl { get; set; }
+        public int PullMessageBatchSize { get; set; }
 
         #endregion
 
@@ -62,6 +68,8 @@ namespace EQueue.Clients.Consumers
             MessageModel = messageModel;
 
             _messageHandler = messageHandler;
+            _remotingClient = new SocketRemotingClient(settings.BrokerAddress, settings.BrokerPort);
+            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
@@ -71,6 +79,7 @@ namespace EQueue.Clients.Consumers
             PullThresholdForQueue = 1000;
             ConsumeMaxSpan = 2000;
             PullTimeDelayMillsWhenFlowControl = 100;
+            PullMessageBatchSize = 32;
         }
 
         #endregion
@@ -148,14 +157,44 @@ namespace EQueue.Clients.Consumers
         }
         private Task<PullResult> StartPullMessageTask(PullRequest pullRequest)
         {
-            //TODO
-            return null;
+            var request = new PullMessageRequest
+            {
+                ConsumerGroup = GroupName,
+                MessageQueue = pullRequest.MessageQueue,
+                QueueOffset = pullRequest.NextOffset,
+                PullMessageBatchSize = PullMessageBatchSize
+            };
+            var data = _binarySerializer.Serialize(request);
+            var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);
+            var taskCompletionSource = new TaskCompletionSource<PullResult>();
+            _remotingClient.InvokeAsync(remotingRequest, 3000).ContinueWith((requestTask) =>
+            {
+                var remotingResponse = requestTask.Result;
+                if (remotingResponse != null)
+                {
+                    var response = _binarySerializer.Deserialize<PullMessageResponse>(remotingResponse.Body);
+                    var result = new PullResult
+                    {
+                        PullStatus = (PullStatus)remotingResponse.Code,
+                        Messages = response.Messages
+                    };
+                    taskCompletionSource.SetResult(result);
+                }
+                else
+                {
+                    taskCompletionSource.SetResult(new PullResult { PullStatus = PullStatus.Failed });
+                }
+            });
+            return taskCompletionSource.Task;
         }
         private void ProcessPullResult(PullRequest pullRequest, PullResult pullResult)
         {
-            pullRequest.NextOffset = pullResult.NextBeginOffset;
-            pullRequest.ProcessQueue.AddMessages(pullResult.Messages);
-            StartConsumeTask(pullRequest, pullResult);
+            if (pullResult.PullStatus == PullStatus.Found && pullResult.Messages.Count() > 0)
+            {
+                pullRequest.NextOffset += pullResult.Messages.Count();
+                pullRequest.ProcessQueue.AddMessages(pullResult.Messages);
+                StartConsumeTask(pullRequest, pullResult);
+            }
             EnqueuePullRequest(pullRequest);
         }
         private void StartConsumeTask(PullRequest pullRequest, PullResult pullResult)
@@ -228,6 +267,7 @@ namespace EQueue.Clients.Consumers
         }
         private IEnumerable<string> FindConsumers(string consumerGroup)
         {
+            //TODO
             return new string[0];
         }
         private bool UpdateProcessQueueDict(string topic, IList<MessageQueue> messageQueues)

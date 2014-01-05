@@ -1,9 +1,10 @@
-﻿namespace EQueue.Clients.Consumers
+﻿namespace EQueue.Protocols
 {
     public enum PullStatus
     {
         Found,
         NoNewMessage,
-        OffsetIllegal
+        OffsetIllegal,
+        Failed
     }
 }

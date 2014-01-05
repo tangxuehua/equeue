@@ -95,7 +95,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Clients\Consumers\PullRequest.cs" />
     <Compile Include="Clients\Consumers\PullResult.cs" />
-    <Compile Include="Clients\Consumers\PullStatus.cs" />
+    <Compile Include="Protocols\PullStatus.cs" />
     <Compile Include="Clients\Producers\SendResult.cs" />
     <Compile Include="Clients\Producers\SendStatus.cs" />
     <Compile Include="Remoting\IChannel.cs" />
@@ -107,9 +107,11 @@
     <Compile Include="Remoting\RemotingMessage.cs" />
     <Compile Include="Remoting\RemotingResponse.cs" />
     <Compile Include="Remoting\RequestCode.cs" />
+    <Compile Include="Remoting\Requests\PullMessageRequest.cs" />
     <Compile Include="Remoting\Requests\SendMessageRequest.cs" />
     <Compile Include="Remoting\ResponseCode.cs" />
     <Compile Include="Remoting\ResponseFuture.cs" />
+    <Compile Include="Remoting\Responses\PullMessageResponse.cs" />
     <Compile Include="Remoting\Responses\SendMessageResponse.cs" />
     <Compile Include="Remoting\SocketRemotingClient.cs" />
     <Compile Include="Remoting\SocketRemotingServer.cs" />

@@ -28,7 +28,7 @@ namespace EQueue.Broker
             queue.SetMessageOffset(queueOffset, storeResult.MessageOffset);
             return storeResult;
         }
-        public QueueMessage GetMessage(string topic, int queueId, long queueOffset)
+        public IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
         {
             var queues = GetQueues(topic);
             var queue = queues.SingleOrDefault(x => x.QueueId == queueId);
@@ -37,10 +37,25 @@ namespace EQueue.Broker
                 var messageOffset = queue.GetMessageOffset(queueOffset);
                 if (messageOffset >= 0)
                 {
-                    return _messageStore.GetMessage(messageOffset);
+                    var offset = messageOffset;
+                    var messages = new List<QueueMessage>();
+                    while (messages.Count < batchSize)
+                    {
+                        var message = _messageStore.GetMessage(offset);
+                        if (message != null)
+                        {
+                            messages.Add(message);
+                            offset++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    return messages;
                 }
             }
-            return null;
+            return new QueueMessage[0];
         }
         public long GetQueueCurrentOffset(string topic, int queueId)
         {

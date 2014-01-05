@@ -17,9 +17,10 @@ namespace QuickStart.ProducerClient
 
             var producer = new Producer().Start();
 
-            for (var index = 1; index <= 10; index++)
+            for (var index = 1; index <= 20; index++)
             {
-                producer.SendAsync(new Message("topic1", Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(task =>
+                var topic = index % 2 == 0 ? "topic1" : "topic2";
+                producer.SendAsync(new Message(topic, Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(task =>
                 {
                     Console.WriteLine(task.Result);
                 });
