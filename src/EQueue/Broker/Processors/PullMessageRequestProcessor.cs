@@ -35,10 +35,10 @@ namespace EQueue.Broker.Processors
                 pullMessageRequest.MessageQueue.QueueId,
                 pullMessageRequest.QueueOffset,
                 pullMessageRequest.PullMessageBatchSize);
-            var pullMessageResponse = new PullMessageResponse(messages);
-            var responseData = _binarySerializer.Serialize(pullMessageResponse);
             if (messages.Count() > 0)
             {
+                var pullMessageResponse = new PullMessageResponse(messages);
+                var responseData = _binarySerializer.Serialize(pullMessageResponse);
                 var remotingResponse = new RemotingResponse((int)PullStatus.Found, responseData);
                 remotingResponse.Sequence = request.Sequence;
                 return remotingResponse;
