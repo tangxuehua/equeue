@@ -3,6 +3,7 @@
     public class ConsumerSettings
     {
         private static ConsumerSettings _default = new ConsumerSettings();
+
         public string BrokerAddress { get; set; }
         public int BrokerPort { get; set; }
         public int UpdateTopicRouteDataInterval { get; set; }
@@ -26,8 +27,9 @@
 
         public override string ToString()
         {
-            return string.Format("ConsumerSettings [BrokerAddress={0}, HeartbeatBrokerInterval={1}, UpdateTopicRouteDataInterval={2}, PersistConsumerOffsetInterval={3}]",
+            return string.Format("ConsumerSettings [BrokerAddress={0}, BrokerPort={1}, HeartbeatBrokerInterval={2}, UpdateTopicRouteDataInterval={3}, PersistConsumerOffsetInterval={4}]",
                 BrokerAddress,
+                BrokerPort,
                 HeartbeatBrokerInterval,
                 UpdateTopicRouteDataInterval,
                 PersistConsumerOffsetInterval);

@@ -52,7 +52,7 @@ namespace EQueue.Clients.Consumers
         #region Constructors
 
         public Consumer(ConsumerSettings settings, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(string.Format("{0}@{1}", "Consumer", Utils.GetLocalIPV4()), settings, groupName, messageModel, messageHandler)
+            : this(string.Format("Consumer@{0}", Utils.GetLocalIPV4()), settings, groupName, messageModel, messageHandler)
         {
         }
         public Consumer(string id, ConsumerSettings settings, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
@@ -200,9 +200,9 @@ namespace EQueue.Clients.Consumers
             if (_topicSubscribeInfoDict.ContainsKey(topic))
             {
                 var messageQueues = _topicSubscribeInfoDict[topic];
-                var consumerClientIds = _nameServerService.FindConsumerClients(GroupName);
+                var consumerIds = _nameServerService.FindConsumers(GroupName);
                 var messageQueueList = messageQueues.ToList();
-                var consumerClientIdList = consumerClientIds.ToList();
+                var consumerClientIdList = consumerIds.ToList();
                 messageQueueList.Sort();
                 consumerClientIdList.Sort();
 

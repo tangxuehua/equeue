@@ -7,33 +7,33 @@ namespace EQueue.Clients.Consumers
 {
     public class AverageAllocateMessageQueueStrategy : IAllocateMessageQueueStrategy
     {
-        public IEnumerable<MessageQueue> Allocate(string currentConsumerClientId, IList<MessageQueue> totalMessageQueues, IList<string> totalConsumerClientIds)
+        public IEnumerable<MessageQueue> Allocate(string currentConsumerId, IList<MessageQueue> totalMessageQueues, IList<string> totalConsumerIds)
         {
-            if (string.IsNullOrEmpty(currentConsumerClientId))
+            if (string.IsNullOrEmpty(currentConsumerId))
             {
-                throw new ArgumentException("currentConsumerClientId is empty");
+                throw new ArgumentException("currentConsumertId is empty");
             }
             if (totalMessageQueues == null || totalMessageQueues.Count() < 1)
             {
                 throw new ArgumentException("totalMessageQueues is null or size < 1");
             }
-            if (totalConsumerClientIds == null || totalConsumerClientIds.Count() < 1)
+            if (totalConsumerIds == null || totalConsumerIds.Count() < 1)
             {
-                throw new ArgumentException("totalConsumerClientIds is null or size < 1");
+                throw new ArgumentException("totalConsumerIds is null or size < 1");
             }
 
             var result = new List<MessageQueue>();
 
-            if (!totalConsumerClientIds.Contains(currentConsumerClientId))
+            if (!totalConsumerIds.Contains(currentConsumerId))
             {
                 return result;
             }
 
-            var index = totalConsumerClientIds.IndexOf(currentConsumerClientId);
+            var index = totalConsumerIds.IndexOf(currentConsumerId);
             var totalMessageQueueCount = totalMessageQueues.Count;
-            var totalConsumerClientIdCount = totalConsumerClientIds.Count;
-            var mod = totalMessageQueues.Count() % totalConsumerClientIdCount;
-            var averageSize = totalMessageQueueCount <= totalConsumerClientIdCount ? 1 : (mod > 0 && index < mod ? totalMessageQueueCount / totalConsumerClientIdCount + 1 : totalMessageQueueCount / totalConsumerClientIdCount);
+            var totalConsumerCount = totalConsumerIds.Count;
+            var mod = totalMessageQueues.Count() % totalConsumerCount;
+            var averageSize = totalMessageQueueCount <= totalConsumerCount ? 1 : (mod > 0 && index < mod ? totalMessageQueueCount / totalConsumerCount + 1 : totalMessageQueueCount / totalConsumerCount);
             var startIndex = (mod > 0 && index < mod) ? index * averageSize : index * averageSize + mod;
             var range = Math.Min(averageSize, totalMessageQueueCount - startIndex);
 

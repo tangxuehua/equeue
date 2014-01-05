@@ -5,6 +5,6 @@ namespace EQueue.Clients.Consumers
 {
     public interface IAllocateMessageQueueStrategy
     {
-        IEnumerable<MessageQueue> Allocate(string currentConsumerClientId, IList<MessageQueue> totalMessageQueues, IList<string> totalConsumerClientIds);
+        IEnumerable<MessageQueue> Allocate(string currentConsumerId, IList<MessageQueue> totalMessageQueues, IList<string> totalConsumerIds);
     }
 }

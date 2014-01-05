@@ -4,6 +4,6 @@ namespace EQueue.Infrastructure
 {
     public interface INameServerService
     {
-        IEnumerable<string> FindConsumerClients(string consumerGroup);
+        IEnumerable<string> FindConsumers(string consumerGroup);
     }
 }
