@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {
@@ -12,22 +13,22 @@ namespace EQueue.Clients.Consumers
 
         }
 
-        public void UpdateOffset(Protocols.MessageQueue messageQueue, long offset)
+        public void UpdateOffset(MessageQueue messageQueue, long offset)
         {
 
         }
 
-        public long ReadOffset(Protocols.MessageQueue messageQueue, OffsetReadType readType)
+        public long ReadOffset(MessageQueue messageQueue, OffsetReadType readType)
         {
             return 0L;
         }
 
-        public void Persist(Protocols.MessageQueue messageQueue)
+        public void Persist(MessageQueue messageQueue)
         {
 
         }
 
-        public void RemoveOffset(Protocols.MessageQueue messageQueue)
+        public void RemoveOffset(MessageQueue messageQueue)
         {
 
         }

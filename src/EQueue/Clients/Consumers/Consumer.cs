@@ -225,7 +225,7 @@ namespace EQueue.Clients.Consumers
                 var changed = UpdateProcessQueueDict(topic, messageQueues);
                 if (changed)
                 {
-                    _logger.InfoFormat("messageQueueChanged [consumerGroup:{0}, topic:{1}, allocatedMessageQueues:{2}]", GroupName, topic, string.Join("|", messageQueues));
+                    _logger.InfoFormat("MessageQueue changed [consumerGroup:{0}, topic:{1}, allocatedMessageQueues:{2}]", GroupName, topic, string.Join("|", messageQueues));
                 }
             }
             else
@@ -240,25 +240,27 @@ namespace EQueue.Clients.Consumers
                 var messageQueues = _topicSubscribeInfoDict[topic];
                 var consumerIds = FindConsumers(GroupName);
                 var messageQueueList = messageQueues.ToList();
-                var consumerClientIdList = consumerIds.ToList();
+                var consumerIdList = consumerIds.ToList();
+
                 messageQueueList.Sort();
-                consumerClientIdList.Sort();
+                consumerIdList.Sort();
 
                 IEnumerable<MessageQueue> allocatedMessageQueues = new List<MessageQueue>();
                 try
                 {
-                    allocatedMessageQueues = _allocateMessageQueueStragegy.Allocate(Id, messageQueueList, consumerClientIdList);
+                    allocatedMessageQueues = _allocateMessageQueueStragegy.Allocate(Id, messageQueueList, consumerIdList);
                 }
                 catch (Exception ex)
                 {
                     _logger.Error("Allocate message queue has exception.", ex);
+                    return;
                 }
 
                 var allocatedMessageQueueList = allocatedMessageQueues.ToList();
                 var changed = UpdateProcessQueueDict(topic, allocatedMessageQueueList);
                 if (changed)
                 {
-                    _logger.InfoFormat("messageQueueChanged [consumerGroup:{0}, topic:{1}, allocatedMessageQueues:{2}, consumerClientIds:{3}]", GroupName, topic, string.Join("|", allocatedMessageQueueList), string.Join("|", consumerClientIdList));
+                    _logger.InfoFormat("MessageQueue changed [consumerGroup:{0}, topic:{1}, allocatedMessageQueues:{2}, consumerClientIds:{3}]", GroupName, topic, string.Join("|", allocatedMessageQueueList), string.Join("|", consumerIdList));
                 }
             }
             else
@@ -306,7 +308,6 @@ namespace EQueue.Clients.Consumers
                         pullRequest.NextOffset = nextOffset;
                         pullRequestList.Add(pullRequest);
                         _processQueueDict.TryAdd(messageQueue, pullRequest.ProcessQueue);
-                        _logger.InfoFormat("DoRebalance, ConsumerGroup: {0}, Add a new messageQueue, {1}", GroupName, messageQueue);
                     }
                     else
                     {
@@ -315,7 +316,11 @@ namespace EQueue.Clients.Consumers
                 }
             }
 
-            DispatchPullRequest(pullRequestList);
+            foreach (var pullRequest in pullRequestList)
+            {
+                EnqueuePullRequest(pullRequest);
+                _logger.InfoFormat("DoRebalance, consumerGroup:{0}, add a new pull request {1}", GroupName, pullRequest);
+            }
 
             return changed;
         }
@@ -339,14 +344,6 @@ namespace EQueue.Clients.Consumers
         {
             _offsetStore.Persist(messageQueue);
             _offsetStore.RemoveOffset(messageQueue);
-        }
-        private void DispatchPullRequest(IEnumerable<PullRequest> pullRequestList)
-        {
-            foreach (var pullRequest in pullRequestList)
-            {
-                EnqueuePullRequest(pullRequest);
-                _logger.InfoFormat("doRebalance, consumerGroup:{0}, add a new pull request {1}", GroupName, pullRequest);
-            }
         }
         private long ComputePullFromWhere(MessageQueue messageQueue)
         {
@@ -449,13 +446,13 @@ namespace EQueue.Clients.Consumers
 
             if (changed)
             {
-                var consumeMessageQueues = new List<MessageQueue>();
-                for (var index = 0; index < topicRouteDataFromServer.ConsumeQueueCount; index++)
+                var messageQueues = new List<MessageQueue>();
+                for (var index = 0; index < topicRouteDataFromServer.QueueCount; index++)
                 {
-                    consumeMessageQueues.Add(new MessageQueue(topic, index));
+                    messageQueues.Add(new MessageQueue(topic, index));
                 }
 
-                _topicSubscribeInfoDict[topic] = consumeMessageQueues.ToList();
+                _topicSubscribeInfoDict[topic] = messageQueues;
                 _topicRouteDataDict[topic] = topicRouteDataFromServer;
             }
         }

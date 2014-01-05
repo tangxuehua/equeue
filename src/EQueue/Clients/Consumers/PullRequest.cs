@@ -61,7 +61,7 @@ namespace EQueue.Clients.Consumers
         }
         public override string ToString()
         {
-            return string.Format("PullRequest [ConsumerGroup={0}, MessageQueue={1}, NextOffset={2}]", ConsumerGroup, MessageQueue, NextOffset);
+            return string.Format("[ConsumerGroup={0}, MessageQueue={1}, NextOffset={2}]", ConsumerGroup, MessageQueue, NextOffset);
         }
     }
 }

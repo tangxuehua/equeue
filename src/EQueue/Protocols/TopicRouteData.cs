@@ -5,18 +5,18 @@ namespace EQueue.Protocols
     [Serializable]
     public class TopicRouteData
     {
-        public int ConsumeQueueCount { get; private set; }
+        public int QueueCount { get; private set; }
 
-        public TopicRouteData(int consumeQueueCount)
+        public TopicRouteData(int queueCount)
         {
-            ConsumeQueueCount = consumeQueueCount;
+            QueueCount = queueCount;
         }
 
         public override int GetHashCode()
         {
             var prime = 31;
             var result = 1;
-            result = prime * result + ConsumeQueueCount;
+            result = prime * result + QueueCount;
             return result;
         }
         public override bool Equals(object obj)
@@ -37,7 +37,7 @@ namespace EQueue.Protocols
 
             var other = (TopicRouteData)obj;
 
-            if (ConsumeQueueCount != other.ConsumeQueueCount)
+            if (QueueCount != other.QueueCount)
             {
                 return false;
             }
@@ -46,7 +46,7 @@ namespace EQueue.Protocols
         }
         public override string ToString()
         {
-            return string.Format("TopicRouteData[ConsumeQueueCount={0}]", ConsumeQueueCount);
+            return string.Format("[QueueCount={0}]", QueueCount);
         }
     }
 }
