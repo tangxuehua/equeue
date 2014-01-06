@@ -34,7 +34,7 @@ namespace EQueue.Clients.Producers
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, SendMessageTimeoutMilliseconds);
             var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
             var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
-            return new SendResult(sendStatus, response.MessageId, response.MessageOffset, response.MessageQueue, response.QueueOffset);
+            return new SendResult(sendStatus, response.MessageOffset, response.MessageQueue, response.QueueOffset);
         }
         public Task<SendResult> SendAsync(Message message, string arg)
         {
@@ -47,7 +47,7 @@ namespace EQueue.Clients.Producers
                 {
                     var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
                     var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
-                    var result = new SendResult(sendStatus, response.MessageId, response.MessageOffset, response.MessageQueue, response.QueueOffset);
+                    var result = new SendResult(sendStatus, response.MessageOffset, response.MessageQueue, response.QueueOffset);
                     taskCompletionSource.SetResult(result);
                 }
                 else

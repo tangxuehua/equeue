@@ -5,6 +5,6 @@ namespace EQueue.Protocols
     public enum MessageModel
     {
         BroadCasting = 1,
-        Clustering
+        Clustering = 2
     }
 }

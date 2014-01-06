@@ -26,7 +26,6 @@ namespace EQueue.Broker.Processors
             var sendMessageRequest = _binarySerializer.Deserialize<SendMessageRequest>(request.Body);
             var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.Arg);
             var sendMessageResponse = new SendMessageResponse(
-                storeResult.MessageId,
                 storeResult.MessageOffset,
                 new MessageQueue(sendMessageRequest.Message.Topic, storeResult.QueueId),
                 storeResult.QueueOffset);

@@ -70,7 +70,7 @@ namespace EQueue.Broker
 
         private IList<Queue> GetQueues(string topic)
         {
-            return _queueDict.GetOrAdd(topic, (x) =>
+            return _queueDict.GetOrAdd(topic, x =>
             {
                 var queues = new List<Queue>();
                 for (var index = 0; index < DefaultTopicQueueCount; index++)

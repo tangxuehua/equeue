@@ -410,13 +410,21 @@ namespace EQueue.Clients.Consumers
         }
         private void SendHeartbeatToBroker()
         {
-            var heartbeatData = new HeartbeatData(Id, new ConsumerData(GroupName, MessageModel, SubscriptionTopics));
+            var heartbeatData = new ConsumerData(Id, GroupName, MessageModel, SubscriptionTopics);
 
             try
             {
-                //TODO
-                //this.mQClientAPIImpl.sendHearbeat(addr, heartbeatData, 3000);
-                _logger.InfoFormat("Send heart beat to broker[{0}] success, heartbeatData:[{1}]", Settings.BrokerAddress, heartbeatData);
+                var remotingRequest = new RemotingRequest((int)RequestCode.ConsumerHeartbeat, _binarySerializer.Serialize(heartbeatData));
+                var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
+                if (remotingResponse.Code == (int)ResponseCode.Success)
+                {
+                    _logger.InfoFormat("Send heart beat to broker[{0}] success, heartbeatData:[{1}]", Settings.BrokerAddress, heartbeatData);
+                }
+                else
+                {
+                    var errorMessage = _binarySerializer.Deserialize<string>(remotingResponse.Body);
+                    _logger.ErrorFormat("Send heart beat to broker has error, error message:{0}", errorMessage);
+                }
             }
             catch (Exception ex)
             {

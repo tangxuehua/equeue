@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using EQueue.Infrastructure;
 using EQueue.Protocols;
@@ -13,9 +14,8 @@ namespace EQueue.Broker
         public MessageStoreResult StoreMessage(Message message, int queueId, long queueOffset)
         {
             var offset = GetNextOffset();
-            var messageId = ObjectId.GenerateNewId().ToString();
-            _queueCurrentOffsetDict[offset] = new QueueMessage(messageId, message.Topic, message.Body, queueId, queueOffset);
-            return new MessageStoreResult(messageId, offset, queueId, queueOffset);
+            _queueCurrentOffsetDict[offset] = new QueueMessage(message.Topic, message.Body, queueId, queueOffset, DateTime.Now);
+            return new MessageStoreResult(offset, queueId, queueOffset);
         }
         public QueueMessage GetMessage(long offset)
         {
