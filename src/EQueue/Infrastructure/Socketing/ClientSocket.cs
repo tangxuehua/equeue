@@ -17,7 +17,7 @@ namespace EQueue.Infrastructure.Socketing
         public ClientSocket()
         {
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _socketService = new SocketService();
+            _socketService = new SocketService(null);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
@@ -30,7 +30,7 @@ namespace EQueue.Infrastructure.Socketing
         {
             Task.Factory.StartNew(() =>
             {
-                _socketService.ReceiveMessage(_socket, reply =>
+                _socketService.ReceiveMessage(new SocketInfo(_socket), reply =>
                 {
                     try
                     {

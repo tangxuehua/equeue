@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using EQueue;
 using EQueue.Autofac;
 using EQueue.Clients.Producers;
@@ -16,17 +18,29 @@ namespace QuickStart.ProducerClient
             InitializeEQueue();
 
             var producer = new Producer().Start();
+            var stopwatch = Stopwatch.StartNew();
+            var total = 20000;
+            var count = 0;
 
-            for (var index = 1; index <= 20; index++)
+            for (var index = 1; index <= total; index++)
             {
                 var topic = index % 2 == 0 ? "topic1" : "topic2";
-                producer.SendAsync(new Message(topic, Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(task =>
+                producer.SendAsync(new Message(topic, Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(sendTask =>
                 {
-                    Console.WriteLine(task.Result);
+                    var current = Interlocked.Increment(ref count);
+                    if (current % 1000 == 0)
+                    {
+                        Console.WriteLine(sendTask.Result);
+                    }
+                    if (current == total)
+                    {
+                        producer.Shutdown();
+                        Console.WriteLine("Send message finised, time spent:" + stopwatch.ElapsedMilliseconds);
+                    }
                 });
             }
 
-            Console.WriteLine("Producer started...");
+
             Console.ReadLine();
         }
 

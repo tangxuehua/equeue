@@ -8,9 +8,11 @@ namespace EQueue.Infrastructure.Socketing
     public class SocketService
     {
         private ILogger _logger;
+        private Action<SocketInfo> _socketReceiveExceptionAction;
 
-        public SocketService()
+        public SocketService(Action<SocketInfo> socketReceiveExceptionAction)
         {
+            _socketReceiveExceptionAction = socketReceiveExceptionAction;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
         public void SendMessage(Socket targetSocket, byte[] message, Action<SendResult> messageSentCallback)
@@ -27,14 +29,14 @@ namespace EQueue.Infrastructure.Socketing
                     new SendContext(targetSocket, wrappedMessage, messageSentCallback));
             }
         }
-        public void ReceiveMessage(Socket sourceSocket, Action<byte[]> messageReceivedCallback)
+        public void ReceiveMessage(SocketInfo sourceSocket, Action<byte[]> messageReceivedCallback)
         {
             ReceiveInternal(new ReceiveState(sourceSocket, messageReceivedCallback), 4);
         }
 
         private void ReceiveInternal(ReceiveState receiveState, int size)
         {
-            receiveState.SourceSocket.BeginReceive(receiveState.Buffer, 0, size, 0, ReceiveCallback, receiveState);
+            receiveState.SourceSocket.InnerSocket.BeginReceive(receiveState.Buffer, 0, size, 0, ReceiveCallback, receiveState);
         }
         private void SendCallback(IAsyncResult asyncResult)
         {
@@ -58,9 +60,14 @@ namespace EQueue.Infrastructure.Socketing
         private void ReceiveCallback(IAsyncResult asyncResult)
         {
             var receiveState = (ReceiveState)asyncResult.AsyncState;
-            var sourceSocket = receiveState.SourceSocket;
+            var sourceSocketInfo = receiveState.SourceSocket;
+            var sourceSocket = sourceSocketInfo.InnerSocket;
             var receivedData = receiveState.Data;
             var bytesRead = 0;
+            if (!sourceSocket.Connected)
+            {
+                return;
+            }
 
             try
             {
@@ -68,11 +75,19 @@ namespace EQueue.Infrastructure.Socketing
             }
             catch (SocketException socketException)
             {
-                _logger.ErrorFormat("Socket receive exception, ErrorCode:{0}", socketException.SocketErrorCode);
+                if (_socketReceiveExceptionAction != null)
+                {
+                    _socketReceiveExceptionAction(sourceSocketInfo);
+                }
+                _logger.ErrorFormat("Socket receive exception. Source socket:{0}, errorCode:{1}", sourceSocketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
             }
             catch (Exception ex)
             {
-                _logger.ErrorFormat("Unknown socket receive exception:{0}", ex);
+                if (_socketReceiveExceptionAction != null)
+                {
+                    _socketReceiveExceptionAction(sourceSocketInfo);
+                }
+                _logger.ErrorFormat("Unknown socket receive exception, source socket:{0}, ex:{1}", sourceSocketInfo.SocketRemotingEndpointAddress, ex);
             }
 
             if (bytesRead > 0)

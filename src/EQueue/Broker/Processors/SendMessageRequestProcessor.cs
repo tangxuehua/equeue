@@ -30,7 +30,7 @@ namespace EQueue.Broker.Processors
                 new MessageQueue(sendMessageRequest.Message.Topic, storeResult.QueueId),
                 storeResult.QueueOffset);
             var responseData = _binarySerializer.Serialize(sendMessageResponse);
-            _logger.Debug(sendMessageResponse);
+            //_logger.Debug(sendMessageResponse);
             var remotingResponse = new RemotingResponse((int)ResponseCode.Success, responseData);
             remotingResponse.Sequence = request.Sequence;
             return remotingResponse;

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using EQueue.Infrastructure;
 using EQueue.Infrastructure.IoC;
@@ -17,7 +18,7 @@ namespace EQueue.Remoting
 
         public SocketRemotingServer(string address = "127.0.0.1", int port = 5000, int backlog = 5000)
         {
-            _serverSocket = new ServerSocket();
+            _serverSocket = new ServerSocket(new SocketEventHandler());
             _requestProcessorDict = new Dictionary<int, IRequestProcessor>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
@@ -69,5 +70,19 @@ namespace EQueue.Remoting
                 }
             });
         }
+
+        class SocketEventHandler : ISocketEventListener
+        {
+            public void OnNewSocketAccepted(SocketInfo socketInfo)
+            {
+                //TODO
+            }
+
+            public void OnSocketDisconnected(SocketInfo socketInfo)
+            {
+                //TODO
+            }
+        }
+
     }
 }
