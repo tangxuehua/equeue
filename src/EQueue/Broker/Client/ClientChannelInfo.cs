@@ -11,8 +11,13 @@ namespace EQueue.Broker.Client
 
         public ClientChannelInfo(string clientId, IChannel channel)
         {
-            Channel = channel;
             ClientId = clientId;
+            Channel = channel;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("[ClientId:{0}, Channel:{1}, LastUpdateTime:{2}]", ClientId, Channel, LastUpdateTime);
         }
     }
 }

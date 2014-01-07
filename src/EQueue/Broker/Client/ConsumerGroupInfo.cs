@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using EQueue.Infrastructure.IoC;
+using EQueue.Infrastructure.Logging;
 using EQueue.Protocols;
 using EQueue.Remoting;
 
@@ -9,16 +11,20 @@ namespace EQueue.Broker.Client
 {
     public class ConsumerGroupInfo
     {
+        private const long ChannelExpiredTimeout = 1000 * 120;
         private string _groupName;
         private MessageModel _messageModel;
         private ConcurrentDictionary<string, ClientChannelInfo> _consumerChannelDict = new ConcurrentDictionary<string, ClientChannelInfo>();
         private ConcurrentDictionary<string, string> _subscriptionTopicDict = new ConcurrentDictionary<string, string>();
+        private ILogger _logger;
+
         public DateTime LastUpdateTime { get; private set; }
 
         public ConsumerGroupInfo(string groupName, MessageModel messageModel)
         {
             _groupName = groupName;
             _messageModel = messageModel;
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
         public bool UpdateChannel(ClientChannelInfo clientChannelInfo, MessageModel messageModel)
@@ -58,6 +64,27 @@ namespace EQueue.Broker.Client
             LastUpdateTime = DateTime.Now;
 
             return subscriptionTopicChanged;
+        }
+        public void RemoteClientChannel(string clientId)
+        {
+            ClientChannelInfo channel;
+            if (_consumerChannelDict.TryRemove(clientId, out channel))
+            {
+                _logger.WarnFormat("Removed not active channel from ConsumerGroupInfo. consumer Group:{0}, channel:{1}", _groupName, channel);
+            }
+        }
+        public void RemoteNotActiveChannels()
+        {
+            foreach (var entry in _consumerChannelDict)
+            {
+                var clientId = entry.Key;
+                var channelInfo = entry.Value;
+                if (DateTime.Now > channelInfo.LastUpdateTime.AddMilliseconds(ChannelExpiredTimeout))
+                {
+                    channelInfo.Channel.Close();
+                    RemoteClientChannel(clientId);
+                }
+            }
         }
 
         public IEnumerable<ClientChannelInfo> GetAllConsumerChannels()

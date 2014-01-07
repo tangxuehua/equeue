@@ -114,6 +114,7 @@
     <Compile Include="Remoting\ResponseFuture.cs" />
     <Compile Include="Remoting\Responses\PullMessageResponse.cs" />
     <Compile Include="Remoting\Responses\SendMessageResponse.cs" />
+    <Compile Include="Remoting\SocketChannel.cs" />
     <Compile Include="Remoting\SocketRemotingClient.cs" />
     <Compile Include="Remoting\SocketRemotingServer.cs" />
     <Compile Include="Remoting\SocketRequestHandlerContext.cs" />

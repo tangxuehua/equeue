@@ -33,5 +33,12 @@ namespace EQueue.Broker.Client
 
             return changed;
         }
+        public void ScanNotActiveChannel()
+        {
+            foreach (var consumerGroup in _consumerGroupDict.Values)
+            {
+                consumerGroup.RemoteNotActiveChannels();
+            }
+        }
     }
 }

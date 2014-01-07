@@ -28,6 +28,10 @@ namespace EQueue.Clients.Producers
             _remotingClient.Start();
             return this;
         }
+        public void Shutdown()
+        {
+            _remotingClient.Shutdown();
+        }
         public SendResult Send(Message message, string arg)
         {
             var remotingRequest = BuildSendMessageRequest(message, arg);
