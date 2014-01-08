@@ -17,28 +17,48 @@ namespace QuickStart.ProducerClient
         {
             InitializeEQueue();
 
-            var producer = new Producer().Start();
-            var stopwatch = Stopwatch.StartNew();
-            var total = 20000;
-            var count = 0;
+            var producer1 = new Producer().Start();
+            var producer2 = new Producer().Start();
+            var stopwatch1 = Stopwatch.StartNew();
+            var stopwatch2 = Stopwatch.StartNew();
+            var total = 40000;
+            var count1 = 0;
+            var count2 = 0;
 
             for (var index = 1; index <= total; index++)
             {
                 var topic = index % 2 == 0 ? "topic1" : "topic2";
-                producer.SendAsync(new Message(topic, Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(sendTask =>
+                producer1.SendAsync(new Message(topic, Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(sendTask =>
                 {
-                    var current = Interlocked.Increment(ref count);
+                    var current = Interlocked.Increment(ref count1);
                     if (current % 1000 == 0)
                     {
-                        Console.WriteLine(sendTask.Result);
+                        Console.WriteLine("Producer1:" + sendTask.Result);
                     }
                     if (current == total)
                     {
-                        producer.Shutdown();
-                        Console.WriteLine("Send message finised, time spent:" + stopwatch.ElapsedMilliseconds);
+                        //producer1.Shutdown();
+                        Console.WriteLine("Producer1 send message finised, time spent:" + stopwatch1.ElapsedMilliseconds + ", messageOffset:" + sendTask.Result.MessageOffset);
                     }
                 });
             }
+            //for (var index = 1; index <= total; index++)
+            //{
+            //    var topic = index % 2 == 0 ? "topic1" : "topic2";
+            //    producer2.SendAsync(new Message(topic, Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(sendTask =>
+            //    {
+            //        var current = Interlocked.Increment(ref count2);
+            //        if (current % 1000 == 0)
+            //        {
+            //            Console.WriteLine("Producer2:" + sendTask.Result);
+            //        }
+            //        if (current == total)
+            //        {
+            //            //producer2.Shutdown();
+            //            Console.WriteLine("Producer2 send message finised, time spent:" + stopwatch2.ElapsedMilliseconds + ", messageOffset:" + sendTask.Result.MessageOffset);
+            //        }
+            //    });
+            //}
 
 
             Console.ReadLine();

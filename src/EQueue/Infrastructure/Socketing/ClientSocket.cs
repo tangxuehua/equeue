@@ -47,7 +47,7 @@ namespace EQueue.Infrastructure.Socketing
         }
         public ClientSocket Shutdown()
         {
-            _socket.Shutdown(SocketShutdown.Both);
+            _socket.Shutdown(SocketShutdown.Send);
             _socket.Close();
             return this;
         }

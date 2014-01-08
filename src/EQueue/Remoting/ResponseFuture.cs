@@ -29,7 +29,7 @@ namespace EQueue.Remoting
         }
         public void CompleteRequestTask(RemotingResponse response)
         {
-            _requestTaskCompletionSource.SetResult(response);
+            _requestTaskCompletionSource.TrySetResult(response);
         }
     }
 }

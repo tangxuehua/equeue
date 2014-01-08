@@ -1,4 +1,5 @@
-﻿using EQueue.Infrastructure;
+﻿using System.Threading;
+using EQueue.Infrastructure;
 using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
 using EQueue.Protocols;
@@ -33,7 +34,16 @@ namespace EQueue.Broker.Processors
             //_logger.Debug(sendMessageResponse);
             var remotingResponse = new RemotingResponse((int)ResponseCode.Success, responseData);
             remotingResponse.Sequence = request.Sequence;
+
+            var current = Interlocked.Increment(ref total);
+            if (current % 2000 == 0)
+            {
+                _logger.Debug(current + "," + sendMessageResponse.MessageOffset);
+            }
+
             return remotingResponse;
         }
+
+        int total = 0;
     }
 }
