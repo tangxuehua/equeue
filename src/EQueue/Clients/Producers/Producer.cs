@@ -11,7 +11,7 @@ namespace EQueue.Clients.Producers
 {
     public class Producer
     {
-        private const int SendMessageTimeoutMilliseconds = 3 * 1000;
+        private const int SendMessageTimeoutMilliseconds = 10 * 1000;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly ILogger _logger;
