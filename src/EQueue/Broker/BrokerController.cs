@@ -11,10 +11,10 @@ namespace EQueue.Broker
         private readonly SocketRemotingServer _remotingServer;
         public PullRequestHoldService PullRequestHoldService { get; private set; }
 
-        public BrokerController()
+        public BrokerController(string address = "127.0.0.1", int port = 5000, int backlog = 5000)
         {
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _remotingServer = new SocketRemotingServer();
+            _remotingServer = new SocketRemotingServer(address, port, backlog);
             PullRequestHoldService = new PullRequestHoldService();
         }
 
