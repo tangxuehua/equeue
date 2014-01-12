@@ -32,8 +32,6 @@ namespace EQueue.Broker.Processors
                 storeResult.QueueOffset);
             var responseData = _binarySerializer.Serialize(sendMessageResponse);
             //_logger.Debug(sendMessageResponse);
-            var remotingResponse = new RemotingResponse((int)ResponseCode.Success, responseData);
-            remotingResponse.Sequence = request.Sequence;
 
             var current = Interlocked.Increment(ref total);
             if (current % 2000 == 0)
@@ -41,7 +39,7 @@ namespace EQueue.Broker.Processors
                 _logger.Debug(current + "," + sendMessageResponse.MessageOffset);
             }
 
-            return remotingResponse;
+            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, responseData);
         }
 
         int total = 0;

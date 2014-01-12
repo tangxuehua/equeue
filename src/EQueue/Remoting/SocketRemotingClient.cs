@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using EQueue.Infrastructure;
 using EQueue.Infrastructure.Extensions;
 using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
@@ -19,7 +18,6 @@ namespace EQueue.Remoting
         private readonly ClientSocket _clientSocket;
         private readonly ConcurrentDictionary<long, ResponseFuture> _responseFutureDict;
         private readonly Dictionary<int, IRequestProcessor> _requestProcessorDict;
-        private readonly IBinarySerializer _binarySerializer;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
 
@@ -30,7 +28,6 @@ namespace EQueue.Remoting
             _clientSocket = new ClientSocket();
             _responseFutureDict = new ConcurrentDictionary<long, ResponseFuture>();
             _requestProcessorDict = new Dictionary<int, IRequestProcessor>();
-            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _clientSocket.Connect(address, port);
@@ -47,7 +44,7 @@ namespace EQueue.Remoting
         }
         public RemotingResponse InvokeSync(RemotingRequest request, int timeoutMillis)
         {
-            var message = _binarySerializer.Serialize(request);
+            var message = RemotingUtil.BuildRequestMessage(request);
             var taskCompletionSource = new TaskCompletionSource<RemotingResponse>();
             var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
             _responseFutureDict.TryAdd(request.Sequence, responseFuture);
@@ -75,7 +72,7 @@ namespace EQueue.Remoting
         }
         public Task<RemotingResponse> InvokeAsync(RemotingRequest request, int timeoutMillis)
         {
-            var message = _binarySerializer.Serialize(request);
+            var message = RemotingUtil.BuildRequestMessage(request);
             var taskCompletionSource = new TaskCompletionSource<RemotingResponse>();
             var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
             _responseFutureDict.TryAdd(request.Sequence, responseFuture);
@@ -93,9 +90,9 @@ namespace EQueue.Remoting
         public void InvokeOneway(RemotingRequest request, int timeoutMillis)
         {
             request.IsOneway = true;
+            var message = RemotingUtil.BuildRequestMessage(request);
             try
             {
-                var message = _binarySerializer.Serialize(request);
                 _clientSocket.SendMessage(message, x => { });
             }
             catch (Exception ex)
@@ -112,7 +109,7 @@ namespace EQueue.Remoting
         {
             Task.Factory.StartNew(() =>
             {
-                var remotingResponse = _binarySerializer.Deserialize<RemotingResponse>(responseMessage);
+                var remotingResponse = RemotingUtil.ParseResponse(responseMessage);
                 ResponseFuture responseFuture;
                 if (_responseFutureDict.TryRemove(remotingResponse.Sequence, out responseFuture))
                 {
@@ -134,7 +131,7 @@ namespace EQueue.Remoting
             foreach (var request in timeoutRequestList)
             {
                 _responseFutureDict.Remove(request.Sequence);
-                _logger.WarnFormat("Removed timeout request:{0}", request);
+                _logger.WarnFormat("Removed timeout request, request:{0}", request);
             }
         }
         private void SendMessageCallback(ResponseFuture responseFuture, RemotingRequest request, string address, SendResult sendResult)
@@ -145,7 +142,7 @@ namespace EQueue.Remoting
             {
                 responseFuture.CompleteRequestTask(null);
                 _responseFutureDict.Remove(request.Sequence);
-                _logger.ErrorFormat("Send request [{0}] to channel <{1}> failed, exception:{2}", request, address, sendResult.Exception);
+                _logger.ErrorFormat("Send request {0} to channel <{1}> failed, exception:{2}", request, address, sendResult.Exception);
             }
         }
     }

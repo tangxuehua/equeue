@@ -8,11 +8,11 @@ namespace EQueue.Remoting
     {
         public Action<RemotingResponse> SendRemotingResponse { get; private set; }
 
-        public SocketRequestHandlerContext(IBinarySerializer binarySerializer, ReceiveContext receiveContext)
+        public SocketRequestHandlerContext(ReceiveContext receiveContext)
         {
             SendRemotingResponse = remotingResponse =>
             {
-                receiveContext.ReplyMessage = binarySerializer.Serialize(remotingResponse);
+                receiveContext.ReplyMessage = RemotingUtil.BuildResponseMessage(remotingResponse);
                 receiveContext.MessageHandledCallback(receiveContext);
             };
         }

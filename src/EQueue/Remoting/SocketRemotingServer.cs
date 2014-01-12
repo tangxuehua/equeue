@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Net.Sockets;
 using System.Threading.Tasks;
-using EQueue.Infrastructure;
 using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
 using EQueue.Infrastructure.Socketing;
@@ -12,7 +10,6 @@ namespace EQueue.Remoting
     {
         private readonly ServerSocket _serverSocket;
         private readonly Dictionary<int, IRequestProcessor> _requestProcessorDict;
-        private readonly IBinarySerializer _binarySerializer;
         private readonly ILogger _logger;
         private bool _started;
 
@@ -20,7 +17,6 @@ namespace EQueue.Remoting
         {
             _serverSocket = new ServerSocket(new SocketEventHandler());
             _requestProcessorDict = new Dictionary<int, IRequestProcessor>();
-            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _serverSocket.Bind(address, port).Listen(backlog);
             _started = false;
@@ -48,7 +44,7 @@ namespace EQueue.Remoting
 
         private void ProcessRemotingRequest(ReceiveContext receiveContext)
         {
-            var remotingRequest = _binarySerializer.Deserialize<RemotingRequest>(receiveContext.ReceivedMessage);
+            var remotingRequest = RemotingUtil.ParseRequest(receiveContext.ReceivedMessage);
             IRequestProcessor requestProcessor;
             if (!_requestProcessorDict.TryGetValue(remotingRequest.Code, out requestProcessor))
             {
@@ -58,14 +54,14 @@ namespace EQueue.Remoting
 
             Task.Factory.StartNew(() =>
             {
-                var remotingResponse = requestProcessor.ProcessRequest(new SocketRequestHandlerContext(_binarySerializer, receiveContext), remotingRequest);
+                var remotingResponse = requestProcessor.ProcessRequest(new SocketRequestHandlerContext(receiveContext), remotingRequest);
                 if (remotingRequest.IsOneway)
                 {
                     return;
                 }
                 else if (remotingResponse != null)
                 {
-                    receiveContext.ReplyMessage = _binarySerializer.Serialize(remotingResponse);
+                    receiveContext.ReplyMessage = RemotingUtil.BuildResponseMessage(remotingResponse);
                     receiveContext.MessageHandledCallback(receiveContext);
                 }
             });

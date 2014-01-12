@@ -24,7 +24,7 @@ namespace QuickStart.ProducerClient
             var stopwatch1 = Stopwatch.StartNew();
             var stopwatch2 = Stopwatch.StartNew();
             var stopwatch3 = Stopwatch.StartNew();
-            var total = 20000;
+            var total = 10000;
             var count1 = 0;
             var count2 = 0;
             var count3 = 0;

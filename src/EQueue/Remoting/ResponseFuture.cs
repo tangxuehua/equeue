@@ -13,7 +13,6 @@ namespace EQueue.Remoting
         public Exception SendException { get; set; }
         public RemotingRequest Request { get; private set; }
 
-
         public ResponseFuture(RemotingRequest request, long timeoutMillis, TaskCompletionSource<RemotingResponse> requestTaskCompletionSource)
         {
             _beginTime = DateTime.Now;

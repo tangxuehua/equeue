@@ -39,9 +39,7 @@ namespace EQueue.Broker.Processors
             {
                 var pullMessageResponse = new PullMessageResponse(messages);
                 var responseData = _binarySerializer.Serialize(pullMessageResponse);
-                var remotingResponse = new RemotingResponse((int)PullStatus.Found, responseData);
-                remotingResponse.Sequence = request.Sequence;
-                return remotingResponse;
+                return new RemotingResponse((int)PullStatus.Found, request.Sequence, responseData);
             }
             else
             {
@@ -68,8 +66,7 @@ namespace EQueue.Broker.Processors
                 pullMessageRequest.PullMessageBatchSize);
             var pullMessageResponse = new PullMessageResponse(messages);
             var responseData = _binarySerializer.Serialize(pullMessageResponse);
-            var remotingResponse = new RemotingResponse(messages.Count() > 0 ? (int)PullStatus.Found : (int)PullStatus.NoNewMessage, responseData);
-            remotingResponse.Sequence = pullRequest.RemotingRequestSequence;
+            var remotingResponse = new RemotingResponse(messages.Count() > 0 ? (int)PullStatus.Found : (int)PullStatus.NoNewMessage, pullRequest.RemotingRequestSequence, responseData);
             pullRequest.RequestHandlerContext.SendRemotingResponse(remotingResponse);
         }
     }

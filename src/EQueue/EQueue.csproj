@@ -108,6 +108,7 @@
     <Compile Include="Remoting\IRequestProcessor.cs" />
     <Compile Include="Remoting\RemotingRequest.cs" />
     <Compile Include="Remoting\RemotingMessage.cs" />
+    <Compile Include="Remoting\RemotingUtil.cs" />
     <Compile Include="Remoting\RemotingResponse.cs" />
     <Compile Include="Remoting\RequestCode.cs" />
     <Compile Include="Remoting\Requests\PullMessageRequest.cs" />
