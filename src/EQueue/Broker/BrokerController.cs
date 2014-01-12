@@ -2,6 +2,7 @@
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.Processors;
 using EQueue.Infrastructure.IoC;
+using EQueue.Infrastructure.Logging;
 using EQueue.Infrastructure.Socketing;
 using EQueue.Remoting;
 
@@ -9,6 +10,8 @@ namespace EQueue.Broker
 {
     public class BrokerController
     {
+        private readonly BrokerSetting _setting;
+        private readonly ILogger _logger;
         private readonly IMessageService _messageService;
         private readonly SocketRemotingServer _sendMessageRemotingServer;
         private readonly SocketRemotingServer _pullMessageRemotingServer;
@@ -19,12 +22,14 @@ namespace EQueue.Broker
         public ConsumerManager ConsumerManager { get; private set; }
 
         public BrokerController() : this(BrokerSetting.Default) { }
-        public BrokerController(BrokerSetting borkerSetting)
+        public BrokerController(BrokerSetting setting)
         {
+            _setting = setting;
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _sendMessageRemotingServer = new SocketRemotingServer(borkerSetting.SendMessageSocketSetting);
-            _pullMessageRemotingServer = new SocketRemotingServer(borkerSetting.PullMessageSocketSetting, new PullMessageSocketEventHandler(this));
-            _heartbeatRemotingServer = new SocketRemotingServer(borkerSetting.HeartbeatSocketSetting);
+            _sendMessageRemotingServer = new SocketRemotingServer(setting.SendMessageSocketSetting);
+            _pullMessageRemotingServer = new SocketRemotingServer(setting.PullMessageSocketSetting, new PullMessageSocketEventHandler(this));
+            _heartbeatRemotingServer = new SocketRemotingServer(setting.HeartbeatSocketSetting);
             _clientManager = new ClientManager(this);
             SuspendedPullRequestManager = new SuspendedPullRequestManager();
             ProducerManager = new ProducerManager();
@@ -44,6 +49,13 @@ namespace EQueue.Broker
             _heartbeatRemotingServer.Start();
             _clientManager.Start();
             SuspendedPullRequestManager.Start();
+            _logger.InfoFormat("Broker started. \nSend message listening address:[{0}:{1}] \nPull message listening address:[{2}:{3}] \nHeartbeat listening address:[{4}:{5}]",
+                _setting.SendMessageSocketSetting.Address,
+                _setting.SendMessageSocketSetting.Port,
+                _setting.PullMessageSocketSetting.Address,
+                _setting.PullMessageSocketSetting.Port,
+                _setting.HeartbeatSocketSetting.Address,
+                _setting.HeartbeatSocketSetting.Port);
         }
         public void Shutdown()
         {

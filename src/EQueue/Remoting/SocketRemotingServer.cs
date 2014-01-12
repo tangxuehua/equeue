@@ -26,10 +26,9 @@ namespace EQueue.Remoting
         {
             if (_started) return;
 
-            _serverSocket.Start(ProcessRemotingRequest);
+            Task.Factory.StartNew(() => _serverSocket.Start(ProcessRemotingRequest));
 
             _started = true;
-            _logger.InfoFormat("{0} started...", this.GetType().Name);
         }
 
         public void Shutdown()
