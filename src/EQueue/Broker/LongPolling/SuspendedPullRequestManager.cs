@@ -7,14 +7,15 @@ using EQueue.Infrastructure.Scheduling;
 
 namespace EQueue.Broker.LongPolling
 {
-    public class PullRequestHoldService
+    public class SuspendedPullRequestManager
     {
         private const string Topic_QueueId_Separator = "@";
         private ConcurrentDictionary<string, ConcurrentQueue<PullRequest>> _queueRequestDict = new ConcurrentDictionary<string, ConcurrentQueue<PullRequest>>();
         private readonly IScheduleService _scheduleService;
         private readonly IMessageService _messageService;
+        private int _checkHoldRequestTaskId;
 
-        public PullRequestHoldService()
+        public SuspendedPullRequestManager()
         {
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _messageService = ObjectContainer.Resolve<IMessageService>();
@@ -43,11 +44,11 @@ namespace EQueue.Broker.LongPolling
 
         public void Start()
         {
-            _scheduleService.ScheduleTask(CheckHoldRequest, 1000, 1000);
+            _checkHoldRequestTaskId = _scheduleService.ScheduleTask(CheckHoldRequest, 1000, 1000);
         }
         public void Shutdown()
         {
-
+            _scheduleService.ShutdownTask(_checkHoldRequestTaskId);
         }
 
         private void CheckHoldRequest()

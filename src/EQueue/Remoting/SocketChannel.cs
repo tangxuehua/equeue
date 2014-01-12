@@ -4,21 +4,21 @@ namespace EQueue.Remoting
 {
     public class SocketChannel : IChannel
     {
-        private readonly Socket _socket;
+        public Socket Socket { get; private set; }
 
         public SocketChannel(Socket socket)
         {
-            _socket = socket;
+            Socket = socket;
         }
 
         public string RemotingAddress
         {
-            get { return _socket.RemoteEndPoint.ToString(); }
+            get { return Socket.RemoteEndPoint.ToString(); }
         }
 
         public void Close()
         {
-            _socket.Close();
+            Socket.Close();
         }
 
         public override string ToString()

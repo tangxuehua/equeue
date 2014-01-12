@@ -51,7 +51,7 @@ namespace EQueue.Broker.Processors
                     SuspendPullRequestMilliseconds,
                     ExecutePullRequest,
                     ExecutePullRequest);
-                _brokerController.PullRequestHoldService.SuspendPullRequest(pullRequest);
+                _brokerController.SuspendedPullRequestManager.SuspendPullRequest(pullRequest);
                 return null;
             }
         }

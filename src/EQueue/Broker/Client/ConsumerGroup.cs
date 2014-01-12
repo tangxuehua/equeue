@@ -9,25 +9,25 @@ using EQueue.Remoting;
 
 namespace EQueue.Broker.Client
 {
-    public class ConsumerGroupInfo
+    public class ConsumerGroup
     {
         private const long ChannelExpiredTimeout = 1000 * 120;
         private string _groupName;
         private MessageModel _messageModel;
-        private ConcurrentDictionary<string, ClientChannelInfo> _consumerChannelDict = new ConcurrentDictionary<string, ClientChannelInfo>();
+        private ConcurrentDictionary<string, ClientChannel> _consumerChannelDict = new ConcurrentDictionary<string, ClientChannel>();
         private ConcurrentDictionary<string, string> _subscriptionTopicDict = new ConcurrentDictionary<string, string>();
         private ILogger _logger;
 
         public DateTime LastUpdateTime { get; private set; }
 
-        public ConsumerGroupInfo(string groupName, MessageModel messageModel)
+        public ConsumerGroup(string groupName, MessageModel messageModel)
         {
             _groupName = groupName;
             _messageModel = messageModel;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        public bool UpdateChannel(ClientChannelInfo clientChannelInfo, MessageModel messageModel)
+        public bool UpdateChannel(ClientChannel clientChannel, MessageModel messageModel)
         {
             var consumeGroupChanged = false;
 
@@ -37,15 +37,15 @@ namespace EQueue.Broker.Client
                 consumeGroupChanged = true;
             }
 
-            var channelInfo = _consumerChannelDict.GetOrAdd(clientChannelInfo.ClientId, x =>
+            var currentChannel = _consumerChannelDict.GetOrAdd(clientChannel.Channel.RemotingAddress, x =>
             {
                 consumeGroupChanged = true;
-                return clientChannelInfo;
+                return clientChannel;
             });
 
             var currentTime = DateTime.Now;
             LastUpdateTime = currentTime;
-            channelInfo.LastUpdateTime = currentTime;
+            currentChannel.LastUpdateTime = currentTime;
 
             return consumeGroupChanged;
         }
@@ -65,29 +65,29 @@ namespace EQueue.Broker.Client
 
             return subscriptionTopicChanged;
         }
-        public void RemoteClientChannel(string clientId)
+        public void RemoveConsumerChannel(string consumerChannelRemotingAddress)
         {
-            ClientChannelInfo channel;
-            if (_consumerChannelDict.TryRemove(clientId, out channel))
+            ClientChannel clientChannel;
+            if (_consumerChannelDict.TryRemove(consumerChannelRemotingAddress, out clientChannel))
             {
-                _logger.WarnFormat("Removed not active channel from ConsumerGroupInfo. consumer Group:{0}, channel:{1}", _groupName, channel);
+                _logger.WarnFormat("Removed not active consumer client channel from consumer group. consumer Group:{0}, clientChannel:{1}", _groupName, clientChannel);
             }
         }
-        public void RemoteNotActiveChannels()
+        public void RemoteNotActiveConsumerChannels()
         {
             foreach (var entry in _consumerChannelDict)
             {
-                var clientId = entry.Key;
-                var channelInfo = entry.Value;
-                if (DateTime.Now > channelInfo.LastUpdateTime.AddMilliseconds(ChannelExpiredTimeout))
+                var channelRemotingAddress = entry.Key;
+                var clientChannel = entry.Value;
+                if (DateTime.Now > clientChannel.LastUpdateTime.AddMilliseconds(ChannelExpiredTimeout))
                 {
-                    channelInfo.Channel.Close();
-                    RemoteClientChannel(clientId);
+                    clientChannel.Channel.Close();
+                    RemoveConsumerChannel(channelRemotingAddress);
                 }
             }
         }
 
-        public IEnumerable<ClientChannelInfo> GetAllConsumerChannels()
+        public IEnumerable<ClientChannel> GetAllConsumerChannels()
         {
             return _consumerChannelDict.Values.ToArray();
         }

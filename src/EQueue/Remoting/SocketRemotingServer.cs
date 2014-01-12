@@ -13,12 +13,12 @@ namespace EQueue.Remoting
         private readonly ILogger _logger;
         private bool _started;
 
-        public SocketRemotingServer(string address = "127.0.0.1", int port = 5000, int backlog = 5000)
+        public SocketRemotingServer(SocketSetting socketSetting, ISocketEventListener socketEventListener = null)
         {
-            _serverSocket = new ServerSocket(new SocketEventHandler());
+            _serverSocket = new ServerSocket(socketEventListener);
             _requestProcessorDict = new Dictionary<int, IRequestProcessor>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
-            _serverSocket.Bind(address, port).Listen(backlog);
+            _serverSocket.Bind(socketSetting.Address, socketSetting.Port).Listen(socketSetting.Backlog);
             _started = false;
         }
 
@@ -66,19 +66,5 @@ namespace EQueue.Remoting
                 }
             });
         }
-
-        class SocketEventHandler : ISocketEventListener
-        {
-            public void OnNewSocketAccepted(SocketInfo socketInfo)
-            {
-                //TODO
-            }
-
-            public void OnSocketDisconnected(SocketInfo socketInfo)
-            {
-                //TODO
-            }
-        }
-
     }
 }

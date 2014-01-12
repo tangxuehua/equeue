@@ -1,10 +1,9 @@
-﻿using EQueue.Infrastructure;
+﻿using EQueue.Broker.Client;
+using EQueue.Infrastructure;
 using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
 using EQueue.Protocols;
 using EQueue.Remoting;
-using EQueue.Remoting.Requests;
-using EQueue.Remoting.Responses;
 
 namespace EQueue.Broker.Processors
 {
@@ -12,29 +11,30 @@ namespace EQueue.Broker.Processors
     {
         private IMessageService _messageService;
         private IBinarySerializer _binarySerializer;
+        private BrokerController _brokerController;
         private ILogger _logger;
 
-        public ConsumerHeartbeatProcessor()
+        public ConsumerHeartbeatProcessor(BrokerController brokerController)
         {
             _messageService = ObjectContainer.Resolve<IMessageService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
+            _brokerController = brokerController;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
         public RemotingResponse ProcessRequest(IRequestHandlerContext context, RemotingRequest request)
         {
             var consumerData = _binarySerializer.Deserialize<ConsumerData>(request.Body);
-            return null;
-            //var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.Arg);
-            //var sendMessageResponse = new SendMessageResponse(
-            //    storeResult.MessageOffset,
-            //    new MessageQueue(sendMessageRequest.Message.Topic, storeResult.QueueId),
-            //    storeResult.QueueOffset);
-            //var responseData = _binarySerializer.Serialize(sendMessageResponse);
-            //_logger.Debug(sendMessageResponse);
-            //var remotingResponse = new RemotingResponse((int)ResponseCode.Success, responseData);
-            //remotingResponse.Sequence = request.Sequence;
-            //return remotingResponse;
+            var changed = _brokerController.ConsumerManager.RegisterConsumer(
+                consumerData.GroupName,
+                new ClientChannel(consumerData.ConsumerId, context.Channel),
+                consumerData.MessageModel,
+                consumerData.SubscriptionTopics);
+            if (changed)
+            {
+                _logger.InfoFormat("ConsumerGroup changed, consumerData:{0}, channel:{1}", consumerData, context.Channel.RemotingAddress);
+            }
+            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, new byte[0]);
         }
     }
 }

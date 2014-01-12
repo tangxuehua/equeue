@@ -6,5 +6,6 @@ namespace EQueue.Infrastructure.Socketing
     {
         void OnNewSocketAccepted(SocketInfo socketInfo);
         void OnSocketDisconnected(SocketInfo socketInfo);
+        void OnSocketReceiveException(SocketInfo socketInfo);
     }
 }

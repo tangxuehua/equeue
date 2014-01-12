@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
 using EQueue.Protocols;
@@ -12,18 +9,18 @@ namespace EQueue.Broker.Client
     public class ConsumerManager
     {
         private ILogger _logger;
-        private ConcurrentDictionary<string, ConsumerGroupInfo> _consumerGroupDict = new ConcurrentDictionary<string, ConsumerGroupInfo>();
+        private ConcurrentDictionary<string, ConsumerGroup> _consumerGroupDict = new ConcurrentDictionary<string, ConsumerGroup>();
 
         public ConsumerManager()
         {
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        public bool RegisterConsumer(string group, ClientChannelInfo clientChannelInfo, MessageModel messageModel, IEnumerable<string> subscriptionTopics)
+        public bool RegisterConsumer(string groupName, ClientChannel clientChannel, MessageModel messageModel, IEnumerable<string> subscriptionTopics)
         {
-            var consumerGroupInfo = _consumerGroupDict.GetOrAdd(group, new ConsumerGroupInfo(group, messageModel));
-            var channelChanged = consumerGroupInfo.UpdateChannel(clientChannelInfo, messageModel);
-            var subscriptionTopicChanged = consumerGroupInfo.UpdateSubscriptionTopics(subscriptionTopics);
+            var consumerGroup = _consumerGroupDict.GetOrAdd(groupName, new ConsumerGroup(groupName, messageModel));
+            var channelChanged = consumerGroup.UpdateChannel(clientChannel, messageModel);
+            var subscriptionTopicChanged = consumerGroup.UpdateSubscriptionTopics(subscriptionTopics);
             var changed = channelChanged || subscriptionTopicChanged;
 
             if (changed)
@@ -33,11 +30,18 @@ namespace EQueue.Broker.Client
 
             return changed;
         }
-        public void ScanNotActiveChannel()
+        public void ScanNotActiveConsumer()
         {
             foreach (var consumerGroup in _consumerGroupDict.Values)
             {
-                consumerGroup.RemoteNotActiveChannels();
+                consumerGroup.RemoteNotActiveConsumerChannels();
+            }
+        }
+        public void RemoveConsumer(string consumerChannelRemotingAddress)
+        {
+            foreach (var consumerGroup in _consumerGroupDict.Values)
+            {
+                consumerGroup.RemoveConsumerChannel(consumerChannelRemotingAddress);
             }
         }
     }

@@ -29,7 +29,7 @@ namespace EQueue.Infrastructure.Socketing
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _clientSocketDict = new ConcurrentDictionary<string, SocketInfo>();
             _socketEventListener = socketEventListener;
-            _socketService = new SocketService(NotifySocketDisconnected);
+            _socketService = new SocketService(NotifySocketReceiveException);
             _newClientSocketSignal = new ManualResetEvent(false);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
@@ -49,9 +49,8 @@ namespace EQueue.Infrastructure.Socketing
         public void Start(Action<ReceiveContext> messageReceivedCallback)
         {
             _messageReceivedCallback = messageReceivedCallback;
-            _scheduleService.ScheduleTask(CheckClientSocketConnection, 3000, 3000);
+            _scheduleService.ScheduleTask(CheckDisconnectedClientSocket, 3 * 1000, 3 * 1000);
             _running = true;
-            _logger.InfoFormat("Server is listening address:{0}", _socket.LocalEndPoint.ToString());
 
             while (_running)
             {
@@ -62,13 +61,14 @@ namespace EQueue.Infrastructure.Socketing
                     _socket.BeginAccept((asyncResult) =>
                     {
                         var clientSocket = _socket.EndAccept(asyncResult);
-                        var clientSocketInfo = new SocketInfo(clientSocket);
-                        _clientSocketDict.TryAdd(clientSocketInfo.SocketRemotingEndpointAddress, clientSocketInfo);
-                        _logger.InfoFormat("----Accepted new client:{0}", clientSocketInfo.SocketRemotingEndpointAddress);
+                        var socketInfo = new SocketInfo(clientSocket);
+                        _clientSocketDict.TryAdd(socketInfo.SocketRemotingEndpointAddress, socketInfo);
+                        _logger.InfoFormat("New socket accepted, address:{0}", socketInfo.SocketRemotingEndpointAddress);
+                        NotifyNewSocketAccepted(socketInfo);
                         _newClientSocketSignal.Set();
-                        _socketService.ReceiveMessage(clientSocketInfo, (receivedMessage) =>
+                        _socketService.ReceiveMessage(socketInfo, receivedMessage =>
                         {
-                            var receiveContext = new ReceiveContext(clientSocketInfo, receivedMessage, context =>
+                            var receiveContext = new ReceiveContext(socketInfo, receivedMessage, context =>
                             {
                                 _socketService.SendMessage(context.ReplySocketInfo.InnerSocket, context.ReplyMessage, sendResult => { });
                             });
@@ -95,7 +95,7 @@ namespace EQueue.Infrastructure.Socketing
             _running = false;
         }
 
-        private void CheckClientSocketConnection()
+        private void CheckDisconnectedClientSocket()
         {
             var disconnectedSockets = new List<SocketInfo>();
             foreach (var entry in _clientSocketDict)
@@ -107,6 +107,8 @@ namespace EQueue.Infrastructure.Socketing
             }
             foreach (var socket in disconnectedSockets)
             {
+                _clientSocketDict.Remove(socket.SocketRemotingEndpointAddress);
+                _logger.InfoFormat("Socket disconnected, address:{0}", socket.SocketRemotingEndpointAddress);
                 NotifySocketDisconnected(socket);
             }
         }
@@ -124,17 +126,27 @@ namespace EQueue.Infrastructure.Socketing
 
             return true;
         }
+
+        private void NotifyNewSocketAccepted(SocketInfo socketInfo)
+        {
+            if (_socketEventListener != null)
+            {
+                Task.Factory.StartNew(() => _socketEventListener.OnSocketDisconnected(socketInfo));
+            }
+        }
         private void NotifySocketDisconnected(SocketInfo socketInfo)
         {
-            Task.Factory.StartNew(() =>
+            if (_socketEventListener != null)
             {
-                _logger.ErrorFormat("Socket disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
-                _clientSocketDict.Remove(socketInfo.SocketRemotingEndpointAddress);
-                if (_socketEventListener != null)
-                {
-                    _socketEventListener.OnSocketDisconnected(socketInfo);
-                }
-            });
+                Task.Factory.StartNew(() => _socketEventListener.OnSocketDisconnected(socketInfo));
+            }
+        }
+        private void NotifySocketReceiveException(SocketInfo socketInfo)
+        {
+            if (_socketEventListener != null)
+            {
+                Task.Factory.StartNew(() => _socketEventListener.OnSocketReceiveException(socketInfo));
+            }
         }
     }
 }
