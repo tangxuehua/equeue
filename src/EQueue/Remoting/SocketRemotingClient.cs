@@ -17,7 +17,6 @@ namespace EQueue.Remoting
         private readonly int _port;
         private readonly ClientSocket _clientSocket;
         private readonly ConcurrentDictionary<long, ResponseFuture> _responseFutureDict;
-        private readonly Dictionary<int, IRequestProcessor> _requestProcessorDict;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
 
@@ -27,7 +26,6 @@ namespace EQueue.Remoting
             _port = port;
             _clientSocket = new ClientSocket();
             _responseFutureDict = new ConcurrentDictionary<long, ResponseFuture>();
-            _requestProcessorDict = new Dictionary<int, IRequestProcessor>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _clientSocket.Connect(address, port);
@@ -100,10 +98,6 @@ namespace EQueue.Remoting
                 throw new RemotingSendRequestException(_address, request, ex);
             }
         }
-        public void RegisterRequestProcessor(int requestCode, IRequestProcessor requestProcessor)
-        {
-            _requestProcessorDict[requestCode] = requestProcessor;
-        }
 
         private void ProcessRemotingResponse(byte[] responseMessage)
         {
@@ -131,7 +125,7 @@ namespace EQueue.Remoting
             foreach (var request in timeoutRequestList)
             {
                 _responseFutureDict.Remove(request.Sequence);
-                _logger.WarnFormat("Removed timeout request, request:{0}", request);
+                _logger.WarnFormat("Removed timeout request:{0}", request);
             }
         }
         private void SendMessageCallback(ResponseFuture responseFuture, RemotingRequest request, string address, SendResult sendResult)

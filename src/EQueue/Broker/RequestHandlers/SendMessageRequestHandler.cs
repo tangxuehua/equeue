@@ -9,20 +9,20 @@ using EQueue.Remoting.Responses;
 
 namespace EQueue.Broker.Processors
 {
-    public class SendMessageRequestProcessor : IRequestProcessor
+    public class SendMessageRequestHandler : IRequestHandler
     {
         private IMessageService _messageService;
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
 
-        public SendMessageRequestProcessor()
+        public SendMessageRequestHandler()
         {
             _messageService = ObjectContainer.Resolve<IMessageService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        public RemotingResponse ProcessRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
             var sendMessageRequest = _binarySerializer.Deserialize<SendMessageRequest>(request.Body);
             var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.Arg);
@@ -31,7 +31,6 @@ namespace EQueue.Broker.Processors
                 new MessageQueue(sendMessageRequest.Message.Topic, storeResult.QueueId),
                 storeResult.QueueOffset);
             var responseData = _binarySerializer.Serialize(sendMessageResponse);
-            //_logger.Debug(sendMessageResponse);
 
             var current = Interlocked.Increment(ref total);
             if (current % 2000 == 0)

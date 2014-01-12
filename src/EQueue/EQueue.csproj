@@ -44,9 +44,9 @@
     <Compile Include="Broker\LongPolling\PullRequest.cs" />
     <Compile Include="Broker\LongPolling\SuspendedPullRequestManager.cs" />
     <Compile Include="Broker\BrokerController.cs" />
-    <Compile Include="Broker\Processors\PullMessageRequestProcessor.cs" />
-    <Compile Include="Broker\Processors\ConsumerHeartbeatProcessor.cs" />
-    <Compile Include="Broker\Processors\SendMessageRequestProcessor.cs" />
+    <Compile Include="Broker\RequestHandlers\PullMessageRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\ConsumerHeartbeatRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\SendMessageRequestHandler.cs" />
     <Compile Include="Broker\Queue.cs" />
     <Compile Include="Broker\MessageService.cs" />
     <Compile Include="Broker\IMessageService.cs" />
@@ -108,7 +108,7 @@
     <Compile Include="Remoting\Exceptions\RemotingSendRequestException.cs" />
     <Compile Include="Remoting\Exceptions\RemotingTimeoutException.cs" />
     <Compile Include="Remoting\IRequestHandlerContext.cs" />
-    <Compile Include="Remoting\IRequestProcessor.cs" />
+    <Compile Include="Remoting\IRequestHandler.cs" />
     <Compile Include="Remoting\RemotingRequest.cs" />
     <Compile Include="Remoting\RemotingMessage.cs" />
     <Compile Include="Remoting\RemotingUtil.cs" />

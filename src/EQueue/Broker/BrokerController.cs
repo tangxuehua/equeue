@@ -38,8 +38,8 @@ namespace EQueue.Broker
 
         public BrokerController Initialize()
         {
-            _sendMessageRemotingServer.RegisterRequestProcessor((int)RequestCode.SendMessage, new SendMessageRequestProcessor());
-            _sendMessageRemotingServer.RegisterRequestProcessor((int)RequestCode.PullMessage, new PullMessageRequestProcessor(this));
+            _sendMessageRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler());
+            _sendMessageRemotingServer.RegisterRequestHandler((int)RequestCode.PullMessage, new PullMessageRequestHandler(this));
             return this;
         }
         public void Start()

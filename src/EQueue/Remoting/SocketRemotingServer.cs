@@ -9,14 +9,14 @@ namespace EQueue.Remoting
     public class SocketRemotingServer
     {
         private readonly ServerSocket _serverSocket;
-        private readonly Dictionary<int, IRequestProcessor> _requestProcessorDict;
+        private readonly Dictionary<int, IRequestHandler> _requestHandlerDict;
         private readonly ILogger _logger;
         private bool _started;
 
         public SocketRemotingServer(SocketSetting socketSetting, ISocketEventListener socketEventListener = null)
         {
             _serverSocket = new ServerSocket(socketEventListener);
-            _requestProcessorDict = new Dictionary<int, IRequestProcessor>();
+            _requestHandlerDict = new Dictionary<int, IRequestHandler>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _serverSocket.Bind(socketSetting.Address, socketSetting.Port).Listen(socketSetting.Backlog);
             _started = false;
@@ -26,7 +26,7 @@ namespace EQueue.Remoting
         {
             if (_started) return;
 
-            Task.Factory.StartNew(() => _serverSocket.Start(ProcessRemotingRequest));
+            Task.Factory.StartNew(() => _serverSocket.Start(HandleRemotingRequest));
 
             _started = true;
         }
@@ -36,24 +36,24 @@ namespace EQueue.Remoting
             _serverSocket.Shutdown();
         }
 
-        public void RegisterRequestProcessor(int requestCode, IRequestProcessor requestProcessor)
+        public void RegisterRequestHandler(int requestCode, IRequestHandler requestHandler)
         {
-            _requestProcessorDict[requestCode] = requestProcessor;
+            _requestHandlerDict[requestCode] = requestHandler;
         }
 
-        private void ProcessRemotingRequest(ReceiveContext receiveContext)
+        private void HandleRemotingRequest(ReceiveContext receiveContext)
         {
             var remotingRequest = RemotingUtil.ParseRequest(receiveContext.ReceivedMessage);
-            IRequestProcessor requestProcessor;
-            if (!_requestProcessorDict.TryGetValue(remotingRequest.Code, out requestProcessor))
+            IRequestHandler requestHandler;
+            if (!_requestHandlerDict.TryGetValue(remotingRequest.Code, out requestHandler))
             {
-                _logger.ErrorFormat("No request processor found for request, request code:{0}", remotingRequest.Code);
+                _logger.ErrorFormat("No request handler found for remoting request, request code:{0}", remotingRequest.Code);
                 return;
             }
 
             Task.Factory.StartNew(() =>
             {
-                var remotingResponse = requestProcessor.ProcessRequest(new SocketRequestHandlerContext(receiveContext), remotingRequest);
+                var remotingResponse = requestHandler.HandleRequest(new SocketRequestHandlerContext(receiveContext), remotingRequest);
                 if (remotingRequest.IsOneway)
                 {
                     return;

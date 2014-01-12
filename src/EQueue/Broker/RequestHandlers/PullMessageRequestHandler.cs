@@ -11,7 +11,7 @@ using EQueue.Remoting.Responses;
 
 namespace EQueue.Broker.Processors
 {
-    public class PullMessageRequestProcessor : IRequestProcessor
+    public class PullMessageRequestHandler : IRequestHandler
     {
         private const int SuspendPullRequestMilliseconds = 15 * 1000;
         private BrokerController _brokerController;
@@ -19,7 +19,7 @@ namespace EQueue.Broker.Processors
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
 
-        public PullMessageRequestProcessor(BrokerController brokerController)
+        public PullMessageRequestHandler(BrokerController brokerController)
         {
             _brokerController = brokerController;
             _messageService = ObjectContainer.Resolve<IMessageService>();
@@ -27,7 +27,7 @@ namespace EQueue.Broker.Processors
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        public RemotingResponse ProcessRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
             var pullMessageRequest = _binarySerializer.Deserialize<PullMessageRequest>(request.Body);
             var messages = _messageService.GetMessages(

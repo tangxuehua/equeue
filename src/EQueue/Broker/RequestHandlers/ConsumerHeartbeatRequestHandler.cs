@@ -7,14 +7,14 @@ using EQueue.Remoting;
 
 namespace EQueue.Broker.Processors
 {
-    public class ConsumerHeartbeatProcessor : IRequestProcessor
+    public class ConsumerHeartbeatRequestHandler : IRequestHandler
     {
         private IMessageService _messageService;
         private IBinarySerializer _binarySerializer;
         private BrokerController _brokerController;
         private ILogger _logger;
 
-        public ConsumerHeartbeatProcessor(BrokerController brokerController)
+        public ConsumerHeartbeatRequestHandler(BrokerController brokerController)
         {
             _messageService = ObjectContainer.Resolve<IMessageService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
@@ -22,7 +22,7 @@ namespace EQueue.Broker.Processors
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        public RemotingResponse ProcessRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
             var consumerData = _binarySerializer.Deserialize<ConsumerData>(request.Body);
             var changed = _brokerController.ConsumerManager.RegisterConsumer(
