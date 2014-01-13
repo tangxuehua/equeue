@@ -40,7 +40,6 @@
     <Compile Include="Broker\Client\ClientManager.cs" />
     <Compile Include="Broker\Client\ConsumerGroup.cs" />
     <Compile Include="Broker\Client\ConsumerManager.cs" />
-    <Compile Include="Broker\Client\ProducerManager.cs" />
     <Compile Include="Broker\LongPolling\PullRequest.cs" />
     <Compile Include="Broker\LongPolling\SuspendedPullRequestManager.cs" />
     <Compile Include="Broker\BrokerController.cs" />
@@ -97,7 +96,6 @@
     <Compile Include="Infrastructure\Extensions\TaskSchedulerExtensions.cs" />
     <Compile Include="Infrastructure\Scheduling\Worker.cs" />
     <Compile Include="Protocols\MessageModel.cs" />
-    <Compile Include="Protocols\TopicRouteData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Clients\Consumers\PullRequest.cs" />
     <Compile Include="Clients\Consumers\PullResult.cs" />

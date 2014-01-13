@@ -9,7 +9,7 @@ namespace EQueue.Clients.Consumers
     public class ProcessQueue
     {
         private ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
-        private IDictionary<long, Message> _messageDict = new SortedDictionary<long, Message>();
+        private IDictionary<long, QueueMessage> _messageDict = new SortedDictionary<long, QueueMessage>();
         private long _queueOffsetMax = 0L;
 
         public void AddMessages(IEnumerable<QueueMessage> messages)

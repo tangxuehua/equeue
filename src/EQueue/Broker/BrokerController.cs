@@ -18,7 +18,6 @@ namespace EQueue.Broker
         private readonly SocketRemotingServer _heartbeatRemotingServer;
         private readonly ClientManager _clientManager;
         public SuspendedPullRequestManager SuspendedPullRequestManager { get; private set; }
-        public ProducerManager ProducerManager { get; private set; }
         public ConsumerManager ConsumerManager { get; private set; }
 
         public BrokerController() : this(BrokerSetting.Default) { }
@@ -32,7 +31,6 @@ namespace EQueue.Broker
             _heartbeatRemotingServer = new SocketRemotingServer(setting.HeartbeatSocketSetting);
             _clientManager = new ClientManager(this);
             SuspendedPullRequestManager = new SuspendedPullRequestManager();
-            ProducerManager = new ProducerManager();
             ConsumerManager = new ConsumerManager();
         }
 

@@ -24,9 +24,8 @@ namespace EQueue.Clients.Consumers
         private long flowControlTimes2;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
-        private readonly IDictionary<string, TopicRouteData> _topicRouteDataDict = new Dictionary<string, TopicRouteData>();
+        private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
         private readonly ConcurrentDictionary<MessageQueue, ProcessQueue> _processQueueDict = new ConcurrentDictionary<MessageQueue, ProcessQueue>();
-        private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicSubscribeInfoDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
         private readonly List<string> _subscriptionTopics = new List<string>();
         private readonly BlockingCollection<PullRequest> _pullRequestBlockingQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
         private readonly Worker _executePullReqeustWorker;
@@ -90,11 +89,11 @@ namespace EQueue.Clients.Consumers
         public Consumer Start()
         {
             _scheduleService.ScheduleTask(Rebalance, 1000 * 10, 1000 * 10);
-            _scheduleService.ScheduleTask(UpdateAllTopicRouteData, 1000 * 30, 1000 * 30);
+            _scheduleService.ScheduleTask(UpdateAllLocalTopicQueues, 1000 * 30, 1000 * 30);
             _scheduleService.ScheduleTask(SendHeartbeatToBroker, 1000 * 30, 1000 * 30);
             _scheduleService.ScheduleTask(PersistOffset, 1000 * 5, 1000 * 5);
             _executePullReqeustWorker.Start();
-            _logger.InfoFormat("Consumer [{0}] start OK, settings:{1}", Id, Settings);
+            _logger.InfoFormat("Consumer [{0}] started, settings:{1}", Id, Settings);
             return this;
         }
         public Consumer Subscribe(string topic)
@@ -217,33 +216,54 @@ namespace EQueue.Clients.Consumers
                 }
             });
         }
-        private void RebalanceBroadCasting(string topic)
+        private void Rebalance()
         {
-            if (_topicSubscribeInfoDict.ContainsKey(topic))
+            if (MessageModel == MessageModel.BroadCasting)
             {
-                var messageQueues = _topicSubscribeInfoDict[topic];
-                var changed = UpdateProcessQueueDict(topic, messageQueues);
-                if (changed)
+                foreach (var subscriptionTopic in _subscriptionTopics)
                 {
-                    _logger.InfoFormat("MessageQueue changed [consumerGroup:{0}, topic:{1}, allocatedMessageQueues:{2}]", GroupName, topic, string.Join("|", messageQueues));
+                    try
+                    {
+                        RebalanceBroadCasting(subscriptionTopic);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(string.Format("RebalanceBroadCasting for topic [{0}] has exception", subscriptionTopic), ex);
+                    }
                 }
             }
-            else
+            else if (MessageModel == MessageModel.Clustering)
             {
-                _logger.WarnFormat("DoRebalance of broad casting, consumerGroup: {0}, but the topic[{1}] not exist.", GroupName, topic);
+                var consumerIdList = FindConsumers(GroupName).ToList();
+                consumerIdList.Sort();
+                foreach (var subscriptionTopic in _subscriptionTopics)
+                {
+                    try
+                    {
+                        RebalanceClustering(subscriptionTopic, consumerIdList);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(string.Format("RebalanceClustering for topic [{0}] has exception", subscriptionTopic), ex);
+                    }
+                }
             }
         }
-        private void RebalanceClustering(string topic)
+        private void RebalanceBroadCasting(string subscriptionTopic)
         {
-            if (_topicSubscribeInfoDict.ContainsKey(topic))
+            IList<MessageQueue> messageQueues;
+            if (_topicQueuesDict.TryGetValue(subscriptionTopic, out messageQueues))
             {
-                var messageQueues = _topicSubscribeInfoDict[topic];
-                var consumerIds = FindConsumers(GroupName);
+                UpdateProcessQueueDict(subscriptionTopic, messageQueues);
+            }
+        }
+        private void RebalanceClustering(string subscriptionTopic, IList<string> consumerIdList)
+        {
+            IList<MessageQueue> messageQueues;
+            if (_topicQueuesDict.TryGetValue(subscriptionTopic, out messageQueues))
+            {
                 var messageQueueList = messageQueues.ToList();
-                var consumerIdList = consumerIds.ToList();
-
                 messageQueueList.Sort();
-                consumerIdList.Sort();
 
                 IEnumerable<MessageQueue> allocatedMessageQueues = new List<MessageQueue>();
                 try
@@ -256,16 +276,7 @@ namespace EQueue.Clients.Consumers
                     return;
                 }
 
-                var allocatedMessageQueueList = allocatedMessageQueues.ToList();
-                var changed = UpdateProcessQueueDict(topic, allocatedMessageQueueList);
-                if (changed)
-                {
-                    _logger.InfoFormat("MessageQueue changed [consumerGroup:{0}, topic:{1}, allocatedMessageQueues:{2}, consumerClientIds:{3}]", GroupName, topic, string.Join("|", allocatedMessageQueueList), string.Join("|", consumerIdList));
-                }
-            }
-            else
-            {
-                _logger.WarnFormat("DoRebalance of clustering, consumerGroup: {0}, but the topic[{1}] not exist.", GroupName, topic);
+                UpdateProcessQueueDict(subscriptionTopic, allocatedMessageQueues.ToList());
             }
         }
         private IEnumerable<string> FindConsumers(string consumerGroup)
@@ -273,28 +284,35 @@ namespace EQueue.Clients.Consumers
             //TODO
             return new string[0];
         }
-        private bool UpdateProcessQueueDict(string topic, IList<MessageQueue> messageQueues)
+        private void UpdateProcessQueueDict(string topic, IList<MessageQueue> messageQueues)
         {
-            var changed = false;
-
+            // Check message queues to remove
+            var toRemoveMessageQueues = new List<MessageQueue>();
             foreach (var messageQueue in _processQueueDict.Keys)
             {
                 if (messageQueue.Topic == topic)
                 {
-                    if (!messageQueues.Contains(messageQueue))
+                    if (!messageQueues.Any(x => x.Topic == messageQueue.Topic && x.QueueId == messageQueue.QueueId))
                     {
-                        changed = true;
-                        ProcessQueue processQueue;
-                        _processQueueDict.TryRemove(messageQueue, out processQueue);
-                        PersistRemovedMessageQueueOffset(messageQueue);
+                        toRemoveMessageQueues.Add(messageQueue);
                     }
                 }
             }
+            foreach (var messageQueue in toRemoveMessageQueues)
+            {
+                ProcessQueue processQueue;
+                if (_processQueueDict.TryRemove(messageQueue, out processQueue))
+                {
+                    PersistRemovedMessageQueueOffset(messageQueue);
+                    _logger.InfoFormat("Removed message queue:{0}, consumerGroup:{1}", messageQueue, GroupName);
+                }
+            }
 
+            // Check message queues to add.
             var pullRequestList = new List<PullRequest>();
             foreach (var messageQueue in messageQueues)
             {
-                if (!_processQueueDict.ContainsKey(messageQueue))
+                if (!_processQueueDict.Any(x => x.Key.Topic == messageQueue.Topic && x.Key.QueueId == messageQueue.QueueId))
                 {
                     var pullRequest = new PullRequest();
                     pullRequest.ConsumerGroup = GroupName;
@@ -304,40 +322,24 @@ namespace EQueue.Clients.Consumers
                     long nextOffset = ComputePullFromWhere(messageQueue);
                     if (nextOffset >= 0)
                     {
-                        changed = true;
                         pullRequest.NextOffset = nextOffset;
-                        pullRequestList.Add(pullRequest);
-                        _processQueueDict.TryAdd(messageQueue, pullRequest.ProcessQueue);
+                        if (_processQueueDict.TryAdd(messageQueue, pullRequest.ProcessQueue))
+                        {
+                            pullRequestList.Add(pullRequest);
+                        }
                     }
                     else
                     {
-                        _logger.WarnFormat("DoRebalance, ConsumerGroup: {0}, The new messageQueue {1} cannot be added as the nextOffset is < 0.", GroupName, messageQueue);
+                        _logger.WarnFormat("The new messageQueue:{0} (consumerGroup:{1}) cannot be added as the nextOffset is < 0.", messageQueue, GroupName);
                     }
                 }
             }
 
             foreach (var pullRequest in pullRequestList)
             {
+                var nextOffset = pullRequest.NextOffset;
                 EnqueuePullRequest(pullRequest);
-                _logger.InfoFormat("DoRebalance, consumerGroup:{0}, add a new pull request {1}", GroupName, pullRequest);
-            }
-
-            return changed;
-        }
-        private void TruncateMessageQueueNotMyTopic()
-        {
-            var shouldRemoveQueues = new List<MessageQueue>();
-            foreach (var messageQueue in _processQueueDict.Keys)
-            {
-                if (!_subscriptionTopics.Contains(messageQueue.Topic))
-                {
-                    shouldRemoveQueues.Add(messageQueue);
-                }
-            }
-            foreach (var queue in shouldRemoveQueues)
-            {
-                ProcessQueue removedQueue;
-                _processQueueDict.TryRemove(queue, out removedQueue);
+                _logger.InfoFormat("Added message queue:{0}, consumerGroup:{1}, nextOffset:{2}", pullRequest.MessageQueue, GroupName, nextOffset);
             }
         }
         private void PersistRemovedMessageQueueOffset(MessageQueue messageQueue)
@@ -360,39 +362,6 @@ namespace EQueue.Clients.Consumers
             }
 
             return offset;
-        }
-        private void Rebalance()
-        {
-            if (MessageModel == MessageModel.BroadCasting)
-            {
-                foreach (var topic in _subscriptionTopics)
-                {
-                    try
-                    {
-                        RebalanceBroadCasting(topic);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error("RebalanceBroadCasting has exception", ex);
-                    }
-                }
-            }
-            else if (MessageModel == MessageModel.Clustering)
-            {
-                foreach (var topic in _subscriptionTopics)
-                {
-                    try
-                    {
-                        RebalanceClustering(topic);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error("RebalanceClustering has exception", ex);
-                    }
-                }
-            }
-
-            TruncateMessageQueueNotMyTopic();
         }
         private void PersistOffset()
         {
@@ -431,58 +400,33 @@ namespace EQueue.Clients.Consumers
                 _logger.Error("Send heart beat to broker exception", ex);
             }
         }
-
-        #region Update topic route data
-
-        private void UpdateAllTopicRouteData()
+        private void UpdateAllLocalTopicQueues()
         {
             foreach (var topic in SubscriptionTopics)
             {
-                UpdateTopicRouteData(topic);
+                UpdateLocalTopicQueues(topic);
             }
         }
-        private void UpdateTopicRouteData(string topic)
+        private void UpdateLocalTopicQueues(string topic)
         {
-            var topicRouteDataFromServer = GetTopicRouteDataFromServer(topic);
-            var topicRouteDataOnLocal = _topicRouteDataDict[topic];
-            var changed = IsTopicRouteDataChanged(topicRouteDataOnLocal, topicRouteDataFromServer);
+            var topicQueueCountFromServer = GetTopicQueueCountFromServer(topic);
+            var topicQueueCountOfLocal = _topicQueuesDict.ContainsKey(topic) ? _topicQueuesDict[topic].Count : 0;
 
-            if (!changed)
-            {
-                changed = IsNeedUpdateTopicRouteData(topic);
-            }
-
-            if (changed)
+            if (topicQueueCountFromServer != topicQueueCountOfLocal)
             {
                 var messageQueues = new List<MessageQueue>();
-                for (var index = 0; index < topicRouteDataFromServer.QueueCount; index++)
+                for (var index = 0; index < topicQueueCountFromServer; index++)
                 {
                     messageQueues.Add(new MessageQueue(topic, index));
                 }
-
-                _topicSubscribeInfoDict[topic] = messageQueues;
-                _topicRouteDataDict[topic] = topicRouteDataFromServer;
+                _topicQueuesDict[topic] = messageQueues;
             }
         }
-        private TopicRouteData GetTopicRouteDataFromServer(string topic)
+        private int GetTopicQueueCountFromServer(string topic)
         {
             //TODO
-            return null;
+            return 0;
         }
-        private bool IsTopicRouteDataChanged(TopicRouteData oldData, TopicRouteData newData)
-        {
-            return oldData != newData;
-        }
-        private bool IsNeedUpdateTopicRouteData(string topic)
-        {
-            if (!_subscriptionTopics.Any(x => x == topic))
-            {
-                return true;
-            }
-            return false;
-        }
-
-        #endregion
 
         #endregion
     }
