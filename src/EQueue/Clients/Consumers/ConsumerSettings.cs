@@ -17,7 +17,7 @@
         {
             BrokerAddress = "127.0.0.1";
             BrokerPort = 5001;
-            RebalanceInterval = 1000 * 10;
+            RebalanceInterval = 1000 * 5;
             HeartbeatBrokerInterval = 1000 * 5;
             UpdateTopicQueueCountInterval = 1000 * 5;
             PersistConsumerOffsetInterval = 1000 * 5;

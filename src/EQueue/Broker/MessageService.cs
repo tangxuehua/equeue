@@ -1,6 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using EQueue.Infrastructure.IoC;
+using EQueue.Infrastructure.Logging;
 using EQueue.Protocols;
 
 namespace EQueue.Broker
@@ -12,11 +14,13 @@ namespace EQueue.Broker
         private ConcurrentDictionary<string, IList<Queue>> _queueDict = new ConcurrentDictionary<string, IList<Queue>>();
         private IQueueSelector _queueSelector;
         private IMessageStore _messageStore;
+        private ILogger _logger;
 
         public MessageService(IQueueSelector messageQueueSelector, IMessageStore messageStore)
         {
             _queueSelector = messageQueueSelector;
             _messageStore = messageStore;
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
         public MessageStoreResult StoreMessage(Message message, string arg)
@@ -26,6 +30,7 @@ namespace EQueue.Broker
             var queueOffset = queue.IncrementCurrentOffset();
             var storeResult = _messageStore.StoreMessage(message, queue.QueueId, queueOffset);
             queue.SetMessageOffset(queueOffset, storeResult.MessageOffset);
+            _logger.DebugFormat("Message stored, offset:{0}, topic:{1}, queueId:{2}, queueOffset:{3}", storeResult.MessageOffset, message.Topic, queue.QueueId, queueOffset);
             return storeResult;
         }
         public IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize)

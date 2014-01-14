@@ -18,33 +18,22 @@ namespace QuickStart.ProducerClient
         {
             InitializeEQueue();
 
-            var producer1 = new Producer().Start();
-            var producer2 = new Producer().Start();
-            var producer3 = new Producer().Start();
-            var stopwatch1 = Stopwatch.StartNew();
-            var stopwatch2 = Stopwatch.StartNew();
-            var stopwatch3 = Stopwatch.StartNew();
-            var total = 10000;
-            var count1 = 0;
-            var count2 = 0;
-            var count3 = 0;
+            var producer = new Producer().Start();
+            var stopwatch = Stopwatch.StartNew();
+            var total = 2;
+            var count = 0;
 
             Task.Factory.StartNew(() =>
             {
                 for (var index = 1; index <= total; index++)
                 {
-                    var topic = index % 2 == 0 ? "topic1" : "topic1";
-                    producer1.SendAsync(new Message(topic, Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(sendTask =>
+                    producer.SendAsync(new Message("topic1", Encoding.UTF8.GetBytes("topic1-message" + index)), index.ToString()).ContinueWith(sendTask =>
                     {
-                        var current = Interlocked.Increment(ref count1);
-                        if (current % 1000 == 0)
-                        {
-                            Console.WriteLine("Producer1:" + sendTask.Result);
-                        }
+                        var current = Interlocked.Increment(ref count);
                         if (current == total)
                         {
-                            //producer1.Shutdown();
-                            Console.WriteLine("Producer1 send message finised, time spent:" + stopwatch1.ElapsedMilliseconds + ", messageOffset:" + sendTask.Result.MessageOffset);
+                            //producer.Shutdown();
+                            Console.WriteLine("Send message finised, time spent:" + stopwatch.ElapsedMilliseconds + ", messageOffset:" + sendTask.Result.MessageOffset);
                         }
                     });
                 }
@@ -53,38 +42,13 @@ namespace QuickStart.ProducerClient
             {
                 for (var index = 1; index <= total; index++)
                 {
-                    var topic = index % 2 == 0 ? "topic1" : "topic1";
-                    producer2.SendAsync(new Message(topic, Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(sendTask =>
+                    producer.SendAsync(new Message("topic2", Encoding.UTF8.GetBytes("topic2-message" + index)), index.ToString()).ContinueWith(sendTask =>
                     {
-                        var current = Interlocked.Increment(ref count2);
-                        if (current % 1000 == 0)
-                        {
-                            Console.WriteLine("Producer2:" + sendTask.Result);
-                        }
+                        var current = Interlocked.Increment(ref count);
                         if (current == total)
                         {
-                            //producer2.Shutdown();
-                            Console.WriteLine("Producer2 send message finised, time spent:" + stopwatch2.ElapsedMilliseconds + ", messageOffset:" + sendTask.Result.MessageOffset);
-                        }
-                    });
-                }
-            });
-            Task.Factory.StartNew(() =>
-            {
-                for (var index = 1; index <= total; index++)
-                {
-                    var topic = index % 2 == 0 ? "topic1" : "topic1";
-                    producer3.SendAsync(new Message(topic, Encoding.UTF8.GetBytes("Message" + index)), index.ToString()).ContinueWith(sendTask =>
-                    {
-                        var current = Interlocked.Increment(ref count3);
-                        if (current % 1000 == 0)
-                        {
-                            Console.WriteLine("Producer3:" + sendTask.Result);
-                        }
-                        if (current == total)
-                        {
-                            //producer3.Shutdown();
-                            Console.WriteLine("Producer3 send message finised, time spent:" + stopwatch3.ElapsedMilliseconds + ", messageOffset:" + sendTask.Result.MessageOffset);
+                            //producer.Shutdown();
+                            Console.WriteLine("Send message finised, time spent:" + stopwatch.ElapsedMilliseconds + ", messageOffset:" + sendTask.Result.MessageOffset);
                         }
                     });
                 }

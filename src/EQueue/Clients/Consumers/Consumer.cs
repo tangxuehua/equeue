@@ -89,6 +89,7 @@ namespace EQueue.Clients.Consumers
 
         public Consumer Start()
         {
+            _remotingClient.Start();
             _scheduleService.ScheduleTask(Rebalance, Settings.RebalanceInterval, Settings.RebalanceInterval);
             _scheduleService.ScheduleTask(UpdateAllLocalTopicQueues, Settings.UpdateTopicQueueCountInterval, Settings.UpdateTopicQueueCountInterval);
             _scheduleService.ScheduleTask(SendHeartbeatToBroker, Settings.HeartbeatBrokerInterval, Settings.HeartbeatBrokerInterval);
@@ -229,7 +230,7 @@ namespace EQueue.Clients.Consumers
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error(string.Format("RebalanceBroadCasting for topic [{0}] has exception", subscriptionTopic), ex);
+                        _logger.Error(string.Format("BroadCasting rebalance for topic [{0}] has exception", subscriptionTopic), ex);
                     }
                 }
             }
@@ -242,7 +243,7 @@ namespace EQueue.Clients.Consumers
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("RebalanceClustering failed as QueryGroupConsumers has exception.", ex);
+                    _logger.Error("Clustering rebalance failed as QueryGroupConsumers has exception.", ex);
                     return;
                 }
 
@@ -274,7 +275,18 @@ namespace EQueue.Clients.Consumers
             if (_topicQueuesDict.TryGetValue(subscriptionTopic, out messageQueues))
             {
                 var messageQueueList = messageQueues.ToList();
-                messageQueueList.Sort();
+                messageQueueList.Sort(new Comparison<MessageQueue>((x, y) =>
+                {
+                    if (x.QueueId > y.QueueId)
+                    {
+                        return 1;
+                    }
+                    else if (x.QueueId < y.QueueId)
+                    {
+                        return -1;
+                    }
+                    return 0;
+                }));
 
                 IEnumerable<MessageQueue> allocatedMessageQueues = new List<MessageQueue>();
                 try
@@ -434,6 +446,7 @@ namespace EQueue.Clients.Consumers
                         messageQueues.Add(new MessageQueue(topic, index));
                     }
                     _topicQueuesDict[topic] = messageQueues;
+                    _logger.InfoFormat("Local topic queues updated, topic:{0}, queueCount:{1}", topic, topicQueueCountFromServer);
                 }
             }
             catch (Exception ex)

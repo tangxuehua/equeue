@@ -9,19 +9,6 @@ namespace EQueue.Clients.Consumers
     {
         public IEnumerable<MessageQueue> Allocate(string currentConsumerId, IList<MessageQueue> totalMessageQueues, IList<string> totalConsumerIds)
         {
-            if (string.IsNullOrEmpty(currentConsumerId))
-            {
-                throw new ArgumentException("currentConsumertId is empty");
-            }
-            if (totalMessageQueues == null || totalMessageQueues.Count() < 1)
-            {
-                throw new ArgumentException("totalMessageQueues is null or size < 1");
-            }
-            if (totalConsumerIds == null || totalConsumerIds.Count() < 1)
-            {
-                throw new ArgumentException("totalConsumerIds is null or size < 1");
-            }
-
             var result = new List<MessageQueue>();
 
             if (!totalConsumerIds.Contains(currentConsumerId))
