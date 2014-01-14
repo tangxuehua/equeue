@@ -67,7 +67,11 @@ namespace EQueue.Broker.Processors
             var pullMessageResponse = new PullMessageResponse(messages);
             var responseData = _binarySerializer.Serialize(pullMessageResponse);
             var remotingResponse = new RemotingResponse(messages.Count() > 0 ? (int)PullStatus.Found : (int)PullStatus.NoNewMessage, pullRequest.RemotingRequestSequence, responseData);
-            pullRequest.RequestHandlerContext.SendRemotingResponse(remotingResponse);
+            var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(pullMessageRequest.ConsumerGroup);
+            if (consumerGroup != null && consumerGroup.IsConsumerChannelActive(pullRequest.RequestHandlerContext.Channel.RemotingAddress))
+            {
+                pullRequest.RequestHandlerContext.SendRemotingResponse(remotingResponse);
+            }
         }
     }
 }

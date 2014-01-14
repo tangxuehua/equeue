@@ -37,7 +37,7 @@ namespace QuickStart.ConsumerClient
     {
         public void Handle(Message message)
         {
-            Console.WriteLine("Handle {0}", Encoding.UTF8.GetString(message.Body));
+            Console.WriteLine("Handled {0}", Encoding.UTF8.GetString(message.Body));
         }
     }
 }

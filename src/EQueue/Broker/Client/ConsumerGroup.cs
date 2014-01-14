@@ -65,6 +65,15 @@ namespace EQueue.Broker.Client
 
             return subscriptionTopicChanged;
         }
+        public bool IsConsumerChannelActive(string consumerChannelRemotingAddress)
+        {
+            ClientChannel clientChannel;
+            if (_consumerChannelDict.TryGetValue(consumerChannelRemotingAddress, out clientChannel))
+            {
+                return true;
+            }
+            return false;
+        }
         public void RemoveConsumerChannel(string consumerChannelRemotingAddress)
         {
             ClientChannel clientChannel;

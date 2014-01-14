@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using EQueue;
 using EQueue.Autofac;
@@ -19,22 +17,16 @@ namespace QuickStart.ProducerClient
             InitializeEQueue();
 
             var producer = new Producer().Start();
-            var stopwatch = Stopwatch.StartNew();
-            var total = 2;
-            var count = 0;
+            var total = 8;
 
             Task.Factory.StartNew(() =>
             {
                 for (var index = 1; index <= total; index++)
                 {
-                    producer.SendAsync(new Message("topic1", Encoding.UTF8.GetBytes("topic1-message" + index)), index.ToString()).ContinueWith(sendTask =>
+                    var message = "topic1-message" + index;
+                    producer.SendAsync(new Message("topic1", Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
                     {
-                        var current = Interlocked.Increment(ref count);
-                        if (current == total)
-                        {
-                            //producer.Shutdown();
-                            Console.WriteLine("Send message finised, time spent:" + stopwatch.ElapsedMilliseconds + ", messageOffset:" + sendTask.Result.MessageOffset);
-                        }
+                        Console.WriteLine("Sent:" + message);
                     });
                 }
             });
@@ -42,14 +34,10 @@ namespace QuickStart.ProducerClient
             {
                 for (var index = 1; index <= total; index++)
                 {
-                    producer.SendAsync(new Message("topic2", Encoding.UTF8.GetBytes("topic2-message" + index)), index.ToString()).ContinueWith(sendTask =>
+                    var message = "topic2-message" + index;
+                    producer.SendAsync(new Message("topic2", Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
                     {
-                        var current = Interlocked.Increment(ref count);
-                        if (current == total)
-                        {
-                            //producer.Shutdown();
-                            Console.WriteLine("Send message finised, time spent:" + stopwatch.ElapsedMilliseconds + ", messageOffset:" + sendTask.Result.MessageOffset);
-                        }
+                        Console.WriteLine("Sent:" + message);
                     });
                 }
             });

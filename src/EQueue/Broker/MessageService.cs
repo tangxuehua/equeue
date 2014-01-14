@@ -39,26 +39,23 @@ namespace EQueue.Broker
             var queue = queues.SingleOrDefault(x => x.QueueId == queueId);
             if (queue != null)
             {
-                var messageOffset = queue.GetMessageOffset(queueOffset);
-                if (messageOffset >= 0)
+                var currentQueueOffset = queueOffset;
+                var maxQueueOffset = queueOffset + batchSize;
+                var messages = new List<QueueMessage>();
+                while (currentQueueOffset < maxQueueOffset)
                 {
-                    var offset = messageOffset;
-                    var messages = new List<QueueMessage>();
-                    while (messages.Count < batchSize)
+                    var messageOffset = queue.GetMessageOffset(currentQueueOffset);
+                    if (messageOffset >= 0)
                     {
-                        var message = _messageStore.GetMessage(offset);
+                        var message = _messageStore.GetMessage(messageOffset);
                         if (message != null)
                         {
                             messages.Add(message);
-                            offset++;
-                        }
-                        else
-                        {
-                            break;
                         }
                     }
-                    return messages;
+                    currentQueueOffset++;
                 }
+                return messages;
             }
             return new QueueMessage[0];
         }
