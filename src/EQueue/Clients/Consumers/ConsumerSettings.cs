@@ -6,7 +6,8 @@
 
         public string BrokerAddress { get; set; }
         public int BrokerPort { get; set; }
-        public int UpdateTopicRouteDataInterval { get; set; }
+        public int RebalanceInterval { get; set; }
+        public int UpdateTopicQueueCountInterval { get; set; }
         public int HeartbeatBrokerInterval { get; set; }
         public int PersistConsumerOffsetInterval { get; set; }
 
@@ -16,8 +17,9 @@
         {
             BrokerAddress = "127.0.0.1";
             BrokerPort = 5001;
-            HeartbeatBrokerInterval = 1000 * 30;
-            UpdateTopicRouteDataInterval = 1000 * 30;
+            RebalanceInterval = 1000 * 10;
+            HeartbeatBrokerInterval = 1000 * 5;
+            UpdateTopicQueueCountInterval = 1000 * 5;
             PersistConsumerOffsetInterval = 1000 * 5;
         }
         public ConsumerSettings(string brokerAddress) : this()
@@ -27,12 +29,13 @@
 
         public override string ToString()
         {
-            return string.Format("ConsumerSettings [BrokerAddress={0}, BrokerPort={1}, HeartbeatBrokerInterval={2}, UpdateTopicRouteDataInterval={3}, PersistConsumerOffsetInterval={4}]",
+            return string.Format("ConsumerSettings [BrokerAddress={0}, BrokerPort={1}, HeartbeatBrokerInterval={2}, UpdateTopicQueueCountInterval={3}, PersistConsumerOffsetInterval={4}, RebalanceInterval={5}]",
                 BrokerAddress,
                 BrokerPort,
                 HeartbeatBrokerInterval,
-                UpdateTopicRouteDataInterval,
-                PersistConsumerOffsetInterval);
+                UpdateTopicQueueCountInterval,
+                PersistConsumerOffsetInterval,
+                RebalanceInterval);
         }
     }
 }

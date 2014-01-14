@@ -10,7 +10,7 @@ namespace EQueue.Remoting
 
         public SocketRequestHandlerContext(ReceiveContext receiveContext)
         {
-            Channel = new SocketChannel(receiveContext.ReplySocketInfo.InnerSocket);
+            Channel = new SocketChannel(receiveContext.ReplySocketInfo);
             SendRemotingResponse = remotingResponse =>
             {
                 receiveContext.ReplyMessage = RemotingUtil.BuildResponseMessage(remotingResponse);

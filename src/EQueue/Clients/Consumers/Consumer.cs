@@ -89,10 +89,10 @@ namespace EQueue.Clients.Consumers
 
         public Consumer Start()
         {
-            _scheduleService.ScheduleTask(Rebalance, 1000 * 10, 1000 * 10);
-            _scheduleService.ScheduleTask(UpdateAllLocalTopicQueues, 1000 * 30, 1000 * 30);
-            _scheduleService.ScheduleTask(SendHeartbeatToBroker, 1000 * 30, 1000 * 30);
-            _scheduleService.ScheduleTask(PersistOffset, 1000 * 5, 1000 * 5);
+            _scheduleService.ScheduleTask(Rebalance, Settings.RebalanceInterval, Settings.RebalanceInterval);
+            _scheduleService.ScheduleTask(UpdateAllLocalTopicQueues, Settings.UpdateTopicQueueCountInterval, Settings.UpdateTopicQueueCountInterval);
+            _scheduleService.ScheduleTask(SendHeartbeatToBroker, Settings.HeartbeatBrokerInterval, Settings.HeartbeatBrokerInterval);
+            _scheduleService.ScheduleTask(PersistOffset, Settings.PersistConsumerOffsetInterval, Settings.PersistConsumerOffsetInterval);
             _executePullReqeustWorker.Start();
             _logger.InfoFormat("Consumer [{0}] started, settings:{1}", Id, Settings);
             return this;
@@ -399,21 +399,12 @@ namespace EQueue.Clients.Consumers
         }
         private void SendHeartbeatToBroker()
         {
-            var heartbeatData = new ConsumerData(Id, GroupName, MessageModel, SubscriptionTopics);
-
             try
             {
-                var remotingRequest = new RemotingRequest((int)RequestCode.ConsumerHeartbeat, _binarySerializer.Serialize(heartbeatData));
-                var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
-                if (remotingResponse.Code == (int)ResponseCode.Success)
-                {
-                    _logger.InfoFormat("Send heart beat to broker[{0}] success, heartbeatData:[{1}]", Settings.BrokerAddress, heartbeatData);
-                }
-                else
-                {
-                    var errorMessage = _binarySerializer.Deserialize<string>(remotingResponse.Body);
-                    _logger.ErrorFormat("Send heart beat to broker has error, error message:{0}", errorMessage);
-                }
+                _remotingClient.InvokeOneway(new RemotingRequest(
+                    (int)RequestCode.ConsumerHeartbeat,
+                    _binarySerializer.Serialize(new ConsumerData(Id, GroupName, MessageModel, SubscriptionTopics))),
+                    3000);
             }
             catch (Exception ex)
             {

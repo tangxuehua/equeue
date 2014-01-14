@@ -1,24 +1,25 @@
 ﻿using System.Net.Sockets;
+using EQueue.Infrastructure.Socketing;
 
 namespace EQueue.Remoting
 {
     public class SocketChannel : IChannel
     {
-        public Socket Socket { get; private set; }
+        public SocketInfo SocketInfo { get; private set; }
 
-        public SocketChannel(Socket socket)
+        public SocketChannel(SocketInfo socketInfo)
         {
-            Socket = socket;
+            SocketInfo = socketInfo;
         }
 
         public string RemotingAddress
         {
-            get { return Socket.RemoteEndPoint.ToString(); }
+            get { return SocketInfo.SocketRemotingEndpointAddress; }
         }
 
         public void Close()
         {
-            Socket.Close();
+            SocketInfo.InnerSocket.Close();
         }
 
         public override string ToString()

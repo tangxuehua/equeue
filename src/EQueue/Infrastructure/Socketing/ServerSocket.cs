@@ -63,7 +63,6 @@ namespace EQueue.Infrastructure.Socketing
                         var clientSocket = _socket.EndAccept(asyncResult);
                         var socketInfo = new SocketInfo(clientSocket);
                         _clientSocketDict.TryAdd(socketInfo.SocketRemotingEndpointAddress, socketInfo);
-                        _logger.InfoFormat("New socket accepted, address:{0}", socketInfo.SocketRemotingEndpointAddress);
                         NotifyNewSocketAccepted(socketInfo);
                         _newClientSocketSignal.Set();
                         _socketService.ReceiveMessage(socketInfo, receivedMessage =>
@@ -108,7 +107,6 @@ namespace EQueue.Infrastructure.Socketing
             foreach (var socket in disconnectedSockets)
             {
                 _clientSocketDict.Remove(socket.SocketRemotingEndpointAddress);
-                _logger.InfoFormat("Socket disconnected, address:{0}", socket.SocketRemotingEndpointAddress);
                 NotifySocketDisconnected(socket);
             }
         }
@@ -131,7 +129,7 @@ namespace EQueue.Infrastructure.Socketing
         {
             if (_socketEventListener != null)
             {
-                Task.Factory.StartNew(() => _socketEventListener.OnSocketDisconnected(socketInfo));
+                Task.Factory.StartNew(() => _socketEventListener.OnNewSocketAccepted(socketInfo));
             }
         }
         private void NotifySocketDisconnected(SocketInfo socketInfo)
@@ -145,7 +143,11 @@ namespace EQueue.Infrastructure.Socketing
         {
             if (_socketEventListener != null)
             {
-                Task.Factory.StartNew(() => _socketEventListener.OnSocketReceiveException(socketInfo));
+                Task.Factory.StartNew(() =>
+                {
+                    _clientSocketDict.Remove(socketInfo.SocketRemotingEndpointAddress);
+                    _socketEventListener.OnSocketReceiveException(socketInfo);
+                });
             }
         }
     }
