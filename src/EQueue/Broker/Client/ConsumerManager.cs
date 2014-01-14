@@ -44,5 +44,14 @@ namespace EQueue.Broker.Client
                 consumerGroup.RemoveConsumerChannel(consumerChannelRemotingAddress);
             }
         }
+        public ConsumerGroup GetConsumerGroup(string groupName)
+        {
+            ConsumerGroup consumerGroup;
+            if (_consumerGroupDict.TryGetValue(groupName, out consumerGroup))
+            {
+                return consumerGroup;
+            }
+            return consumerGroup;
+        }
     }
 }

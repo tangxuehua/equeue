@@ -23,7 +23,7 @@ namespace EQueue.Broker
         {
             var queues = GetQueues(message.Topic);
             var queue = _queueSelector.SelectQueue(queues, message, arg);
-            var queueOffset = queue.GetNextOffset();
+            var queueOffset = queue.IncrementCurrentOffset();
             var storeResult = _messageStore.StoreMessage(message, queue.QueueId, queueOffset);
             queue.SetMessageOffset(queueOffset, storeResult.MessageOffset);
             return storeResult;
@@ -66,6 +66,10 @@ namespace EQueue.Broker
                 return queue.CurrentOffset;
             }
             return -1;
+        }
+        public int GetTopicQueueCount(string topic)
+        {
+            return GetQueues(topic).Count;
         }
 
         private IList<Queue> GetQueues(string topic)

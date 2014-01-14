@@ -15,7 +15,7 @@
         public ConsumerSettings()
         {
             BrokerAddress = "127.0.0.1";
-            BrokerPort = 5000;
+            BrokerPort = 5001;
             HeartbeatBrokerInterval = 1000 * 30;
             UpdateTopicRouteDataInterval = 1000 * 30;
             PersistConsumerOffsetInterval = 1000 * 5;

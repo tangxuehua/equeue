@@ -20,7 +20,7 @@ namespace EQueue.Broker
             QueueId = queueId;
         }
 
-        public long GetNextOffset()
+        public long IncrementCurrentOffset()
         {
             return Interlocked.Increment(ref _currentOffset);
         }

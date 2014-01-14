@@ -6,5 +6,7 @@
         PullMessage = 11,
         ProducerHeartbeat = 12,
         ConsumerHeartbeat = 13,
+        QueryGroupConsumer = 14,
+        GetTopicQueueCount = 15,
     }
 }

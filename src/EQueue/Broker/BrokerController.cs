@@ -13,9 +13,9 @@ namespace EQueue.Broker
         private readonly BrokerSetting _setting;
         private readonly ILogger _logger;
         private readonly IMessageService _messageService;
-        private readonly SocketRemotingServer _sendMessageRemotingServer;
-        private readonly SocketRemotingServer _pullMessageRemotingServer;
-        private readonly SocketRemotingServer _heartbeatRemotingServer;
+        private readonly SocketRemotingServer _socketRemotingServerForProducer;
+        private readonly SocketRemotingServer _socketRemotingServerForConsumer;
+        private readonly SocketRemotingServer _socketRemotingServerForHeartbeat;
         private readonly ClientManager _clientManager;
         public SuspendedPullRequestManager SuspendedPullRequestManager { get; private set; }
         public ConsumerManager ConsumerManager { get; private set; }
@@ -26,9 +26,9 @@ namespace EQueue.Broker
             _setting = setting;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _sendMessageRemotingServer = new SocketRemotingServer(setting.SendMessageSocketSetting);
-            _pullMessageRemotingServer = new SocketRemotingServer(setting.PullMessageSocketSetting, new PullMessageSocketEventHandler(this));
-            _heartbeatRemotingServer = new SocketRemotingServer(setting.HeartbeatSocketSetting);
+            _socketRemotingServerForHeartbeat = new SocketRemotingServer(setting.HeartbeatSocketSetting);
+            _socketRemotingServerForProducer = new SocketRemotingServer(setting.ProducerSocketSetting);
+            _socketRemotingServerForConsumer = new SocketRemotingServer(setting.ConsumerSocketSetting, new PullMessageSocketEventHandler(this));
             _clientManager = new ClientManager(this);
             SuspendedPullRequestManager = new SuspendedPullRequestManager();
             ConsumerManager = new ConsumerManager();
@@ -36,30 +36,33 @@ namespace EQueue.Broker
 
         public BrokerController Initialize()
         {
-            _sendMessageRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler());
-            _sendMessageRemotingServer.RegisterRequestHandler((int)RequestCode.PullMessage, new PullMessageRequestHandler(this));
+            _socketRemotingServerForHeartbeat.RegisterRequestHandler((int)RequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
+            _socketRemotingServerForProducer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler());
+            _socketRemotingServerForProducer.RegisterRequestHandler((int)RequestCode.PullMessage, new PullMessageRequestHandler(this));
+            _socketRemotingServerForConsumer.RegisterRequestHandler((int)RequestCode.QueryGroupConsumer, new QueryConsumerRequestHandler(this));
+            _socketRemotingServerForConsumer.RegisterRequestHandler((int)RequestCode.GetTopicQueueCount, new GetTopicQueueCountRequestHandler());
             return this;
         }
         public void Start()
         {
-            _sendMessageRemotingServer.Start();
-            _pullMessageRemotingServer.Start();
-            _heartbeatRemotingServer.Start();
+            _socketRemotingServerForHeartbeat.Start();
+            _socketRemotingServerForProducer.Start();
+            _socketRemotingServerForConsumer.Start();
             _clientManager.Start();
             SuspendedPullRequestManager.Start();
             _logger.InfoFormat("Broker started. \nSend message listening address:[{0}:{1}] \nPull message listening address:[{2}:{3}] \nHeartbeat listening address:[{4}:{5}]",
-                _setting.SendMessageSocketSetting.Address,
-                _setting.SendMessageSocketSetting.Port,
-                _setting.PullMessageSocketSetting.Address,
-                _setting.PullMessageSocketSetting.Port,
+                _setting.ProducerSocketSetting.Address,
+                _setting.ProducerSocketSetting.Port,
+                _setting.ConsumerSocketSetting.Address,
+                _setting.ConsumerSocketSetting.Port,
                 _setting.HeartbeatSocketSetting.Address,
                 _setting.HeartbeatSocketSetting.Port);
         }
         public void Shutdown()
         {
-            _sendMessageRemotingServer.Shutdown();
-            _pullMessageRemotingServer.Shutdown();
-            _heartbeatRemotingServer.Shutdown();
+            _socketRemotingServerForProducer.Shutdown();
+            _socketRemotingServerForConsumer.Shutdown();
+            _socketRemotingServerForHeartbeat.Shutdown();
             _clientManager.Shutdown();
             SuspendedPullRequestManager.Shutdown();
         }

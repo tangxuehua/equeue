@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using EQueue.Infrastructure;
 using EQueue.Infrastructure.Extensions;
@@ -234,7 +235,17 @@ namespace EQueue.Clients.Consumers
             }
             else if (MessageModel == MessageModel.Clustering)
             {
-                var consumerIdList = FindConsumers(GroupName).ToList();
+                List<string> consumerIdList;
+                try
+                {
+                    consumerIdList = QueryGroupConsumers(GroupName).ToList();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("RebalanceClustering failed as QueryGroupConsumers has exception.", ex);
+                    return;
+                }
+
                 consumerIdList.Sort();
                 foreach (var subscriptionTopic in _subscriptionTopics)
                 {
@@ -279,10 +290,19 @@ namespace EQueue.Clients.Consumers
                 UpdateProcessQueueDict(subscriptionTopic, allocatedMessageQueues.ToList());
             }
         }
-        private IEnumerable<string> FindConsumers(string consumerGroup)
+        private IEnumerable<string> QueryGroupConsumers(string groupName)
         {
-            //TODO
-            return new string[0];
+            var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, Encoding.UTF8.GetBytes(groupName));
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
+            if (remotingResponse.Code == (int)ResponseCode.Success)
+            {
+                var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
+                return consumerIds.Split(new [] { "," }, StringSplitOptions.RemoveEmptyEntries);
+            }
+            else
+            {
+                throw new Exception(string.Format("QueryGroupConsumers has exception, remoting response code:{0}", remotingResponse.Code));
+            }
         }
         private void UpdateProcessQueueDict(string topic, IList<MessageQueue> messageQueues)
         {
@@ -409,23 +429,39 @@ namespace EQueue.Clients.Consumers
         }
         private void UpdateLocalTopicQueues(string topic)
         {
-            var topicQueueCountFromServer = GetTopicQueueCountFromServer(topic);
-            var topicQueueCountOfLocal = _topicQueuesDict.ContainsKey(topic) ? _topicQueuesDict[topic].Count : 0;
-
-            if (topicQueueCountFromServer != topicQueueCountOfLocal)
+            try
             {
-                var messageQueues = new List<MessageQueue>();
-                for (var index = 0; index < topicQueueCountFromServer; index++)
+                var topicQueueCountFromServer = GetTopicQueueCountFromServer(topic);
+                IList<MessageQueue> currentMessageQueues;
+                var topicQueueCountOfLocal = _topicQueuesDict.TryGetValue(topic, out currentMessageQueues) ? currentMessageQueues.Count : 0;
+
+                if (topicQueueCountFromServer != topicQueueCountOfLocal)
                 {
-                    messageQueues.Add(new MessageQueue(topic, index));
+                    var messageQueues = new List<MessageQueue>();
+                    for (var index = 0; index < topicQueueCountFromServer; index++)
+                    {
+                        messageQueues.Add(new MessageQueue(topic, index));
+                    }
+                    _topicQueuesDict[topic] = messageQueues;
                 }
-                _topicQueuesDict[topic] = messageQueues;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(string.Format("UpdateLocalTopicQueues failed, topic:{0}", topic), ex);
             }
         }
         private int GetTopicQueueCountFromServer(string topic)
         {
-            //TODO
-            return 0;
+            var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueCount, Encoding.UTF8.GetBytes(topic));
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
+            if (remotingResponse.Code == (int)ResponseCode.Success)
+            {
+                return BitConverter.ToInt32(remotingResponse.Body, 0);
+            }
+            else
+            {
+                throw new Exception(string.Format("GetTopicQueueCountFromServer has exception, remoting response code:{0}", remotingResponse.Code));
+            }
         }
 
         #endregion
