@@ -27,9 +27,11 @@ namespace EQueue.Clients.Consumers
         private readonly IBinarySerializer _binarySerializer;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
         private readonly ConcurrentDictionary<MessageQueue, ProcessQueue> _processQueueDict = new ConcurrentDictionary<MessageQueue, ProcessQueue>();
+        private readonly BlockingCollection<WrappedMessage> _messageQueue = new BlockingCollection<WrappedMessage>(new ConcurrentQueue<WrappedMessage>());
         private readonly List<string> _subscriptionTopics = new List<string>();
         private readonly BlockingCollection<PullRequest> _pullRequestBlockingQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
         private readonly Worker _executePullReqeustWorker;
+        private readonly Worker _handleMessageWorker;
         private readonly IScheduleService _scheduleService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly IOffsetStore _offsetStore;
@@ -75,6 +77,7 @@ namespace EQueue.Clients.Consumers
             _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
             _executePullReqeustWorker = new Worker(ExecutePullRequest);
+            _handleMessageWorker = new Worker(HandleMessage);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
 
             PullThresholdForQueue = 1000;
@@ -90,6 +93,7 @@ namespace EQueue.Clients.Consumers
         public Consumer Start()
         {
             _remotingClient.Start();
+            _handleMessageWorker.Start();
             _scheduleService.ScheduleTask(Rebalance, Settings.RebalanceInterval, Settings.RebalanceInterval);
             _scheduleService.ScheduleTask(UpdateAllLocalTopicQueues, Settings.UpdateTopicQueueCountInterval, Settings.UpdateTopicQueueCountInterval);
             _scheduleService.ScheduleTask(SendHeartbeatToBroker, Settings.HeartbeatBrokerInterval, Settings.HeartbeatBrokerInterval);
@@ -195,28 +199,34 @@ namespace EQueue.Clients.Consumers
             {
                 pullRequest.NextOffset += pullResult.Messages.Count();
                 pullRequest.ProcessQueue.AddMessages(pullResult.Messages);
-                StartConsumeTask(pullRequest, pullResult);
+                pullResult.Messages.ForEach(x => _messageQueue.Add(new WrappedMessage(x, pullRequest.MessageQueue, pullRequest.ProcessQueue)));
             }
             EnqueuePullRequest(pullRequest);
         }
-        private void StartConsumeTask(PullRequest pullRequest, PullResult pullResult)
+        private void HandleMessage()
         {
-            Task.Factory.StartNew(() =>
+            var wrappedMessage = _messageQueue.Take();
+            Action handleAction = () =>
             {
-                foreach (var message in pullResult.Messages)
+                try
                 {
-                    try
-                    {
-                        _messageHandler.Handle(message);
-                    }
-                    catch { }  //TODO,处理失败的消息放到本地队列继续重试消费
+                    _messageHandler.Handle(wrappedMessage.QueueMessage);
                 }
-                long offset = pullRequest.ProcessQueue.RemoveMessages(pullResult.Messages);
+                catch { }  //TODO,处理失败的消息放到本地队列继续重试消费
+                var offset = wrappedMessage.ProcessQueue.RemoveMessage(wrappedMessage.QueueMessage);
                 if (offset >= 0)
                 {
-                    _offsetStore.UpdateOffset(pullRequest.MessageQueue, offset);
+                    _offsetStore.UpdateOffset(wrappedMessage.MessageQueue, offset);
                 }
-            });
+            };
+            if (Settings.MessageHandleMode == MessageHandleMode.Sequential)
+            {
+                handleAction();
+            }
+            else if (Settings.MessageHandleMode == MessageHandleMode.Parallel)
+            {
+                Task.Factory.StartNew(handleAction);
+            }
         }
         private void Rebalance()
         {

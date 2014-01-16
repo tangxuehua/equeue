@@ -60,12 +60,15 @@
     <Compile Include="Clients\Consumers\IMessageHandler.cs" />
     <Compile Include="Clients\Consumers\InMemoryOffsetStore.cs" />
     <Compile Include="Clients\Consumers\IOffsetStore.cs" />
+    <Compile Include="Clients\Consumers\MessageHandleMode.cs" />
     <Compile Include="Clients\Consumers\OffsetReadType.cs" />
     <Compile Include="Clients\Consumers\IAllocateMessageQueueStrategy.cs" />
     <Compile Include="Clients\Consumers\AverageAllocateMessageQueueStrategy.cs" />
     <Compile Include="Clients\Consumers\ConsumerSettings.cs" />
+    <Compile Include="Clients\Consumers\WrappedMessage.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
     <Compile Include="Configuration.cs" />
+    <Compile Include="Infrastructure\Extensions\IEnumerableExtensions.cs" />
     <Compile Include="Infrastructure\Extensions\ConcurrentDictionaryExtensions.cs" />
     <Compile Include="Infrastructure\Extensions\TaskExtensions.cs" />
     <Compile Include="Infrastructure\IBinarySerializer.cs" />

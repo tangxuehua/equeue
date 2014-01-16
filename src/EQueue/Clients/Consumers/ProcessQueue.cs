@@ -23,7 +23,7 @@ namespace EQueue.Clients.Consumers
                 }
             });
         }
-        public long RemoveMessages(IEnumerable<QueueMessage> messages)
+        public long RemoveMessage(QueueMessage message)
         {
             var result = -1L;
 
@@ -32,10 +32,7 @@ namespace EQueue.Clients.Consumers
                 if (_messageDict.Count > 0)
                 {
                     result = _queueOffsetMax + 1;
-                    foreach (var message in messages)
-                    {
-                        _messageDict.Remove(message.QueueOffset);
-                    }
+                    _messageDict.Remove(message.QueueOffset);
                     if (_messageDict.Count > 0)
                     {
                         result = _messageDict.Keys.First();

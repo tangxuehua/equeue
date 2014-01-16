@@ -1,4 +1,5 @@
 ﻿using EQueue.Infrastructure;
+
 namespace EQueue.Clients.Consumers
 {
     public class ConsumerSettings
@@ -32,13 +33,14 @@ namespace EQueue.Clients.Consumers
 
         public override string ToString()
         {
-            return string.Format("ConsumerSettings [BrokerAddress={0}, BrokerPort={1}, HeartbeatBrokerInterval={2}, UpdateTopicQueueCountInterval={3}, PersistConsumerOffsetInterval={4}, RebalanceInterval={5}]",
+            return string.Format("ConsumerSettings [BrokerAddress={0}, BrokerPort={1}, HeartbeatBrokerInterval={2}, UpdateTopicQueueCountInterval={3}, PersistConsumerOffsetInterval={4}, RebalanceInterval={5}, MessageHandleMode={6}]",
                 BrokerAddress,
                 BrokerPort,
                 HeartbeatBrokerInterval,
                 UpdateTopicQueueCountInterval,
                 PersistConsumerOffsetInterval,
-                RebalanceInterval);
+                RebalanceInterval,
+                MessageHandleMode);
         }
     }
 }
