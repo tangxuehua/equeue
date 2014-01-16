@@ -16,8 +16,7 @@ namespace QuickStart.ConsumerClient
             InitializeEQueue();
 
             var consumer = new Consumer(ConsumerSettings.Default, "group1", MessageModel.Clustering, new MessageHandler())
-                .Subscribe("topic1")
-                .Subscribe("topic2")
+                .Subscribe("SampleTopic")
                 .Start();
             Console.ReadLine();
         }

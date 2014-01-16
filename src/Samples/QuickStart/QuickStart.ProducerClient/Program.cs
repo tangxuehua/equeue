@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using EQueue;
 using EQueue.Autofac;
 using EQueue.Clients.Producers;
+using EQueue.Infrastructure.IoC;
+using EQueue.Infrastructure.Scheduling;
 using EQueue.JsonNet;
 using EQueue.Log4Net;
 using EQueue.Protocols;
@@ -16,31 +19,18 @@ namespace QuickStart.ProducerClient
         {
             InitializeEQueue();
 
+            var scheduleService = ObjectContainer.Resolve<IScheduleService>();
             var producer = new Producer().Start();
-            var total = 8;
+            var index = 0;
 
-            Task.Factory.StartNew(() =>
+            scheduleService.ScheduleTask(() =>
             {
-                for (var index = 1; index <= total; index++)
+                var message = "message" + Interlocked.Increment(ref index);
+                producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
                 {
-                    var message = "topic1-message" + index;
-                    producer.SendAsync(new Message("topic1", Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
-                    {
-                        Console.WriteLine("Sent:" + message);
-                    });
-                }
-            });
-            Task.Factory.StartNew(() =>
-            {
-                for (var index = 1; index <= total; index++)
-                {
-                    var message = "topic2-message" + index;
-                    producer.SendAsync(new Message("topic2", Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
-                    {
-                        Console.WriteLine("Sent:" + message);
-                    });
-                }
-            });
+                    Console.WriteLine("Sent:" + message);
+                });
+            }, 3000, 0);
 
             Console.ReadLine();
         }
