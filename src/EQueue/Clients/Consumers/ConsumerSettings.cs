@@ -10,6 +10,7 @@
         public int UpdateTopicQueueCountInterval { get; set; }
         public int HeartbeatBrokerInterval { get; set; }
         public int PersistConsumerOffsetInterval { get; set; }
+        public MessageHandleMode MessageHandleMode { get; set; }
 
         public static ConsumerSettings Default { get { return _default; } }
 
@@ -21,6 +22,7 @@
             HeartbeatBrokerInterval = 1000 * 5;
             UpdateTopicQueueCountInterval = 1000 * 5;
             PersistConsumerOffsetInterval = 1000 * 5;
+            MessageHandleMode = MessageHandleMode.Parallel;
         }
         public ConsumerSettings(string brokerAddress) : this()
         {
