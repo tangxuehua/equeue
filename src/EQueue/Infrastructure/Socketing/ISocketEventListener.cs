@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 
 namespace EQueue.Infrastructure.Socketing
 {
@@ -6,6 +7,6 @@ namespace EQueue.Infrastructure.Socketing
     {
         void OnNewSocketAccepted(SocketInfo socketInfo);
         void OnSocketDisconnected(SocketInfo socketInfo);
-        void OnSocketReceiveException(SocketInfo socketInfo);
+        void OnSocketReceiveException(SocketInfo socketInfo, Exception exception);
     }
 }

@@ -139,14 +139,14 @@ namespace EQueue.Infrastructure.Socketing
                 Task.Factory.StartNew(() => _socketEventListener.OnSocketDisconnected(socketInfo));
             }
         }
-        private void NotifySocketReceiveException(SocketInfo socketInfo)
+        private void NotifySocketReceiveException(SocketInfo socketInfo, Exception exception)
         {
             if (_socketEventListener != null)
             {
                 Task.Factory.StartNew(() =>
                 {
                     _clientSocketDict.Remove(socketInfo.SocketRemotingEndpointAddress);
-                    _socketEventListener.OnSocketReceiveException(socketInfo);
+                    _socketEventListener.OnSocketReceiveException(socketInfo, exception);
                 });
             }
         }

@@ -8,9 +8,9 @@ namespace EQueue.Infrastructure.Socketing
     public class SocketService
     {
         private ILogger _logger;
-        private Action<SocketInfo> _socketReceiveExceptionAction;
+        private Action<SocketInfo, Exception> _socketReceiveExceptionAction;
 
-        public SocketService(Action<SocketInfo> socketReceiveExceptionAction)
+        public SocketService(Action<SocketInfo, Exception> socketReceiveExceptionAction)
         {
             _socketReceiveExceptionAction = socketReceiveExceptionAction;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
@@ -48,12 +48,10 @@ namespace EQueue.Infrastructure.Socketing
             }
             catch (SocketException socketException)
             {
-                _logger.ErrorFormat("Socket send exception, ErrorCode:{0}", socketException.SocketErrorCode);
                 sendContext.MessageSendCallback(new SendResult(false, socketException));
             }
             catch (Exception ex)
             {
-                _logger.ErrorFormat("Unknown socket send exception:{0}", ex);
                 sendContext.MessageSendCallback(new SendResult(false, ex));
             }
         }
@@ -77,17 +75,15 @@ namespace EQueue.Infrastructure.Socketing
             {
                 if (_socketReceiveExceptionAction != null)
                 {
-                    _socketReceiveExceptionAction(sourceSocketInfo);
+                    _socketReceiveExceptionAction(sourceSocketInfo, socketException);
                 }
-                _logger.ErrorFormat("Socket receive exception. Source socket:{0}, errorCode:{1}", sourceSocketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
             }
             catch (Exception ex)
             {
                 if (_socketReceiveExceptionAction != null)
                 {
-                    _socketReceiveExceptionAction(sourceSocketInfo);
+                    _socketReceiveExceptionAction(sourceSocketInfo, ex);
                 }
-                _logger.ErrorFormat("Unknown socket receive exception, source socket:{0}, ex:{1}", sourceSocketInfo.SocketRemotingEndpointAddress, ex);
             }
 
             if (bytesRead > 0)

@@ -1,4 +1,6 @@
-﻿using EQueue.Broker.Client;
+﻿using System;
+using System.Net.Sockets;
+using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.Processors;
 using EQueue.Infrastructure.IoC;
@@ -25,7 +27,7 @@ namespace EQueue.Broker
             _setting = setting;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _producerSocketRemotingServer = new SocketRemotingServer(setting.ProducerSocketSetting);
+            _producerSocketRemotingServer = new SocketRemotingServer(setting.ProducerSocketSetting, new ProducerSocketEventHandler(this));
             _consumerSocketRemotingServer = new SocketRemotingServer(setting.ConsumerSocketSetting, new ConsumerSocketEventHandler(this));
             _clientManager = new ClientManager(this);
             SuspendedPullRequestManager = new SuspendedPullRequestManager();
@@ -61,6 +63,40 @@ namespace EQueue.Broker
             SuspendedPullRequestManager.Shutdown();
         }
 
+        class ProducerSocketEventHandler : ISocketEventListener
+        {
+            private readonly ILogger _logger;
+            private BrokerController _brokerController;
+
+            public ProducerSocketEventHandler(BrokerController brokerController)
+            {
+                _brokerController = brokerController;
+                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            }
+
+            public void OnNewSocketAccepted(SocketInfo socketInfo)
+            {
+                _logger.InfoFormat("Accepted new producer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
+            }
+
+            public void OnSocketDisconnected(SocketInfo socketInfo)
+            {
+                _logger.InfoFormat("Producer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
+            }
+
+            public void OnSocketReceiveException(SocketInfo socketInfo, Exception exception)
+            {
+                var socketException = exception as SocketException;
+                if (socketException != null)
+                {
+                    _logger.InfoFormat("Producer SocketException, address:{0}, errorCode:{1}", socketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
+                }
+                else
+                {
+                    _logger.InfoFormat("Producer Exception, address:{0}, errorMsg:", socketInfo.SocketRemotingEndpointAddress, exception.Message);
+                }
+            }
+        }
         class ConsumerSocketEventHandler : ISocketEventListener
         {
             private readonly ILogger _logger;
@@ -83,10 +119,18 @@ namespace EQueue.Broker
                 _logger.InfoFormat("Consumer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
             }
 
-            public void OnSocketReceiveException(SocketInfo socketInfo)
+            public void OnSocketReceiveException(SocketInfo socketInfo, Exception exception)
             {
                 _brokerController.ConsumerManager.RemoveConsumer(socketInfo.SocketRemotingEndpointAddress);
-                _logger.InfoFormat("Consumer exception, address:{0}", socketInfo.SocketRemotingEndpointAddress);
+                var socketException = exception as SocketException;
+                if (socketException != null)
+                {
+                    _logger.InfoFormat("Consumer SocketException, address:{0}, errorCode:{1}", socketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
+                }
+                else
+                {
+                    _logger.InfoFormat("Consumer Exception, address:{0}, errorMsg:", socketInfo.SocketRemotingEndpointAddress, exception.Message);
+                }
             }
         }
     }
