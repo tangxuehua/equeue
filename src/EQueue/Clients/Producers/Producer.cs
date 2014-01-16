@@ -16,7 +16,8 @@ namespace EQueue.Clients.Producers
         private readonly IBinarySerializer _binarySerializer;
         private readonly ILogger _logger;
 
-        public Producer(string brokerAddress = "127.0.0.1", int brokerPort = 5000)
+        public Producer() : this(Utils.GetLocalIPV4(), 5000) { }
+        public Producer(string brokerAddress, int brokerPort)
         {
             _remotingClient = new SocketRemotingClient(brokerAddress, brokerPort);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();

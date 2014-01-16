@@ -8,7 +8,7 @@ namespace EQueue.Infrastructure
     {
         public static string GetLocalIPV4()
         {
-            return Dns.GetHostEntry(Dns.GetHostName()).AddressList.Single(x => x.AddressFamily == AddressFamily.InterNetwork).ToString();
+            return Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == AddressFamily.InterNetwork).ToString();
         }
     }
 }
