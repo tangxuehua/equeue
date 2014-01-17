@@ -166,12 +166,7 @@ namespace EQueue.Clients.Consumers
         }
         private bool AllowExecutePullRequest(PullRequest pullRequest)
         {
-            IList<MessageQueue> messageQueues;
-            if (_topicQueuesDict.TryGetValue(pullRequest.MessageQueue.Topic, out messageQueues))
-            {
-                return messageQueues.Any(x => x.QueueId == pullRequest.MessageQueue.QueueId);
-            }
-            return false;
+            return _processQueueDict.Keys.Where(x => x.Topic == pullRequest.MessageQueue.Topic).Any(x => x.QueueId == pullRequest.MessageQueue.QueueId);
         }
 
         private Task<PullResult> StartPullMessageTask(PullRequest pullRequest)

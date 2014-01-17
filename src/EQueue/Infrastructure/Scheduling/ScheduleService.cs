@@ -37,12 +37,14 @@ namespace EQueue.Infrastructure.Scheduling
                     }
                     finally
                     {
-                        currentTimer.Change(state.DueTime, state.Period);
+                        currentTimer.Change(state.Period, state.Period);
                     }
                 }
-            }, new TimerState(taskId, dueTime, period), dueTime, period);
+            }, new TimerState(taskId, dueTime, period), Timeout.Infinite, Timeout.Infinite);
 
             _timerDict.Add(taskId, timer);
+
+            timer.Change(dueTime, period);
 
             return taskId;
         }

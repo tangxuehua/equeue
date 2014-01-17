@@ -30,7 +30,7 @@ namespace QuickStart.ProducerClient
                 {
                     Console.WriteLine(string.Format("Sent:{0}, result:{1}", message, sendTask.Result));
                 });
-            }, 3000, 0);
+            }, 0, 3000);
 
             Console.ReadLine();
         }
