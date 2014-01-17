@@ -27,6 +27,7 @@ namespace EQueue.Clients.Producers
         public Producer Start()
         {
             _remotingClient.Start();
+            _logger.Info("Producer started.");
             return this;
         }
         public void Shutdown()

@@ -99,7 +99,7 @@ namespace EQueue.Clients.Consumers
             _scheduleService.ScheduleTask(SendHeartbeatToBroker, Settings.HeartbeatBrokerInterval, Settings.HeartbeatBrokerInterval);
             _scheduleService.ScheduleTask(PersistOffset, Settings.PersistConsumerOffsetInterval, Settings.PersistConsumerOffsetInterval);
             _executePullReqeustWorker.Start();
-            _logger.InfoFormat("Consumer [{0}] started, settings:{1}", Id, Settings);
+            _logger.InfoFormat("[{0}] started, settings:{1}", Id, Settings);
             return this;
         }
         public Consumer Subscribe(string topic)
@@ -125,7 +125,7 @@ namespace EQueue.Clients.Consumers
                 EnqueuePullRequest(pullRequest, PullTimeDelayMillsWhenFlowControl);
                 if ((flowControlTimes1++ % 3000) == 0)
                 {
-                    _logger.WarnFormat("The consumer message buffer is full, so do flow control, [messageCount={0},pullRequest={1},flowControlTimes={2}]", messageCount, pullRequest, flowControlTimes1);
+                    _logger.WarnFormat("[{0}]: the consumer message buffer is full, so do flow control, [messageCount={1},pullRequest={2},flowControlTimes={3}]", Id, messageCount, pullRequest, flowControlTimes1);
                 }
             }
             else if (messageSpan >= ConsumeMaxSpan)
@@ -133,7 +133,7 @@ namespace EQueue.Clients.Consumers
                 EnqueuePullRequest(pullRequest, PullTimeDelayMillsWhenFlowControl);
                 if ((flowControlTimes2++ % 3000) == 0)
                 {
-                    _logger.WarnFormat("The consumer message span too long, so do flow control, [messageSpan={0},pullRequest={1},flowControlTimes={2}]", messageSpan, pullRequest, flowControlTimes2);
+                    _logger.WarnFormat("[{0}]: the consumer message span too long, so do flow control, [messageSpan={1},pullRequest={2},flowControlTimes={3}]", Id, messageSpan, pullRequest, flowControlTimes2);
                 }
             }
             else
@@ -154,13 +154,26 @@ namespace EQueue.Clients.Consumers
             var pullRequest = _pullRequestBlockingQueue.Take();
             try
             {
-                PullMessage(pullRequest);
+                if (AllowExecutePullRequest(pullRequest))
+                {
+                    PullMessage(pullRequest);
+                }
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("ExecutePullRequest exception. PullRequest: {0}.", pullRequest), ex);
+                _logger.Error(string.Format("[{0}]: executePullRequest exception. PullRequest: {1}.", Id, pullRequest), ex);
             }
         }
+        private bool AllowExecutePullRequest(PullRequest pullRequest)
+        {
+            IList<MessageQueue> messageQueues;
+            if (_topicQueuesDict.TryGetValue(pullRequest.MessageQueue.Topic, out messageQueues))
+            {
+                return messageQueues.Any(x => x.QueueId == pullRequest.MessageQueue.QueueId);
+            }
+            return false;
+        }
+
         private Task<PullResult> StartPullMessageTask(PullRequest pullRequest)
         {
             var request = new PullMessageRequest
@@ -240,7 +253,7 @@ namespace EQueue.Clients.Consumers
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error(string.Format("BroadCasting rebalance for topic [{0}] has exception", subscriptionTopic), ex);
+                        _logger.Error(string.Format("[{0}]: broadCasting rebalance for topic [{1}] has exception", Id, subscriptionTopic), ex);
                     }
                 }
             }
@@ -253,7 +266,7 @@ namespace EQueue.Clients.Consumers
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("Clustering rebalance failed as QueryGroupConsumers has exception.", ex);
+                    _logger.Error(string.Format("[{0}]: clustering rebalance failed as QueryGroupConsumers has exception.", Id), ex);
                     return;
                 }
 
@@ -266,7 +279,7 @@ namespace EQueue.Clients.Consumers
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error(string.Format("RebalanceClustering for topic [{0}] has exception", subscriptionTopic), ex);
+                        _logger.Error(string.Format("[{0}]: rebalanceClustering for topic [{1}] has exception", Id, subscriptionTopic), ex);
                     }
                 }
             }
@@ -305,7 +318,7 @@ namespace EQueue.Clients.Consumers
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("Allocate message queue has exception.", ex);
+                    _logger.Error(string.Format("[{0}]: allocate message queue has exception.", Id), ex);
                     return;
                 }
 
@@ -315,7 +328,7 @@ namespace EQueue.Clients.Consumers
         private IEnumerable<string> QueryGroupConsumers(string groupName)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, Encoding.UTF8.GetBytes(groupName));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -323,7 +336,7 @@ namespace EQueue.Clients.Consumers
             }
             else
             {
-                throw new Exception(string.Format("QueryGroupConsumers has exception, remoting response code:{0}", remotingResponse.Code));
+                throw new Exception(string.Format("[{0}]: queryGroupConsumers has exception, remoting response code:{1}", Id, remotingResponse.Code));
             }
         }
         private void UpdateProcessQueueDict(string topic, IList<MessageQueue> messageQueues)
@@ -346,7 +359,7 @@ namespace EQueue.Clients.Consumers
                 if (_processQueueDict.TryRemove(messageQueue, out processQueue))
                 {
                     PersistRemovedMessageQueueOffset(messageQueue);
-                    _logger.InfoFormat("Removed message queue:{0}, consumerGroup:{1}", messageQueue, GroupName);
+                    _logger.InfoFormat("[{0}]: removed message queue:{1}, consumerGroup:{2}", Id, messageQueue, GroupName);
                 }
             }
 
@@ -372,7 +385,7 @@ namespace EQueue.Clients.Consumers
                     }
                     else
                     {
-                        _logger.WarnFormat("The new messageQueue:{0} (consumerGroup:{1}) cannot be added as the nextOffset is < 0.", messageQueue, GroupName);
+                        _logger.WarnFormat("[{0}]: the new messageQueue:{1} (consumerGroup:{2}) cannot be added as the nextOffset is < 0.", Id, messageQueue, GroupName);
                     }
                 }
             }
@@ -381,7 +394,7 @@ namespace EQueue.Clients.Consumers
             {
                 var nextOffset = pullRequest.NextOffset;
                 EnqueuePullRequest(pullRequest);
-                _logger.InfoFormat("Added message queue:{0}, consumerGroup:{1}, nextOffset:{2}", pullRequest.MessageQueue, GroupName, nextOffset);
+                _logger.InfoFormat("[{0}]: added message queue:{1}, consumerGroup:{2}, nextOffset:{3}", Id, pullRequest.MessageQueue, GroupName, nextOffset);
             }
         }
         private void PersistRemovedMessageQueueOffset(MessageQueue messageQueue)
@@ -430,7 +443,7 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                _logger.Error("Send heart beat to broker exception", ex);
+                _logger.Error(string.Format("[{0}]: send heart beat to broker exception", Id), ex);
             }
         }
         private void UpdateAllLocalTopicQueues()
@@ -456,18 +469,18 @@ namespace EQueue.Clients.Consumers
                         messageQueues.Add(new MessageQueue(topic, index));
                     }
                     _topicQueuesDict[topic] = messageQueues;
-                    _logger.InfoFormat("Local topic queues updated, topic:{0}, queueCount:{1}", topic, topicQueueCountFromServer);
+                    _logger.InfoFormat("[{0}]: topic queue count updated, topic:{1}, queueCount:{2}", Id, topic, topicQueueCountFromServer);
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("UpdateLocalTopicQueues failed, topic:{0}", topic), ex);
+                _logger.Error(string.Format("[{0}]: updateLocalTopicQueues failed, topic:{1}", Id, topic), ex);
             }
         }
         private int GetTopicQueueCountFromServer(string topic)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueCount, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 return BitConverter.ToInt32(remotingResponse.Body, 0);

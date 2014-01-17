@@ -21,14 +21,14 @@ namespace QuickStart.ProducerClient
 
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
             var producer = new Producer().Start();
-            var index = 0;
+            var index = 100;
 
             scheduleService.ScheduleTask(() =>
             {
                 var message = "message" + Interlocked.Increment(ref index);
                 producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
                 {
-                    Console.WriteLine("Sent:" + message);
+                    Console.WriteLine(string.Format("Sent:{0}, result:{1}", message, sendTask.Result));
                 });
             }, 3000, 0);
 

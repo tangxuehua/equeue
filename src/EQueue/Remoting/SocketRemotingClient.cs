@@ -45,28 +45,31 @@ namespace EQueue.Remoting
             var message = RemotingUtil.BuildRequestMessage(request);
             var taskCompletionSource = new TaskCompletionSource<RemotingResponse>();
             var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
+            var response = default(RemotingResponse);
+
             _responseFutureDict.TryAdd(request.Sequence, responseFuture);
             try
             {
                 _clientSocket.SendMessage(message, sendResult => SendMessageCallback(responseFuture, request, _address, sendResult));
-                var response = taskCompletionSource.Task.WaitResult<RemotingResponse>(timeoutMillis);
-                if (response == null)
-                {
-                    if (responseFuture.SendRequestSuccess)
-                    {
-                        throw new RemotingTimeoutException(_address, request, timeoutMillis);
-                    }
-                    else
-                    {
-                        throw new RemotingSendRequestException(_address, request, responseFuture.SendException);
-                    }
-                }
-                return response;
+                response = taskCompletionSource.Task.WaitResult<RemotingResponse>(timeoutMillis);
             }
             catch (Exception ex)
             {
                 throw new RemotingSendRequestException(_address, request, ex);
             }
+
+            if (response == null)
+            {
+                if (responseFuture.SendRequestSuccess)
+                {
+                    throw new RemotingTimeoutException(_address, request, timeoutMillis);
+                }
+                else
+                {
+                    throw new RemotingSendRequestException(_address, request, responseFuture.SendException);
+                }
+            }
+            return response;
         }
         public Task<RemotingResponse> InvokeAsync(RemotingRequest request, int timeoutMillis)
         {

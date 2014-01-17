@@ -4,6 +4,6 @@ namespace EQueue.Clients.Consumers
 {
     public interface IMessageHandler
     {
-        void Handle(Message message);
+        void Handle(QueueMessage message);
     }
 }

@@ -28,7 +28,7 @@ namespace EQueue.Broker.Processors
                 new ClientChannel(consumerData.ConsumerId, context.Channel),
                 consumerData.MessageModel,
                 consumerData.SubscriptionTopics);
-            _logger.InfoFormat("Received heartbeat from consumer:{0}, channel:{1}", consumerData, context.Channel);
+            //_logger.InfoFormat("Handled ConsumerHeartbeatRequest. consumerData:{0}, channel:{1}", consumerData, context.Channel);
             return null;
         }
     }
