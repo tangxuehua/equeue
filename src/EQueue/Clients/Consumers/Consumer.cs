@@ -110,6 +110,10 @@ namespace EQueue.Clients.Consumers
             }
             return this;
         }
+        public IEnumerable<MessageQueue> GetCurrentQueues()
+        {
+            return _processQueueDict.Keys;
+        }
 
         #endregion
 
