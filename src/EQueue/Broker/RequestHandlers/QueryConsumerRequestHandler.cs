@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using EQueue.Infrastructure.IoC;
+using EQueue.Infrastructure.Logging;
 using EQueue.Remoting;
 
 namespace EQueue.Broker.Processors
@@ -8,10 +10,12 @@ namespace EQueue.Broker.Processors
     public class QueryConsumerRequestHandler : IRequestHandler
     {
         private BrokerController _brokerController;
+        private ILogger _logger;
 
         public QueryConsumerRequestHandler(BrokerController brokerController)
         {
             _brokerController = brokerController;
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
@@ -23,7 +27,9 @@ namespace EQueue.Broker.Processors
             {
                 consumerIdList = consumerGroup.GetAllConsumerChannels().Select(x => x.ClientId).ToList();
             }
-            var data = Encoding.UTF8.GetBytes(string.Join(",", consumerIdList));
+            var consumerIds = string.Join(",", consumerIdList);
+            var data = Encoding.UTF8.GetBytes(consumerIds);
+            _logger.InfoFormat("Handled QueryConsumerRequest. groupName:{0}, consumerIds:{1}, channel:{2}", groupName, consumerIds, context.Channel);
             return new RemotingResponse((int)ResponseCode.Success, request.Sequence, data);
         }
     }
