@@ -20,19 +20,12 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Members
 
-        private const int PullRequestTimeoutMilliseconds = 30 * 1000;
-        private long flowControlTimes1;
-        private long flowControlTimes2;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
-        private readonly ConcurrentDictionary<MessageQueue, ProcessQueue> _processQueueDict = new ConcurrentDictionary<MessageQueue, ProcessQueue>();
-        private readonly BlockingCollection<WrappedMessage> _messageQueue = new BlockingCollection<WrappedMessage>(new ConcurrentQueue<WrappedMessage>());
+        private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly List<string> _subscriptionTopics = new List<string>();
         private IList<string> _consumerIds;
-        private readonly BlockingCollection<PullRequest> _pullRequestBlockingQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
-        private readonly Worker _executePullReqeustWorker;
-        private readonly Worker _handleMessageWorker;
         private readonly IScheduleService _scheduleService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly IOffsetStore _offsetStore;
@@ -51,10 +44,6 @@ namespace EQueue.Clients.Consumers
         {
             get { return _subscriptionTopics; }
         }
-        public int PullThresholdForQueue { get; set; }
-        public int ConsumeMaxSpan { get; set; }
-        public int PullTimeDelayMillsWhenFlowControl { get; set; }
-        public int PullMessageBatchSize { get; set; }
 
         #endregion
 
@@ -77,14 +66,7 @@ namespace EQueue.Clients.Consumers
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
-            _executePullReqeustWorker = new Worker(ExecutePullRequest);
-            _handleMessageWorker = new Worker(HandleMessage);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
-
-            PullThresholdForQueue = 1000;
-            ConsumeMaxSpan = 2000;
-            PullTimeDelayMillsWhenFlowControl = 100;
-            PullMessageBatchSize = 32;
         }
 
         #endregion
@@ -94,12 +76,10 @@ namespace EQueue.Clients.Consumers
         public Consumer Start()
         {
             _remotingClient.Start();
-            _handleMessageWorker.Start();
             _scheduleService.ScheduleTask(Rebalance, Settings.RebalanceInterval, Settings.RebalanceInterval);
             _scheduleService.ScheduleTask(UpdateAllLocalTopicQueues, Settings.UpdateTopicQueueCountInterval, Settings.UpdateTopicQueueCountInterval);
             _scheduleService.ScheduleTask(SendHeartbeatToBroker, Settings.HeartbeatBrokerInterval, Settings.HeartbeatBrokerInterval);
             _scheduleService.ScheduleTask(PersistOffset, Settings.PersistConsumerOffsetInterval, Settings.PersistConsumerOffsetInterval);
-            _executePullReqeustWorker.Start();
             _logger.InfoFormat("[{0}] started, settings:{1}", Id, Settings);
             return this;
         }
@@ -113,138 +93,13 @@ namespace EQueue.Clients.Consumers
         }
         public IEnumerable<MessageQueue> GetCurrentQueues()
         {
-            return _processQueueDict.Keys;
+            return _pullRequestDict.Values.Select(x => x.MessageQueue);
         }
 
         #endregion
 
         #region Private Methods
 
-        private void PullMessage(PullRequest pullRequest)
-        {
-            var messageCount = pullRequest.ProcessQueue.GetMessageCount();
-            var messageSpan = pullRequest.ProcessQueue.GetMessageSpan();
-
-            if (messageCount >= PullThresholdForQueue)
-            {
-                EnqueuePullRequest(pullRequest, PullTimeDelayMillsWhenFlowControl);
-                if ((flowControlTimes1++ % 3000) == 0)
-                {
-                    _logger.WarnFormat("[{0}]: the consumer message buffer is full, so do flow control, [messageCount={1},pullRequest={2},flowControlTimes={3}]", Id, messageCount, pullRequest, flowControlTimes1);
-                }
-            }
-            else if (messageSpan >= ConsumeMaxSpan)
-            {
-                EnqueuePullRequest(pullRequest, PullTimeDelayMillsWhenFlowControl);
-                if ((flowControlTimes2++ % 3000) == 0)
-                {
-                    _logger.WarnFormat("[{0}]: the consumer message span too long, so do flow control, [messageSpan={1},pullRequest={2},flowControlTimes={3}]", Id, messageSpan, pullRequest, flowControlTimes2);
-                }
-            }
-            else
-            {
-                StartPullMessageTask(pullRequest).ContinueWith((task) => ProcessPullResult(pullRequest, task.Result));
-            }
-        }
-        private void EnqueuePullRequest(PullRequest pullRequest)
-        {
-            _pullRequestBlockingQueue.Add(pullRequest);
-        }
-        private void EnqueuePullRequest(PullRequest pullRequest, int millisecondsDelay)
-        {
-            Task.Factory.StartDelayedTask(millisecondsDelay, () => _pullRequestBlockingQueue.Add(pullRequest));
-        }
-        private void ExecutePullRequest()
-        {
-            var pullRequest = _pullRequestBlockingQueue.Take();
-            try
-            {
-                if (IsQueueAllocatedToCurrentConsumer(pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId))
-                {
-                    PullMessage(pullRequest);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(string.Format("[{0}]: executePullRequest exception. PullRequest: {1}.", Id, pullRequest), ex);
-            }
-        }
-        private bool IsQueueAllocatedToCurrentConsumer(string topic, int queueId)
-        {
-            return _processQueueDict.Keys.Where(x => x.Topic == topic).Any(x => x.QueueId == queueId);
-        }
-
-        private Task<PullResult> StartPullMessageTask(PullRequest pullRequest)
-        {
-            var request = new PullMessageRequest
-            {
-                ConsumerGroup = GroupName,
-                MessageQueue = pullRequest.MessageQueue,
-                QueueOffset = pullRequest.NextOffset,
-                PullMessageBatchSize = PullMessageBatchSize
-            };
-            var data = _binarySerializer.Serialize(request);
-            var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);
-            var taskCompletionSource = new TaskCompletionSource<PullResult>();
-            _remotingClient.InvokeAsync(remotingRequest, PullRequestTimeoutMilliseconds).ContinueWith((requestTask) =>
-            {
-                var remotingResponse = requestTask.Result;
-                if (remotingResponse != null)
-                {
-                    var response = _binarySerializer.Deserialize<PullMessageResponse>(remotingResponse.Body);
-                    var result = new PullResult
-                    {
-                        PullStatus = (PullStatus)remotingResponse.Code,
-                        Messages = response.Messages
-                    };
-                    taskCompletionSource.SetResult(result);
-                }
-                else
-                {
-                    taskCompletionSource.SetResult(new PullResult { PullStatus = PullStatus.Failed });
-                }
-            });
-            return taskCompletionSource.Task;
-        }
-        private void ProcessPullResult(PullRequest pullRequest, PullResult pullResult)
-        {
-            if (pullResult.PullStatus == PullStatus.Found && pullResult.Messages.Count() > 0)
-            {
-                pullRequest.NextOffset += pullResult.Messages.Count();
-                pullRequest.ProcessQueue.AddMessages(pullResult.Messages);
-                pullResult.Messages.ForEach(x => _messageQueue.Add(new WrappedMessage(x, pullRequest.MessageQueue, pullRequest.ProcessQueue)));
-            }
-            EnqueuePullRequest(pullRequest);
-        }
-        private void HandleMessage()
-        {
-            var wrappedMessage = _messageQueue.Take();
-            if (!IsQueueAllocatedToCurrentConsumer(wrappedMessage.QueueMessage.Topic, wrappedMessage.QueueMessage.QueueId))
-            {
-                return;
-            }
-            Action handleAction = () =>
-            {
-                try
-                {
-                    _messageHandler.Handle(wrappedMessage.QueueMessage);
-                }
-                catch { }  //TODO,处理失败的消息放到本地队列继续重试消费
-                var offset = wrappedMessage.ProcessQueue.RemoveMessage(wrappedMessage.QueueMessage);
-                if (offset >= 0)
-                {
-                    _offsetStore.UpdateOffset(wrappedMessage.MessageQueue, offset);
-                }
-            };
-            if (Settings.MessageHandleMode == MessageHandleMode.Sequential)
-            {
-                handleAction();
-            }
-            else if (Settings.MessageHandleMode == MessageHandleMode.Parallel)
-            {
-                Task.Factory.StartNew(handleAction);
-            }
-        }
         private void Rebalance()
         {
             if (MessageModel == MessageModel.BroadCasting)
@@ -298,7 +153,7 @@ namespace EQueue.Clients.Consumers
             IList<MessageQueue> messageQueues;
             if (_topicQueuesDict.TryGetValue(subscriptionTopic, out messageQueues))
             {
-                UpdateProcessQueueDict(subscriptionTopic, messageQueues);
+                UpdatePullRequestDict(subscriptionTopic, messageQueues);
             }
         }
         private void RebalanceClustering(string subscriptionTopic, IList<string> consumerIdList)
@@ -331,7 +186,7 @@ namespace EQueue.Clients.Consumers
                     return;
                 }
 
-                UpdateProcessQueueDict(subscriptionTopic, allocatedMessageQueues.ToList());
+                UpdatePullRequestDict(subscriptionTopic, allocatedMessageQueues.ToList());
             }
         }
         private IEnumerable<string> QueryGroupConsumers(string groupName)
@@ -348,62 +203,52 @@ namespace EQueue.Clients.Consumers
                 throw new Exception(string.Format("[{0}]: queryGroupConsumers has exception, remoting response code:{1}", Id, remotingResponse.Code));
             }
         }
-        private void UpdateProcessQueueDict(string topic, IList<MessageQueue> messageQueues)
+        private void UpdatePullRequestDict(string topic, IList<MessageQueue> messageQueues)
         {
             // Check message queues to remove
-            var toRemoveMessageQueues = new List<MessageQueue>();
-            foreach (var messageQueue in _processQueueDict.Keys)
+            var toRemovePullRequestKeys = new List<string>();
+            foreach (var pullRequest in _pullRequestDict.Values.Where(x => x.MessageQueue.Topic == topic))
             {
-                if (messageQueue.Topic == topic)
+                var key = pullRequest.MessageQueue.ToString();
+                if (!messageQueues.Any(x => x.ToString() == key))
                 {
-                    if (!messageQueues.Any(x => x.Topic == messageQueue.Topic && x.QueueId == messageQueue.QueueId))
-                    {
-                        toRemoveMessageQueues.Add(messageQueue);
-                    }
+                    toRemovePullRequestKeys.Add(key);
                 }
             }
-            foreach (var messageQueue in toRemoveMessageQueues)
+            foreach (var pullRequestKey in toRemovePullRequestKeys)
             {
-                ProcessQueue processQueue;
-                if (_processQueueDict.TryRemove(messageQueue, out processQueue))
+                PullRequest pullRequest;
+                if (_pullRequestDict.TryRemove(pullRequestKey, out pullRequest))
                 {
-                    PersistRemovedMessageQueueOffset(messageQueue);
-                    _logger.InfoFormat("[{0}]: removed message queue:{1}, consumerGroup:{2}", Id, messageQueue, GroupName);
+                    pullRequest.Stop();
+                    PersistRemovedMessageQueueOffset(pullRequest.MessageQueue);
+                    _logger.InfoFormat("[{0}]: removed pull request:{1}", Id, pullRequest);
                 }
             }
 
             // Check message queues to add.
-            var pullRequestList = new List<PullRequest>();
             foreach (var messageQueue in messageQueues)
             {
-                if (!_processQueueDict.Any(x => x.Key.Topic == messageQueue.Topic && x.Key.QueueId == messageQueue.QueueId))
+                var key = messageQueue.ToString();
+                PullRequest pullRequest;
+                if (!_pullRequestDict.TryGetValue(key, out pullRequest))
                 {
-                    var pullRequest = new PullRequest();
-                    pullRequest.ConsumerGroup = GroupName;
-                    pullRequest.MessageQueue = messageQueue;
-                    pullRequest.ProcessQueue = new ProcessQueue();
-
+                    var request = new PullRequest(Id, GroupName, messageQueue, _remotingClient, Settings.MessageHandleMode, _messageHandler, Settings.PullRequestSetting);
                     long nextOffset = ComputePullFromWhere(messageQueue);
                     if (nextOffset >= 0)
                     {
-                        pullRequest.NextOffset = nextOffset;
-                        if (_processQueueDict.TryAdd(messageQueue, pullRequest.ProcessQueue))
+                        request.NextOffset = nextOffset;
+                        if (_pullRequestDict.TryAdd(key, request))
                         {
-                            pullRequestList.Add(pullRequest);
+                            request.Start();
+                            _logger.InfoFormat("[{0}]: added pull request:{1}", Id, request);
                         }
                     }
                     else
                     {
-                        _logger.WarnFormat("[{0}]: the new messageQueue:{1} (consumerGroup:{2}) cannot be added as the nextOffset is < 0.", Id, messageQueue, GroupName);
+                        _logger.WarnFormat("[{0}]: the pull request {1} cannot be added as the nextOffset is < 0.", Id, request);
                     }
                 }
-            }
-
-            foreach (var pullRequest in pullRequestList)
-            {
-                var nextOffset = pullRequest.NextOffset;
-                EnqueuePullRequest(pullRequest);
-                _logger.InfoFormat("[{0}]: added message queue:{1}, consumerGroup:{2}, nextOffset:{3}", Id, pullRequest.MessageQueue, GroupName, nextOffset);
             }
         }
         private void PersistRemovedMessageQueueOffset(MessageQueue messageQueue)
@@ -429,11 +274,11 @@ namespace EQueue.Clients.Consumers
         }
         private void PersistOffset()
         {
-            foreach (var messageQueue in _processQueueDict.Keys)
+            foreach (var pullRequest in _pullRequestDict.Values)
             {
                 try
                 {
-                    _offsetStore.Persist(messageQueue);
+                    _offsetStore.Persist(pullRequest.MessageQueue);
                 }
                 catch (Exception ex)
                 {
