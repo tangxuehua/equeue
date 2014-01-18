@@ -41,7 +41,6 @@ namespace EQueue.Infrastructure.Socketing
                         _logger.Error(ex);
                     }
                 });
-                new ManualResetEvent(false).WaitOne();
             });
             return this;
         }

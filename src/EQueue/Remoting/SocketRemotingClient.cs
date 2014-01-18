@@ -47,7 +47,10 @@ namespace EQueue.Remoting
             var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
             var response = default(RemotingResponse);
 
-            _responseFutureDict.TryAdd(request.Sequence, responseFuture);
+            if (!_responseFutureDict.TryAdd(request.Sequence, responseFuture))
+            {
+                throw new Exception(string.Format("Try to add response future failed. request sequence:{0}", request.Sequence));
+            }
             try
             {
                 _clientSocket.SendMessage(message, sendResult => SendMessageCallback(responseFuture, request, _address, sendResult));
@@ -76,7 +79,11 @@ namespace EQueue.Remoting
             var message = RemotingUtil.BuildRequestMessage(request);
             var taskCompletionSource = new TaskCompletionSource<RemotingResponse>();
             var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
-            _responseFutureDict.TryAdd(request.Sequence, responseFuture);
+
+            if (!_responseFutureDict.TryAdd(request.Sequence, responseFuture))
+            {
+                throw new Exception(string.Format("Try to add response future failed. request sequence:{0}", request.Sequence));
+            }
             try
             {
                 _clientSocket.SendMessage(message, sendResult => SendMessageCallback(responseFuture, request, _address, sendResult));
@@ -112,23 +119,30 @@ namespace EQueue.Remoting
                 {
                     responseFuture.CompleteRequestTask(remotingResponse);
                 }
+                else
+                {
+                    _logger.ErrorFormat("Remoting response returned, but the responseFuture was removed already. request sequence:{0}", remotingResponse.Sequence);
+                }
             });
         }
         private void ScanTimeoutRequest()
         {
-            var timeoutRequestList = new List<RemotingRequest>();
-            foreach (var responseFuture in _responseFutureDict.Values)
+            var timeoutResponseFutureKeyList = new List<long>();
+            foreach (var entry in _responseFutureDict)
             {
-                if (responseFuture.IsTimeout())
+                if (entry.Value.IsTimeout())
                 {
-                    responseFuture.CompleteRequestTask(null);
-                    timeoutRequestList.Add(responseFuture.Request);
+                    timeoutResponseFutureKeyList.Add(entry.Key);
                 }
             }
-            foreach (var request in timeoutRequestList)
+            foreach (var key in timeoutResponseFutureKeyList)
             {
-                _responseFutureDict.Remove(request.Sequence);
-                _logger.WarnFormat("Removed timeout request:{0}", request);
+                ResponseFuture responseFuture;
+                if (_responseFutureDict.TryRemove(key, out responseFuture))
+                {
+                    responseFuture.CompleteRequestTask(null);
+                    _logger.WarnFormat("Removed timeout request:{0}", responseFuture.Request);
+                }
             }
         }
         private void SendMessageCallback(ResponseFuture responseFuture, RemotingRequest request, string address, SendResult sendResult)

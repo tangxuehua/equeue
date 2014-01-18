@@ -25,7 +25,7 @@ namespace EQueue.Clients.Consumers
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
         private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly List<string> _subscriptionTopics = new List<string>();
-        private IList<string> _consumerIds;
+        private IList<string> _consumerIds = new List<string>();
         private readonly IScheduleService _scheduleService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly IOffsetStore _offsetStore;
@@ -49,6 +49,10 @@ namespace EQueue.Clients.Consumers
 
         #region Constructors
 
+        public Consumer(string groupName, MessageModel messageModel, IMessageHandler messageHandler)
+            : this(ConsumerSettings.Default, groupName, messageModel, messageHandler)
+        {
+        }
         public Consumer(ConsumerSettings settings, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
             : this(string.Format("Consumer@{0}", Utils.GetLocalIPV4()), settings, groupName, messageModel, messageHandler)
         {
@@ -77,8 +81,8 @@ namespace EQueue.Clients.Consumers
         {
             _remotingClient.Start();
             _scheduleService.ScheduleTask(Rebalance, Settings.RebalanceInterval, Settings.RebalanceInterval);
-            _scheduleService.ScheduleTask(UpdateAllLocalTopicQueues, Settings.UpdateTopicQueueCountInterval, Settings.UpdateTopicQueueCountInterval);
-            _scheduleService.ScheduleTask(SendHeartbeatToBroker, Settings.HeartbeatBrokerInterval, Settings.HeartbeatBrokerInterval);
+            _scheduleService.ScheduleTask(UpdateAllTopicQueues, Settings.UpdateTopicQueueCountInterval, Settings.UpdateTopicQueueCountInterval);
+            _scheduleService.ScheduleTask(SendHeartbeat, Settings.HeartbeatBrokerInterval, Settings.HeartbeatBrokerInterval);
             _scheduleService.ScheduleTask(PersistOffset, Settings.PersistConsumerOffsetInterval, Settings.PersistConsumerOffsetInterval);
             _logger.InfoFormat("[{0}] started, settings:{1}", Id, Settings);
             return this;
@@ -122,7 +126,7 @@ namespace EQueue.Clients.Consumers
                 try
                 {
                     consumerIdList = QueryGroupConsumers(GroupName).ToList();
-                    if (_consumerIds == null || _consumerIds.Count != consumerIdList.Count)
+                    if (_consumerIds.Count != consumerIdList.Count)
                     {
                         _logger.InfoFormat("[{0}]: consumerIds changed, old:{1}, new:{2}", Id, _consumerIds == null ? string.Empty : string.Join(",", _consumerIds), string.Join(",", consumerIdList));
                         _consumerIds = consumerIdList;
@@ -187,20 +191,6 @@ namespace EQueue.Clients.Consumers
                 }
 
                 UpdatePullRequestDict(subscriptionTopic, allocatedMessageQueues.ToList());
-            }
-        }
-        private IEnumerable<string> QueryGroupConsumers(string groupName)
-        {
-            var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, Encoding.UTF8.GetBytes(groupName));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
-            if (remotingResponse.Code == (int)ResponseCode.Success)
-            {
-                var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
-                return consumerIds.Split(new [] { "," }, StringSplitOptions.RemoveEmptyEntries);
-            }
-            else
-            {
-                throw new Exception(string.Format("[{0}]: queryGroupConsumers has exception, remoting response code:{1}", Id, remotingResponse.Code));
             }
         }
         private void UpdatePullRequestDict(string topic, IList<MessageQueue> messageQueues)
@@ -282,11 +272,11 @@ namespace EQueue.Clients.Consumers
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("PersistOffset exception.", ex);
+                    _logger.Error(string.Format("[{0}]: PersistOffset has exception.", Id), ex);
                 }
             }
         }
-        private void SendHeartbeatToBroker()
+        private void SendHeartbeat()
         {
             try
             {
@@ -297,21 +287,21 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("[{0}]: send heart beat to broker exception", Id), ex);
+                _logger.Error(string.Format("[{0}]: SendHeartbeat has exception.", Id), ex);
             }
         }
-        private void UpdateAllLocalTopicQueues()
+        private void UpdateAllTopicQueues()
         {
             foreach (var topic in SubscriptionTopics)
             {
-                UpdateLocalTopicQueues(topic);
+                UpdateTopicQueues(topic);
             }
         }
-        private void UpdateLocalTopicQueues(string topic)
+        private void UpdateTopicQueues(string topic)
         {
             try
             {
-                var topicQueueCountFromServer = GetTopicQueueCountFromServer(topic);
+                var topicQueueCountFromServer = GetTopicQueueCount(topic);
                 IList<MessageQueue> currentMessageQueues;
                 var topicQueueCountOfLocal = _topicQueuesDict.TryGetValue(topic, out currentMessageQueues) ? currentMessageQueues.Count : 0;
 
@@ -331,17 +321,31 @@ namespace EQueue.Clients.Consumers
                 _logger.Error(string.Format("[{0}]: updateLocalTopicQueues failed, topic:{1}", Id, topic), ex);
             }
         }
-        private int GetTopicQueueCountFromServer(string topic)
+        private IEnumerable<string> QueryGroupConsumers(string groupName)
+        {
+            var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, Encoding.UTF8.GetBytes(groupName));
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
+            if (remotingResponse.Code == (int)ResponseCode.Success)
+            {
+                var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
+                return consumerIds.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+            }
+            else
+            {
+                throw new Exception(string.Format("[{0}]: QueryGroupConsumers has exception, remoting response code:{1}", Id, remotingResponse.Code));
+            }
+        }
+        private int GetTopicQueueCount(string topic)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueCount, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 return BitConverter.ToInt32(remotingResponse.Body, 0);
             }
             else
             {
-                throw new Exception(string.Format("GetTopicQueueCountFromServer has exception, remoting response code:{0}", remotingResponse.Code));
+                throw new Exception(string.Format("[{0}]: GetTopicQueueCount has exception, remoting response code:{1}", Id, remotingResponse.Code));
             }
         }
 

@@ -19,7 +19,7 @@ namespace EQueue.Clients.Consumers
 
         public ConsumerSettings()
         {
-            BrokerAddress = Utils.GetLocalIPV4();
+            BrokerAddress = "127.0.0.1";
             BrokerPort = 5001;
             RebalanceInterval = 1000 * 5;
             HeartbeatBrokerInterval = 1000 * 5;
