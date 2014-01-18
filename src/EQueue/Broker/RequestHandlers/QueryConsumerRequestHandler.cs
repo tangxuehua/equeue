@@ -26,6 +26,7 @@ namespace EQueue.Broker.Processors
             if (consumerGroup != null)
             {
                 consumerIdList = consumerGroup.GetAllConsumerChannels().Select(x => x.ClientId).ToList();
+                consumerIdList.Sort();
             }
             var consumerIds = string.Join(",", consumerIdList);
             var data = Encoding.UTF8.GetBytes(consumerIds);

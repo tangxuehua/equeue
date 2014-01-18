@@ -29,6 +29,7 @@ namespace EQueue.Clients.Consumers
         private readonly ConcurrentDictionary<MessageQueue, ProcessQueue> _processQueueDict = new ConcurrentDictionary<MessageQueue, ProcessQueue>();
         private readonly BlockingCollection<WrappedMessage> _messageQueue = new BlockingCollection<WrappedMessage>(new ConcurrentQueue<WrappedMessage>());
         private readonly List<string> _subscriptionTopics = new List<string>();
+        private IList<string> _consumerIds;
         private readonly BlockingCollection<PullRequest> _pullRequestBlockingQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
         private readonly Worker _executePullReqeustWorker;
         private readonly Worker _handleMessageWorker;
@@ -158,7 +159,7 @@ namespace EQueue.Clients.Consumers
             var pullRequest = _pullRequestBlockingQueue.Take();
             try
             {
-                if (AllowExecutePullRequest(pullRequest))
+                if (IsQueueAllocatedToCurrentConsumer(pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId))
                 {
                     PullMessage(pullRequest);
                 }
@@ -168,9 +169,9 @@ namespace EQueue.Clients.Consumers
                 _logger.Error(string.Format("[{0}]: executePullRequest exception. PullRequest: {1}.", Id, pullRequest), ex);
             }
         }
-        private bool AllowExecutePullRequest(PullRequest pullRequest)
+        private bool IsQueueAllocatedToCurrentConsumer(string topic, int queueId)
         {
-            return _processQueueDict.Keys.Where(x => x.Topic == pullRequest.MessageQueue.Topic).Any(x => x.QueueId == pullRequest.MessageQueue.QueueId);
+            return _processQueueDict.Keys.Where(x => x.Topic == topic).Any(x => x.QueueId == queueId);
         }
 
         private Task<PullResult> StartPullMessageTask(PullRequest pullRequest)
@@ -218,6 +219,10 @@ namespace EQueue.Clients.Consumers
         private void HandleMessage()
         {
             var wrappedMessage = _messageQueue.Take();
+            if (!IsQueueAllocatedToCurrentConsumer(wrappedMessage.QueueMessage.Topic, wrappedMessage.QueueMessage.QueueId))
+            {
+                return;
+            }
             Action handleAction = () =>
             {
                 try
@@ -262,6 +267,11 @@ namespace EQueue.Clients.Consumers
                 try
                 {
                     consumerIdList = QueryGroupConsumers(GroupName).ToList();
+                    if (_consumerIds == null || _consumerIds.Count != consumerIdList.Count)
+                    {
+                        _logger.InfoFormat("[{0}]: consumerIds changed, old:{1}, new:{2}", Id, _consumerIds == null ? string.Empty : string.Join(",", _consumerIds), string.Join(",", consumerIdList));
+                        _consumerIds = consumerIdList;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -297,7 +307,7 @@ namespace EQueue.Clients.Consumers
             if (_topicQueuesDict.TryGetValue(subscriptionTopic, out messageQueues))
             {
                 var messageQueueList = messageQueues.ToList();
-                messageQueueList.Sort(new Comparison<MessageQueue>((x, y) =>
+                messageQueueList.Sort((x, y) =>
                 {
                     if (x.QueueId > y.QueueId)
                     {
@@ -308,7 +318,7 @@ namespace EQueue.Clients.Consumers
                         return -1;
                     }
                     return 0;
-                }));
+                });
 
                 IEnumerable<MessageQueue> allocatedMessageQueues = new List<MessageQueue>();
                 try
