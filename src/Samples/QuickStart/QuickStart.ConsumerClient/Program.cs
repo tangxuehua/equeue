@@ -28,7 +28,7 @@ namespace QuickStart.ConsumerClient
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
             scheduleService.ScheduleTask(() =>
             {
-                Console.WriteLine(string.Format("Queue Allocation. c1:{0}, c2:{1}, c3:{2}, c4:{3}",
+                Console.WriteLine(string.Format("Consumer message queue allocation. c1:{0}, c2:{1}, c3:{2}, c4:{3}",
                     string.Join(",", consumer1.GetCurrentQueues().Select(x => x.QueueId)),
                     string.Join(",", consumer2.GetCurrentQueues().Select(x => x.QueueId)),
                     string.Join(",", consumer3.GetCurrentQueues().Select(x => x.QueueId)),
