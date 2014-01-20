@@ -18,7 +18,7 @@ namespace EQueue.Clients.Consumers
     public class PullRequest
     {
         private readonly SocketRemotingClient _remotingClient;
-        private readonly Worker _pullMessageorker;
+        private readonly Worker _pullMessageWorker;
         private readonly Worker _handleMessageWorker;
         private readonly ILogger _logger;
         private readonly IBinarySerializer _binarySerializer;
@@ -56,7 +56,7 @@ namespace EQueue.Clients.Consumers
             _messageHandleMode = messageHandleMode;
             _messageHandler = messageHandler;
             _messageQueue = new BlockingCollection<WrappedMessage>(new ConcurrentQueue<WrappedMessage>());
-            _pullMessageorker = new Worker(() =>
+            _pullMessageWorker = new Worker(() =>
             {
                 try
                 {
@@ -76,12 +76,12 @@ namespace EQueue.Clients.Consumers
 
         public void Start()
         {
-            _pullMessageorker.Start();
+            _pullMessageWorker.Start();
             _handleMessageWorker.Start();
         }
         public void Stop()
         {
-            _pullMessageorker.Stop();
+            _pullMessageWorker.Stop();
             _handleMessageWorker.Stop();
         }
 
@@ -93,7 +93,8 @@ namespace EQueue.Clients.Consumers
         private void PullMessage()
         {
             var messageCount = ProcessQueue.GetMessageCount();
-            var messageSpan = ProcessQueue.GetMessageSpan();
+            //TODO, here the GetMessageSpan has bug when in parallel environment.
+            //var messageSpan = ProcessQueue.GetMessageSpan();
 
             if (messageCount >= _setting.PullThresholdForQueue)
             {
@@ -103,14 +104,14 @@ namespace EQueue.Clients.Consumers
                     _logger.WarnFormat("[{0}]: the consumer message buffer is full, so do flow control, [messageCount={1},pullRequest={2},flowControlTimes={3}]", ConsumerId, messageCount, this, flowControlTimes1);
                 }
             }
-            else if (messageSpan >= _setting.ConsumeMaxSpan)
-            {
-                Thread.Sleep(_setting.PullTimeDelayMillsWhenFlowControl);
-                if ((flowControlTimes2++ % 3000) == 0)
-                {
-                    _logger.WarnFormat("[{0}]: the consumer message span too long, so do flow control, [messageSpan={1},pullRequest={2},flowControlTimes={3}]", ConsumerId, messageSpan, this, flowControlTimes2);
-                }
-            }
+            //else if (messageSpan >= _setting.ConsumeMaxSpan)
+            //{
+            //    Thread.Sleep(_setting.PullTimeDelayMillsWhenFlowControl);
+            //    if ((flowControlTimes2++ % 3000) == 0)
+            //    {
+            //        _logger.WarnFormat("[{0}]: the consumer message span too long, so do flow control, [messageSpan={1},pullRequest={2},flowControlTimes={3}]", ConsumerId, messageSpan, this, flowControlTimes2);
+            //    }
+            //}
 
             var request = new PullMessageRequest
             {

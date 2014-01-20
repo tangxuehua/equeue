@@ -324,7 +324,7 @@ namespace EQueue.Clients.Consumers
         private IEnumerable<string> QueryGroupConsumers(string groupName)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, Encoding.UTF8.GetBytes(groupName));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -338,7 +338,7 @@ namespace EQueue.Clients.Consumers
         private int GetTopicQueueCount(string topic)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueCount, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 3000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 return BitConverter.ToInt32(remotingResponse.Body, 0);

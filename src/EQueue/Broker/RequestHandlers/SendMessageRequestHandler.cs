@@ -31,16 +31,7 @@ namespace EQueue.Broker.Processors
                 new MessageQueue(sendMessageRequest.Message.Topic, storeResult.QueueId),
                 storeResult.QueueOffset);
             var responseData = _binarySerializer.Serialize(sendMessageResponse);
-
-            var current = Interlocked.Increment(ref total);
-            if (current % 2000 == 0)
-            {
-                _logger.Debug(current + "," + sendMessageResponse.MessageOffset);
-            }
-
             return new RemotingResponse((int)ResponseCode.Success, request.Sequence, responseData);
         }
-
-        int total = 0;
     }
 }

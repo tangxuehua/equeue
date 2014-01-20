@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,16 +23,35 @@ namespace QuickStart.ProducerClient
 
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
             var producer = new Producer().Start();
-            var index = 100;
+            var total = 1000;
+            var parallelCount = 10;
+            var finished = 0;
+            var messageIndex = 0;
+            var watch = Stopwatch.StartNew();
 
-            scheduleService.ScheduleTask(() =>
+            var action = new Action(() =>
             {
-                var message = "message" + Interlocked.Increment(ref index);
-                producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
+                for (var index = 1; index <= total; index++)
                 {
-                    Console.WriteLine(string.Format("Sent:{0}, result:{1}", message, sendTask.Result));
-                });
-            }, 0, 3000);
+                    var message = "message" + Interlocked.Increment(ref messageIndex);
+                    producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
+                    {
+                        var finishedCount = Interlocked.Increment(ref finished);
+                        if (finishedCount % 1000 == 0)
+                        {
+                            Console.WriteLine(string.Format("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds));
+                        }
+                    });
+                }
+            });
+
+            var actions = new List<Action>();
+            for (var index = 0; index < parallelCount; index++)
+            {
+                actions.Add(action);
+            }
+
+            Parallel.Invoke(actions.ToArray());
 
             Console.ReadLine();
         }

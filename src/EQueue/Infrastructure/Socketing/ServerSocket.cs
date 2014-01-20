@@ -48,44 +48,47 @@ namespace EQueue.Infrastructure.Socketing
         }
         public void Start(Action<ReceiveContext> messageReceivedCallback)
         {
-            _messageReceivedCallback = messageReceivedCallback;
-            _scheduleService.ScheduleTask(CheckDisconnectedClientSocket, 3 * 1000, 3 * 1000);
-            _running = true;
-
-            while (_running)
+            Task.Factory.StartNew(() =>
             {
-                _newClientSocketSignal.Reset();
+                _messageReceivedCallback = messageReceivedCallback;
+                _scheduleService.ScheduleTask(CheckDisconnectedClientSocket, 3 * 1000, 3 * 1000);
+                _running = true;
 
-                try
+                while (_running)
                 {
-                    _socket.BeginAccept((asyncResult) =>
+                    _newClientSocketSignal.Reset();
+
+                    try
                     {
-                        var clientSocket = _socket.EndAccept(asyncResult);
-                        var socketInfo = new SocketInfo(clientSocket);
-                        _clientSocketDict.TryAdd(socketInfo.SocketRemotingEndpointAddress, socketInfo);
-                        NotifyNewSocketAccepted(socketInfo);
-                        _newClientSocketSignal.Set();
-                        _socketService.ReceiveMessage(socketInfo, receivedMessage =>
+                        _socket.BeginAccept((asyncResult) =>
                         {
-                            var receiveContext = new ReceiveContext(socketInfo, receivedMessage, context =>
+                            var clientSocket = _socket.EndAccept(asyncResult);
+                            var socketInfo = new SocketInfo(clientSocket);
+                            _clientSocketDict.TryAdd(socketInfo.SocketRemotingEndpointAddress, socketInfo);
+                            NotifyNewSocketAccepted(socketInfo);
+                            _newClientSocketSignal.Set();
+                            _socketService.ReceiveMessage(socketInfo, receivedMessage =>
                             {
-                                _socketService.SendMessage(context.ReplySocketInfo.InnerSocket, context.ReplyMessage, sendResult => { });
+                                var receiveContext = new ReceiveContext(socketInfo, receivedMessage, context =>
+                                {
+                                    _socketService.SendMessage(context.ReplySocketInfo.InnerSocket, context.ReplyMessage, sendResult => { });
+                                });
+                                _messageReceivedCallback(receiveContext);
                             });
-                            _messageReceivedCallback(receiveContext);
-                        });
-                    }, _socket);
-                }
-                catch (SocketException socketException)
-                {
-                    _logger.Error(string.Format("Socket accept exception, ErrorCode:{0}", socketException.SocketErrorCode), socketException);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error("Unknown socket accept exception.", ex);
-                }
+                        }, _socket);
+                    }
+                    catch (SocketException socketException)
+                    {
+                        _logger.Error(string.Format("Socket accept exception, ErrorCode:{0}", socketException.SocketErrorCode), socketException);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error("Unknown socket accept exception.", ex);
+                    }
 
-                _newClientSocketSignal.WaitOne();
-            }
+                    _newClientSocketSignal.WaitOne();
+                }
+            });
         }
         public void Shutdown()
         {

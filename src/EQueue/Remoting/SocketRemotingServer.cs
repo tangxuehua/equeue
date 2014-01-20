@@ -26,7 +26,7 @@ namespace EQueue.Remoting
         {
             if (_started) return;
 
-            Task.Factory.StartNew(() => _serverSocket.Start(HandleRemotingRequest));
+            _serverSocket.Start(HandleRemotingRequest);
 
             _started = true;
         }
@@ -51,19 +51,16 @@ namespace EQueue.Remoting
                 return;
             }
 
-            Task.Factory.StartNew(() =>
+            var remotingResponse = requestHandler.HandleRequest(new SocketRequestHandlerContext(receiveContext), remotingRequest);
+            if (remotingRequest.IsOneway)
             {
-                var remotingResponse = requestHandler.HandleRequest(new SocketRequestHandlerContext(receiveContext), remotingRequest);
-                if (remotingRequest.IsOneway)
-                {
-                    return;
-                }
-                else if (remotingResponse != null)
-                {
-                    receiveContext.ReplyMessage = RemotingUtil.BuildResponseMessage(remotingResponse);
-                    receiveContext.MessageHandledCallback(receiveContext);
-                }
-            });
+                return;
+            }
+            else if (remotingResponse != null)
+            {
+                receiveContext.ReplyMessage = RemotingUtil.BuildResponseMessage(remotingResponse);
+                receiveContext.MessageHandledCallback(receiveContext);
+            }
         }
     }
 }

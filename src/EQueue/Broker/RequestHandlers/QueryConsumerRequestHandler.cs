@@ -30,7 +30,6 @@ namespace EQueue.Broker.Processors
             }
             var consumerIds = string.Join(",", consumerIdList);
             var data = Encoding.UTF8.GetBytes(consumerIds);
-            _logger.DebugFormat("Handled QueryConsumerRequest. groupName:{0}, consumerIds:{1}, channel:{2}", groupName, consumerIds, context.Channel);
             return new RemotingResponse((int)ResponseCode.Success, request.Sequence, data);
         }
     }

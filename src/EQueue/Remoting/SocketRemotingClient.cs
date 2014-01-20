@@ -17,8 +17,11 @@ namespace EQueue.Remoting
         private readonly int _port;
         private readonly ClientSocket _clientSocket;
         private readonly ConcurrentDictionary<long, ResponseFuture> _responseFutureDict;
+        private readonly BlockingCollection<byte[]> _responseMessageQueue;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
+        private readonly Worker _processResponseMessageWorker;
+        private int _scanTimeoutRequestTaskId;
 
         public SocketRemotingClient(string address = "127.0.0.1", int port = 5000)
         {
@@ -26,19 +29,24 @@ namespace EQueue.Remoting
             _port = port;
             _clientSocket = new ClientSocket();
             _responseFutureDict = new ConcurrentDictionary<long, ResponseFuture>();
+            _responseMessageQueue = new BlockingCollection<byte[]>(new ConcurrentQueue<byte[]>());
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
+            _processResponseMessageWorker = new Worker(ProcessResponseMessage);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _clientSocket.Connect(address, port);
         }
 
         public void Start()
         {
-            _clientSocket.Start(ProcessRemotingResponse);
-            _scheduleService.ScheduleTask(ScanTimeoutRequest, 1000 * 3, 1000);
+            _clientSocket.Start(responseMessage => _responseMessageQueue.Add(responseMessage));
+            _processResponseMessageWorker.Start();
+            _scanTimeoutRequestTaskId = _scheduleService.ScheduleTask(ScanTimeoutRequest, 1000 * 3, 1000);
         }
         public void Shutdown()
         {
             _clientSocket.Shutdown();
+            _processResponseMessageWorker.Stop();
+            _scheduleService.ShutdownTask(_scanTimeoutRequestTaskId);
         }
         public RemotingResponse InvokeSync(RemotingRequest request, int timeoutMillis)
         {
@@ -109,21 +117,20 @@ namespace EQueue.Remoting
             }
         }
 
-        private void ProcessRemotingResponse(byte[] responseMessage)
+        private void ProcessResponseMessage()
         {
-            Task.Factory.StartNew(() =>
+            var responseMessage = _responseMessageQueue.Take();
+            var remotingResponse = RemotingUtil.ParseResponse(responseMessage);
+
+            ResponseFuture responseFuture;
+            if (_responseFutureDict.TryRemove(remotingResponse.Sequence, out responseFuture))
             {
-                var remotingResponse = RemotingUtil.ParseResponse(responseMessage);
-                ResponseFuture responseFuture;
-                if (_responseFutureDict.TryRemove(remotingResponse.Sequence, out responseFuture))
-                {
-                    responseFuture.CompleteRequestTask(remotingResponse);
-                }
-                else
-                {
-                    _logger.ErrorFormat("Remoting response returned, but the responseFuture was removed already. request sequence:{0}", remotingResponse.Sequence);
-                }
-            });
+                responseFuture.CompleteRequestTask(remotingResponse);
+            }
+            else
+            {
+                _logger.ErrorFormat("Remoting response returned, but the responseFuture was removed already. request sequence:{0}", remotingResponse.Sequence);
+            }
         }
         private void ScanTimeoutRequest()
         {

@@ -22,7 +22,6 @@ namespace EQueue.Broker.Processors
             var topic = Encoding.UTF8.GetString(request.Body);
             var queueCount = _messageService.GetTopicQueueCount(topic);
             var data = BitConverter.GetBytes(queueCount);
-            _logger.DebugFormat("Handled GetTopicQueueCountRequest. topic:{0}, queueCount:{1}, channel:{2}", topic, queueCount, context.Channel);
             return new RemotingResponse((int)ResponseCode.Success, request.Sequence, data);
         }
     }

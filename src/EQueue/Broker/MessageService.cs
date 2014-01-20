@@ -30,7 +30,6 @@ namespace EQueue.Broker
             var queueOffset = queue.IncrementCurrentOffset();
             var storeResult = _messageStore.StoreMessage(message, queue.QueueId, queueOffset);
             queue.SetMessageOffset(queueOffset, storeResult.MessageOffset);
-            _logger.DebugFormat("Message stored, offset:{0}, topic:{1}, queueId:{2}, queueOffset:{3}", storeResult.MessageOffset, message.Topic, queue.QueueId, queueOffset);
             return storeResult;
         }
         public IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
