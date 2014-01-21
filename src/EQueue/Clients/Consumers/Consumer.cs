@@ -3,16 +3,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using EQueue.Infrastructure;
-using EQueue.Infrastructure.Extensions;
 using EQueue.Infrastructure.IoC;
 using EQueue.Infrastructure.Logging;
 using EQueue.Infrastructure.Scheduling;
 using EQueue.Protocols;
 using EQueue.Remoting;
-using EQueue.Remoting.Requests;
-using EQueue.Remoting.Responses;
 
 namespace EQueue.Clients.Consumers
 {

@@ -13,6 +13,7 @@ namespace EQueue.Broker
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
         public long CurrentOffset { get { return _currentOffset; } }
+        public QueueStatus Status { get; private set; }
 
         public Queue(string topic, int queueId)
         {
@@ -20,6 +21,14 @@ namespace EQueue.Broker
             QueueId = queueId;
         }
 
+        public void AllowEnqueue()
+        {
+            Status = QueueStatus.Normal;
+        }
+        public void DisableEnqueue()
+        {
+            Status = QueueStatus.EnqueueDisabled;
+        }
         public long IncrementCurrentOffset()
         {
             return Interlocked.Increment(ref _currentOffset);
