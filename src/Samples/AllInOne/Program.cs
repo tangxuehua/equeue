@@ -55,8 +55,9 @@ namespace AllInOne
             var consumer4 = new Consumer("consumer4", ConsumerSettings.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
 
             //Below to wait for consumer balance.
+            var scheduleService = ObjectContainer.Resolve<IScheduleService>();
             var waitHandle = new ManualResetEvent(false);
-            ObjectContainer.Resolve<IScheduleService>().ScheduleTask(() =>
+            var taskId = scheduleService.ScheduleTask(() =>
             {
                 var c1AllocatedQueueIds = consumer1.GetCurrentQueues().Select(x => x.QueueId);
                 var c2AllocatedQueueIds = consumer2.GetCurrentQueues().Select(x => x.QueueId);
@@ -74,8 +75,7 @@ namespace AllInOne
             }, 1000, 1000);
 
             waitHandle.WaitOne();
-
-
+            scheduleService.ShutdownTask(taskId);
         }
         static void StartProducer()
         {
@@ -114,13 +114,18 @@ namespace AllInOne
         class MessageHandler : IMessageHandler
         {
             private int _handledCount;
+            private Stopwatch _watch;
 
             public void Handle(QueueMessage message)
             {
                 var count = Interlocked.Increment(ref _handledCount);
-                if (count % 1000 == 0)
+                if (count == 1)
                 {
-                    Console.WriteLine("Total handled {0} messages.", count);
+                    _watch = Stopwatch.StartNew();
+                }
+                else if (count % 1000 == 0)
+                {
+                    Console.WriteLine("Total handled {0} messages, time spent:{1}", count, _watch.ElapsedMilliseconds);
                 }
             }
         }
