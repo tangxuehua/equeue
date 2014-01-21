@@ -43,6 +43,7 @@
     <Compile Include="Broker\LongPolling\PullRequest.cs" />
     <Compile Include="Broker\LongPolling\SuspendedPullRequestManager.cs" />
     <Compile Include="Broker\BrokerController.cs" />
+    <Compile Include="Broker\QueueStatus.cs" />
     <Compile Include="Broker\RequestHandlers\ConsumerHeartbeatRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\PullMessageRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetTopicQueueCountRequestHandler.cs" />
