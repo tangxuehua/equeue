@@ -26,8 +26,9 @@ namespace EQueue.Clients.Consumers
         private readonly MessageHandleMode _messageHandleMode;
         private readonly IMessageHandler _messageHandler;
         private readonly PullRequestSetting _setting;
-        private long flowControlTimes1;
-        private long flowControlTimes2;
+        private long _flowControlTimes1;
+        private long _flowControlTimes2;
+        private bool _stoped;
 
         public string ConsumerId { get; private set; }
         public string GroupName { get; private set; }
@@ -79,15 +80,17 @@ namespace EQueue.Clients.Consumers
             _pullMessageWorker.Start();
             _handleMessageWorker.Start();
         }
+
         public void Stop()
         {
             _pullMessageWorker.Stop();
             _handleMessageWorker.Stop();
+            _stoped = true;
         }
 
         public override string ToString()
         {
-            return string.Format("[ConsumerId={0}, GroupName={0}, MessageQueue={1}, NextOffset={2}]", GroupName, MessageQueue, NextOffset);
+            return string.Format("[ConsumerId={0}, GroupName={1}, MessageQueue={2}, NextOffset={3}]", ConsumerId, GroupName, MessageQueue, NextOffset);
         }
 
         private void PullMessage()
@@ -99,9 +102,9 @@ namespace EQueue.Clients.Consumers
             if (messageCount >= _setting.PullThresholdForQueue)
             {
                 Thread.Sleep(_setting.PullTimeDelayMillsWhenFlowControl);
-                if ((flowControlTimes1++ % 3000) == 0)
+                if ((_flowControlTimes1++ % 3000) == 0)
                 {
-                    _logger.WarnFormat("[{0}]: the consumer message buffer is full, so do flow control, [messageCount={1},pullRequest={2},flowControlTimes={3}]", ConsumerId, messageCount, this, flowControlTimes1);
+                    _logger.WarnFormat("[{0}]: the consumer message buffer is full, so do flow control, [messageCount={1},pullRequest={2},flowControlTimes={3}]", ConsumerId, messageCount, this, _flowControlTimes1);
                 }
             }
             //else if (messageSpan >= _setting.ConsumeMaxSpan)
@@ -139,6 +142,10 @@ namespace EQueue.Clients.Consumers
             {
                 try
                 {
+                    if (_stoped)
+                    {
+                        return;
+                    }
                     _messageHandler.Handle(wrappedMessage.QueueMessage);
                 }
                 catch { }  //TODO,处理失败的消息放到本地队列继续重试消费
