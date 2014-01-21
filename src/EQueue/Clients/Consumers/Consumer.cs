@@ -84,7 +84,7 @@ namespace EQueue.Clients.Consumers
             _scheduleService.ScheduleTask(UpdateAllTopicQueues, Settings.UpdateTopicQueueCountInterval, Settings.UpdateTopicQueueCountInterval);
             _scheduleService.ScheduleTask(SendHeartbeat, Settings.HeartbeatBrokerInterval, Settings.HeartbeatBrokerInterval);
             _scheduleService.ScheduleTask(PersistOffset, Settings.PersistConsumerOffsetInterval, Settings.PersistConsumerOffsetInterval);
-            _logger.InfoFormat("[{0}] started, settings:{1}", Id, Settings);
+            _logger.InfoFormat("[{0}] started", Id);
             return this;
         }
         public Consumer Subscribe(string topic)
