@@ -126,6 +126,10 @@ namespace EQueue.Clients.Consumers
             var data = _binarySerializer.Serialize(request);
             var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, _setting.PullRequestTimeoutMilliseconds);
+            if (_stoped)
+            {
+                return;
+            }
             var response = _binarySerializer.Deserialize<PullMessageResponse>(remotingResponse.Body);
 
             if (remotingResponse.Code == (int)PullStatus.Found && response.Messages.Count() > 0)
