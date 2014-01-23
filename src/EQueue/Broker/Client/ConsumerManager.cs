@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Logging;
+using ECommon.IoC;
+using ECommon.Logging;
 using EQueue.Protocols;
 
 namespace EQueue.Broker.Client

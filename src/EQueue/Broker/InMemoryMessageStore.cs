@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
-using EQueue.Infrastructure;
 using EQueue.Protocols;
 
 namespace EQueue.Broker

@@ -1,11 +1,9 @@
 ﻿using System.Threading;
-using EQueue.Infrastructure;
-using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Logging;
+using ECommon.IoC;
+using ECommon.Logging;
 using EQueue.Protocols;
-using EQueue.Remoting;
-using EQueue.Remoting.Requests;
-using EQueue.Remoting.Responses;
+using ECommon.Remoting;
+using ECommon.Serializing;
 
 namespace EQueue.Broker.Processors
 {

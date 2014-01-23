@@ -1,9 +1,9 @@
-﻿using EQueue.Broker.Client;
-using EQueue.Infrastructure;
-using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Logging;
+﻿using ECommon.IoC;
+using ECommon.Logging;
+using ECommon.Remoting;
+using ECommon.Serializing;
+using EQueue.Broker.Client;
 using EQueue.Protocols;
-using EQueue.Remoting;
 
 namespace EQueue.Broker.Processors
 {

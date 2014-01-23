@@ -1,5 +1,5 @@
-﻿using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Scheduling;
+﻿using ECommon.IoC;
+using ECommon.Scheduling;
 
 namespace EQueue.Broker.Client
 {

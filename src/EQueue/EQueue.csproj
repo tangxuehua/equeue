@@ -30,6 +30,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ECommon, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\ecommon.1.0.1\lib\net40\ECommon.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
@@ -69,39 +73,12 @@
     <Compile Include="Clients\Consumers\PullRequestSetting.cs" />
     <Compile Include="Clients\Consumers\WrappedMessage.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
-    <Compile Include="Configuration.cs" />
-    <Compile Include="Infrastructure\Extensions\IEnumerableExtensions.cs" />
-    <Compile Include="Infrastructure\Extensions\ConcurrentDictionaryExtensions.cs" />
-    <Compile Include="Infrastructure\Extensions\TaskExtensions.cs" />
-    <Compile Include="Infrastructure\IBinarySerializer.cs" />
-    <Compile Include="Infrastructure\IJsonSerializer.cs" />
-    <Compile Include="Infrastructure\IoC\ComponentAttribute.cs" />
-    <Compile Include="Infrastructure\JsonBasedBinarySerializer.cs" />
-    <Compile Include="Infrastructure\ObjectId.cs" />
-    <Compile Include="Infrastructure\Socketing\ClientSocket.cs" />
-    <Compile Include="Infrastructure\Socketing\ISocketEventListener.cs" />
-    <Compile Include="Infrastructure\Socketing\SendResult.cs" />
-    <Compile Include="Infrastructure\Socketing\ServerSocket.cs" />
-    <Compile Include="Infrastructure\Socketing\SocketInfo.cs" />
-    <Compile Include="Infrastructure\Socketing\SocketService.cs" />
-    <Compile Include="Infrastructure\Socketing\ReceiveContext.cs" />
-    <Compile Include="Infrastructure\Socketing\ReceiveState.cs" />
-    <Compile Include="Infrastructure\Socketing\SendContext.cs" />
-    <Compile Include="Infrastructure\Socketing\SocketUtils.cs" />
-    <Compile Include="Infrastructure\Utils.cs" />
+    <Compile Include="Configurations\ConfigurationExtensions.cs" />
     <Compile Include="Protocols\QueueMessage.cs" />
-    <Compile Include="Infrastructure\Scheduling\ScheduleService.cs" />
     <Compile Include="Protocols\ConsumerData.cs" />
-    <Compile Include="Infrastructure\Scheduling\IScheduleService.cs" />
-    <Compile Include="Infrastructure\IoC\IObjectContainer.cs" />
-    <Compile Include="Infrastructure\Logging\ILogger.cs" />
-    <Compile Include="Infrastructure\Logging\ILoggerFactory.cs" />
     <Compile Include="Protocols\Message.cs" />
     <Compile Include="Protocols\MessageQueue.cs" />
     <Compile Include="Clients\Consumers\ProcessQueue.cs" />
-    <Compile Include="Infrastructure\IoC\ObjectContainer.cs" />
-    <Compile Include="Infrastructure\Extensions\TaskSchedulerExtensions.cs" />
-    <Compile Include="Infrastructure\Scheduling\Worker.cs" />
     <Compile Include="Protocols\MessageModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Clients\Consumers\PullRequest.cs" />
@@ -109,29 +86,15 @@
     <Compile Include="Protocols\PullStatus.cs" />
     <Compile Include="Clients\Producers\SendResult.cs" />
     <Compile Include="Clients\Producers\SendStatus.cs" />
-    <Compile Include="Remoting\IChannel.cs" />
-    <Compile Include="Remoting\Exceptions\RemotingSendRequestException.cs" />
-    <Compile Include="Remoting\Exceptions\RemotingTimeoutException.cs" />
-    <Compile Include="Remoting\IRequestHandlerContext.cs" />
-    <Compile Include="Remoting\IRequestHandler.cs" />
-    <Compile Include="Remoting\RemotingRequest.cs" />
-    <Compile Include="Remoting\RemotingMessage.cs" />
-    <Compile Include="Remoting\RemotingUtil.cs" />
-    <Compile Include="Remoting\RemotingResponse.cs" />
-    <Compile Include="Remoting\RequestCode.cs" />
-    <Compile Include="Remoting\Requests\PullMessageRequest.cs" />
-    <Compile Include="Remoting\Requests\SendMessageRequest.cs" />
-    <Compile Include="Remoting\ResponseCode.cs" />
-    <Compile Include="Remoting\ResponseFuture.cs" />
-    <Compile Include="Remoting\Responses\PullMessageResponse.cs" />
-    <Compile Include="Remoting\Responses\SendMessageResponse.cs" />
-    <Compile Include="Remoting\SocketChannel.cs" />
-    <Compile Include="Remoting\SocketRemotingClient.cs" />
-    <Compile Include="Remoting\SocketRemotingServer.cs" />
-    <Compile Include="Remoting\SocketRequestHandlerContext.cs" />
-    <Compile Include="Remoting\SocketSetting.cs" />
+    <Compile Include="Protocols\RequestCode.cs" />
+    <Compile Include="Protocols\PullMessageRequest.cs" />
+    <Compile Include="Protocols\SendMessageRequest.cs" />
+    <Compile Include="Protocols\ResponseCode.cs" />
+    <Compile Include="Protocols\PullMessageResponse.cs" />
+    <Compile Include="Protocols\SendMessageResponse.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="packages.config" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup />

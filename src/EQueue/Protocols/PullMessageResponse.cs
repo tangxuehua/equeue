@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using EQueue.Protocols;
 
-namespace EQueue.Remoting.Responses
+namespace EQueue.Protocols
 {
     public class PullMessageResponse
     {

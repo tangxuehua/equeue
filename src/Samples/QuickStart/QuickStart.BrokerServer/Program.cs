@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Text;
-using EQueue;
-using EQueue.Autofac;
+using ECommon.Autofac;
+using ECommon.Configurations;
+using ECommon.JsonNet;
+using ECommon.Log4Net;
 using EQueue.Broker;
-using EQueue.JsonNet;
-using EQueue.Log4Net;
+using EQueue.Configurations;
 using EQueue.Protocols;
 
 namespace QuickStart.BrokerServer
@@ -25,7 +26,7 @@ namespace QuickStart.BrokerServer
                 .UseAutofac()
                 .UseLog4Net()
                 .UseJsonNet()
-                .RegisterFrameworkComponents();
+                .RegisterEQueueComponents();
         }
     }
 }

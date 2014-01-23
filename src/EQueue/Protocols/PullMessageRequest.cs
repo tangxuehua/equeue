@@ -1,6 +1,6 @@
 ﻿using EQueue.Protocols;
 
-namespace EQueue.Remoting.Requests
+namespace EQueue.Protocols
 {
     public class PullMessageRequest
     {

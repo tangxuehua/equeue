@@ -1,6 +1,4 @@
-﻿using EQueue.Infrastructure;
-
-namespace EQueue.Clients.Consumers
+﻿namespace EQueue.Clients.Consumers
 {
     public class ConsumerSettings
     {

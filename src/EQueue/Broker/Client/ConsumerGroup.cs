@@ -2,10 +2,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Logging;
+using ECommon.IoC;
+using ECommon.Logging;
 using EQueue.Protocols;
-using EQueue.Remoting;
 
 namespace EQueue.Broker.Client
 {

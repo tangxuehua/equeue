@@ -1,4 +1,4 @@
-﻿namespace EQueue.Remoting
+﻿namespace EQueue.Protocols
 {
     public enum RequestCode
     {

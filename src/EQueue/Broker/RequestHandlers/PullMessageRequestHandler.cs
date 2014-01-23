@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Linq;
+using ECommon.IoC;
+using ECommon.Logging;
+using ECommon.Remoting;
+using ECommon.Serializing;
 using EQueue.Broker.LongPolling;
-using EQueue.Infrastructure;
-using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Logging;
 using EQueue.Protocols;
-using EQueue.Remoting;
-using EQueue.Remoting.Requests;
-using EQueue.Remoting.Responses;
 
 namespace EQueue.Broker.Processors
 {

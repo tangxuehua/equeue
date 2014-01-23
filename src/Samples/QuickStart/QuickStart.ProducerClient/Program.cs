@@ -4,13 +4,14 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using EQueue;
-using EQueue.Autofac;
+using ECommon.Autofac;
+using ECommon.Configurations;
+using ECommon.IoC;
+using ECommon.JsonNet;
+using ECommon.Log4Net;
+using ECommon.Scheduling;
 using EQueue.Clients.Producers;
-using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Scheduling;
-using EQueue.JsonNet;
-using EQueue.Log4Net;
+using EQueue.Configurations;
 using EQueue.Protocols;
 
 namespace QuickStart.ProducerClient
@@ -63,7 +64,7 @@ namespace QuickStart.ProducerClient
                 .UseAutofac()
                 .UseLog4Net()
                 .UseJsonNet()
-                .RegisterFrameworkComponents();
+                .RegisterEQueueComponents();
         }
     }
 }

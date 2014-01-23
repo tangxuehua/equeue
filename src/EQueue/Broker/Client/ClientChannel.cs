@@ -1,5 +1,5 @@
 ﻿using System;
-using EQueue.Remoting;
+using ECommon.Remoting;
 
 namespace EQueue.Broker.Client
 {

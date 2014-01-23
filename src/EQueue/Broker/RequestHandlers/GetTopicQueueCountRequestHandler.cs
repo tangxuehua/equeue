@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Text;
-using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Logging;
-using EQueue.Remoting;
+using ECommon.IoC;
+using ECommon.Logging;
+using ECommon.Remoting;
+using EQueue.Protocols;
 
 namespace EQueue.Broker.Processors
 {

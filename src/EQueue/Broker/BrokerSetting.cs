@@ -1,5 +1,4 @@
-﻿using EQueue.Infrastructure;
-using EQueue.Remoting;
+﻿using ECommon.Remoting;
 
 namespace EQueue.Broker
 {

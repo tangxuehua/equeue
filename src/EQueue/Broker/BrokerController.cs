@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Net.Sockets;
+using ECommon.IoC;
+using ECommon.Logging;
+using ECommon.Remoting;
+using ECommon.Socketing;
 using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.Processors;
-using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Logging;
-using EQueue.Infrastructure.Socketing;
-using EQueue.Remoting;
+using EQueue.Protocols;
 
 namespace EQueue.Broker
 {

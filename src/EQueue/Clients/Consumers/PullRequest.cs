@@ -3,15 +3,13 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using EQueue.Infrastructure;
-using EQueue.Infrastructure.Extensions;
-using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Logging;
-using EQueue.Infrastructure.Scheduling;
+using ECommon.Extensions;
+using ECommon.IoC;
+using ECommon.Logging;
+using ECommon.Remoting;
+using ECommon.Scheduling;
+using ECommon.Serializing;
 using EQueue.Protocols;
-using EQueue.Remoting;
-using EQueue.Remoting.Requests;
-using EQueue.Remoting.Responses;
 
 namespace EQueue.Clients.Consumers
 {
@@ -27,7 +25,7 @@ namespace EQueue.Clients.Consumers
         private readonly IMessageHandler _messageHandler;
         private readonly PullRequestSetting _setting;
         private long _flowControlTimes1;
-        private long _flowControlTimes2;
+        //private long _flowControlTimes2;
         private bool _stoped;
 
         public string ConsumerId { get; private set; }

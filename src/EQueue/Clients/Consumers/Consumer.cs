@@ -3,12 +3,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using EQueue.Infrastructure;
-using EQueue.Infrastructure.IoC;
-using EQueue.Infrastructure.Logging;
-using EQueue.Infrastructure.Scheduling;
+using ECommon.IoC;
+using ECommon.Logging;
+using ECommon.Remoting;
+using ECommon.Scheduling;
+using ECommon.Serializing;
+using ECommon.Socketing;
 using EQueue.Protocols;
-using EQueue.Remoting;
 
 namespace EQueue.Clients.Consumers
 {
@@ -50,7 +51,7 @@ namespace EQueue.Clients.Consumers
         {
         }
         public Consumer(ConsumerSettings settings, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(string.Format("Consumer@{0}", Utils.GetLocalIPV4()), settings, groupName, messageModel, messageHandler)
+            : this(string.Format("Consumer@{0}", SocketUtils.GetLocalIPV4()), settings, groupName, messageModel, messageHandler)
         {
         }
         public Consumer(string id, ConsumerSettings settings, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
