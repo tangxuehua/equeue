@@ -80,7 +80,7 @@ namespace AllInOne
         }
         static void StartProducer()
         {
-            var producer = new Producer().Start();
+            var producer = new Producer("SampleProducer").Start();
             var total = 1000;
             var parallelCount = 10;
             var finished = 0;
@@ -92,7 +92,7 @@ namespace AllInOne
                 for (var index = 1; index <= total; index++)
                 {
                     var message = "message" + Interlocked.Increment(ref messageIndex);
-                    producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
+                    producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), index).ContinueWith(sendTask =>
                     {
                         var finishedCount = Interlocked.Increment(ref finished);
                         if (finishedCount % 1000 == 0)

@@ -1,9 +1,9 @@
-﻿using System.Threading;
-using ECommon.IoC;
+﻿using ECommon.IoC;
 using ECommon.Logging;
-using EQueue.Protocols;
 using ECommon.Remoting;
 using ECommon.Serializing;
+using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker.Processors
 {
@@ -22,8 +22,8 @@ namespace EQueue.Broker.Processors
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
-            var sendMessageRequest = _binarySerializer.Deserialize<SendMessageRequest>(request.Body);
-            var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.Arg);
+            var sendMessageRequest = MessageUtils.DecodeSendMessageRequest(request.Body);
+            var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.QueueId);
             var sendMessageResponse = new SendMessageResponse(
                 storeResult.MessageOffset,
                 new MessageQueue(sendMessageRequest.Message.Topic, storeResult.QueueId),

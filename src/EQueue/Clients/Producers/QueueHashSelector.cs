@@ -1,20 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
+using EQueue.Clients.Producers;
 using EQueue.Protocols;
 
-namespace EQueue.Broker
+namespace EQueue.Clients.Producers
 {
     public class QueueHashSelector : IQueueSelector
     {
-        public Queue SelectQueue(IList<Queue> totalQueues, Message message, string arg)
+        public int SelectQueueId(int totalQueueCount, Message message, object arg)
         {
             var value = arg.GetHashCode();
             if (value < 0)
             {
                 value = Math.Abs(value);
             }
-            value = value % totalQueues.Count;
-            return totalQueues[value];
+            return value % totalQueueCount;
         }
     }
 }

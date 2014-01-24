@@ -12,21 +12,24 @@ namespace EQueue.Broker
         private const int DefaultTopicQueueCount = 4;
         private ConcurrentDictionary<string, long> _queueCurrentOffsetDict = new ConcurrentDictionary<string, long>();
         private ConcurrentDictionary<string, IList<Queue>> _queueDict = new ConcurrentDictionary<string, IList<Queue>>();
-        private IQueueSelector _queueSelector;
         private IMessageStore _messageStore;
         private ILogger _logger;
 
-        public MessageService(IQueueSelector messageQueueSelector, IMessageStore messageStore)
+        public MessageService(IMessageStore messageStore)
         {
-            _queueSelector = messageQueueSelector;
             _messageStore = messageStore;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        public MessageStoreResult StoreMessage(Message message, string arg)
+        public MessageStoreResult StoreMessage(Message message, int queueId)
         {
             var queues = GetQueues(message.Topic);
-            var queue = _queueSelector.SelectQueue(queues, message, arg);
+            var queueCount = queues.Count;
+            if (queueId >= queueCount || queueId < 0)
+            {
+                throw new InvalidQueueIdException(message.Topic, queueCount, queueId);
+            }
+            var queue = queues[queueId];
             var queueOffset = queue.IncrementCurrentOffset();
             var storeResult = _messageStore.StoreMessage(message, queue.QueueId, queueOffset);
             queue.SetMessageOffset(queueOffset, storeResult.MessageOffset);

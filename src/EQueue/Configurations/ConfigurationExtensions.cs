@@ -4,6 +4,7 @@ using ECommon.Scheduling;
 using ECommon.Serializing;
 using EQueue.Broker;
 using EQueue.Clients.Consumers;
+using EQueue.Clients.Producers;
 
 namespace EQueue.Configurations
 {

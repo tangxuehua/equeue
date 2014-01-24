@@ -44,6 +44,7 @@
     <Compile Include="Broker\Client\ClientManager.cs" />
     <Compile Include="Broker\Client\ConsumerGroup.cs" />
     <Compile Include="Broker\Client\ConsumerManager.cs" />
+    <Compile Include="Broker\InvalidQueueIdException.cs" />
     <Compile Include="Broker\LongPolling\PullRequest.cs" />
     <Compile Include="Broker\LongPolling\SuspendedPullRequestManager.cs" />
     <Compile Include="Broker\BrokerController.cs" />
@@ -56,8 +57,7 @@
     <Compile Include="Broker\Queue.cs" />
     <Compile Include="Broker\MessageService.cs" />
     <Compile Include="Broker\IMessageService.cs" />
-    <Compile Include="Broker\QueueHashSelector.cs" />
-    <Compile Include="Broker\IQueueSelector.cs" />
+    <Compile Include="Clients\Producers\IQueueSelector.cs" />
     <Compile Include="Broker\InMemoryMessageStore.cs" />
     <Compile Include="Broker\IMessageStore.cs" />
     <Compile Include="Broker\MessageStoreResult.cs" />
@@ -73,6 +73,7 @@
     <Compile Include="Clients\Consumers\PullRequestSetting.cs" />
     <Compile Include="Clients\Consumers\WrappedMessage.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
+    <Compile Include="Clients\Producers\QueueHashSelector.cs" />
     <Compile Include="Configurations\ConfigurationExtensions.cs" />
     <Compile Include="Protocols\QueueMessage.cs" />
     <Compile Include="Protocols\ConsumerData.cs" />
@@ -92,6 +93,7 @@
     <Compile Include="Protocols\ResponseCode.cs" />
     <Compile Include="Protocols\PullMessageResponse.cs" />
     <Compile Include="Protocols\SendMessageResponse.cs" />
+    <Compile Include="Utils\MessageUtils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

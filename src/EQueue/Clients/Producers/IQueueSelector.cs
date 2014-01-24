@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using EQueue.Protocols;
 
-namespace EQueue.Broker
+namespace EQueue.Clients.Producers
 {
     public interface IQueueSelector
     {
-        Queue SelectQueue(IList<Queue> totalQueues, Message message, string arg);
+        int SelectQueueId(int totalQueueCount, Message message, object arg);
     }
 }

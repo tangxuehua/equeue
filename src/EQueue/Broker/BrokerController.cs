@@ -38,13 +38,14 @@ namespace EQueue.Broker
         public BrokerController Initialize()
         {
             _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler());
+            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueCount, new GetTopicQueueCountRequestHandler());
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.PullMessage, new PullMessageRequestHandler(this));
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryGroupConsumer, new QueryConsumerRequestHandler(this));
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueCount, new GetTopicQueueCountRequestHandler());
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
             return this;
         }
-        public void Start()
+        public BrokerController Start()
         {
             _producerSocketRemotingServer.Start();
             _consumerSocketRemotingServer.Start();
@@ -55,13 +56,15 @@ namespace EQueue.Broker
                 _setting.ProducerSocketSetting.Port,
                 _setting.ConsumerSocketSetting.Address,
                 _setting.ConsumerSocketSetting.Port);
+            return this;
         }
-        public void Shutdown()
+        public BrokerController Shutdown()
         {
             _producerSocketRemotingServer.Shutdown();
             _consumerSocketRemotingServer.Shutdown();
             _clientManager.Shutdown();
             SuspendedPullRequestManager.Shutdown();
+            return this;
         }
 
         class ProducerSocketEventHandler : ISocketEventListener
