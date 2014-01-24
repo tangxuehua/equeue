@@ -87,9 +87,9 @@ namespace EQueue.Broker.Client
             {
                 var channelRemotingAddress = entry.Key;
                 var clientChannel = entry.Value;
-                if (DateTime.Now > clientChannel.LastUpdateTime.AddMilliseconds(ChannelExpiredTimeout))
+                if (clientChannel.IsTimeout(ChannelExpiredTimeout))
                 {
-                    clientChannel.Channel.Close();
+                    clientChannel.Close();
                     RemoveConsumerChannel(channelRemotingAddress);
                 }
             }
