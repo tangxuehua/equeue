@@ -7,6 +7,7 @@ using ECommon.IoC;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Serializing;
+using ECommon.Socketing;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -14,7 +15,6 @@ namespace EQueue.Clients.Producers
 {
     public class Producer
     {
-        private const int SendMessageTimeoutMilliseconds = 10 * 1000;
         private readonly ConcurrentDictionary<string, int> _topicQueueCountDict;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
@@ -22,13 +22,15 @@ namespace EQueue.Clients.Producers
         private readonly ILogger _logger;
 
         public string Id { get; private set; }
+        public ProducerSetting Setting { get; private set; }
 
-        public Producer(string id) : this(id, "127.0.0.1", 5000) { }
-        public Producer(string id, string brokerAddress, int brokerPort)
+        public Producer(ProducerSetting setting) : this(string.Format("Producer@{0}", SocketUtils.GetLocalIPV4()), setting) { }
+        public Producer(string id, ProducerSetting setting)
         {
             Id = id;
+            Setting = setting;
             _topicQueueCountDict = new ConcurrentDictionary<string, int>();
-            _remotingClient = new SocketRemotingClient(brokerAddress, brokerPort);
+            _remotingClient = new SocketRemotingClient(setting.BrokerAddress, setting.BrokerPort);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
@@ -37,12 +39,14 @@ namespace EQueue.Clients.Producers
         public Producer Start()
         {
             _remotingClient.Start();
-            _logger.InfoFormat("Producer[{0}] started.", Id);
+            _logger.InfoFormat("[{0}] started.", Id);
             return this;
         }
-        public void Shutdown()
+        public Producer Shutdown()
         {
+            _logger.InfoFormat("[{0}] shutdown.", Id);
             _remotingClient.Shutdown();
+            return this;
         }
         public SendResult Send(Message message, object arg)
         {
@@ -53,7 +57,7 @@ namespace EQueue.Clients.Producers
             }
             var queueId = _queueSelector.SelectQueueId(queueCount, message, arg);
             var remotingRequest = BuildSendMessageRequest(message, queueId);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, SendMessageTimeoutMilliseconds);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, Setting.SendMessageTimeoutMilliseconds);
             var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
             var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
             return new SendResult(sendStatus, response.MessageOffset, response.MessageQueue, response.QueueOffset);
@@ -68,7 +72,7 @@ namespace EQueue.Clients.Producers
             var queueId = _queueSelector.SelectQueueId(queueCount, message, arg);
             var remotingRequest = BuildSendMessageRequest(message, queueId);
             var taskCompletionSource = new TaskCompletionSource<SendResult>();
-            _remotingClient.InvokeAsync(remotingRequest, SendMessageTimeoutMilliseconds).ContinueWith((requestTask) =>
+            _remotingClient.InvokeAsync(remotingRequest, Setting.SendMessageTimeoutMilliseconds).ContinueWith((requestTask) =>
             {
                 var remotingResponse = requestTask.Result;
                 if (remotingResponse != null)

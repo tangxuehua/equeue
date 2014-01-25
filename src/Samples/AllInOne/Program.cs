@@ -50,10 +50,10 @@ namespace AllInOne
             var messageHandler = new MessageHandler();
 
             //Start four consumers.
-            var consumer1 = new Consumer("consumer1", ConsumerSettings.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
-            var consumer2 = new Consumer("consumer2", ConsumerSettings.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
-            var consumer3 = new Consumer("consumer3", ConsumerSettings.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
-            var consumer4 = new Consumer("consumer4", ConsumerSettings.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
+            var consumer1 = new Consumer("consumer1", ConsumerSetting.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
+            var consumer2 = new Consumer("consumer2", ConsumerSetting.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
+            var consumer3 = new Consumer("consumer3", ConsumerSetting.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
+            var consumer4 = new Consumer("consumer4", ConsumerSetting.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
 
             //Below to wait for consumer balance.
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
@@ -80,7 +80,7 @@ namespace AllInOne
         }
         static void StartProducer()
         {
-            var producer = new Producer("SampleProducer").Start();
+            var producer = new Producer(ProducerSetting.Default).Start();
             var total = 1000;
             var parallelCount = 10;
             var finished = 0;

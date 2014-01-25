@@ -73,6 +73,7 @@
     <Compile Include="Clients\Consumers\PullRequestSetting.cs" />
     <Compile Include="Clients\Consumers\WrappedMessage.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
+    <Compile Include="Clients\Producers\ProducerSetting.cs" />
     <Compile Include="Clients\Producers\QueueHashSelector.cs" />
     <Compile Include="Configurations\ConfigurationExtensions.cs" />
     <Compile Include="Protocols\QueueMessage.cs" />

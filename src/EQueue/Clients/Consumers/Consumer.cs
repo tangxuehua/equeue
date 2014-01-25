@@ -34,7 +34,7 @@ namespace EQueue.Clients.Consumers
         #region Public Properties
 
         public string Id { get; private set; }
-        public ConsumerSettings Settings { get; private set; }
+        public ConsumerSetting Setting { get; private set; }
         public string GroupName { get; private set; }
         public MessageModel MessageModel { get; private set; }
         public IEnumerable<string> SubscriptionTopics
@@ -47,22 +47,22 @@ namespace EQueue.Clients.Consumers
         #region Constructors
 
         public Consumer(string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(ConsumerSettings.Default, groupName, messageModel, messageHandler)
+            : this(ConsumerSetting.Default, groupName, messageModel, messageHandler)
         {
         }
-        public Consumer(ConsumerSettings settings, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(string.Format("Consumer@{0}", SocketUtils.GetLocalIPV4()), settings, groupName, messageModel, messageHandler)
+        public Consumer(ConsumerSetting setting, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
+            : this(string.Format("Consumer@{0}", SocketUtils.GetLocalIPV4()), setting, groupName, messageModel, messageHandler)
         {
         }
-        public Consumer(string id, ConsumerSettings settings, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
+        public Consumer(string id, ConsumerSetting setting, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
         {
             Id = id;
-            Settings = settings;
+            Setting = setting;
             GroupName = groupName;
             MessageModel = messageModel;
 
             _messageHandler = messageHandler;
-            _remotingClient = new SocketRemotingClient(settings.BrokerAddress, settings.BrokerPort);
+            _remotingClient = new SocketRemotingClient(setting.BrokerAddress, setting.BrokerPort);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
@@ -77,10 +77,10 @@ namespace EQueue.Clients.Consumers
         public Consumer Start()
         {
             _remotingClient.Start();
-            _scheduleService.ScheduleTask(Rebalance, Settings.RebalanceInterval, Settings.RebalanceInterval);
-            _scheduleService.ScheduleTask(UpdateAllTopicQueues, Settings.UpdateTopicQueueCountInterval, Settings.UpdateTopicQueueCountInterval);
-            _scheduleService.ScheduleTask(SendHeartbeat, Settings.HeartbeatBrokerInterval, Settings.HeartbeatBrokerInterval);
-            _scheduleService.ScheduleTask(PersistOffset, Settings.PersistConsumerOffsetInterval, Settings.PersistConsumerOffsetInterval);
+            _scheduleService.ScheduleTask(Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval);
+            _scheduleService.ScheduleTask(UpdateAllTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval);
+            _scheduleService.ScheduleTask(SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval);
+            _scheduleService.ScheduleTask(PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval);
             _logger.InfoFormat("[{0}] started", Id);
             return this;
         }
@@ -220,7 +220,7 @@ namespace EQueue.Clients.Consumers
                 PullRequest pullRequest;
                 if (!_pullRequestDict.TryGetValue(key, out pullRequest))
                 {
-                    var request = new PullRequest(Id, GroupName, messageQueue, _remotingClient, Settings.MessageHandleMode, _messageHandler, Settings.PullRequestSetting);
+                    var request = new PullRequest(Id, GroupName, messageQueue, _remotingClient, Setting.MessageHandleMode, _messageHandler, Setting.PullRequestSetting);
                     long nextOffset = ComputePullFromWhere(messageQueue);
                     if (nextOffset >= 0)
                     {

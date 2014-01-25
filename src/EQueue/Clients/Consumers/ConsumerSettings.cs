@@ -1,8 +1,8 @@
 ﻿namespace EQueue.Clients.Consumers
 {
-    public class ConsumerSettings
+    public class ConsumerSetting
     {
-        private static ConsumerSettings _default = new ConsumerSettings();
+        private static ConsumerSetting _default = new ConsumerSetting();
 
         public string BrokerAddress { get; set; }
         public int BrokerPort { get; set; }
@@ -13,9 +13,9 @@
         public PullRequestSetting PullRequestSetting { get; set; }
         public MessageHandleMode MessageHandleMode { get; set; }
 
-        public static ConsumerSettings Default { get { return _default; } }
+        public static ConsumerSetting Default { get { return _default; } }
 
-        public ConsumerSettings()
+        public ConsumerSetting()
         {
             BrokerAddress = "127.0.0.1";
             BrokerPort = 5001;
@@ -26,7 +26,7 @@
             PullRequestSetting = PullRequestSetting.Default;
             MessageHandleMode = MessageHandleMode.Parallel;
         }
-        public ConsumerSettings(string brokerAddress) : this()
+        public ConsumerSetting(string brokerAddress) : this()
         {
             BrokerAddress = brokerAddress;
         }
