@@ -55,13 +55,14 @@ namespace QuickStart.ConsumerClient
     {
         private int _handledCount;
 
-        public void Handle(QueueMessage message)
+        public void Handle(QueueMessage message, IMessageContext context)
         {
             var count = Interlocked.Increment(ref _handledCount);
             if (count % 1000 == 0)
             {
                 Console.WriteLine("Total handled {0} messages.", count);
             }
+            context.OnMessageHandled(message);
         }
     }
 }

@@ -21,6 +21,7 @@ namespace EQueue.Clients.Consumers
         private readonly ILogger _logger;
         private readonly IBinarySerializer _binarySerializer;
         private readonly BlockingCollection<WrappedMessage> _messageQueue;
+        private readonly ConcurrentDictionary<long, WrappedMessage> _handlingMessageDict;
         private readonly MessageHandleMode _messageHandleMode;
         private readonly IMessageHandler _messageHandler;
         private readonly PullRequestSetting _setting;
@@ -55,6 +56,7 @@ namespace EQueue.Clients.Consumers
             _messageHandleMode = messageHandleMode;
             _messageHandler = messageHandler;
             _messageQueue = new BlockingCollection<WrappedMessage>(new ConcurrentQueue<WrappedMessage>());
+            _handlingMessageDict = new ConcurrentDictionary<long, WrappedMessage>();
             _pullMessageWorker = new Worker(() =>
             {
                 try
@@ -142,21 +144,37 @@ namespace EQueue.Clients.Consumers
             var wrappedMessage = _messageQueue.Take();
             Action handleAction = () =>
             {
+                if (_stoped)
+                {
+                    return;
+                }
+                if (!_handlingMessageDict.TryAdd(wrappedMessage.QueueMessage.MessageOffset, wrappedMessage))
+                {
+                    _logger.InfoFormat("Ignore to handle message [offset={0}, topic={1}, queueId={2}, queueOffset={3}, consumerId={4}], as it is being handling.",
+                        wrappedMessage.QueueMessage.MessageOffset,
+                        wrappedMessage.QueueMessage.Topic,
+                        wrappedMessage.QueueMessage.QueueId,
+                        wrappedMessage.QueueMessage.QueueOffset,
+                        ConsumerId);
+                    return;
+                }
                 try
                 {
-                    if (_stoped)
+                    _messageHandler.Handle(wrappedMessage.QueueMessage, new MessageContext(queueMessage =>
                     {
-                        return;
-                    }
-                    _messageHandler.Handle(wrappedMessage.QueueMessage);
+                        WrappedMessage handledWrappedMessage;
+                        if (_handlingMessageDict.TryRemove(queueMessage.MessageOffset, out handledWrappedMessage))
+                        {
+                            var offset = handledWrappedMessage.ProcessQueue.RemoveMessage(handledWrappedMessage.QueueMessage);
+                            if (offset >= 0)
+                            {
+                                //TODO
+                                //_offsetStore.UpdateOffset(wrappedMessage.MessageQueue, offset);
+                            }
+                        }
+                    }));
                 }
                 catch { }  //TODO,处理失败的消息放到本地队列继续重试消费
-                var offset = wrappedMessage.ProcessQueue.RemoveMessage(wrappedMessage.QueueMessage);
-                if (offset >= 0)
-                {
-                    //TODO
-                    //_offsetStore.UpdateOffset(wrappedMessage.MessageQueue, offset);
-                }
             };
             if (_messageHandleMode == MessageHandleMode.Sequential)
             {

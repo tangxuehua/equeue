@@ -117,7 +117,7 @@ namespace AllInOne
             private int _handledCount;
             private Stopwatch _watch;
 
-            public void Handle(QueueMessage message)
+            public void Handle(QueueMessage message, IMessageContext context)
             {
                 var count = Interlocked.Increment(ref _handledCount);
                 if (count == 1)
@@ -128,6 +128,7 @@ namespace AllInOne
                 {
                     Console.WriteLine("Total handled {0} messages, time spent:{1}", count, _watch.ElapsedMilliseconds);
                 }
+                context.OnMessageHandled(message);
             }
         }
     }
