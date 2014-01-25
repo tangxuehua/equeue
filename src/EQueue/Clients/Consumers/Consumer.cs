@@ -23,6 +23,7 @@ namespace EQueue.Clients.Consumers
         private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly List<string> _subscriptionTopics = new List<string>();
         private IList<string> _consumerIds = new List<string>();
+        private readonly List<int> _taskIds = new List<int>();
         private readonly IScheduleService _scheduleService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly IOffsetStore _offsetStore;
@@ -77,11 +78,21 @@ namespace EQueue.Clients.Consumers
         public Consumer Start()
         {
             _remotingClient.Start();
-            _scheduleService.ScheduleTask(Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval);
-            _scheduleService.ScheduleTask(UpdateAllTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval);
-            _scheduleService.ScheduleTask(SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval);
-            _scheduleService.ScheduleTask(PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval);
-            _logger.InfoFormat("[{0}] started", Id);
+            _taskIds.Add(_scheduleService.ScheduleTask(Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask(SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask(PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval));
+            _logger.InfoFormat("[{0}] started.", Id);
+            return this;
+        }
+        public Consumer Shutdown()
+        {
+            _remotingClient.Shutdown();
+            foreach (var taskId in _taskIds)
+            {
+                _scheduleService.ShutdownTask(taskId);
+            }
+            _logger.InfoFormat("[{0}] shutdown.", Id);
             return this;
         }
         public Consumer Subscribe(string topic)
