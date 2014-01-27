@@ -12,7 +12,7 @@ namespace EQueue.Configurations
     {
         public static Configuration RegisterEQueueComponents(this Configuration configuration)
         {
-            ObjectContainer.Register<IBinarySerializer, JsonBasedBinarySerializer>();
+            ObjectContainer.Register<IBinarySerializer, DefaultBinarySerializer>();
             ObjectContainer.Register<IScheduleService, ScheduleService>();
             ObjectContainer.Register<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             ObjectContainer.Register<IQueueSelector, QueueHashSelector>();
