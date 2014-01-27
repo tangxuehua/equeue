@@ -1,5 +1,8 @@
-﻿namespace EQueue.Utils
+﻿using System;
+
+namespace EQueue.Utils
 {
+    [Serializable]
     public class TypeData<TData>
     {
         public int TypeCode { get; private set; }
