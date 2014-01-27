@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ECommon.IoC;
 using ECommon.Logging;
@@ -15,6 +16,7 @@ namespace EQueue.Clients.Producers
 {
     public class Producer
     {
+        private static int _producerIndex;
         private readonly ConcurrentDictionary<string, int> _topicQueueCountDict;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
@@ -24,7 +26,7 @@ namespace EQueue.Clients.Producers
         public string Id { get; private set; }
         public ProducerSetting Setting { get; private set; }
 
-        public Producer(ProducerSetting setting) : this(string.Format("Producer@{0}", SocketUtils.GetLocalIPV4()), setting) { }
+        public Producer(ProducerSetting setting) : this(string.Format("{0}@{1}-{2}", SocketUtils.GetLocalIPV4(), typeof(Producer).Name, Interlocked.Increment(ref _producerIndex)), setting) { }
         public Producer(string id, ProducerSetting setting)
         {
             Id = id;

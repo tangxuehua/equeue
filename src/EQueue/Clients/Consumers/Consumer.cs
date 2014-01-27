@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using ECommon.IoC;
 using ECommon.Logging;
 using ECommon.Remoting;
@@ -17,6 +18,7 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Members
 
+        private static int _consumerIndex;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
@@ -52,7 +54,7 @@ namespace EQueue.Clients.Consumers
         {
         }
         public Consumer(ConsumerSetting setting, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(string.Format("Consumer@{0}", SocketUtils.GetLocalIPV4()), setting, groupName, messageModel, messageHandler)
+            : this(string.Format("{0}@{1}-{2}", SocketUtils.GetLocalIPV4(), typeof(Consumer).Name, Interlocked.Increment(ref _consumerIndex)), setting, groupName, messageModel, messageHandler)
         {
         }
         public Consumer(string id, ConsumerSetting setting, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
