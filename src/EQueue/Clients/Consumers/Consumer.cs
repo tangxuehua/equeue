@@ -222,7 +222,7 @@ namespace EQueue.Clients.Consumers
                 {
                     pullRequest.Stop();
                     PersistRemovedMessageQueueOffset(pullRequest.MessageQueue);
-                    _logger.InfoFormat("[{0}]: removed pull request:{1}", Id, pullRequest);
+                    _logger.InfoFormat("[{0}]: removed pull request.[topic={1},queueId={2}]", Id, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId);
                 }
             }
 
@@ -241,7 +241,7 @@ namespace EQueue.Clients.Consumers
                         if (_pullRequestDict.TryAdd(key, request))
                         {
                             request.Start();
-                            _logger.InfoFormat("[{0}]: added pull request:{1}", Id, request);
+                            _logger.InfoFormat("[{0}]: added pull request.[topic={1},queueId={2}]", Id, request.MessageQueue.Topic, request.MessageQueue.QueueId);
                         }
                     }
                     else

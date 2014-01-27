@@ -1,7 +1,9 @@
-﻿using EQueue.Protocols;
+﻿using System;
+using EQueue.Protocols;
 
 namespace EQueue.Protocols
 {
+    [Serializable]
     public class PullMessageRequest
     {
         public string ConsumerGroup { get; set; }

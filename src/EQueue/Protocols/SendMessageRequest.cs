@@ -1,7 +1,9 @@
-﻿using EQueue.Protocols;
+﻿using System;
+using EQueue.Protocols;
 
 namespace EQueue.Protocols
 {
+    [Serializable]
     public class SendMessageRequest
     {
         public int QueueId { get; set; }

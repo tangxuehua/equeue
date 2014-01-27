@@ -1,7 +1,9 @@
-﻿using EQueue.Protocols;
+﻿using System;
+using EQueue.Protocols;
 
 namespace EQueue.Protocols
 {
+    [Serializable]
     public class SendMessageResponse
     {
         public long MessageOffset { get; private set; }
