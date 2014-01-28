@@ -26,7 +26,7 @@ namespace EQueue.Clients.Consumers
             UpdateTopicQueueCountInterval = 1000 * 5;
             PersistConsumerOffsetInterval = 1000 * 5;
             PullRequestSetting = PullRequestSetting.Default;
-            MessageHandleMode = MessageHandleMode.Sequential;
+            MessageHandleMode = MessageHandleMode.Parallel;
         }
         public ConsumerSetting(string brokerAddress) : this()
         {
