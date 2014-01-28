@@ -26,7 +26,7 @@ namespace EQueue.Clients.Producers
         public string Id { get; private set; }
         public ProducerSetting Setting { get; private set; }
 
-        public Producer(ProducerSetting setting) : this(string.Format("{0}@{1}-{2}", SocketUtils.GetLocalIPV4(), typeof(Producer).Name, Interlocked.Increment(ref _producerIndex)), setting) { }
+        public Producer(ProducerSetting setting) : this(string.Format("{0}@{1}-{2}-{3}", SocketUtils.GetLocalIPV4(), typeof(Producer).Name, Interlocked.Increment(ref _producerIndex), DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:ffff")), setting) { }
         public Producer(string id, ProducerSetting setting)
         {
             Id = id;

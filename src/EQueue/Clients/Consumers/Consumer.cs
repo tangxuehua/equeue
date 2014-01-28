@@ -54,7 +54,7 @@ namespace EQueue.Clients.Consumers
         {
         }
         public Consumer(ConsumerSetting setting, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(string.Format("{0}@{1}-{2}", SocketUtils.GetLocalIPV4(), typeof(Consumer).Name, Interlocked.Increment(ref _consumerIndex)), setting, groupName, messageModel, messageHandler)
+            : this(string.Format("{0}@{1}-{2}-{3}", SocketUtils.GetLocalIPV4(), typeof(Consumer).Name, Interlocked.Increment(ref _consumerIndex), DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:ffff")), setting, groupName, messageModel, messageHandler)
         {
         }
         public Consumer(string id, ConsumerSetting setting, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
