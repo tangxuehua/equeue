@@ -11,10 +11,10 @@ using ECommon.IoC;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Scheduling;
-using EQueue.Configurations;
 using EQueue.Broker;
 using EQueue.Clients.Consumers;
 using EQueue.Clients.Producers;
+using EQueue.Configurations;
 using EQueue.Protocols;
 
 namespace AllInOne
@@ -37,6 +37,7 @@ namespace AllInOne
             Configuration
                 .Create()
                 .UseAutofac()
+                .RegisterCommonComponents()
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterEQueueComponents();

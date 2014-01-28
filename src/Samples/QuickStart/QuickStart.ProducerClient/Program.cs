@@ -62,6 +62,7 @@ namespace QuickStart.ProducerClient
             Configuration
                 .Create()
                 .UseAutofac()
+                .RegisterCommonComponents()
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterEQueueComponents();

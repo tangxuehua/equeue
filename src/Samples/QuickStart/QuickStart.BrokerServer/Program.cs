@@ -24,6 +24,7 @@ namespace QuickStart.BrokerServer
             Configuration
                 .Create()
                 .UseAutofac()
+                .RegisterCommonComponents()
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterEQueueComponents();
