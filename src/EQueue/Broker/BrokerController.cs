@@ -28,8 +28,8 @@ namespace EQueue.Broker
             _setting = setting;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _producerSocketRemotingServer = new SocketRemotingServer(setting.ProducerSocketSetting, new ProducerSocketEventHandler(this));
-            _consumerSocketRemotingServer = new SocketRemotingServer(setting.ConsumerSocketSetting, new ConsumerSocketEventHandler(this));
+            _producerSocketRemotingServer = new SocketRemotingServer(setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
+            _consumerSocketRemotingServer = new SocketRemotingServer(setting.ConsumerSocketSetting, new ConsumerSocketEventListener(this));
             _clientManager = new ClientManager(this);
             SuspendedPullRequestManager = new SuspendedPullRequestManager();
             ConsumerManager = new ConsumerManager();
@@ -37,7 +37,7 @@ namespace EQueue.Broker
 
         public BrokerController Initialize()
         {
-            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler());
+            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler(this));
             _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueCount, new GetTopicQueueCountRequestHandler());
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.PullMessage, new PullMessageRequestHandler(this));
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryGroupConsumer, new QueryConsumerRequestHandler(this));
@@ -51,7 +51,7 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.Start();
             _clientManager.Start();
             SuspendedPullRequestManager.Start();
-            _logger.InfoFormat("Broker started, listening address for producer:[{0}:{1}], listening address for consumer:[{2}:{3}]]",
+            _logger.InfoFormat("Broker started, producer address:[{0}:{1}], consumer address:[{2}:{3}]]",
                 _setting.ProducerSocketSetting.Address,
                 _setting.ProducerSocketSetting.Port,
                 _setting.ConsumerSocketSetting.Address,
@@ -67,12 +67,12 @@ namespace EQueue.Broker
             return this;
         }
 
-        class ProducerSocketEventHandler : ISocketEventListener
+        class ProducerSocketEventListener : ISocketEventListener
         {
             private readonly ILogger _logger;
             private BrokerController _brokerController;
 
-            public ProducerSocketEventHandler(BrokerController brokerController)
+            public ProducerSocketEventListener(BrokerController brokerController)
             {
                 _brokerController = brokerController;
                 _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
@@ -101,12 +101,12 @@ namespace EQueue.Broker
                 }
             }
         }
-        class ConsumerSocketEventHandler : ISocketEventListener
+        class ConsumerSocketEventListener : ISocketEventListener
         {
             private readonly ILogger _logger;
             private BrokerController _brokerController;
 
-            public ConsumerSocketEventHandler(BrokerController brokerController)
+            public ConsumerSocketEventListener(BrokerController brokerController)
             {
                 _brokerController = brokerController;
                 _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);

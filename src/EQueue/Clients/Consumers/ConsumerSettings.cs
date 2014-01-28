@@ -1,4 +1,6 @@
-﻿namespace EQueue.Clients.Consumers
+﻿using ECommon.Socketing;
+
+namespace EQueue.Clients.Consumers
 {
     public class ConsumerSetting
     {
@@ -17,14 +19,14 @@
 
         public ConsumerSetting()
         {
-            BrokerAddress = "127.0.0.1";
+            BrokerAddress = SocketUtils.GetLocalIPV4().ToString();
             BrokerPort = 5001;
             RebalanceInterval = 1000 * 5;
             HeartbeatBrokerInterval = 1000 * 5;
             UpdateTopicQueueCountInterval = 1000 * 5;
             PersistConsumerOffsetInterval = 1000 * 5;
             PullRequestSetting = PullRequestSetting.Default;
-            MessageHandleMode = MessageHandleMode.Parallel;
+            MessageHandleMode = MessageHandleMode.Sequential;
         }
         public ConsumerSetting(string brokerAddress) : this()
         {

@@ -138,7 +138,7 @@ namespace EQueue.Clients.Consumers
                     consumerIdList = QueryGroupConsumers(GroupName).ToList();
                     if (_consumerIds.Count != consumerIdList.Count)
                     {
-                        _logger.InfoFormat("[{0}]: consumerIds changed, old:{1}, new:{2}", Id, _consumerIds == null ? string.Empty : string.Join(",", _consumerIds), string.Join(",", consumerIdList));
+                        _logger.DebugFormat("[{0}]: consumerIds changed, old:{1}, new:{2}", Id, _consumerIds == null ? string.Empty : string.Join(",", _consumerIds), string.Join(",", consumerIdList));
                         _consumerIds = consumerIdList;
                     }
                 }
@@ -222,7 +222,7 @@ namespace EQueue.Clients.Consumers
                 {
                     pullRequest.Stop();
                     PersistRemovedMessageQueueOffset(pullRequest.MessageQueue);
-                    _logger.InfoFormat("[{0}]: removed pull request.[topic={1},queueId={2}]", Id, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId);
+                    _logger.DebugFormat("[{0}]: removed pull request.[topic={1},queueId={2}]", Id, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId);
                 }
             }
 
@@ -241,7 +241,7 @@ namespace EQueue.Clients.Consumers
                         if (_pullRequestDict.TryAdd(key, request))
                         {
                             request.Start();
-                            _logger.InfoFormat("[{0}]: added pull request.[topic={1},queueId={2}]", Id, request.MessageQueue.Topic, request.MessageQueue.QueueId);
+                            _logger.DebugFormat("[{0}]: added pull request.[topic={1},queueId={2}]", Id, request.MessageQueue.Topic, request.MessageQueue.QueueId);
                         }
                     }
                     else
@@ -323,7 +323,7 @@ namespace EQueue.Clients.Consumers
                         messageQueues.Add(new MessageQueue(topic, index));
                     }
                     _topicQueuesDict[topic] = messageQueues;
-                    _logger.InfoFormat("[{0}]: topic queue count updated, topic:{1}, queueCount:{2}", Id, topic, topicQueueCountFromServer);
+                    _logger.DebugFormat("[{0}]: topic queue count updated, topic:{1}, queueCount:{2}", Id, topic, topicQueueCountFromServer);
                 }
             }
             catch (Exception ex)

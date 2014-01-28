@@ -11,10 +11,12 @@ namespace EQueue.Broker.Processors
     {
         private IMessageService _messageService;
         private IBinarySerializer _binarySerializer;
+        private BrokerController _brokerController;
         private ILogger _logger;
 
-        public SendMessageRequestHandler()
+        public SendMessageRequestHandler(BrokerController brokerController)
         {
+            _brokerController = brokerController;
             _messageService = ObjectContainer.Resolve<IMessageService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
@@ -24,6 +26,7 @@ namespace EQueue.Broker.Processors
         {
             var sendMessageRequest = MessageUtils.DecodeSendMessageRequest(request.Body);
             var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.QueueId);
+            _brokerController.SuspendedPullRequestManager.NotifyMessageArrived(sendMessageRequest.Message.Topic, storeResult.QueueId, storeResult.QueueOffset);
             var sendMessageResponse = new SendMessageResponse(
                 storeResult.MessageOffset,
                 new MessageQueue(sendMessageRequest.Message.Topic, storeResult.QueueId),

@@ -10,15 +10,22 @@ namespace EQueue.Broker.LongPolling
     public class SuspendedPullRequestManager
     {
         private const string Topic_QueueId_Separator = "@";
-        private ConcurrentDictionary<string, ConcurrentQueue<PullRequest>> _queueRequestDict = new ConcurrentDictionary<string, ConcurrentQueue<PullRequest>>();
+        private readonly ConcurrentDictionary<string, ConcurrentQueue<PullRequest>> _queueRequestDict = new ConcurrentDictionary<string, ConcurrentQueue<PullRequest>>();
         private readonly IScheduleService _scheduleService;
         private readonly IMessageService _messageService;
+        private readonly BlockingCollection<NotifyItem> _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
+        private readonly Worker _worker;
         private int _checkHoldRequestTaskId;
 
         public SuspendedPullRequestManager()
         {
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _messageService = ObjectContainer.Resolve<IMessageService>();
+            _worker = new Worker(() =>
+            {
+                var notifyItem = _notifyQueue.Take();
+                NotifyMessageArrived(BuildKey(notifyItem.Topic, notifyItem.QueueId), notifyItem.QueueOffset);
+            });
         }
 
         public void SuspendPullRequest(PullRequest pullRequest)
@@ -39,16 +46,18 @@ namespace EQueue.Broker.LongPolling
         }
         public void NotifyMessageArrived(string topic, int queueId, long queueOffset)
         {
-            NotifyMessageArrived(BuildKey(topic, queueId), queueOffset);
+            _notifyQueue.Add(new NotifyItem { Topic = topic, QueueId = queueId, QueueOffset = queueOffset });
         }
 
         public void Start()
         {
             _checkHoldRequestTaskId = _scheduleService.ScheduleTask(CheckHoldRequest, 1000, 1000);
+            _worker.Start();
         }
         public void Shutdown()
         {
             _scheduleService.ShutdownTask(_checkHoldRequestTaskId);
+            _worker.Stop();
         }
 
         private void CheckHoldRequest()
@@ -75,7 +84,7 @@ namespace EQueue.Broker.LongPolling
                     {
                         request.NewMessageArrivedAction(request);
                     }
-                    else if (DateTime.Now > request.SuspendTime.AddMilliseconds(request.SuspendMilliseconds))
+                    else if (request.IsTimeout())
                     {
                         request.SuspendTimeoutAction(request);
                     }
@@ -95,11 +104,18 @@ namespace EQueue.Broker.LongPolling
         }
         private string BuildKey(string topic, int queueId)
         {
-            StringBuilder builder = new StringBuilder();
+            var builder = new StringBuilder();
             builder.Append(topic);
             builder.Append(Topic_QueueId_Separator);
             builder.Append(queueId);
             return builder.ToString();
+        }
+
+        class NotifyItem
+        {
+            public string Topic { get; set; }
+            public int QueueId { get; set; }
+            public long QueueOffset { get; set; }
         }
     }
 }

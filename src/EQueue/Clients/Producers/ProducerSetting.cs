@@ -1,4 +1,6 @@
-﻿namespace EQueue.Clients.Producers
+﻿using ECommon.Socketing;
+
+namespace EQueue.Clients.Producers
 {
     public class ProducerSetting
     {
@@ -12,7 +14,7 @@
 
         public ProducerSetting()
         {
-            BrokerAddress = "127.0.0.1";
+            BrokerAddress = SocketUtils.GetLocalIPV4().ToString();
             BrokerPort = 5000;
             SendMessageTimeoutMilliseconds = 1000 * 5;
         }

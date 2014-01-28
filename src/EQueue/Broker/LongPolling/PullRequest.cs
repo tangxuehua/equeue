@@ -31,5 +31,10 @@ namespace EQueue.Broker.LongPolling
             NewMessageArrivedAction = newMessageArrivedAction;
             SuspendTimeoutAction = suspendTimeoutAction;
         }
+
+        public bool IsTimeout()
+        {
+            return DateTime.Now > SuspendTime.AddMilliseconds(SuspendMilliseconds);
+        }
     }
 }
