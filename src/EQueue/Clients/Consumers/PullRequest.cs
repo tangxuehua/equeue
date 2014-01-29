@@ -65,7 +65,10 @@ namespace EQueue.Clients.Consumers
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("[{0}]: PullMessage has exception. PullRequest: {1}.", ConsumerId, this), ex);
+                    if (!_stoped)
+                    {
+                        _logger.Error(string.Format("[{0}]: PullMessage has unknown exception. PullRequest: {1}.", ConsumerId, this), ex);
+                    }
                 }
             });
             _handleMessageWorker = new Worker(HandleMessage);
@@ -90,7 +93,7 @@ namespace EQueue.Clients.Consumers
 
         public override string ToString()
         {
-            return string.Format("[ConsumerId={0}, GroupName={1}, MessageQueue={2}, NextOffset={3}]", ConsumerId, GroupName, MessageQueue, NextOffset);
+            return string.Format("[ConsumerId={0}, GroupName={1}, MessageQueue={2}, NextOffset={3}, Stoped={4}]", ConsumerId, GroupName, MessageQueue, NextOffset, _stoped);
         }
 
         private void PullMessage()
@@ -125,7 +128,39 @@ namespace EQueue.Clients.Consumers
             };
             var data = _binarySerializer.Serialize(request);
             var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, _setting.PullRequestTimeoutMilliseconds);
+            var remotingResponse = default(RemotingResponse);
+
+            try
+            {
+                remotingResponse = _remotingClient.InvokeSync(remotingRequest, _setting.PullRequestTimeoutMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                if (_stoped)
+                {
+                    _logger.DebugFormat("Ignored stoped remoting request:{0}", remotingRequest.Sequence);
+                }
+                else
+                {
+                    _logger.Error(string.Format("[{0}]: PullMessage has exception. RemotingRequest: {1}, PullRequest: {2}.", ConsumerId, remotingRequest, this), ex);
+                }
+            }
+
+            if (remotingResponse == null)
+            {
+                return;
+            }
+            else if (remotingResponse.Code == (int)PullStatus.Ignored)
+            {
+                _logger.DebugFormat("Received ignored remoting response, [remotingRequest code:{0},sequence:{1},currentPullRequest:[consumerId:{2},topic:{3},queueId:{4},stoped:{5}]",
+                    remotingRequest.Code,
+                    remotingRequest.Sequence,
+                    ConsumerId,
+                    MessageQueue.Topic,
+                    MessageQueue.QueueId,
+                    _stoped);
+            }
+
             if (_stoped)
             {
                 return;
@@ -150,7 +185,7 @@ namespace EQueue.Clients.Consumers
                 }
                 if (!_handlingMessageDict.TryAdd(wrappedMessage.QueueMessage.MessageOffset, wrappedMessage))
                 {
-                    _logger.InfoFormat("Ignore to handle message [offset={0}, topic={1}, queueId={2}, queueOffset={3}, consumerId={4}], as it is being handling.",
+                    _logger.DebugFormat("Ignore to handle message [offset={0}, topic={1}, queueId={2}, queueOffset={3}, consumerId={4}], as it is being handling.",
                         wrappedMessage.QueueMessage.MessageOffset,
                         wrappedMessage.QueueMessage.Topic,
                         wrappedMessage.QueueMessage.QueueId,

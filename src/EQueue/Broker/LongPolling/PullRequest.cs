@@ -13,6 +13,7 @@ namespace EQueue.Broker.LongPolling
         public long SuspendMilliseconds { get; private set; }
         public Action<PullRequest> NewMessageArrivedAction { get; private set; }
         public Action<PullRequest> SuspendTimeoutAction { get; private set; }
+        public Action<PullRequest> ReplacedAction { get; private set; }
 
         public PullRequest(
             long remotingRequestSequence,
@@ -21,7 +22,8 @@ namespace EQueue.Broker.LongPolling
             DateTime suspendTime,
             long suspendMilliseconds,
             Action<PullRequest> newMessageArrivedAction,
-            Action<PullRequest> suspendTimeoutAction)
+            Action<PullRequest> suspendTimeoutAction,
+            Action<PullRequest> replacedAction)
         {
             RemotingRequestSequence = remotingRequestSequence;
             PullMessageRequest = pullMessageRequest;
@@ -30,6 +32,7 @@ namespace EQueue.Broker.LongPolling
             SuspendMilliseconds = suspendMilliseconds;
             NewMessageArrivedAction = newMessageArrivedAction;
             SuspendTimeoutAction = suspendTimeoutAction;
+            ReplacedAction = replacedAction;
         }
 
         public bool IsTimeout()

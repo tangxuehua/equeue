@@ -11,7 +11,7 @@ namespace EQueue.Broker.Processors
 {
     public class PullMessageRequestHandler : IRequestHandler
     {
-        private const int SuspendPullRequestMilliseconds = 15 * 1000;
+        private const int SuspendPullRequestMilliseconds = 60 * 1000;
         private BrokerController _brokerController;
         private IMessageService _messageService;
         private IBinarySerializer _binarySerializer;
@@ -48,7 +48,8 @@ namespace EQueue.Broker.Processors
                     DateTime.Now,
                     SuspendPullRequestMilliseconds,
                     ExecutePullRequest,
-                    ExecutePullRequest);
+                    ExecutePullRequest,
+                    ExecuteReplacedPullRequest);
                 _brokerController.SuspendedPullRequestManager.SuspendPullRequest(pullRequest);
                 return null;
             }
@@ -56,18 +57,28 @@ namespace EQueue.Broker.Processors
 
         private void ExecutePullRequest(PullRequest pullRequest)
         {
-            var pullMessageRequest = pullRequest.PullMessageRequest;
-            var messages = _messageService.GetMessages(
-                pullMessageRequest.MessageQueue.Topic,
-                pullMessageRequest.MessageQueue.QueueId,
-                pullMessageRequest.QueueOffset,
-                pullMessageRequest.PullMessageBatchSize);
-            var pullMessageResponse = new PullMessageResponse(messages);
-            var responseData = _binarySerializer.Serialize(pullMessageResponse);
-            var remotingResponse = new RemotingResponse(messages.Count() > 0 ? (int)PullStatus.Found : (int)PullStatus.NoNewMessage, pullRequest.RemotingRequestSequence, responseData);
-            var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(pullMessageRequest.ConsumerGroup);
+            var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
             if (consumerGroup != null && consumerGroup.IsConsumerChannelActive(pullRequest.RequestHandlerContext.Channel.RemotingAddress))
             {
+                var pullMessageRequest = pullRequest.PullMessageRequest;
+                var messages = _messageService.GetMessages(
+                    pullMessageRequest.MessageQueue.Topic,
+                    pullMessageRequest.MessageQueue.QueueId,
+                    pullMessageRequest.QueueOffset,
+                    pullMessageRequest.PullMessageBatchSize);
+                var pullMessageResponse = new PullMessageResponse(messages);
+                var responseData = _binarySerializer.Serialize(pullMessageResponse);
+                var remotingResponse = new RemotingResponse(messages.Count() > 0 ? (int)PullStatus.Found : (int)PullStatus.NoNewMessage, pullRequest.RemotingRequestSequence, responseData);
+                pullRequest.RequestHandlerContext.SendRemotingResponse(remotingResponse);
+            }
+        }
+        private void ExecuteReplacedPullRequest(PullRequest pullRequest)
+        {
+            var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
+            if (consumerGroup != null && consumerGroup.IsConsumerChannelActive(pullRequest.RequestHandlerContext.Channel.RemotingAddress))
+            {
+                var responseData = _binarySerializer.Serialize(new PullMessageResponse(new QueueMessage[0]));
+                var remotingResponse = new RemotingResponse((int)PullStatus.Ignored, pullRequest.RemotingRequestSequence, responseData);
                 pullRequest.RequestHandlerContext.SendRemotingResponse(remotingResponse);
             }
         }

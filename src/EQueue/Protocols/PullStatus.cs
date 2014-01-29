@@ -2,9 +2,10 @@
 {
     public enum PullStatus
     {
-        Found,
-        NoNewMessage,
-        OffsetIllegal,
-        Failed
+        Found = 1,
+        NoNewMessage = 2,
+        OffsetIllegal = 3,
+        Ignored = 4,
+        Failed = 100
     }
 }

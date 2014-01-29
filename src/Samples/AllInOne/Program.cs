@@ -44,7 +44,9 @@ namespace AllInOne
         }
         static void StartBroker()
         {
-            new BrokerController().Initialize().Start();
+            var setting = BrokerSetting.Default;
+            setting.NotifyWhenMessageArrived = false;
+            new BrokerController(setting).Initialize().Start();
         }
         static void StartConsumers()
         {

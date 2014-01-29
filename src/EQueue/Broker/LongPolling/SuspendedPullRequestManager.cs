@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using ECommon.IoC;
 using ECommon.Scheduling;
 
@@ -10,7 +10,7 @@ namespace EQueue.Broker.LongPolling
     public class SuspendedPullRequestManager
     {
         private const string Topic_QueueId_Separator = "@";
-        private readonly ConcurrentDictionary<string, ConcurrentQueue<PullRequest>> _queueRequestDict = new ConcurrentDictionary<string, ConcurrentQueue<PullRequest>>();
+        private readonly ConcurrentDictionary<string, PullRequest> _queueRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly IScheduleService _scheduleService;
         private readonly IMessageService _messageService;
         private readonly BlockingCollection<NotifyItem> _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
@@ -31,18 +31,19 @@ namespace EQueue.Broker.LongPolling
         public void SuspendPullRequest(PullRequest pullRequest)
         {
             var key = BuildKey(pullRequest.PullMessageRequest.MessageQueue.Topic, pullRequest.PullMessageRequest.MessageQueue.QueueId);
-            _queueRequestDict.AddOrUpdate(key,
-            (x) =>
+            var changed = false;
+            var existingRequest = default(PullRequest);
+            _queueRequestDict.AddOrUpdate(key, pullRequest, (x, request) =>
             {
-                var queue = new ConcurrentQueue<PullRequest>();
-                queue.Enqueue(pullRequest);
-                return queue;
-            },
-            (x, queue) =>
-            {
-                queue.Enqueue(pullRequest);
-                return queue;
+                existingRequest = request;
+                changed = true;
+                return pullRequest;
             });
+            if (changed && existingRequest != null)
+            {
+                var currentRequest = existingRequest;
+                Task.Factory.StartNew(() => currentRequest.ReplacedAction(currentRequest));
+            }
         }
         public void NotifyMessageArrived(string topic, int queueId, long queueOffset)
         {
@@ -73,31 +74,23 @@ namespace EQueue.Broker.LongPolling
         }
         private void NotifyMessageArrived(string key, long queueOffset)
         {
-            ConcurrentQueue<PullRequest> queue;
-            if (_queueRequestDict.TryGetValue(key, out queue))
+            PullRequest request;
+            if (_queueRequestDict.TryGetValue(key, out request))
             {
-                var retryRequestList = new List<PullRequest>();
-                PullRequest request;
-                while (queue.TryDequeue(out request))
+                if (queueOffset >= request.PullMessageRequest.QueueOffset)
                 {
-                    if (queueOffset >= request.PullMessageRequest.QueueOffset)
+                    PullRequest currentRequest;
+                    if (_queueRequestDict.TryRemove(key, out currentRequest))
                     {
-                        request.NewMessageArrivedAction(request);
-                    }
-                    else if (request.IsTimeout())
-                    {
-                        request.SuspendTimeoutAction(request);
-                    }
-                    else
-                    {
-                        retryRequestList.Add(request);
+                        Task.Factory.StartNew(() => currentRequest.NewMessageArrivedAction(currentRequest));
                     }
                 }
-                if (retryRequestList.Count > 0)
+                else if (request.IsTimeout())
                 {
-                    foreach (var retryRequest in retryRequestList)
+                    PullRequest currentRequest;
+                    if (_queueRequestDict.TryRemove(key, out currentRequest))
                     {
-                        queue.Enqueue(retryRequest);
+                        Task.Factory.StartNew(() => currentRequest.SuspendTimeoutAction(currentRequest));
                     }
                 }
             }

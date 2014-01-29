@@ -13,7 +13,6 @@ namespace EQueue.Broker
 {
     public class BrokerController
     {
-        private readonly BrokerSetting _setting;
         private readonly ILogger _logger;
         private readonly IMessageService _messageService;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
@@ -22,17 +21,19 @@ namespace EQueue.Broker
         public SuspendedPullRequestManager SuspendedPullRequestManager { get; private set; }
         public ConsumerManager ConsumerManager { get; private set; }
 
+        public BrokerSetting Setting { get; private set; }
+
         public BrokerController() : this(BrokerSetting.Default) { }
         public BrokerController(BrokerSetting setting)
         {
-            _setting = setting;
+            Setting = setting;
+            SuspendedPullRequestManager = new SuspendedPullRequestManager();
+            ConsumerManager = new ConsumerManager();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _messageService = ObjectContainer.Resolve<IMessageService>();
             _producerSocketRemotingServer = new SocketRemotingServer(setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
             _consumerSocketRemotingServer = new SocketRemotingServer(setting.ConsumerSocketSetting, new ConsumerSocketEventListener(this));
             _clientManager = new ClientManager(this);
-            SuspendedPullRequestManager = new SuspendedPullRequestManager();
-            ConsumerManager = new ConsumerManager();
         }
 
         public BrokerController Initialize()
@@ -51,11 +52,11 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.Start();
             _clientManager.Start();
             SuspendedPullRequestManager.Start();
-            _logger.InfoFormat("Broker started, producer address:[{0}:{1}], consumer address:[{2}:{3}]]",
-                _setting.ProducerSocketSetting.Address,
-                _setting.ProducerSocketSetting.Port,
-                _setting.ConsumerSocketSetting.Address,
-                _setting.ConsumerSocketSetting.Port);
+            _logger.InfoFormat("Broker started, producer:[{0}:{1}], consumer:[{2}:{3}]]",
+                Setting.ProducerSocketSetting.Address,
+                Setting.ProducerSocketSetting.Port,
+                Setting.ConsumerSocketSetting.Address,
+                Setting.ConsumerSocketSetting.Port);
             return this;
         }
         public BrokerController Shutdown()
@@ -85,7 +86,7 @@ namespace EQueue.Broker
 
             public void OnSocketDisconnected(SocketInfo socketInfo)
             {
-                _logger.InfoFormat("Producer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
+                //_logger.InfoFormat("Producer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
             }
 
             public void OnSocketReceiveException(SocketInfo socketInfo, Exception exception)
@@ -119,8 +120,8 @@ namespace EQueue.Broker
 
             public void OnSocketDisconnected(SocketInfo socketInfo)
             {
-                _brokerController.ConsumerManager.RemoveConsumer(socketInfo.SocketRemotingEndpointAddress);
-                _logger.InfoFormat("Consumer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
+                //_brokerController.ConsumerManager.RemoveConsumer(socketInfo.SocketRemotingEndpointAddress);
+                //_logger.InfoFormat("Consumer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
             }
 
             public void OnSocketReceiveException(SocketInfo socketInfo, Exception exception)

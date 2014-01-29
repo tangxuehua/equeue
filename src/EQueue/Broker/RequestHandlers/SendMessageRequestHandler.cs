@@ -26,7 +26,10 @@ namespace EQueue.Broker.Processors
         {
             var sendMessageRequest = MessageUtils.DecodeSendMessageRequest(request.Body);
             var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.QueueId);
-            _brokerController.SuspendedPullRequestManager.NotifyMessageArrived(sendMessageRequest.Message.Topic, storeResult.QueueId, storeResult.QueueOffset);
+            if (_brokerController.Setting.NotifyWhenMessageArrived)
+            {
+                _brokerController.SuspendedPullRequestManager.NotifyMessageArrived(sendMessageRequest.Message.Topic, storeResult.QueueId, storeResult.QueueOffset);
+            }
             var sendMessageResponse = new SendMessageResponse(
                 storeResult.MessageOffset,
                 new MessageQueue(sendMessageRequest.Message.Topic, storeResult.QueueId),

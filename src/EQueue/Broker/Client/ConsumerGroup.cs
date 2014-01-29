@@ -78,6 +78,7 @@ namespace EQueue.Broker.Client
             ClientChannel clientChannel;
             if (_consumerChannelDict.TryRemove(consumerChannelRemotingAddress, out clientChannel))
             {
+                clientChannel.Close();
                 _logger.WarnFormat("Removed not active consumer client channel from consumer group. consumer Group:{0}, clientChannel:{1}", _groupName, clientChannel);
             }
         }
@@ -89,7 +90,6 @@ namespace EQueue.Broker.Client
                 var clientChannel = entry.Value;
                 if (clientChannel.IsTimeout(ChannelExpiredTimeout))
                 {
-                    clientChannel.Close();
                     RemoveConsumerChannel(channelRemotingAddress);
                 }
             }

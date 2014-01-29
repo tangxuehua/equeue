@@ -17,7 +17,7 @@
             PullThresholdForQueue = 1000;
             ConsumeMaxSpan = 2000;
             PullTimeDelayMillsWhenFlowControl = 100;
-            PullRequestTimeoutMilliseconds = 30 * 1000;
+            PullRequestTimeoutMilliseconds = 70 * 1000;
             PullMessageBatchSize = 32;
         }
 

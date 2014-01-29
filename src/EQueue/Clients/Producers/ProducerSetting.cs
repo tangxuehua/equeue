@@ -16,7 +16,7 @@ namespace EQueue.Clients.Producers
         {
             BrokerAddress = SocketUtils.GetLocalIPV4().ToString();
             BrokerPort = 5000;
-            SendMessageTimeoutMilliseconds = 1000 * 5;
+            SendMessageTimeoutMilliseconds = 1000 * 10;
         }
         public ProducerSetting(string brokerAddress) : this()
         {
