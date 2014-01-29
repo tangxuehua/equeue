@@ -12,29 +12,21 @@ namespace EQueue.Broker.Client
     {
         private const long ChannelExpiredTimeout = 1000 * 120;
         private string _groupName;
-        private MessageModel _messageModel;
         private ConcurrentDictionary<string, ClientChannel> _consumerChannelDict = new ConcurrentDictionary<string, ClientChannel>();
         private ConcurrentDictionary<string, string> _subscriptionTopicDict = new ConcurrentDictionary<string, string>();
         private ILogger _logger;
 
         public DateTime LastUpdateTime { get; private set; }
 
-        public ConsumerGroup(string groupName, MessageModel messageModel)
+        public ConsumerGroup(string groupName)
         {
             _groupName = groupName;
-            _messageModel = messageModel;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        public bool UpdateChannel(ClientChannel clientChannel, MessageModel messageModel)
+        public bool UpdateChannel(ClientChannel clientChannel)
         {
             var consumeGroupChanged = false;
-
-            if (_messageModel != messageModel)
-            {
-                _messageModel = messageModel;
-                consumeGroupChanged = true;
-            }
 
             var currentChannel = _consumerChannelDict.GetOrAdd(clientChannel.Channel.RemotingAddress, x =>
             {

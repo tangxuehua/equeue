@@ -39,7 +39,6 @@ namespace EQueue.Clients.Consumers
         public string Id { get; private set; }
         public ConsumerSetting Setting { get; private set; }
         public string GroupName { get; private set; }
-        public MessageModel MessageModel { get; private set; }
         public IEnumerable<string> SubscriptionTopics
         {
             get { return _subscriptionTopics; }
@@ -49,24 +48,23 @@ namespace EQueue.Clients.Consumers
 
         #region Constructors
 
-        public Consumer(string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(ConsumerSetting.Default, null, groupName, messageModel, messageHandler)
+        public Consumer(string groupName, IMessageHandler messageHandler)
+            : this(ConsumerSetting.Default, null, groupName, messageHandler)
         {
         }
-        public Consumer(string name, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(ConsumerSetting.Default, name, groupName, messageModel, messageHandler)
+        public Consumer(string name, string groupName, IMessageHandler messageHandler)
+            : this(ConsumerSetting.Default, name, groupName, messageHandler)
         {
         }
-        public Consumer(ConsumerSetting setting, string name, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(string.Format("{0}@{1}@{2}", SocketUtils.GetLocalIPV4(), string.IsNullOrEmpty(name) ? typeof(Consumer).Name : name, ObjectId.GenerateNewId()), setting, groupName, messageModel, messageHandler)
+        public Consumer(ConsumerSetting setting, string name, string groupName, IMessageHandler messageHandler)
+            : this(string.Format("{0}@{1}@{2}", SocketUtils.GetLocalIPV4(), string.IsNullOrEmpty(name) ? typeof(Consumer).Name : name, ObjectId.GenerateNewId()), setting, groupName, messageHandler)
         {
         }
-        public Consumer(string id, ConsumerSetting setting, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
+        public Consumer(string id, ConsumerSetting setting, string groupName, IMessageHandler messageHandler)
         {
             Id = id;
             Setting = setting;
             GroupName = groupName;
-            MessageModel = messageModel;
 
             _messageHandler = messageHandler;
             _remotingClient = new SocketRemotingClient(setting.BrokerAddress, setting.BrokerPort);
@@ -120,49 +118,32 @@ namespace EQueue.Clients.Consumers
 
         private void Rebalance()
         {
-            if (MessageModel == MessageModel.BroadCasting)
+            List<string> consumerIdList;
+            try
             {
-                foreach (var subscriptionTopic in _subscriptionTopics)
+                consumerIdList = QueryGroupConsumers(GroupName).ToList();
+                if (_consumerIds.Count != consumerIdList.Count)
                 {
-                    try
-                    {
-                        RebalanceBroadCasting(subscriptionTopic);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(string.Format("[{0}]: broadCasting rebalance for topic [{1}] has exception", Id, subscriptionTopic), ex);
-                    }
+                    _logger.DebugFormat("[{0}]: consumerIds changed, old:{1}, new:{2}", Id, _consumerIds == null ? string.Empty : string.Join(",", _consumerIds), string.Join(",", consumerIdList));
+                    _consumerIds = consumerIdList;
                 }
             }
-            else if (MessageModel == MessageModel.Clustering)
+            catch (Exception ex)
             {
-                List<string> consumerIdList;
+                _logger.Error(string.Format("[{0}]: clustering rebalance failed as QueryGroupConsumers has exception.", Id), ex);
+                return;
+            }
+
+            consumerIdList.Sort();
+            foreach (var subscriptionTopic in _subscriptionTopics)
+            {
                 try
                 {
-                    consumerIdList = QueryGroupConsumers(GroupName).ToList();
-                    if (_consumerIds.Count != consumerIdList.Count)
-                    {
-                        _logger.DebugFormat("[{0}]: consumerIds changed, old:{1}, new:{2}", Id, _consumerIds == null ? string.Empty : string.Join(",", _consumerIds), string.Join(",", consumerIdList));
-                        _consumerIds = consumerIdList;
-                    }
+                    RebalanceClustering(subscriptionTopic, consumerIdList);
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("[{0}]: clustering rebalance failed as QueryGroupConsumers has exception.", Id), ex);
-                    return;
-                }
-
-                consumerIdList.Sort();
-                foreach (var subscriptionTopic in _subscriptionTopics)
-                {
-                    try
-                    {
-                        RebalanceClustering(subscriptionTopic, consumerIdList);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(string.Format("[{0}]: rebalanceClustering for topic [{1}] has exception", Id, subscriptionTopic), ex);
-                    }
+                    _logger.Error(string.Format("[{0}]: rebalanceClustering for topic [{1}] has exception", Id, subscriptionTopic), ex);
                 }
             }
         }
@@ -296,7 +277,7 @@ namespace EQueue.Clients.Consumers
             {
                 _remotingClient.InvokeOneway(new RemotingRequest(
                     (int)RequestCode.ConsumerHeartbeat,
-                    _binarySerializer.Serialize(new ConsumerData(Id, GroupName, MessageModel, SubscriptionTopics))),
+                    _binarySerializer.Serialize(new ConsumerData(Id, GroupName, SubscriptionTopics))),
                     3000);
             }
             catch (Exception ex)

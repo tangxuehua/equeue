@@ -16,10 +16,10 @@ namespace EQueue.Broker.Client
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        public void RegisterConsumer(string groupName, ClientChannel clientChannel, MessageModel messageModel, IEnumerable<string> subscriptionTopics)
+        public void RegisterConsumer(string groupName, ClientChannel clientChannel, IEnumerable<string> subscriptionTopics)
         {
-            var consumerGroup = _consumerGroupDict.GetOrAdd(groupName, new ConsumerGroup(groupName, messageModel));
-            consumerGroup.UpdateChannel(clientChannel, messageModel);
+            var consumerGroup = _consumerGroupDict.GetOrAdd(groupName, new ConsumerGroup(groupName));
+            consumerGroup.UpdateChannel(clientChannel);
             consumerGroup.UpdateSubscriptionTopics(subscriptionTopics);
         }
         public void ScanNotActiveConsumer()
