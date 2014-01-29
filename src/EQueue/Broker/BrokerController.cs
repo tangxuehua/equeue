@@ -84,11 +84,6 @@ namespace EQueue.Broker
                 _logger.InfoFormat("Accepted new producer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
             }
 
-            public void OnSocketDisconnected(SocketInfo socketInfo)
-            {
-                //_logger.InfoFormat("Producer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
-            }
-
             public void OnSocketReceiveException(SocketInfo socketInfo, Exception exception)
             {
                 var socketException = exception as SocketException;
@@ -116,12 +111,6 @@ namespace EQueue.Broker
             public void OnNewSocketAccepted(SocketInfo socketInfo)
             {
                 _logger.InfoFormat("Accepted new consumer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
-            }
-
-            public void OnSocketDisconnected(SocketInfo socketInfo)
-            {
-                //_brokerController.ConsumerManager.RemoveConsumer(socketInfo.SocketRemotingEndpointAddress);
-                //_logger.InfoFormat("Consumer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
             }
 
             public void OnSocketReceiveException(SocketInfo socketInfo, Exception exception)
