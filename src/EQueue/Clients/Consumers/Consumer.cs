@@ -10,6 +10,7 @@ using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
+using ECommon.Utilities;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
@@ -18,7 +19,6 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Members
 
-        private static int _consumerIndex;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
@@ -50,11 +50,15 @@ namespace EQueue.Clients.Consumers
         #region Constructors
 
         public Consumer(string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(ConsumerSetting.Default, groupName, messageModel, messageHandler)
+            : this(ConsumerSetting.Default, null, groupName, messageModel, messageHandler)
         {
         }
-        public Consumer(ConsumerSetting setting, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
-            : this(string.Format("{0}@{1}-{2}-{3}", SocketUtils.GetLocalIPV4(), typeof(Consumer).Name, Interlocked.Increment(ref _consumerIndex), DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:ffff")), setting, groupName, messageModel, messageHandler)
+        public Consumer(string name, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
+            : this(ConsumerSetting.Default, name, groupName, messageModel, messageHandler)
+        {
+        }
+        public Consumer(ConsumerSetting setting, string name, string groupName, MessageModel messageModel, IMessageHandler messageHandler)
+            : this(string.Format("{0}@{1}@{2}", SocketUtils.GetLocalIPV4(), string.IsNullOrEmpty(name) ? typeof(Consumer).Name : name, ObjectId.GenerateNewId()), setting, groupName, messageModel, messageHandler)
         {
         }
         public Consumer(string id, ConsumerSetting setting, string groupName, MessageModel messageModel, IMessageHandler messageHandler)

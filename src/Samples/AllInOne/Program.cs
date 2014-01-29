@@ -53,10 +53,10 @@ namespace AllInOne
             var messageHandler = new MessageHandler();
 
             //Start four consumers.
-            var consumer1 = new Consumer(ConsumerSetting.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
-            var consumer2 = new Consumer(ConsumerSetting.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
-            var consumer3 = new Consumer(ConsumerSetting.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
-            var consumer4 = new Consumer(ConsumerSetting.Default, "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
+            var consumer1 = new Consumer("Consumer1", "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
+            var consumer2 = new Consumer("Consumer2", "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
+            var consumer3 = new Consumer("Consumer3", "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
+            var consumer4 = new Consumer("Consumer4", "group1", MessageModel.Clustering, messageHandler).Subscribe("SampleTopic").Start();
 
             //Below to wait for consumer balance.
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();

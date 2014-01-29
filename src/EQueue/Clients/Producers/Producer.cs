@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using ECommon.IoC;
 using ECommon.Logging;
@@ -10,6 +9,7 @@ using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
+using ECommon.Utilities;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -17,7 +17,6 @@ namespace EQueue.Clients.Producers
 {
     public class Producer
     {
-        private static int _producerIndex;
         private readonly ConcurrentDictionary<string, int> _topicQueueCountDict;
         private readonly List<int> _taskIds;
         private readonly IScheduleService _scheduleService;
@@ -29,8 +28,9 @@ namespace EQueue.Clients.Producers
         public string Id { get; private set; }
         public ProducerSetting Setting { get; private set; }
 
-        public Producer(ProducerSetting setting) : this(string.Format("{0}@{1}-{2}-{3}", SocketUtils.GetLocalIPV4(), typeof(Producer).Name, Interlocked.Increment(ref _producerIndex), DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:ffff")), setting) { }
-        public Producer(string id, ProducerSetting setting)
+        public Producer(ProducerSetting setting) : this(null, setting) { }
+        public Producer(string name, ProducerSetting setting) : this(setting, string.Format("{0}@{1}@{2}", SocketUtils.GetLocalIPV4(), string.IsNullOrEmpty(name) ? typeof(Producer).Name : name, ObjectId.GenerateNewId())) { }
+        public Producer(ProducerSetting setting, string id)
         {
             Id = id;
             Setting = setting;
