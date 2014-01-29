@@ -9,6 +9,7 @@ namespace EQueue.Clients.Producers
         public string BrokerAddress { get; set; }
         public int BrokerPort { get; set; }
         public int SendMessageTimeoutMilliseconds { get; set; }
+        public int UpdateTopicQueueCountInterval { get; set; }
 
         public static ProducerSetting Default { get { return _default; } }
 
@@ -17,6 +18,7 @@ namespace EQueue.Clients.Producers
             BrokerAddress = SocketUtils.GetLocalIPV4().ToString();
             BrokerPort = 5000;
             SendMessageTimeoutMilliseconds = 1000 * 10;
+            UpdateTopicQueueCountInterval = 1000 * 5;
         }
         public ProducerSetting(string brokerAddress) : this()
         {
@@ -25,10 +27,11 @@ namespace EQueue.Clients.Producers
 
         public override string ToString()
         {
-            return string.Format("[BrokerAddress={0}, BrokerPort={1}, SendMessageTimeoutMilliseconds={2}]",
+            return string.Format("[BrokerAddress={0}, BrokerPort={1}, SendMessageTimeoutMilliseconds={2}, UpdateTopicQueueCountInterval={3}]",
                 BrokerAddress,
                 BrokerPort,
-                SendMessageTimeoutMilliseconds);
+                SendMessageTimeoutMilliseconds,
+                UpdateTopicQueueCountInterval);
         }
     }
 }

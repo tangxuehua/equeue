@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using ECommon.IoC;
 using ECommon.Logging;
 using ECommon.Remoting;
+using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
 using EQueue.Protocols;
@@ -18,6 +19,8 @@ namespace EQueue.Clients.Producers
     {
         private static int _producerIndex;
         private readonly ConcurrentDictionary<string, int> _topicQueueCountDict;
+        private readonly List<int> _taskIds;
+        private readonly IScheduleService _scheduleService;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly IQueueSelector _queueSelector;
@@ -32,7 +35,9 @@ namespace EQueue.Clients.Producers
             Id = id;
             Setting = setting;
             _topicQueueCountDict = new ConcurrentDictionary<string, int>();
+            _taskIds = new List<int>();
             _remotingClient = new SocketRemotingClient(setting.BrokerAddress, setting.BrokerPort);
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
@@ -41,13 +46,18 @@ namespace EQueue.Clients.Producers
         public Producer Start()
         {
             _remotingClient.Start();
+            _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
             _logger.InfoFormat("[{0}] started.", Id);
             return this;
         }
         public Producer Shutdown()
         {
-            _logger.InfoFormat("[{0}] shutdown.", Id);
             _remotingClient.Shutdown();
+            foreach (var taskId in _taskIds)
+            {
+                _scheduleService.ShutdownTask(taskId);
+            }
+            _logger.InfoFormat("[{0}] shutdown.", Id);
             return this;
         }
         public SendResult Send(Message message, object arg)
@@ -104,6 +114,32 @@ namespace EQueue.Clients.Producers
             }
 
             return count;
+        }
+        private void UpdateAllTopicQueueCount()
+        {
+            foreach (var topic in _topicQueueCountDict.Keys)
+            {
+                UpdateTopicQueueCount(topic);
+            }
+        }
+        private void UpdateTopicQueueCount(string topic)
+        {
+            try
+            {
+                var topicQueueCountFromServer = GetTopicQueueCountFromBroker(topic);
+                int count;
+                var topicQueueCountOfLocal = _topicQueueCountDict.TryGetValue(topic, out count) ? count : 0;
+
+                if (topicQueueCountFromServer != topicQueueCountOfLocal)
+                {
+                    _topicQueueCountDict[topic] = topicQueueCountFromServer;
+                    _logger.DebugFormat("[{0}]: topic queue count updated, topic:{1}, queueCount:{2}", Id, topic, topicQueueCountFromServer);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(string.Format("[{0}]: UpdateTopicQueueCount failed, topic:{1}", Id, topic), ex);
+            }
         }
         private int GetTopicQueueCountFromBroker(string topic)
         {

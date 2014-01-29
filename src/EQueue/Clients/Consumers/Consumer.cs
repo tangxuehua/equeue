@@ -328,7 +328,7 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("[{0}]: updateLocalTopicQueues failed, topic:{1}", Id, topic), ex);
+                _logger.Error(string.Format("[{0}]: UpdateTopicQueues failed, topic:{1}", Id, topic), ex);
             }
         }
         private IEnumerable<string> QueryGroupConsumers(string groupName)
@@ -348,7 +348,7 @@ namespace EQueue.Clients.Consumers
         private int GetTopicQueueCount(string topic)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueCount, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 return BitConverter.ToInt32(remotingResponse.Body, 0);

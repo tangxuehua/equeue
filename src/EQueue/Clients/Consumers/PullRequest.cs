@@ -136,35 +136,18 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                if (_stoped)
-                {
-                    _logger.DebugFormat("Ignored stoped remoting request:{0}", remotingRequest.Sequence);
-                }
-                else
+                if (!_stoped)
                 {
                     _logger.Error(string.Format("[{0}]: PullMessage has exception. RemotingRequest: {1}, PullRequest: {2}.", ConsumerId, remotingRequest, this), ex);
                 }
-            }
-
-            if (remotingResponse == null)
-            {
                 return;
-            }
-            else if (remotingResponse.Code == (int)PullStatus.Ignored)
-            {
-                _logger.DebugFormat("Received ignored remoting response, [remotingRequest code:{0},sequence:{1},currentPullRequest:[consumerId:{2},topic:{3},queueId:{4},stoped:{5}]",
-                    remotingRequest.Code,
-                    remotingRequest.Sequence,
-                    ConsumerId,
-                    MessageQueue.Topic,
-                    MessageQueue.QueueId,
-                    _stoped);
             }
 
             if (_stoped)
             {
                 return;
             }
+
             var response = _binarySerializer.Deserialize<PullMessageResponse>(remotingResponse.Body);
 
             if (remotingResponse.Code == (int)PullStatus.Found && response.Messages.Count() > 0)
