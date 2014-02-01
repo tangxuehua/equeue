@@ -118,10 +118,24 @@ namespace EQueue.Clients.Consumers
 
         private void Rebalance()
         {
+            foreach (var subscriptionTopic in _subscriptionTopics)
+            {
+                try
+                {
+                    RebalanceClustering(subscriptionTopic);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(string.Format("[{0}]: rebalanceClustering for topic [{1}] has exception", Id, subscriptionTopic), ex);
+                }
+            }
+        }
+        private void RebalanceClustering(string subscriptionTopic)
+        {
             List<string> consumerIdList;
             try
             {
-                consumerIdList = QueryGroupConsumers(GroupName).ToList();
+                consumerIdList = QueryGroupConsumers(GroupName, subscriptionTopic).ToList();
                 if (_consumerIds.Count != consumerIdList.Count)
                 {
                     _logger.DebugFormat("[{0}]: consumerIds changed, old:{1}, new:{2}", Id, _consumerIds == null ? string.Empty : string.Join(",", _consumerIds), string.Join(",", consumerIdList));
@@ -135,28 +149,7 @@ namespace EQueue.Clients.Consumers
             }
 
             consumerIdList.Sort();
-            foreach (var subscriptionTopic in _subscriptionTopics)
-            {
-                try
-                {
-                    RebalanceClustering(subscriptionTopic, consumerIdList);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(string.Format("[{0}]: rebalanceClustering for topic [{1}] has exception", Id, subscriptionTopic), ex);
-                }
-            }
-        }
-        private void RebalanceBroadCasting(string subscriptionTopic)
-        {
-            IList<MessageQueue> messageQueues;
-            if (_topicQueuesDict.TryGetValue(subscriptionTopic, out messageQueues))
-            {
-                UpdatePullRequestDict(subscriptionTopic, messageQueues);
-            }
-        }
-        private void RebalanceClustering(string subscriptionTopic, IList<string> consumerIdList)
-        {
+
             IList<MessageQueue> messageQueues;
             if (_topicQueuesDict.TryGetValue(subscriptionTopic, out messageQueues))
             {
@@ -316,9 +309,10 @@ namespace EQueue.Clients.Consumers
                 _logger.Error(string.Format("[{0}]: UpdateTopicQueues failed, topic:{1}", Id, topic), ex);
             }
         }
-        private IEnumerable<string> QueryGroupConsumers(string groupName)
+        private IEnumerable<string> QueryGroupConsumers(string groupName, string topic)
         {
-            var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, Encoding.UTF8.GetBytes(groupName));
+            var queryConsumerRequest = _binarySerializer.Serialize(new QueryConsumerRequest(groupName, topic));
+            var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, queryConsumerRequest);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {

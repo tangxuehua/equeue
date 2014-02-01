@@ -19,8 +19,8 @@ namespace EQueue.Broker.Client
         public void RegisterConsumer(string groupName, ClientChannel clientChannel, IEnumerable<string> subscriptionTopics)
         {
             var consumerGroup = _consumerGroupDict.GetOrAdd(groupName, new ConsumerGroup(groupName));
-            consumerGroup.UpdateChannel(clientChannel);
-            consumerGroup.UpdateSubscriptionTopics(subscriptionTopics);
+            consumerGroup.GetOrAddChannel(clientChannel);
+            consumerGroup.UpdateChannelSubscriptionTopics(clientChannel, subscriptionTopics);
         }
         public void ScanNotActiveConsumer()
         {

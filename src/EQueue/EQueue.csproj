@@ -98,6 +98,7 @@
     <Compile Include="Protocols\ResponseCode.cs" />
     <Compile Include="Protocols\PullMessageResponse.cs" />
     <Compile Include="Protocols\SendMessageResponse.cs" />
+    <Compile Include="Protocols\QueryConsumerRequest.cs" />
     <Compile Include="Utils\ByteTypeData.cs" />
     <Compile Include="Utils\ByteTypeDataUtils.cs" />
     <Compile Include="Utils\MessageUtils.cs" />

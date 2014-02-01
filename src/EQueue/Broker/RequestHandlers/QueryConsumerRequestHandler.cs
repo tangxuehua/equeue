@@ -4,6 +4,7 @@ using System.Text;
 using ECommon.IoC;
 using ECommon.Logging;
 using ECommon.Remoting;
+using ECommon.Serializing;
 using EQueue.Protocols;
 
 namespace EQueue.Broker.Processors
@@ -11,22 +12,24 @@ namespace EQueue.Broker.Processors
     public class QueryConsumerRequestHandler : IRequestHandler
     {
         private BrokerController _brokerController;
+        private IBinarySerializer _binarySerializer;
         private ILogger _logger;
 
         public QueryConsumerRequestHandler(BrokerController brokerController)
         {
             _brokerController = brokerController;
+            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
-            var groupName = Encoding.UTF8.GetString(request.Body);
-            var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(groupName);
+            var queryConsumerRequest = _binarySerializer.Deserialize<QueryConsumerRequest>(request.Body);
+            var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(queryConsumerRequest.GroupName);
             var consumerIdList = new List<string>();
             if (consumerGroup != null)
             {
-                consumerIdList = consumerGroup.GetAllConsumerChannels().Select(x => x.ClientId).ToList();
+                consumerIdList = consumerGroup.GetConsumerIdsForTopic(queryConsumerRequest.Topic).ToList();
                 consumerIdList.Sort();
             }
             var consumerIds = string.Join(",", consumerIdList);

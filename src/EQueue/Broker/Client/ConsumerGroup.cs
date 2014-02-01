@@ -13,10 +13,8 @@ namespace EQueue.Broker.Client
         private const long ChannelExpiredTimeout = 1000 * 120;
         private string _groupName;
         private ConcurrentDictionary<string, ClientChannel> _consumerChannelDict = new ConcurrentDictionary<string, ClientChannel>();
-        private ConcurrentDictionary<string, string> _subscriptionTopicDict = new ConcurrentDictionary<string, string>();
+        private ConcurrentDictionary<string, IEnumerable<string>> _clientSubscriptionTopicDict = new ConcurrentDictionary<string, IEnumerable<string>>();
         private ILogger _logger;
-
-        public DateTime LastUpdateTime { get; private set; }
 
         public ConsumerGroup(string groupName)
         {
@@ -24,37 +22,14 @@ namespace EQueue.Broker.Client
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
 
-        public bool UpdateChannel(ClientChannel clientChannel)
+        public void GetOrAddChannel(ClientChannel clientChannel)
         {
-            var consumeGroupChanged = false;
-
-            var currentChannel = _consumerChannelDict.GetOrAdd(clientChannel.Channel.RemotingAddress, x =>
-            {
-                consumeGroupChanged = true;
-                return clientChannel;
-            });
-
-            var currentTime = DateTime.Now;
-            LastUpdateTime = currentTime;
-            currentChannel.LastUpdateTime = currentTime;
-
-            return consumeGroupChanged;
+            var currentChannel = _consumerChannelDict.GetOrAdd(clientChannel.Channel.RemotingAddress, clientChannel);
+            currentChannel.LastUpdateTime = DateTime.Now;
         }
-        public bool UpdateSubscriptionTopics(IEnumerable<string> subscriptionTopics)
+        public void UpdateChannelSubscriptionTopics(ClientChannel clientChannel, IEnumerable<string> subscriptionTopics)
         {
-            var subscriptionTopicChanged = false;
-
-            //Only care the new subscription topics of the current consumer group.
-            foreach (var topic in subscriptionTopics)
-            {
-                if (_subscriptionTopicDict.TryAdd(topic, topic))
-                {
-                    subscriptionTopicChanged = true;
-                }
-            }
-            LastUpdateTime = DateTime.Now;
-
-            return subscriptionTopicChanged;
+            _clientSubscriptionTopicDict.AddOrUpdate(clientChannel.ClientId, subscriptionTopics, (key, old) => subscriptionTopics);
         }
         public bool IsConsumerChannelActive(string consumerChannelRemotingAddress)
         {
@@ -87,9 +62,9 @@ namespace EQueue.Broker.Client
             }
         }
 
-        public IEnumerable<ClientChannel> GetAllConsumerChannels()
+        public IEnumerable<string> GetConsumerIdsForTopic(string topic)
         {
-            return _consumerChannelDict.Values.ToArray();
+            return _clientSubscriptionTopicDict.Where(x => x.Value.Any(y => y == topic)).Select(z => z.Key);
         }
     }
 }
