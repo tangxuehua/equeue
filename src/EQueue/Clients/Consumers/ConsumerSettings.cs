@@ -4,8 +4,6 @@ namespace EQueue.Clients.Consumers
 {
     public class ConsumerSetting
     {
-        private static ConsumerSetting _default = new ConsumerSetting();
-
         public string BrokerAddress { get; set; }
         public int BrokerPort { get; set; }
         public int RebalanceInterval { get; set; }
@@ -15,8 +13,6 @@ namespace EQueue.Clients.Consumers
         public PullRequestSetting PullRequestSetting { get; set; }
         public MessageHandleMode MessageHandleMode { get; set; }
 
-        public static ConsumerSetting Default { get { return _default; } }
-
         public ConsumerSetting()
         {
             BrokerAddress = SocketUtils.GetLocalIPV4().ToString();
@@ -25,12 +21,8 @@ namespace EQueue.Clients.Consumers
             HeartbeatBrokerInterval = 1000 * 5;
             UpdateTopicQueueCountInterval = 1000 * 5;
             PersistConsumerOffsetInterval = 1000 * 5;
-            PullRequestSetting = PullRequestSetting.Default;
+            PullRequestSetting = new PullRequestSetting();
             MessageHandleMode = MessageHandleMode.Parallel;
-        }
-        public ConsumerSetting(string brokerAddress) : this()
-        {
-            BrokerAddress = brokerAddress;
         }
 
         public override string ToString()

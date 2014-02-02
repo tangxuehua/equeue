@@ -2,20 +2,16 @@
 {
     public class PullRequestSetting
     {
-        private static PullRequestSetting _default = new PullRequestSetting();
-
         public int PullThresholdForQueue { get; set; }
         public int ConsumeMaxSpan { get; set; }
         public int PullTimeDelayMillsWhenFlowControl { get; set; }
         public int PullRequestTimeoutMilliseconds { get; set; }
         public int PullMessageBatchSize { get; set; }
 
-        public static PullRequestSetting Default { get { return _default; } }
-
         public PullRequestSetting()
         {
-            PullThresholdForQueue = 1000;
-            ConsumeMaxSpan = 2000;
+            PullThresholdForQueue = 10000;
+            ConsumeMaxSpan = 10000;
             PullTimeDelayMillsWhenFlowControl = 100;
             PullRequestTimeoutMilliseconds = 70 * 1000;
             PullMessageBatchSize = 32;

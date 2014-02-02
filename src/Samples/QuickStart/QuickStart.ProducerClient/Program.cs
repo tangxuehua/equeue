@@ -23,7 +23,7 @@ namespace QuickStart.ProducerClient
             InitializeEQueue();
 
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            var producer = new Producer(ProducerSetting.Default).Start();
+            var producer = new Producer().Start();
             var total = 1000;
             var parallelCount = 10;
             var finished = 0;

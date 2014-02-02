@@ -28,15 +28,16 @@ namespace EQueue.Clients.Producers
         public string Id { get; private set; }
         public ProducerSetting Setting { get; private set; }
 
+        public Producer() : this(null) { }
         public Producer(ProducerSetting setting) : this(null, setting) { }
         public Producer(string name, ProducerSetting setting) : this(setting, string.Format("{0}@{1}@{2}", SocketUtils.GetLocalIPV4(), string.IsNullOrEmpty(name) ? typeof(Producer).Name : name, ObjectId.GenerateNewId())) { }
         public Producer(ProducerSetting setting, string id)
         {
             Id = id;
-            Setting = setting;
+            Setting = setting ?? new ProducerSetting();
             _topicQueueCountDict = new ConcurrentDictionary<string, int>();
             _taskIds = new List<int>();
-            _remotingClient = new SocketRemotingClient(setting.BrokerAddress, setting.BrokerPort);
+            _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();

@@ -49,11 +49,11 @@ namespace EQueue.Clients.Consumers
         #region Constructors
 
         public Consumer(string groupName, IMessageHandler messageHandler)
-            : this(ConsumerSetting.Default, null, groupName, messageHandler)
+            : this(new ConsumerSetting(), null, groupName, messageHandler)
         {
         }
         public Consumer(string name, string groupName, IMessageHandler messageHandler)
-            : this(ConsumerSetting.Default, name, groupName, messageHandler)
+            : this(new ConsumerSetting(), name, groupName, messageHandler)
         {
         }
         public Consumer(ConsumerSetting setting, string name, string groupName, IMessageHandler messageHandler)
@@ -63,11 +63,11 @@ namespace EQueue.Clients.Consumers
         public Consumer(string id, ConsumerSetting setting, string groupName, IMessageHandler messageHandler)
         {
             Id = id;
-            Setting = setting;
+            Setting = setting ?? new ConsumerSetting();
             GroupName = groupName;
 
             _messageHandler = messageHandler;
-            _remotingClient = new SocketRemotingClient(setting.BrokerAddress, setting.BrokerPort);
+            _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _offsetStore = ObjectContainer.Resolve<IOffsetStore>();

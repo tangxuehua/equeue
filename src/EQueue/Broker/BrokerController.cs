@@ -23,16 +23,16 @@ namespace EQueue.Broker
 
         public BrokerSetting Setting { get; private set; }
 
-        public BrokerController() : this(BrokerSetting.Default) { }
+        public BrokerController() : this(null) { }
         public BrokerController(BrokerSetting setting)
         {
-            Setting = setting;
+            Setting = setting ?? new BrokerSetting();
             SuspendedPullRequestManager = new SuspendedPullRequestManager();
             ConsumerManager = new ConsumerManager();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _producerSocketRemotingServer = new SocketRemotingServer(setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
-            _consumerSocketRemotingServer = new SocketRemotingServer(setting.ConsumerSocketSetting, new ConsumerSocketEventListener(this));
+            _producerSocketRemotingServer = new SocketRemotingServer(Setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
+            _consumerSocketRemotingServer = new SocketRemotingServer(Setting.ConsumerSocketSetting, new ConsumerSocketEventListener(this));
             _clientManager = new ClientManager(this);
         }
 

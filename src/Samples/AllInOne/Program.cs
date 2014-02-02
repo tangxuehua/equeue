@@ -44,7 +44,7 @@ namespace AllInOne
         }
         static void StartBroker()
         {
-            var setting = BrokerSetting.Default;
+            var setting = new BrokerSetting();
             setting.NotifyWhenMessageArrived = false;
             new BrokerController(setting).Initialize().Start();
         }
@@ -83,7 +83,7 @@ namespace AllInOne
         }
         static void StartProducer()
         {
-            var producer = new Producer(ProducerSetting.Default).Start();
+            var producer = new Producer().Start();
             var total = 1000;
             var parallelCount = 10;
             var finished = 0;
