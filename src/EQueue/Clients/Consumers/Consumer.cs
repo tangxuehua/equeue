@@ -11,6 +11,7 @@ using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
 using ECommon.Utilities;
+using EQueue.Clients.Consumers.OffsetStores;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
@@ -65,12 +66,11 @@ namespace EQueue.Clients.Consumers
             Id = id;
             Setting = setting ?? new ConsumerSetting();
             GroupName = groupName;
-
             _messageHandler = messageHandler;
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = Setting.MessageModel == MessageModel.Clustering ? ObjectContainer.Resolve<IRemoteBrokerOffsetStore>() as IOffsetStore : ObjectContainer.Resolve<ILocalOffsetStore>() as IOffsetStore;
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
@@ -211,7 +211,7 @@ namespace EQueue.Clients.Consumers
                 PullRequest pullRequest;
                 if (!_pullRequestDict.TryGetValue(key, out pullRequest))
                 {
-                    var request = new PullRequest(Id, GroupName, messageQueue, _remotingClient, Setting.MessageHandleMode, _messageHandler, Setting.PullRequestSetting);
+                    var request = new PullRequest(Id, GroupName, messageQueue, _remotingClient, Setting.MessageHandleMode, _messageHandler, _offsetStore, Setting.PullRequestSetting);
                     long nextOffset = ComputePullFromWhere(messageQueue);
                     if (nextOffset >= 0)
                     {

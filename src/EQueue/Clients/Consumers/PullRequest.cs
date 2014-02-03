@@ -9,6 +9,7 @@ using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
+using EQueue.Clients.Consumers.OffsetStores;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
@@ -25,6 +26,7 @@ namespace EQueue.Clients.Consumers
         private readonly MessageHandleMode _messageHandleMode;
         private readonly IMessageHandler _messageHandler;
         private readonly PullRequestSetting _setting;
+        private readonly IOffsetStore _offsetStore;
         private long _flowControlTimes1;
         //private long _flowControlTimes2;
         private bool _stoped;
@@ -44,6 +46,7 @@ namespace EQueue.Clients.Consumers
             SocketRemotingClient remotingClient,
             MessageHandleMode messageHandleMode,
             IMessageHandler messageHandler,
+            IOffsetStore offsetStore,
             PullRequestSetting setting)
         {
             ConsumerId = consumerId;
@@ -55,6 +58,7 @@ namespace EQueue.Clients.Consumers
             _setting = setting;
             _messageHandleMode = messageHandleMode;
             _messageHandler = messageHandler;
+            _offsetStore = offsetStore;
             _messageQueue = new BlockingCollection<WrappedMessage>(new ConcurrentQueue<WrappedMessage>());
             _handlingMessageDict = new ConcurrentDictionary<long, WrappedMessage>();
             _pullMessageWorker = new Worker(() =>
@@ -154,7 +158,7 @@ namespace EQueue.Clients.Consumers
             {
                 NextOffset += response.Messages.Count();
                 ProcessQueue.AddMessages(response.Messages);
-                response.Messages.ForEach(x => _messageQueue.Add(new WrappedMessage(x, MessageQueue, ProcessQueue)));
+                response.Messages.ForEach(x => _messageQueue.Add(new WrappedMessage(MessageQueue, x, ProcessQueue)));
             }
         }
         private void HandleMessage()
@@ -186,13 +190,16 @@ namespace EQueue.Clients.Consumers
                             var offset = handledWrappedMessage.ProcessQueue.RemoveMessage(handledWrappedMessage.QueueMessage);
                             if (offset >= 0)
                             {
-                                //TODO
-                                //_offsetStore.UpdateOffset(wrappedMessage.MessageQueue, offset);
+                                _offsetStore.UpdateOffset(wrappedMessage.MessageQueue, offset);
                             }
                         }
                     }));
                 }
-                catch { }  //TODO,处理失败的消息放到本地队列继续重试消费
+                catch (Exception ex)
+                {
+                    _logger.Error("Handle message has exception.", ex);
+                    //TODO，消费失败的消息要放入broker上的重试队列进行重试。
+                }
             };
             if (_messageHandleMode == MessageHandleMode.Sequential)
             {

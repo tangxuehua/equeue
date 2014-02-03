@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using EQueue.Protocols;
+﻿using EQueue.Protocols;
 
-namespace EQueue.Clients.Consumers
+namespace EQueue.Clients.Consumers.OffsetStores
 {
-    public class InMemoryOffsetStore : IOffsetStore
+    public class DefaultRemoteBrokerOffsetStore : IRemoteBrokerOffsetStore
     {
         public void Load()
         {

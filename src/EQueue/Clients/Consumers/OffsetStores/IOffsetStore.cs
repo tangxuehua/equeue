@@ -1,6 +1,6 @@
 ﻿using EQueue.Protocols;
 
-namespace EQueue.Clients.Consumers
+namespace EQueue.Clients.Consumers.OffsetStores
 {
     public interface IOffsetStore
     {

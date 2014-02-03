@@ -1,4 +1,4 @@
-﻿namespace EQueue.Clients.Consumers
+﻿namespace EQueue.Clients.Consumers.OffsetStores
 {
     public enum OffsetReadType
     {

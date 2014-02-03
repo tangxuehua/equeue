@@ -2,6 +2,7 @@
 using ECommon.IoC;
 using EQueue.Broker;
 using EQueue.Clients.Consumers;
+using EQueue.Clients.Consumers.OffsetStores;
 using EQueue.Clients.Producers;
 
 namespace EQueue.Configurations
@@ -12,7 +13,8 @@ namespace EQueue.Configurations
         {
             ObjectContainer.Register<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             ObjectContainer.Register<IQueueSelector, QueueHashSelector>();
-            ObjectContainer.Register<IOffsetStore, InMemoryOffsetStore>();
+            ObjectContainer.Register<ILocalOffsetStore, DefaultLocalOffsetStore>();
+            ObjectContainer.Register<IRemoteBrokerOffsetStore, DefaultRemoteBrokerOffsetStore>();
             ObjectContainer.Register<IMessageStore, InMemoryMessageStore>();
             ObjectContainer.Register<IMessageService, MessageService>();
             return configuration;
