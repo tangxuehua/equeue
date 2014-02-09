@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using ECommon.IoC;
 using ECommon.Logging;
 using ECommon.Remoting;
@@ -25,13 +24,13 @@ namespace EQueue.Clients.Consumers
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
         private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly List<string> _subscriptionTopics = new List<string>();
-        private IList<string> _consumerIds = new List<string>();
         private readonly List<int> _taskIds = new List<int>();
         private readonly IScheduleService _scheduleService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly IOffsetStore _offsetStore;
-        private readonly IMessageHandler _messageHandler;
         private readonly ILogger _logger;
+        private IList<string> _consumerIds = new List<string>();
+        private IMessageHandler _messageHandler;
 
         #endregion
 
@@ -49,24 +48,23 @@ namespace EQueue.Clients.Consumers
 
         #region Constructors
 
-        public Consumer(string groupName, IMessageHandler messageHandler)
-            : this(new ConsumerSetting(), null, groupName, messageHandler)
+        public Consumer(string groupName)
+            : this(new ConsumerSetting(), null, groupName)
         {
         }
-        public Consumer(string name, string groupName, IMessageHandler messageHandler)
-            : this(new ConsumerSetting(), name, groupName, messageHandler)
+        public Consumer(string name, string groupName)
+            : this(new ConsumerSetting(), name, groupName)
         {
         }
-        public Consumer(ConsumerSetting setting, string name, string groupName, IMessageHandler messageHandler)
-            : this(string.Format("{0}@{1}@{2}", SocketUtils.GetLocalIPV4(), string.IsNullOrEmpty(name) ? typeof(Consumer).Name : name, ObjectId.GenerateNewId()), setting, groupName, messageHandler)
+        public Consumer(ConsumerSetting setting, string name, string groupName)
+            : this(string.Format("{0}@{1}@{2}", SocketUtils.GetLocalIPV4(), string.IsNullOrEmpty(name) ? typeof(Consumer).Name : name, ObjectId.GenerateNewId()), setting, groupName)
         {
         }
-        public Consumer(string id, ConsumerSetting setting, string groupName, IMessageHandler messageHandler)
+        public Consumer(string id, ConsumerSetting setting, string groupName)
         {
             Id = id;
             Setting = setting ?? new ConsumerSetting();
             GroupName = groupName;
-            _messageHandler = messageHandler;
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
@@ -79,8 +77,9 @@ namespace EQueue.Clients.Consumers
 
         #region Public Methods
 
-        public Consumer Start()
+        public Consumer Start(IMessageHandler messageHandler)
         {
+            _messageHandler = messageHandler;
             _remotingClient.Start();
             _taskIds.Add(_scheduleService.ScheduleTask(Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval));
             _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));

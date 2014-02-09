@@ -22,10 +22,10 @@ namespace QuickStart.ConsumerClient
             InitializeEQueue();
 
             var messageHandler = new MessageHandler();
-            var consumer1 = new Consumer("Consumer1", "group1", messageHandler).Subscribe("SampleTopic").Start();
-            var consumer2 = new Consumer("Consumer2", "group1", messageHandler).Subscribe("SampleTopic").Start();
-            var consumer3 = new Consumer("Consumer3", "group1", messageHandler).Subscribe("SampleTopic").Start();
-            var consumer4 = new Consumer("Consumer4", "group1", messageHandler).Subscribe("SampleTopic").Start();
+            var consumer1 = new Consumer("Consumer1", "group1").Subscribe("SampleTopic").Start(messageHandler);
+            var consumer2 = new Consumer("Consumer2", "group1").Subscribe("SampleTopic").Start(messageHandler);
+            var consumer3 = new Consumer("Consumer3", "group1").Subscribe("SampleTopic").Start(messageHandler);
+            var consumer4 = new Consumer("Consumer4", "group1").Subscribe("SampleTopic").Start(messageHandler);
 
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
             scheduleService.ScheduleTask(() =>
