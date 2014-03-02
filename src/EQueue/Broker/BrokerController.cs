@@ -31,8 +31,8 @@ namespace EQueue.Broker
             ConsumerManager = new ConsumerManager();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _producerSocketRemotingServer = new SocketRemotingServer(Setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
-            _consumerSocketRemotingServer = new SocketRemotingServer(Setting.ConsumerSocketSetting, new ConsumerSocketEventListener(this));
+            _producerSocketRemotingServer = new SocketRemotingServer("ProducerRemotingServer", Setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
+            _consumerSocketRemotingServer = new SocketRemotingServer("ConsumerRemotingServer", Setting.ConsumerSocketSetting, new ConsumerSocketEventListener(this));
             _clientManager = new ClientManager(this);
         }
 
