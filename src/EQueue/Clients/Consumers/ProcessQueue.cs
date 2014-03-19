@@ -35,7 +35,7 @@ namespace EQueue.Clients.Consumers
                     _messageDict.Remove(message.QueueOffset);
                     if (_messageDict.Count > 0)
                     {
-                        result = _messageDict.Keys.First();
+                        result = _messageDict.Keys.First() - 1;
                     }
                 }
             });

@@ -8,5 +8,6 @@
         ConsumerHeartbeat = 13,
         QueryGroupConsumer = 14,
         GetTopicQueueCount = 15,
+        UpdateQueueOffsetRequest = 16
     }
 }

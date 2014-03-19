@@ -1,5 +1,4 @@
 ﻿using ECommon.Configurations;
-using ECommon.IoC;
 using EQueue.Broker;
 using EQueue.Clients.Consumers;
 using EQueue.Clients.Consumers.OffsetStores;
@@ -11,12 +10,23 @@ namespace EQueue.Configurations
     {
         public static Configuration RegisterEQueueComponents(this Configuration configuration)
         {
-            ObjectContainer.Register<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
-            ObjectContainer.Register<IQueueSelector, QueueHashSelector>();
-            ObjectContainer.Register<ILocalOffsetStore, DefaultLocalOffsetStore>();
-            ObjectContainer.Register<IRemoteBrokerOffsetStore, DefaultRemoteBrokerOffsetStore>();
-            ObjectContainer.Register<IMessageStore, InMemoryMessageStore>();
-            ObjectContainer.Register<IMessageService, MessageService>();
+            configuration.SetDefault<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
+            configuration.SetDefault<IQueueSelector, QueueHashSelector>();
+            configuration.SetDefault<ILocalOffsetStore, InMemoryLocalOffsetStore>();
+            configuration.SetDefault<IMessageStore, InMemoryMessageStore>();
+            configuration.SetDefault<IMessageService, MessageService>();
+            configuration.SetDefault<IOffsetManager, InMemoryOffsetManager>();
+            return configuration;
+        }
+        public static Configuration UseDefaultRemoteBrokerOffsetStore(this Configuration configuration)
+        {
+            var consumerSetting = new ConsumerSetting();
+            return configuration.UseDefaultRemoteBrokerOffsetStore(consumerSetting.BrokerAddress, consumerSetting.BrokerPort);
+        }
+        public static Configuration UseDefaultRemoteBrokerOffsetStore(this Configuration configuration, string brokerAddress, int brokerPort)
+        {
+            var offsetStore = new DefaultRemoteBrokerOffsetStore(brokerAddress, brokerPort);
+            configuration.SetDefault<IRemoteBrokerOffsetStore, DefaultRemoteBrokerOffsetStore>(offsetStore);
             return configuration;
         }
     }

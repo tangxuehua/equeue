@@ -15,9 +15,11 @@ namespace EQueue.Broker
     {
         private readonly ILogger _logger;
         private readonly IMessageService _messageService;
+        private readonly IOffsetManager _offsetManager;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
         private readonly ClientManager _clientManager;
+
         public SuspendedPullRequestManager SuspendedPullRequestManager { get; private set; }
         public ConsumerManager ConsumerManager { get; private set; }
 
@@ -31,6 +33,7 @@ namespace EQueue.Broker
             ConsumerManager = new ConsumerManager();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
             _messageService = ObjectContainer.Resolve<IMessageService>();
+            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
             _producerSocketRemotingServer = new SocketRemotingServer("ProducerRemotingServer", Setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
             _consumerSocketRemotingServer = new SocketRemotingServer("ConsumerRemotingServer", Setting.ConsumerSocketSetting, new ConsumerSocketEventListener(this));
             _clientManager = new ClientManager(this);
@@ -44,6 +47,7 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryGroupConsumer, new QueryConsumerRequestHandler(this));
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueCount, new GetTopicQueueCountRequestHandler());
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
+            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.UpdateQueueOffsetRequest, new UpdateQueueOffsetRequestHandler());
             return this;
         }
         public BrokerController Start()
@@ -51,8 +55,9 @@ namespace EQueue.Broker
             _producerSocketRemotingServer.Start();
             _consumerSocketRemotingServer.Start();
             _clientManager.Start();
+            _offsetManager.Start();
             SuspendedPullRequestManager.Start();
-            _logger.InfoFormat("Broker started, producer:[{0}:{1}], consumer:[{2}:{3}]]",
+            _logger.InfoFormat("Broker started, producer:[{0}:{1}], consumer:[{2}:{3}]",
                 Setting.ProducerSocketSetting.Address,
                 Setting.ProducerSocketSetting.Port,
                 Setting.ConsumerSocketSetting.Address,
@@ -64,6 +69,7 @@ namespace EQueue.Broker
             _producerSocketRemotingServer.Shutdown();
             _consumerSocketRemotingServer.Shutdown();
             _clientManager.Shutdown();
+            _offsetManager.Shutdown();
             SuspendedPullRequestManager.Shutdown();
             return this;
         }

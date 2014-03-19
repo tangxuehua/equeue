@@ -81,6 +81,7 @@ namespace EQueue.Clients.Consumers
         {
             _messageHandler = messageHandler;
             _remotingClient.Start();
+
             _taskIds.Add(_scheduleService.ScheduleTask(Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval));
             _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
             _taskIds.Add(_scheduleService.ScheduleTask(SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval));
@@ -198,7 +199,7 @@ namespace EQueue.Clients.Consumers
                 if (_pullRequestDict.TryRemove(pullRequestKey, out pullRequest))
                 {
                     pullRequest.Stop();
-                    PersistRemovedMessageQueueOffset(pullRequest.MessageQueue);
+                    _offsetStore.PersistOffset(GroupName, pullRequest.MessageQueue);
                     _logger.DebugFormat("[{0}]: removed pull request.[topic={1},queueId={2}]", Id, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId);
                 }
             }
@@ -211,43 +212,13 @@ namespace EQueue.Clients.Consumers
                 if (!_pullRequestDict.TryGetValue(key, out pullRequest))
                 {
                     var request = new PullRequest(Id, GroupName, messageQueue, _remotingClient, Setting.MessageHandleMode, _messageHandler, _offsetStore, Setting.PullRequestSetting);
-                    long nextOffset = ComputePullFromWhere(messageQueue);
-                    if (nextOffset >= 0)
+                    if (_pullRequestDict.TryAdd(key, request))
                     {
-                        request.NextOffset = nextOffset;
-                        if (_pullRequestDict.TryAdd(key, request))
-                        {
-                            request.Start();
-                            _logger.DebugFormat("[{0}]: added pull request.[topic={1},queueId={2}]", Id, request.MessageQueue.Topic, request.MessageQueue.QueueId);
-                        }
-                    }
-                    else
-                    {
-                        _logger.WarnFormat("[{0}]: the pull request {1} cannot be added as the nextOffset is < 0.", Id, request);
+                        request.Start();
+                        _logger.DebugFormat("[{0}]: added pull request.[topic={1},queueId={2},nextOffset={3}]", Id, request.MessageQueue.Topic, request.MessageQueue.QueueId, request.NextOffset);
                     }
                 }
             }
-        }
-        private void PersistRemovedMessageQueueOffset(MessageQueue messageQueue)
-        {
-            _offsetStore.Persist(messageQueue);
-            _offsetStore.RemoveOffset(messageQueue);
-        }
-        private long ComputePullFromWhere(MessageQueue messageQueue)
-        {
-            var offset = -1L;
-
-            var lastOffset = _offsetStore.ReadOffset(messageQueue, OffsetReadType.ReadFromStore);
-            if (lastOffset >= 0)
-            {
-                offset = lastOffset;
-            }
-            else if (lastOffset == -1)
-            {
-                offset = long.MaxValue;
-            }
-
-            return offset;
         }
         private void PersistOffset()
         {
@@ -255,7 +226,7 @@ namespace EQueue.Clients.Consumers
             {
                 try
                 {
-                    _offsetStore.Persist(pullRequest.MessageQueue);
+                    _offsetStore.PersistOffset(GroupName, pullRequest.MessageQueue);
                 }
                 catch (Exception ex)
                 {

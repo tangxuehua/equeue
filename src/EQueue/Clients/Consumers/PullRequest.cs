@@ -52,6 +52,7 @@ namespace EQueue.Clients.Consumers
             ConsumerId = consumerId;
             GroupName = groupName;
             MessageQueue = messageQueue;
+            NextOffset = -1;
             ProcessQueue = new ProcessQueue();
 
             _remotingClient = remotingClient;
@@ -160,6 +161,10 @@ namespace EQueue.Clients.Consumers
                 ProcessQueue.AddMessages(response.Messages);
                 response.Messages.ForEach(x => _messageQueue.Add(new WrappedMessage(MessageQueue, x, ProcessQueue)));
             }
+            else if (remotingResponse.Code == (int)PullStatus.NextOffsetReset && response.NextOffset != null)
+            {
+                NextOffset = response.NextOffset.Value;
+            }
         }
         private void HandleMessage()
         {
@@ -190,15 +195,26 @@ namespace EQueue.Clients.Consumers
                             var offset = handledWrappedMessage.ProcessQueue.RemoveMessage(handledWrappedMessage.QueueMessage);
                             if (offset >= 0)
                             {
-                                _offsetStore.UpdateOffset(wrappedMessage.MessageQueue, offset);
+                                _offsetStore.UpdateOffset(GroupName, wrappedMessage.MessageQueue, offset);
                             }
                         }
                     }));
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("Handle message has exception.", ex);
-                    //TODO，消费失败的消息要放入broker上的重试队列进行重试。
+                    _logger.Error("Handle message has exception. Currently, we still take this message as consumed.", ex);
+                    //TODO，目前，对于消费失败（遇到异常）的消息，我们仅仅记录错误日志，然后仍将该消息标记为已消费，即让消费位置继续往下移动；
+                    //以后，这里需要将消费失败的消息发回到Broker上的重试队列进行重试。
+
+                    WrappedMessage failHandlingWrappedMessage;
+                    if (_handlingMessageDict.TryRemove(wrappedMessage.QueueMessage.MessageOffset, out failHandlingWrappedMessage))
+                    {
+                        var nextOffset = failHandlingWrappedMessage.ProcessQueue.RemoveMessage(failHandlingWrappedMessage.QueueMessage);
+                        if (nextOffset >= 0)
+                        {
+                            _offsetStore.UpdateOffset(GroupName, wrappedMessage.MessageQueue, nextOffset);
+                        }
+                    }
                 }
             };
             if (_messageHandleMode == MessageHandleMode.Sequential)

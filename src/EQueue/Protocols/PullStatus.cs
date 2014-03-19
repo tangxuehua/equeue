@@ -4,7 +4,7 @@
     {
         Found = 1,
         NoNewMessage = 2,
-        OffsetIllegal = 3,
+        NextOffsetReset = 3,
         Ignored = 4,
         Failed = 100
     }

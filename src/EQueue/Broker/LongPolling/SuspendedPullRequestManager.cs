@@ -9,7 +9,7 @@ namespace EQueue.Broker.LongPolling
 {
     public class SuspendedPullRequestManager
     {
-        private const string Topic_QueueId_Separator = "@";
+        private const string Separator = "@";
         private readonly ConcurrentDictionary<string, PullRequest> _queueRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly IScheduleService _scheduleService;
         private readonly IMessageService _messageService;
@@ -65,10 +65,10 @@ namespace EQueue.Broker.LongPolling
         {
             foreach (var entry in _queueRequestDict)
             {
-                var items = entry.Key.Split(new string[] { Topic_QueueId_Separator }, StringSplitOptions.None);
+                var items = entry.Key.Split(new string[] { Separator }, StringSplitOptions.None);
                 var topic = items[0];
                 var queueId = int.Parse(items[1]);
-                var queueOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
+                var queueOffset = _messageService.GetQueueOffset(topic, queueId);
                 NotifyMessageArrived(entry.Key, queueOffset);
             }
         }
@@ -90,7 +90,7 @@ namespace EQueue.Broker.LongPolling
                     PullRequest currentRequest;
                     if (_queueRequestDict.TryRemove(key, out currentRequest))
                     {
-                        Task.Factory.StartNew(() => currentRequest.SuspendTimeoutAction(currentRequest));
+                        Task.Factory.StartNew(() => currentRequest.TimeoutAction(currentRequest));
                     }
                 }
             }
@@ -99,7 +99,7 @@ namespace EQueue.Broker.LongPolling
         {
             var builder = new StringBuilder();
             builder.Append(topic);
-            builder.Append(Topic_QueueId_Separator);
+            builder.Append(Separator);
             builder.Append(queueId);
             return builder.ToString();
         }

@@ -61,7 +61,7 @@ namespace EQueue.Broker
             }
             return new QueueMessage[0];
         }
-        public long GetQueueCurrentOffset(string topic, int queueId)
+        public long GetQueueOffset(string topic, int queueId)
         {
             var queues = GetQueues(topic);
             var queue = queues.SingleOrDefault(x => x.QueueId == queueId);

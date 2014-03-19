@@ -13,6 +13,7 @@ using ECommon.Log4Net;
 using ECommon.Scheduling;
 using EQueue.Broker;
 using EQueue.Clients.Consumers;
+using EQueue.Clients.Consumers.OffsetStores;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
 using EQueue.Protocols;
@@ -26,6 +27,7 @@ namespace AllInOne
             InitializeEQueue();
 
             StartBroker();
+            InitializeOffsetStore();
             StartConsumers();
             StartProducer();
 
@@ -48,6 +50,11 @@ namespace AllInOne
             setting.NotifyWhenMessageArrived = false;
             new BrokerController(setting).Initialize().Start();
         }
+        static void InitializeOffsetStore()
+        {
+            Configuration.Instance.UseDefaultRemoteBrokerOffsetStore();
+            ObjectContainer.Resolve<IRemoteBrokerOffsetStore>().Start();
+        }
         static void StartConsumers()
         {
             var messageHandler = new MessageHandler();
@@ -69,7 +76,7 @@ namespace AllInOne
                 var c4AllocatedQueueIds = consumer4.GetCurrentQueues().Select(x => x.QueueId);
                 if (c1AllocatedQueueIds.Count() == 1 && c2AllocatedQueueIds.Count() == 1 && c3AllocatedQueueIds.Count() == 1 && c4AllocatedQueueIds.Count() == 1)
                 {
-                    Console.WriteLine(string.Format("Consumer message queue allocation result: c1:{0}, c2:{1}, c3:{2}, c4:{3}",
+                    Console.WriteLine(string.Format("All consumer load balance completed, queue allocation result: c1:{0}, c2:{1}, c3:{2}, c4:{3}",
                         string.Join(",", c1AllocatedQueueIds),
                         string.Join(",", c2AllocatedQueueIds),
                         string.Join(",", c3AllocatedQueueIds),

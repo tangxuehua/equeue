@@ -14,6 +14,7 @@ namespace EQueue.Broker.Processors
         private const int SuspendPullRequestMilliseconds = 60 * 1000;
         private BrokerController _brokerController;
         private IMessageService _messageService;
+        private IOffsetManager _offsetManager;
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
 
@@ -21,6 +22,7 @@ namespace EQueue.Broker.Processors
         {
             _brokerController = brokerController;
             _messageService = ObjectContainer.Resolve<IMessageService>();
+            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
@@ -28,6 +30,16 @@ namespace EQueue.Broker.Processors
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
             var pullMessageRequest = _binarySerializer.Deserialize<PullMessageRequest>(request.Body);
+            if (pullMessageRequest.QueueOffset < 0)
+            {
+                var queueOffset = _offsetManager.GetQueueOffset(
+                    pullMessageRequest.MessageQueue.Topic,
+                    pullMessageRequest.MessageQueue.QueueId,
+                    pullMessageRequest.ConsumerGroup);
+                var response = new PullMessageResponse(new QueueMessage[0], queueOffset + 1);
+                var responseData = _binarySerializer.Serialize(response);
+                return new RemotingResponse((int)PullStatus.NextOffsetReset, request.Sequence, responseData);
+            }
             var messages = _messageService.GetMessages(
                 pullMessageRequest.MessageQueue.Topic,
                 pullMessageRequest.MessageQueue.QueueId,
