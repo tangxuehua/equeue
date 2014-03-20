@@ -12,21 +12,11 @@ namespace EQueue.Configurations
         {
             configuration.SetDefault<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             configuration.SetDefault<IQueueSelector, QueueHashSelector>();
-            configuration.SetDefault<ILocalOffsetStore, InMemoryLocalOffsetStore>();
+            configuration.SetDefault<ILocalOffsetStore, DefaultLocalOffsetStore>();
+            configuration.SetDefault<IRemoteBrokerOffsetStore, DefaultRemoteBrokerOffsetStore>();
             configuration.SetDefault<IMessageStore, InMemoryMessageStore>();
             configuration.SetDefault<IMessageService, MessageService>();
             configuration.SetDefault<IOffsetManager, InMemoryOffsetManager>();
-            return configuration;
-        }
-        public static Configuration UseDefaultRemoteBrokerOffsetStore(this Configuration configuration)
-        {
-            var consumerSetting = new ConsumerSetting();
-            return configuration.UseDefaultRemoteBrokerOffsetStore(consumerSetting.BrokerAddress, consumerSetting.BrokerPort);
-        }
-        public static Configuration UseDefaultRemoteBrokerOffsetStore(this Configuration configuration, string brokerAddress, int brokerPort)
-        {
-            var offsetStore = new DefaultRemoteBrokerOffsetStore(brokerAddress, brokerPort);
-            configuration.SetDefault<IRemoteBrokerOffsetStore, DefaultRemoteBrokerOffsetStore>(offsetStore);
             return configuration;
         }
     }

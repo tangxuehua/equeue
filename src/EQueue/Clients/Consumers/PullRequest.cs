@@ -29,13 +29,13 @@ namespace EQueue.Clients.Consumers
         private readonly IOffsetStore _offsetStore;
         private long _flowControlTimes1;
         //private long _flowControlTimes2;
+        private long _queueOffset;
         private bool _stoped;
 
         public string ConsumerId { get; private set; }
         public string GroupName { get; private set; }
         public MessageQueue MessageQueue { get; private set; }
         public ProcessQueue ProcessQueue { get; private set; }
-        public long NextOffset { get; set; }
 
         #region Constructors
 
@@ -52,9 +52,9 @@ namespace EQueue.Clients.Consumers
             ConsumerId = consumerId;
             GroupName = groupName;
             MessageQueue = messageQueue;
-            NextOffset = -1;
             ProcessQueue = new ProcessQueue();
 
+            _queueOffset = -1;
             _remotingClient = remotingClient;
             _setting = setting;
             _messageHandleMode = messageHandleMode;
@@ -98,7 +98,7 @@ namespace EQueue.Clients.Consumers
 
         public override string ToString()
         {
-            return string.Format("[ConsumerId={0}, GroupName={1}, MessageQueue={2}, NextOffset={3}, Stoped={4}]", ConsumerId, GroupName, MessageQueue, NextOffset, _stoped);
+            return string.Format("[ConsumerId={0}, GroupName={1}, MessageQueue={2}, QueueOffset={3}, Stoped={4}]", ConsumerId, GroupName, MessageQueue, _queueOffset, _stoped);
         }
 
         private void PullMessage()
@@ -128,7 +128,7 @@ namespace EQueue.Clients.Consumers
             {
                 ConsumerGroup = GroupName,
                 MessageQueue = MessageQueue,
-                QueueOffset = NextOffset,
+                QueueOffset = _queueOffset,
                 PullMessageBatchSize = _setting.PullMessageBatchSize
             };
             var data = _binarySerializer.Serialize(request);
@@ -157,13 +157,13 @@ namespace EQueue.Clients.Consumers
 
             if (remotingResponse.Code == (int)PullStatus.Found && response.Messages.Count() > 0)
             {
-                NextOffset += response.Messages.Count();
+                _queueOffset += response.Messages.Count();
                 ProcessQueue.AddMessages(response.Messages);
                 response.Messages.ForEach(x => _messageQueue.Add(new WrappedMessage(MessageQueue, x, ProcessQueue)));
             }
             else if (remotingResponse.Code == (int)PullStatus.NextOffsetReset && response.NextOffset != null)
             {
-                NextOffset = response.NextOffset.Value;
+                _queueOffset = response.NextOffset.Value;
             }
         }
         private void HandleMessage()
@@ -187,34 +187,14 @@ namespace EQueue.Clients.Consumers
                 }
                 try
                 {
-                    _messageHandler.Handle(wrappedMessage.QueueMessage, new MessageContext(queueMessage =>
-                    {
-                        WrappedMessage handledWrappedMessage;
-                        if (_handlingMessageDict.TryRemove(queueMessage.MessageOffset, out handledWrappedMessage))
-                        {
-                            var offset = handledWrappedMessage.ProcessQueue.RemoveMessage(handledWrappedMessage.QueueMessage);
-                            if (offset >= 0)
-                            {
-                                _offsetStore.UpdateOffset(GroupName, wrappedMessage.MessageQueue, offset);
-                            }
-                        }
-                    }));
+                    _messageHandler.Handle(wrappedMessage.QueueMessage, new MessageContext(queueMessage => RemoveMessageAndUpdateOffset(queueMessage.MessageOffset)));
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("Handle message has exception. Currently, we still take this message as consumed.", ex);
-                    //TODO，目前，对于消费失败（遇到异常）的消息，我们仅仅记录错误日志，然后仍将该消息标记为已消费，即让消费位置继续往下移动；
+                    //TODO，目前，对于消费失败（遇到异常）的消息，我们仅仅记录错误日志，然后仍将该消息移除，即让消费位置（滑动门）可以往前移动；
                     //以后，这里需要将消费失败的消息发回到Broker上的重试队列进行重试。
-
-                    WrappedMessage failHandlingWrappedMessage;
-                    if (_handlingMessageDict.TryRemove(wrappedMessage.QueueMessage.MessageOffset, out failHandlingWrappedMessage))
-                    {
-                        var nextOffset = failHandlingWrappedMessage.ProcessQueue.RemoveMessage(failHandlingWrappedMessage.QueueMessage);
-                        if (nextOffset >= 0)
-                        {
-                            _offsetStore.UpdateOffset(GroupName, wrappedMessage.MessageQueue, nextOffset);
-                        }
-                    }
+                    _logger.Error("Handle message has exception. Currently, we still take this message as consumed.", ex);
+                    RemoveMessageAndUpdateOffset(wrappedMessage.QueueMessage.MessageOffset);
                 }
             };
             if (_messageHandleMode == MessageHandleMode.Sequential)
@@ -224,6 +204,19 @@ namespace EQueue.Clients.Consumers
             else if (_messageHandleMode == MessageHandleMode.Parallel)
             {
                 Task.Factory.StartNew(handleAction);
+            }
+        }
+
+        private void RemoveMessageAndUpdateOffset(long messageOffset)
+        {
+            WrappedMessage wrappedMessage;
+            if (_handlingMessageDict.TryRemove(messageOffset, out wrappedMessage))
+            {
+                var minMessageOffset = wrappedMessage.ProcessQueue.RemoveMessage(wrappedMessage.QueueMessage);
+                if (minMessageOffset >= 0)
+                {
+                    _offsetStore.UpdateQueueOffset(GroupName, wrappedMessage.MessageQueue, minMessageOffset);
+                }
             }
         }
     }

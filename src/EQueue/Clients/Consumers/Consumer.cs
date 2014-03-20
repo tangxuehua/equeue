@@ -199,7 +199,7 @@ namespace EQueue.Clients.Consumers
                 if (_pullRequestDict.TryRemove(pullRequestKey, out pullRequest))
                 {
                     pullRequest.Stop();
-                    _offsetStore.PersistOffset(GroupName, pullRequest.MessageQueue);
+                    PersistOffset(pullRequest);
                     _logger.DebugFormat("[{0}]: removed pull request.[topic={1},queueId={2}]", Id, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId);
                 }
             }
@@ -215,7 +215,7 @@ namespace EQueue.Clients.Consumers
                     if (_pullRequestDict.TryAdd(key, request))
                     {
                         request.Start();
-                        _logger.DebugFormat("[{0}]: added pull request.[topic={1},queueId={2},nextOffset={3}]", Id, request.MessageQueue.Topic, request.MessageQueue.QueueId, request.NextOffset);
+                        _logger.DebugFormat("[{0}]: added pull request.[topic={1},queueId={2}]", Id, request.MessageQueue.Topic, request.MessageQueue.QueueId);
                     }
                 }
             }
@@ -224,14 +224,28 @@ namespace EQueue.Clients.Consumers
         {
             foreach (var pullRequest in _pullRequestDict.Values)
             {
-                try
+                PersistOffset(pullRequest);
+            }
+        }
+        private void PersistOffset(PullRequest pullRequest)
+        {
+            try
+            {
+                if (Setting.MessageModel == MessageModel.BroadCasting)
                 {
-                    _offsetStore.PersistOffset(GroupName, pullRequest.MessageQueue);
+                    ((ILocalOffsetStore)_offsetStore).PersistQueueOffset(GroupName, pullRequest.MessageQueue);
                 }
-                catch (Exception ex)
+                else if (Setting.MessageModel == MessageModel.Clustering)
                 {
-                    _logger.Error(string.Format("[{0}]: PersistOffset has exception.", Id), ex);
+                    var queueOffset = _offsetStore.GetQueueOffset(GroupName, pullRequest.MessageQueue);
+                    var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, queueOffset);
+                    var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
+                    _remotingClient.InvokeOneway(remotingRequest, 10000);
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(string.Format("[{0}]: PersistOffset has exception.", Id), ex);
             }
         }
         private void SendHeartbeat()
@@ -283,7 +297,7 @@ namespace EQueue.Clients.Consumers
         {
             var queryConsumerRequest = _binarySerializer.Serialize(new QueryConsumerRequest(groupName, topic));
             var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, queryConsumerRequest);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);

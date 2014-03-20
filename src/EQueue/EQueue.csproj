@@ -63,6 +63,7 @@
     <Compile Include="Broker\Queue.cs" />
     <Compile Include="Broker\MessageService.cs" />
     <Compile Include="Broker\IMessageService.cs" />
+    <Compile Include="Clients\Consumers\OffsetStores\DefaultLocalOffsetStore.cs" />
     <Compile Include="Clients\Consumers\OffsetStores\DefaultRemoteBrokerOffsetStore.cs" />
     <Compile Include="Clients\Consumers\OffsetStores\IRemoteBrokerOffsetStore.cs" />
     <Compile Include="Clients\Consumers\MessageContext.cs" />
@@ -75,7 +76,7 @@
     <Compile Include="Broker\MessageStoreResult.cs" />
     <Compile Include="Clients\Consumers\Consumer.cs" />
     <Compile Include="Clients\Consumers\IMessageHandler.cs" />
-    <Compile Include="Clients\Consumers\OffsetStores\InMemoryLocalOffsetStore.cs" />
+    <Compile Include="Clients\Consumers\OffsetStores\InMemoryOffsetStore.cs" />
     <Compile Include="Clients\Consumers\OffsetStores\IOffsetStore.cs" />
     <Compile Include="Clients\Consumers\MessageHandleMode.cs" />
     <Compile Include="Clients\Consumers\IAllocateMessageQueueStrategy.cs" />
