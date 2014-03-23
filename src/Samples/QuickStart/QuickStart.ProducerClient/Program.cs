@@ -9,6 +9,7 @@ using ECommon.Configurations;
 using ECommon.IoC;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
+using ECommon.Logging;
 using ECommon.Scheduling;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
@@ -40,7 +41,7 @@ namespace QuickStart.ProducerClient
                         var finishedCount = Interlocked.Increment(ref finished);
                         if (finishedCount % 1000 == 0)
                         {
-                            Console.WriteLine(string.Format("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds));
+                            _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
                         }
                     });
                 }
@@ -57,6 +58,7 @@ namespace QuickStart.ProducerClient
             Console.ReadLine();
         }
 
+        static ILogger _logger;
         static void InitializeEQueue()
         {
             Configuration
@@ -66,6 +68,7 @@ namespace QuickStart.ProducerClient
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterEQueueComponents();
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create("Program");
         }
     }
 }
