@@ -10,10 +10,10 @@ using ECommon.Configurations;
 using ECommon.IoC;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
+using ECommon.Logging;
 using ECommon.Scheduling;
 using EQueue.Broker;
 using EQueue.Clients.Consumers;
-using EQueue.Clients.Consumers.OffsetStores;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
 using EQueue.Protocols;
@@ -33,6 +33,7 @@ namespace AllInOne
             Console.ReadLine();
         }
 
+        static ILogger _logger;
         static void InitializeEQueue()
         {
             Configuration
@@ -42,11 +43,13 @@ namespace AllInOne
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterEQueueComponents();
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create("Program");
         }
         static void StartBroker()
         {
             var setting = new BrokerSetting();
             setting.NotifyWhenMessageArrived = false;
+            setting.DeleteMessageInterval = 1000;
             new BrokerController(setting).Initialize().Start();
         }
         static void StartConsumers()
@@ -60,7 +63,7 @@ namespace AllInOne
             var consumer4 = new Consumer("Consumer4", "group1").Subscribe("SampleTopic").Start(messageHandler);
 
             //Below to wait for consumer balance.
-            Console.WriteLine("Start consumer load balance, please wait for a moment.");
+            _logger.Info("Start consumer load balance, please wait for a moment.");
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
             var waitHandle = new ManualResetEvent(false);
             var taskId = scheduleService.ScheduleTask(() =>
@@ -71,7 +74,7 @@ namespace AllInOne
                 var c4AllocatedQueueIds = consumer4.GetCurrentQueues().Select(x => x.QueueId);
                 if (c1AllocatedQueueIds.Count() == 1 && c2AllocatedQueueIds.Count() == 1 && c3AllocatedQueueIds.Count() == 1 && c4AllocatedQueueIds.Count() == 1)
                 {
-                    Console.WriteLine(string.Format("Consumer load balance finished. Queue allocation result: c1:{0}, c2:{1}, c3:{2}, c4:{3}",
+                    _logger.Info(string.Format("Consumer load balance finished. Queue allocation result: c1:{0}, c2:{1}, c3:{2}, c4:{3}",
                         string.Join(",", c1AllocatedQueueIds),
                         string.Join(",", c2AllocatedQueueIds),
                         string.Join(",", c3AllocatedQueueIds),
@@ -102,7 +105,7 @@ namespace AllInOne
                         var finishedCount = Interlocked.Increment(ref finished);
                         if (finishedCount % 1000 == 0)
                         {
-                            Console.WriteLine(string.Format("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds));
+                            _logger.Info(string.Format("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds));
                         }
                     });
                 }
@@ -131,7 +134,7 @@ namespace AllInOne
                 }
                 else if (count % 1000 == 0)
                 {
-                    Console.WriteLine("Total handled {0} messages, time spent:{1}", count, _watch.ElapsedMilliseconds);
+                    _logger.InfoFormat("Total handled {0} messages, time spent:{1}", count, _watch.ElapsedMilliseconds);
                 }
                 context.OnMessageHandled(message);
             }

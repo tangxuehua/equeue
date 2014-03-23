@@ -1,13 +1,13 @@
 ﻿using System.Collections.Concurrent;
 using EQueue.Protocols;
 
-namespace EQueue.Clients.Consumers.OffsetStores
+namespace EQueue.Clients.Consumers
 {
-    public class InMemoryOffsetStore : IOffsetStore
+    public class DefaultLocalOffsetStore : ILocalOffsetStore
     {
         private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _dict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
 
-        public void UpdateQueueOffset(string groupName, MessageQueue messageQueue, long queueOffset)
+        public void PersistQueueOffset(string groupName, MessageQueue messageQueue, long queueOffset)
         {
             var queueOffsetDict = _dict.GetOrAdd(groupName, new ConcurrentDictionary<string, long>());
             var key = string.Format("{0}-{1}", messageQueue.Topic, messageQueue.QueueId);
@@ -29,6 +29,5 @@ namespace EQueue.Clients.Consumers.OffsetStores
             }
             return -1;
         }
-        public virtual void PersistQueueOffset(string groupName, MessageQueue messageQueue) { }
     }
 }

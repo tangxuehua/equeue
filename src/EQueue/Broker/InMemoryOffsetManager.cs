@@ -27,14 +27,12 @@ namespace EQueue.Broker
         {
             _scheduleService.ShutdownTask(_printQueueOffsetTaskId);
         }
+
         public void UpdateQueueOffset(string topic, int queueId, long offset, string group)
         {
             var queueOffsetDict = _dict.GetOrAdd(group, new ConcurrentDictionary<string, long>());
             var key = string.Format("{0}-{1}", topic, queueId);
-            queueOffsetDict.AddOrUpdate(key, offset, (currentKey, oldOffset) =>
-            {
-                return offset > oldOffset ? offset : oldOffset;
-            });
+            queueOffsetDict.AddOrUpdate(key, offset, (currentKey, oldOffset) => offset > oldOffset ? offset : oldOffset);
         }
         public long GetQueueOffset(string topic, int queueId, string group)
         {
@@ -50,15 +48,37 @@ namespace EQueue.Broker
             }
             return -1L;
         }
+        public long GetMinOffset(string topic, int queueId)
+        {
+            var key = string.Format("{0}-{1}", topic, queueId);
+            var minOffset = -1L;
+            foreach (var queueOffsetDict in _dict.Values)
+            {
+                long offset;
+                if (queueOffsetDict.TryGetValue(key, out offset))
+                {
+                    if (minOffset == -1)
+                    {
+                        minOffset = offset;
+                    }
+                    else if (offset < minOffset)
+                    {
+                        minOffset = offset;
+                    }
+                }
+            }
+
+            return minOffset;
+        }
         private void PrintQueueOffset()
         {
             foreach (var entry1 in _dict)
             {
-                _logger.DebugFormat("Group [{0}] queue offset info:", entry1.Key);
+                _logger.DebugFormat("Queue consume offset statistic info of Group [{0}]:", entry1.Key);
                 foreach (var entry2 in entry1.Value)
                 {
                     var items = entry2.Key.Split(new string[] { "-" }, StringSplitOptions.None);
-                    _logger.DebugFormat("    [Topic:{0},queue{1}] offset:{2}", items[0], items[1], entry2.Value);
+                    _logger.DebugFormat("    [Topic:{0},queue{1}] consume offset:{2}", items[0], items[1], entry2.Value);
                 }
             }
         }

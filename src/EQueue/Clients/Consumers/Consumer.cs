@@ -10,7 +10,6 @@ using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
 using ECommon.Utilities;
-using EQueue.Clients.Consumers.OffsetStores;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
@@ -27,7 +26,7 @@ namespace EQueue.Clients.Consumers
         private readonly List<int> _taskIds = new List<int>();
         private readonly IScheduleService _scheduleService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
-        private readonly IOffsetStore _offsetStore;
+        private readonly ILocalOffsetStore _localOffsetStore;
         private readonly ILogger _logger;
         private IList<string> _consumerIds = new List<string>();
         private IMessageHandler _messageHandler;
@@ -68,7 +67,7 @@ namespace EQueue.Clients.Consumers
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _offsetStore = Setting.MessageModel == MessageModel.Clustering ? ObjectContainer.Resolve<IRemoteBrokerOffsetStore>() as IOffsetStore : ObjectContainer.Resolve<ILocalOffsetStore>() as IOffsetStore;
+            _localOffsetStore = ObjectContainer.Resolve<ILocalOffsetStore>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
         }
@@ -211,7 +210,12 @@ namespace EQueue.Clients.Consumers
                 PullRequest pullRequest;
                 if (!_pullRequestDict.TryGetValue(key, out pullRequest))
                 {
-                    var request = new PullRequest(Id, GroupName, messageQueue, _remotingClient, Setting.MessageHandleMode, _messageHandler, _offsetStore, Setting.PullRequestSetting);
+                    var queueOffset = -1L;
+                    if (Setting.MessageModel == MessageModel.BroadCasting)
+                    {
+                        queueOffset = _localOffsetStore.GetQueueOffset(GroupName, messageQueue);
+                    }
+                    var request = new PullRequest(Id, GroupName, messageQueue, queueOffset, _remotingClient, Setting.MessageHandleMode, _messageHandler, Setting.PullRequestSetting);
                     if (_pullRequestDict.TryAdd(key, request))
                     {
                         request.Start();
@@ -231,16 +235,24 @@ namespace EQueue.Clients.Consumers
         {
             try
             {
-                if (Setting.MessageModel == MessageModel.BroadCasting)
+                var consumedMinQueueOffset = pullRequest.ProcessQueue.GetConsumedMinQueueOffset();
+                if (consumedMinQueueOffset >= 0)
                 {
-                    ((ILocalOffsetStore)_offsetStore).PersistQueueOffset(GroupName, pullRequest.MessageQueue);
-                }
-                else if (Setting.MessageModel == MessageModel.Clustering)
-                {
-                    var queueOffset = _offsetStore.GetQueueOffset(GroupName, pullRequest.MessageQueue);
-                    var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, queueOffset);
-                    var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
-                    _remotingClient.InvokeOneway(remotingRequest, 10000);
+                    if (Setting.MessageModel == MessageModel.BroadCasting)
+                    {
+                        _localOffsetStore.PersistQueueOffset(GroupName, pullRequest.MessageQueue, consumedMinQueueOffset);
+                    }
+                    else if (Setting.MessageModel == MessageModel.Clustering)
+                    {
+                        var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, consumedMinQueueOffset);
+                        var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
+                        _remotingClient.InvokeOneway(remotingRequest, 10000);
+                        _logger.DebugFormat("Update consumed min queue offset to broker. Group:{0}, Topic:{1}, QueueId:{2}, Offset:{3}",
+                            GroupName,
+                            pullRequest.MessageQueue.Topic,
+                            pullRequest.MessageQueue.QueueId,
+                            consumedMinQueueOffset);
+                    }
                 }
             }
             catch (Exception ex)

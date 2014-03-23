@@ -9,7 +9,6 @@ using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
-using EQueue.Clients.Consumers.OffsetStores;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
@@ -26,9 +25,7 @@ namespace EQueue.Clients.Consumers
         private readonly MessageHandleMode _messageHandleMode;
         private readonly IMessageHandler _messageHandler;
         private readonly PullRequestSetting _setting;
-        private readonly IOffsetStore _offsetStore;
-        private long _flowControlTimes1;
-        //private long _flowControlTimes2;
+        private long _flowControlTimes;
         private long _queueOffset;
         private bool _stoped;
 
@@ -43,10 +40,10 @@ namespace EQueue.Clients.Consumers
             string consumerId,
             string groupName,
             MessageQueue messageQueue,
+            long queueOffset,
             SocketRemotingClient remotingClient,
             MessageHandleMode messageHandleMode,
             IMessageHandler messageHandler,
-            IOffsetStore offsetStore,
             PullRequestSetting setting)
         {
             ConsumerId = consumerId;
@@ -54,12 +51,11 @@ namespace EQueue.Clients.Consumers
             MessageQueue = messageQueue;
             ProcessQueue = new ProcessQueue();
 
-            _queueOffset = -1;
+            _queueOffset = queueOffset;
             _remotingClient = remotingClient;
             _setting = setting;
             _messageHandleMode = messageHandleMode;
             _messageHandler = messageHandler;
-            _offsetStore = offsetStore;
             _messageQueue = new BlockingCollection<WrappedMessage>(new ConcurrentQueue<WrappedMessage>());
             _handlingMessageDict = new ConcurrentDictionary<long, WrappedMessage>();
             _pullMessageWorker = new Worker(() =>
@@ -104,25 +100,15 @@ namespace EQueue.Clients.Consumers
         private void PullMessage()
         {
             var messageCount = ProcessQueue.GetMessageCount();
-            //TODO, here the GetMessageSpan has bug when in parallel environment.
-            //var messageSpan = ProcessQueue.GetMessageSpan();
 
             if (messageCount >= _setting.PullThresholdForQueue)
             {
                 Thread.Sleep(_setting.PullTimeDelayMillsWhenFlowControl);
-                if ((_flowControlTimes1++ % 3000) == 0)
+                if ((_flowControlTimes++ % 3000) == 0)
                 {
-                    _logger.WarnFormat("[{0}]: the consumer message buffer is full, so do flow control, [messageCount={1},pullRequest={2},flowControlTimes={3}]", ConsumerId, messageCount, this, _flowControlTimes1);
+                    _logger.WarnFormat("[{0}]: the consumer message buffer is full, so do flow control, [messageCount={1},pullRequest={2},flowControlTimes={3}]", ConsumerId, messageCount, this, _flowControlTimes);
                 }
             }
-            //else if (messageSpan >= _setting.ConsumeMaxSpan)
-            //{
-            //    Thread.Sleep(_setting.PullTimeDelayMillsWhenFlowControl);
-            //    if ((flowControlTimes2++ % 3000) == 0)
-            //    {
-            //        _logger.WarnFormat("[{0}]: the consumer message span too long, so do flow control, [messageSpan={1},pullRequest={2},flowControlTimes={3}]", ConsumerId, messageSpan, this, flowControlTimes2);
-            //    }
-            //}
 
             var request = new PullMessageRequest
             {
@@ -187,14 +173,14 @@ namespace EQueue.Clients.Consumers
                 }
                 try
                 {
-                    _messageHandler.Handle(wrappedMessage.QueueMessage, new MessageContext(queueMessage => RemoveMessageAndUpdateOffset(queueMessage.MessageOffset)));
+                    _messageHandler.Handle(wrappedMessage.QueueMessage, new MessageContext(queueMessage => RemoveMessage(queueMessage.MessageOffset)));
                 }
                 catch (Exception ex)
                 {
                     //TODO，目前，对于消费失败（遇到异常）的消息，我们仅仅记录错误日志，然后仍将该消息移除，即让消费位置（滑动门）可以往前移动；
                     //以后，这里需要将消费失败的消息发回到Broker上的重试队列进行重试。
                     _logger.Error("Handle message has exception. Currently, we still take this message as consumed.", ex);
-                    RemoveMessageAndUpdateOffset(wrappedMessage.QueueMessage.MessageOffset);
+                    RemoveMessage(wrappedMessage.QueueMessage.MessageOffset);
                 }
             };
             if (_messageHandleMode == MessageHandleMode.Sequential)
@@ -207,16 +193,12 @@ namespace EQueue.Clients.Consumers
             }
         }
 
-        private void RemoveMessageAndUpdateOffset(long messageOffset)
+        private void RemoveMessage(long messageOffset)
         {
             WrappedMessage wrappedMessage;
             if (_handlingMessageDict.TryRemove(messageOffset, out wrappedMessage))
             {
-                var minMessageOffset = wrappedMessage.ProcessQueue.RemoveMessage(wrappedMessage.QueueMessage);
-                if (minMessageOffset >= 0)
-                {
-                    _offsetStore.UpdateQueueOffset(GroupName, wrappedMessage.MessageQueue, minMessageOffset);
-                }
+                wrappedMessage.ProcessQueue.RemoveMessage(wrappedMessage.QueueMessage);
             }
         }
     }

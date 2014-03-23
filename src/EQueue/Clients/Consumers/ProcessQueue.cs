@@ -1,67 +1,44 @@
-﻿using System;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {
     public class ProcessQueue
     {
-        private ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
-        private IDictionary<long, QueueMessage> _messageDict = new SortedDictionary<long, QueueMessage>();
-        private long _queueOffsetMax = 0L;
+        private ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
+        private long _queueMaxOffset = -1L;
 
         public void AddMessages(IEnumerable<QueueMessage> messages)
         {
-            AtomWrite(_lock, () =>
+            foreach (var message in messages)
             {
-                foreach (var message in messages)
+                if (_messageDict.TryAdd(message.QueueOffset, message))
                 {
-                    _messageDict[message.QueueOffset] = message;
-                    _queueOffsetMax = message.QueueOffset;
+                    _queueMaxOffset = message.QueueOffset;
                 }
-            });
+            }
         }
-        public long RemoveMessage(QueueMessage message)
+        public void RemoveMessage(QueueMessage message)
         {
-            var result = -1L;
-
-            AtomWrite(_lock, () =>
-            {
-                if (_messageDict.Count > 0)
-                {
-                    result = _queueOffsetMax + 1;
-                    _messageDict.Remove(message.QueueOffset);
-                    if (_messageDict.Count > 0)
-                    {
-                        result = _messageDict.Keys.First() - 1;
-                    }
-                }
-            });
-
-            return result;
+            QueueMessage removedMessage;
+            _messageDict.TryRemove(message.QueueOffset, out removedMessage);
         }
         public int GetMessageCount()
         {
             return _messageDict.Count;
         }
-        public long GetMessageSpan()
+        public long GetConsumedMinQueueOffset()
         {
-            return _messageDict.Keys.LastOrDefault() - _messageDict.Keys.FirstOrDefault();
-        }
-
-        private static void AtomWrite(ReaderWriterLockSlim readerWriterLockSlim, Action action)
-        {
-            readerWriterLockSlim.EnterWriteLock();
-            try
+            var currentMinQueueOffset = _queueMaxOffset + 1;
+            foreach (var offset in _messageDict.Keys)
             {
-                action();
+                if (offset < currentMinQueueOffset)
+                {
+                    currentMinQueueOffset = offset;
+                }
             }
-            finally
-            {
-                readerWriterLockSlim.ExitWriteLock();
-            }
+            return currentMinQueueOffset - 1;
         }
     }
 }

@@ -37,6 +37,7 @@ namespace EQueue.Broker
             _producerSocketRemotingServer = new SocketRemotingServer("ProducerRemotingServer", Setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
             _consumerSocketRemotingServer = new SocketRemotingServer("ConsumerRemotingServer", Setting.ConsumerSocketSetting, new ConsumerSocketEventListener(this));
             _clientManager = new ClientManager(this);
+            _messageService.SetBrokerContrller(this);
         }
 
         public BrokerController Initialize()
@@ -56,6 +57,7 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.Start();
             _clientManager.Start();
             _offsetManager.Start();
+            _messageService.Start();
             SuspendedPullRequestManager.Start();
             _logger.InfoFormat("Broker started, producer:[{0}:{1}], consumer:[{2}:{3}]",
                 Setting.ProducerSocketSetting.Address,
@@ -70,6 +72,7 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.Shutdown();
             _clientManager.Shutdown();
             _offsetManager.Shutdown();
+            _messageService.Shutdown();
             SuspendedPullRequestManager.Shutdown();
             return this;
         }
