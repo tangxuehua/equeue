@@ -57,10 +57,11 @@ namespace AllInOne
             var messageHandler = new MessageHandler();
 
             //Start four consumers.
-            var consumer1 = new Consumer("Consumer1", "group1").Subscribe("SampleTopic").Start(messageHandler);
-            var consumer2 = new Consumer("Consumer2", "group1").Subscribe("SampleTopic").Start(messageHandler);
-            var consumer3 = new Consumer("Consumer3", "group1").Subscribe("SampleTopic").Start(messageHandler);
-            var consumer4 = new Consumer("Consumer4", "group1").Subscribe("SampleTopic").Start(messageHandler);
+            var consumerSetting = new ConsumerSetting { HeartbeatBrokerInterval = 1000, UpdateTopicQueueCountInterval = 1000, RebalanceInterval = 1000 };
+            var consumer1 = new Consumer("Consumer1", "group1", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
+            var consumer2 = new Consumer("Consumer2", "group1", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
+            var consumer3 = new Consumer("Consumer3", "group1", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
+            var consumer4 = new Consumer("Consumer4", "group1", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
 
             //Below to wait for consumer balance.
             _logger.Info("Start consumer load balance, please wait for a moment.");
@@ -88,7 +89,7 @@ namespace AllInOne
         }
         static void StartProducer()
         {
-            var producer = new Producer().Start();
+            var producer = new Producer("Producer1").Start();
             var total = 1000;
             var parallelCount = 10;
             var finished = 0;

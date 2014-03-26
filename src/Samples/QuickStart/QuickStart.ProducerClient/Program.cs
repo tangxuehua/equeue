@@ -24,7 +24,7 @@ namespace QuickStart.ProducerClient
             InitializeEQueue();
 
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            var producer = new Producer().Start();
+            var producer = new Producer("Producer1").Start();
             var total = 1000;
             var parallelCount = 10;
             var finished = 0;
@@ -36,7 +36,8 @@ namespace QuickStart.ProducerClient
                 for (var index = 1; index <= total; index++)
                 {
                     var message = "message" + Interlocked.Increment(ref messageIndex);
-                    producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
+                    var topic = index % 2 == 0 ? "SampleTopic1" : "SampleTopic2";
+                    producer.SendAsync(new Message(topic, Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
                     {
                         var finishedCount = Interlocked.Increment(ref finished);
                         if (finishedCount % 1000 == 0)

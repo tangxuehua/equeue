@@ -74,11 +74,11 @@ namespace EQueue.Broker
         {
             foreach (var entry1 in _dict)
             {
-                _logger.DebugFormat("Queue consume offset statistic info of Group [{0}]:", entry1.Key);
+                _logger.DebugFormat("Queue consume offset statistic info of group [{0}]:", entry1.Key);
                 foreach (var entry2 in entry1.Value)
                 {
                     var items = entry2.Key.Split(new string[] { "-" }, StringSplitOptions.None);
-                    _logger.DebugFormat("    [Topic:{0},queue{1}] consume offset:{2}", items[0], items[1], entry2.Value);
+                    _logger.DebugFormat("[topic:{0},queue{1}], consume offset:{2}", items[0], items[1], entry2.Value);
                 }
             }
         }

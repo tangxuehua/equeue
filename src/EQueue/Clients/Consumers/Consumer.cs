@@ -47,23 +47,23 @@ namespace EQueue.Clients.Consumers
 
         #region Constructors
 
-        public Consumer(string groupName)
-            : this(new ConsumerSetting(), null, groupName)
+        public Consumer(string id, string groupName)
+            : this(id, groupName, new ConsumerSetting())
         {
         }
-        public Consumer(string name, string groupName)
-            : this(new ConsumerSetting(), name, groupName)
+        public Consumer(string id, string groupName, ConsumerSetting setting)
         {
-        }
-        public Consumer(ConsumerSetting setting, string name, string groupName)
-            : this(string.Format("{0}@{1}@{2}", SocketUtils.GetLocalIPV4(), string.IsNullOrEmpty(name) ? typeof(Consumer).Name : name, ObjectId.GenerateNewId()), setting, groupName)
-        {
-        }
-        public Consumer(string id, ConsumerSetting setting, string groupName)
-        {
+            if (id == null)
+            {
+                throw new ArgumentNullException("id");
+            }
+            if (groupName == null)
+            {
+                throw new ArgumentNullException("groupName");
+            }
             Id = id;
-            Setting = setting ?? new ConsumerSetting();
             GroupName = groupName;
+            Setting = setting ?? new ConsumerSetting();
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
@@ -85,7 +85,7 @@ namespace EQueue.Clients.Consumers
             _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
             _taskIds.Add(_scheduleService.ScheduleTask(SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval));
             _taskIds.Add(_scheduleService.ScheduleTask(PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval));
-            _logger.InfoFormat("[{0}] started.", Id);
+            _logger.InfoFormat("Started, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
         public Consumer Shutdown()
@@ -95,7 +95,7 @@ namespace EQueue.Clients.Consumers
             {
                 _scheduleService.ShutdownTask(taskId);
             }
-            _logger.InfoFormat("[{0}] shutdown.", Id);
+            _logger.InfoFormat("Shutdown, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
         public Consumer Subscribe(string topic)
@@ -125,7 +125,7 @@ namespace EQueue.Clients.Consumers
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("[{0}]: rebalanceClustering for topic [{1}] has exception", Id, subscriptionTopic), ex);
+                    _logger.Error(string.Format("RebalanceClustering has exception, consumerId:{0}, group:{1}, topic:{2}", Id, GroupName, subscriptionTopic), ex);
                 }
             }
         }
@@ -134,16 +134,16 @@ namespace EQueue.Clients.Consumers
             List<string> consumerIdList;
             try
             {
-                consumerIdList = QueryGroupConsumers(GroupName, subscriptionTopic).ToList();
+                consumerIdList = QueryGroupConsumers(subscriptionTopic).ToList();
                 if (_consumerIds.Count != consumerIdList.Count)
                 {
-                    _logger.DebugFormat("[{0}]: consumerIds changed, old:{1}, new:{2}", Id, _consumerIds == null ? string.Empty : string.Join(",", _consumerIds), string.Join(",", consumerIdList));
+                    _logger.DebugFormat("ConsumerIds changed, current consumerId:{0}, group:{1}, old:{2}, new:{3}", Id, GroupName, string.Join(",", _consumerIds), string.Join(",", consumerIdList));
                     _consumerIds = consumerIdList;
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("[{0}]: clustering rebalance failed as QueryGroupConsumers has exception.", Id), ex);
+                _logger.Error(string.Format("RebalanceClustering failed as QueryGroupConsumers has exception, consumerId:{0}, group:{1}, topic:{2}", Id, GroupName, subscriptionTopic), ex);
                 return;
             }
 
@@ -173,7 +173,7 @@ namespace EQueue.Clients.Consumers
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("[{0}]: allocate message queue has exception.", Id), ex);
+                    _logger.Error(string.Format("Allocate message queue has exception, consumerId:{0}, group:{1}, topic:{2}", Id, GroupName, subscriptionTopic), ex);
                     return;
                 }
 
@@ -199,7 +199,7 @@ namespace EQueue.Clients.Consumers
                 {
                     pullRequest.Stop();
                     PersistOffset(pullRequest);
-                    _logger.DebugFormat("[{0}]: removed pull request.[topic={1},queueId={2}]", Id, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId);
+                    _logger.DebugFormat("Removed pull request, consumerId:{0}, group:{1}, topic={2}, queueId={3}", Id, GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId);
                 }
             }
 
@@ -219,7 +219,7 @@ namespace EQueue.Clients.Consumers
                     if (_pullRequestDict.TryAdd(key, request))
                     {
                         request.Start();
-                        _logger.DebugFormat("[{0}]: added pull request.[topic={1},queueId={2}]", Id, request.MessageQueue.Topic, request.MessageQueue.QueueId);
+                        _logger.DebugFormat("Added pull request, consumerId:{0}, group:{1}, topic={2}, queueId={3}", Id, GroupName, request.MessageQueue.Topic, request.MessageQueue.QueueId);
                     }
                 }
             }
@@ -238,6 +238,10 @@ namespace EQueue.Clients.Consumers
                 var consumedMinQueueOffset = pullRequest.ProcessQueue.GetConsumedMinQueueOffset();
                 if (consumedMinQueueOffset >= 0)
                 {
+                    if (!pullRequest.ProcessQueue.TryUpdatePreviousConsumedMinQueueOffset(consumedMinQueueOffset))
+                    {
+                        return;
+                    }
                     if (Setting.MessageModel == MessageModel.BroadCasting)
                     {
                         _localOffsetStore.PersistQueueOffset(GroupName, pullRequest.MessageQueue, consumedMinQueueOffset);
@@ -247,8 +251,9 @@ namespace EQueue.Clients.Consumers
                         var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, consumedMinQueueOffset);
                         var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
                         _remotingClient.InvokeOneway(remotingRequest, 10000);
-                        _logger.DebugFormat("Update consumed min queue offset to broker. Group:{0}, Topic:{1}, QueueId:{2}, Offset:{3}",
+                        _logger.InfoFormat("Sent new queue offset to broker. group:{0}, consumerId:{1}, topic:{2}, queueId:{3}, offset:{4}",
                             GroupName,
+                            Id,
                             pullRequest.MessageQueue.Topic,
                             pullRequest.MessageQueue.QueueId,
                             consumedMinQueueOffset);
@@ -257,7 +262,7 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("[{0}]: PersistOffset has exception.", Id), ex);
+                _logger.Error(string.Format("PersistOffset has exception, consumerId:{0}, group:{1}, topic:{2}, queueId:{3}", Id, GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId), ex);
             }
         }
         private void SendHeartbeat()
@@ -271,7 +276,7 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("[{0}]: SendHeartbeat has exception.", Id), ex);
+                _logger.Error(string.Format("SendHeartbeat remoting request to broker has exception, consumerId:{0}, group:{1}", Id, GroupName), ex);
             }
         }
         private void UpdateAllTopicQueues()
@@ -297,19 +302,19 @@ namespace EQueue.Clients.Consumers
                         messageQueues.Add(new MessageQueue(topic, index));
                     }
                     _topicQueuesDict[topic] = messageQueues;
-                    _logger.DebugFormat("[{0}]: topic queue count updated, topic:{1}, queueCount:{2}", Id, topic, topicQueueCountFromServer);
+                    _logger.DebugFormat("Queue count of topic updated, consumerId:{0}, group:{1}, topic:{2}, queueCount:{3}", Id, GroupName, topic, topicQueueCountFromServer);
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("[{0}]: UpdateTopicQueues failed, topic:{1}", Id, topic), ex);
+                _logger.Error(string.Format("UpdateTopicQueues failed, consumerId:{0}, group:{1}, topic:{2}", Id, GroupName, topic), ex);
             }
         }
-        private IEnumerable<string> QueryGroupConsumers(string groupName, string topic)
+        private IEnumerable<string> QueryGroupConsumers(string topic)
         {
-            var queryConsumerRequest = _binarySerializer.Serialize(new QueryConsumerRequest(groupName, topic));
+            var queryConsumerRequest = _binarySerializer.Serialize(new QueryConsumerRequest(GroupName, topic));
             var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, queryConsumerRequest);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -317,20 +322,20 @@ namespace EQueue.Clients.Consumers
             }
             else
             {
-                throw new Exception(string.Format("[{0}]: QueryGroupConsumers has exception, remoting response code:{1}", Id, remotingResponse.Code));
+                throw new Exception(string.Format("QueryGroupConsumers has exception, consumerId:{0}, group:{1}, topic:{2}, remoting response code:{3}", Id, GroupName, topic, remotingResponse.Code));
             }
         }
         private int GetTopicQueueCount(string topic)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueCount, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 return BitConverter.ToInt32(remotingResponse.Body, 0);
             }
             else
             {
-                throw new Exception(string.Format("[{0}]: GetTopicQueueCount has exception, remoting response code:{1}", Id, remotingResponse.Code));
+                throw new Exception(string.Format("GetTopicQueueCount has exception, consumerId:{0}, group:{1}, topic:{2}, remoting response code:{3}", Id, GroupName, topic, remotingResponse.Code));
             }
         }
 

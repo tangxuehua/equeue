@@ -22,10 +22,9 @@ namespace QuickStart.ConsumerClient
             InitializeEQueue();
 
             var messageHandler = new MessageHandler();
-            var consumer1 = new Consumer("Consumer1", "group1").Subscribe("SampleTopic").Start(messageHandler);
-            var consumer2 = new Consumer("Consumer2", "group1").Subscribe("SampleTopic").Start(messageHandler);
-            var consumer3 = new Consumer("Consumer3", "group1").Subscribe("SampleTopic").Start(messageHandler);
-            var consumer4 = new Consumer("Consumer4", "group1").Subscribe("SampleTopic").Start(messageHandler);
+            var consumerSetting = new ConsumerSetting { HeartbeatBrokerInterval = 1000, UpdateTopicQueueCountInterval = 1000, RebalanceInterval = 1000 };
+            var consumer1 = new Consumer("Consumer1", "group1", consumerSetting).Subscribe("SampleTopic1").Subscribe("SampleTopic2").Start(messageHandler);
+            var consumer2 = new Consumer("Consumer2", "group1", consumerSetting).Subscribe("SampleTopic1").Subscribe("SampleTopic2").Start(messageHandler);
 
             _logger.Info("Start consumer load balance, please wait for a moment.");
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
@@ -34,15 +33,11 @@ namespace QuickStart.ConsumerClient
             {
                 var c1AllocatedQueueIds = consumer1.GetCurrentQueues().Select(x => x.QueueId);
                 var c2AllocatedQueueIds = consumer2.GetCurrentQueues().Select(x => x.QueueId);
-                var c3AllocatedQueueIds = consumer3.GetCurrentQueues().Select(x => x.QueueId);
-                var c4AllocatedQueueIds = consumer4.GetCurrentQueues().Select(x => x.QueueId);
-                if (c1AllocatedQueueIds.Count() == 1 && c2AllocatedQueueIds.Count() == 1 && c3AllocatedQueueIds.Count() == 1 && c4AllocatedQueueIds.Count() == 1)
+                if (c1AllocatedQueueIds.Count() == 4 && c2AllocatedQueueIds.Count() == 4)
                 {
-                    _logger.Info(string.Format("Consumer load balance finished. Queue allocation result: c1:{0}, c2:{1}, c3:{2}, c4:{3}",
+                    _logger.Info(string.Format("Consumer load balance finished. Queue allocation result: c1:{0}, c2:{1}",
                         string.Join(",", c1AllocatedQueueIds),
-                        string.Join(",", c2AllocatedQueueIds),
-                        string.Join(",", c3AllocatedQueueIds),
-                        string.Join(",", c4AllocatedQueueIds)));
+                        string.Join(",", c2AllocatedQueueIds)));
                     waitHandle.Set();
                 }
             }, 1000, 1000);

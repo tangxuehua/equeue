@@ -10,7 +10,6 @@ namespace EQueue.Broker
 {
     public class MessageService : IMessageService
     {
-        private const int DefaultTopicQueueCount = 4;
         private ConcurrentDictionary<string, long> _queueCurrentOffsetDict = new ConcurrentDictionary<string, long>();
         private ConcurrentDictionary<string, IList<Queue>> _topicQueueDict = new ConcurrentDictionary<string, IList<Queue>>();
         private readonly IMessageStore _messageStore;
@@ -19,6 +18,7 @@ namespace EQueue.Broker
         private ILogger _logger;
         private BrokerController _brokerController;
         private int _deleteConsumedMessageTaskId;
+        private long _totalDeleteMessageCount;
 
         public MessageService(IMessageStore messageStore, IOffsetManager offsetManager, IScheduleService scheduleService)
         {
@@ -107,13 +107,14 @@ namespace EQueue.Broker
             return _topicQueueDict.GetOrAdd(topic, x =>
             {
                 var queues = new List<Queue>();
-                for (var index = 0; index < DefaultTopicQueueCount; index++)
+                for (var index = 0; index < _brokerController.Setting.DefaultTopicQueueCount; index++)
                 {
                     queues.Add(new Queue(x, index));
                 }
                 return queues;
             });
         }
+
         private void DeleteConsumedMessage()
         {
             foreach (var topicQueues in _topicQueueDict.Values)
@@ -135,7 +136,8 @@ namespace EQueue.Broker
                     }
                     if (deletedMessageCount > 0)
                     {
-                        _logger.DebugFormat("Deleted {0} messages for Queue{1} of Topic [{2}].", deletedMessageCount, queue.QueueId, queue.Topic);
+                        _totalDeleteMessageCount += deletedMessageCount;
+                        _logger.InfoFormat("Deleted {0} messages of queue{1} of topic [{2}], total deleted:{3}.", deletedMessageCount, queue.QueueId, queue.Topic, _totalDeleteMessageCount);
                     }
                 }
             }

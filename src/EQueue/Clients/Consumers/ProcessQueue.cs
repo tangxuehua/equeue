@@ -9,6 +9,22 @@ namespace EQueue.Clients.Consumers
         private ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
         private long _queueMaxOffset = -1L;
 
+        public long PreviousConsumedMinQueueOffset { get; private set; }
+
+        public ProcessQueue()
+        {
+            PreviousConsumedMinQueueOffset = -1L;
+        }
+
+        public bool TryUpdatePreviousConsumedMinQueueOffset(long offset)
+        {
+            if (offset > PreviousConsumedMinQueueOffset)
+            {
+                PreviousConsumedMinQueueOffset = offset;
+                return true;
+            }
+            return false;
+        }
         public void AddMessages(IEnumerable<QueueMessage> messages)
         {
             foreach (var message in messages)
