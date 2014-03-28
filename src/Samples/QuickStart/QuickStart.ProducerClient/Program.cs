@@ -17,35 +17,47 @@ using EQueue.Protocols;
 
 namespace QuickStart.ProducerClient
 {
+    class IndexEntry
+    {
+        public int Index;
+        public int Total;
+    }
     class Program
     {
+        static int finished;
+        static int messageIndex;
+        static Stopwatch watch = Stopwatch.StartNew();
+
+        static void SendMessage(Producer producer, IndexEntry indexEntry)
+        {
+            var message = "message" + Interlocked.Increment(ref messageIndex);
+            var topic = indexEntry.Index % 2 == 0 ? "SampleTopic1" : "SampleTopic2";
+            producer.SendAsync(new Message(topic, Encoding.UTF8.GetBytes(message)), indexEntry.Index.ToString()).ContinueWith(sendTask =>
+            {
+                var finishedCount = Interlocked.Increment(ref finished);
+                if (finishedCount % 1000 == 0)
+                {
+                    _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
+                }
+                if (indexEntry.Index < indexEntry.Total)
+                {
+                    indexEntry.Index++;
+                    SendMessage(producer, indexEntry);
+                }
+            });
+        }
         static void Main(string[] args)
         {
             InitializeEQueue();
 
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
             var producer = new Producer("Producer1").Start();
-            var total = 1000;
+            var total = 10000;
             var parallelCount = 10;
-            var finished = 0;
-            var messageIndex = 0;
-            var watch = Stopwatch.StartNew();
 
             var action = new Action(() =>
             {
-                for (var index = 1; index <= total; index++)
-                {
-                    var message = "message" + Interlocked.Increment(ref messageIndex);
-                    var topic = index % 2 == 0 ? "SampleTopic1" : "SampleTopic2";
-                    producer.SendAsync(new Message(topic, Encoding.UTF8.GetBytes(message)), index.ToString()).ContinueWith(sendTask =>
-                    {
-                        var finishedCount = Interlocked.Increment(ref finished);
-                        if (finishedCount % 1000 == 0)
-                        {
-                            _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
-                        }
-                    });
-                }
+                SendMessage(producer, new IndexEntry { Index = 1, Total = total });
             });
 
             var actions = new List<Action>();
