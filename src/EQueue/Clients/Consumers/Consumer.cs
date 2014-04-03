@@ -69,7 +69,7 @@ namespace EQueue.Clients.Consumers
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _localOffsetStore = ObjectContainer.Resolve<ILocalOffsetStore>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         #endregion
@@ -251,7 +251,7 @@ namespace EQueue.Clients.Consumers
                         var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, consumedMinQueueOffset);
                         var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
                         _remotingClient.InvokeOneway(remotingRequest, 10000);
-                        _logger.InfoFormat("Sent new queue offset to broker. group:{0}, consumerId:{1}, topic:{2}, queueId:{3}, offset:{4}",
+                        _logger.DebugFormat("Sent new queue offset to broker. group:{0}, consumerId:{1}, topic:{2}, queueId:{3}, offset:{4}",
                             GroupName,
                             Id,
                             pullRequest.MessageQueue.Topic,

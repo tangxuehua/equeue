@@ -25,7 +25,7 @@ namespace EQueue.Broker
             _messageStore = messageStore;
             _offsetManager = offsetManager;
             _scheduleService = scheduleService;
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         public void SetBrokerContrller(BrokerController brokerController)
@@ -137,7 +137,7 @@ namespace EQueue.Broker
                     if (deletedMessageCount > 0)
                     {
                         _totalDeleteMessageCount += deletedMessageCount;
-                        _logger.InfoFormat("Deleted {0} messages of queue{1} of topic [{2}], total deleted:{3}.", deletedMessageCount, queue.QueueId, queue.Topic, _totalDeleteMessageCount);
+                        _logger.DebugFormat("Deleted {0} messages of queue{1} of topic [{2}], total deleted:{3}.", deletedMessageCount, queue.QueueId, queue.Topic, _totalDeleteMessageCount);
                     }
                 }
             }

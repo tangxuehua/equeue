@@ -16,7 +16,7 @@ namespace EQueue.Broker
         public InMemoryOffsetManager()
         {
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         public void Start()

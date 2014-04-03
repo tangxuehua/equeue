@@ -106,7 +106,7 @@ namespace AllInOne
                         var finishedCount = Interlocked.Increment(ref finished);
                         if (finishedCount % 1000 == 0)
                         {
-                            _logger.Info(string.Format("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds));
+                            _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
                         }
                     });
                 }

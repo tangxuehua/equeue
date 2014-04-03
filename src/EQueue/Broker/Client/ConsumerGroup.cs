@@ -19,14 +19,14 @@ namespace EQueue.Broker.Client
         public ConsumerGroup(string groupName)
         {
             _groupName = groupName;
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         public void GetOrAddChannel(ClientChannel clientChannel)
         {
             var currentChannel = _consumerChannelDict.GetOrAdd(clientChannel.Channel.RemotingAddress, key =>
             {
-                _logger.InfoFormat("Added consumer client into consumer group. consumerGroup:{0}, consumerId:{1}, channel:{2}", _groupName, clientChannel.ClientId, clientChannel.Channel);
+                _logger.DebugFormat("Added consumer client into consumer group. consumerGroup:{0}, consumerId:{1}, channel:{2}", _groupName, clientChannel.ClientId, clientChannel.Channel);
                 return clientChannel;
             });
             currentChannel.LastUpdateTime = DateTime.Now;
@@ -50,7 +50,7 @@ namespace EQueue.Broker.Client
             if (_consumerChannelDict.TryRemove(consumerChannelRemotingAddress, out clientChannel))
             {
                 clientChannel.Close();
-                _logger.InfoFormat("Removed consumer client from consumer group. consumerGroup:{0}, consumerInfo:{1}", _groupName, clientChannel);
+                _logger.DebugFormat("Removed consumer client from consumer group. consumerGroup:{0}, consumerInfo:{1}", _groupName, clientChannel);
             }
         }
         public void RemoteNotActiveConsumerChannels()

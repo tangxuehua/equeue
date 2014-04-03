@@ -31,7 +31,7 @@ namespace EQueue.Broker
             Setting = setting ?? new BrokerSetting();
             SuspendedPullRequestManager = new SuspendedPullRequestManager();
             ConsumerManager = new ConsumerManager();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _messageService = ObjectContainer.Resolve<IMessageService>();
             _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
             _producerSocketRemotingServer = new SocketRemotingServer("ProducerRemotingServer", Setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
@@ -85,12 +85,12 @@ namespace EQueue.Broker
             public ProducerSocketEventListener(BrokerController brokerController)
             {
                 _brokerController = brokerController;
-                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             }
 
             public void OnNewSocketAccepted(SocketInfo socketInfo)
             {
-                _logger.InfoFormat("Accepted new producer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
+                _logger.DebugFormat("Accepted new producer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
             }
 
             public void OnSocketReceiveException(SocketInfo socketInfo, Exception exception)
@@ -98,11 +98,11 @@ namespace EQueue.Broker
                 var socketException = exception as SocketException;
                 if (socketException != null)
                 {
-                    _logger.InfoFormat("Producer SocketException, address:{0}, errorCode:{1}", socketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
+                    _logger.DebugFormat("Producer SocketException, address:{0}, errorCode:{1}", socketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
                 }
                 else
                 {
-                    _logger.InfoFormat("Producer Exception, address:{0}, errorMsg:", socketInfo.SocketRemotingEndpointAddress, exception.Message);
+                    _logger.DebugFormat("Producer Exception, address:{0}, errorMsg:", socketInfo.SocketRemotingEndpointAddress, exception.Message);
                 }
             }
         }
@@ -114,12 +114,12 @@ namespace EQueue.Broker
             public ConsumerSocketEventListener(BrokerController brokerController)
             {
                 _brokerController = brokerController;
-                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             }
 
             public void OnNewSocketAccepted(SocketInfo socketInfo)
             {
-                _logger.InfoFormat("Accepted new consumer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
+                _logger.DebugFormat("Accepted new consumer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
             }
 
             public void OnSocketReceiveException(SocketInfo socketInfo, Exception exception)
@@ -128,11 +128,11 @@ namespace EQueue.Broker
                 var socketException = exception as SocketException;
                 if (socketException != null)
                 {
-                    _logger.InfoFormat("Consumer SocketException, address:{0}, errorCode:{1}", socketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
+                    _logger.DebugFormat("Consumer SocketException, address:{0}, errorCode:{1}", socketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
                 }
                 else
                 {
-                    _logger.InfoFormat("Consumer Exception, address:{0}, errorMsg:", socketInfo.SocketRemotingEndpointAddress, exception.Message);
+                    _logger.DebugFormat("Consumer Exception, address:{0}, errorMsg:", socketInfo.SocketRemotingEndpointAddress, exception.Message);
                 }
             }
         }

@@ -74,7 +74,7 @@ namespace EQueue.Clients.Consumers
             });
             _handleMessageWorker = new Worker(HandleMessage);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         #endregion

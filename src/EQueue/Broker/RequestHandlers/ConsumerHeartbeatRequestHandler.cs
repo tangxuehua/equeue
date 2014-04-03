@@ -17,7 +17,7 @@ namespace EQueue.Broker.Processors
         {
             _brokerController = brokerController;
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
