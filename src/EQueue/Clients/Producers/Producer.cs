@@ -8,8 +8,6 @@ using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
-using ECommon.Socketing;
-using ECommon.Utilities;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -28,11 +26,13 @@ namespace EQueue.Clients.Producers
         public string Id { get; private set; }
         public ProducerSetting Setting { get; private set; }
 
-        public Producer() : this(null) { }
-        public Producer(ProducerSetting setting) : this(null, setting) { }
-        public Producer(string name, ProducerSetting setting) : this(setting, string.Format("{0}@{1}@{2}", SocketUtils.GetLocalIPV4(), string.IsNullOrEmpty(name) ? typeof(Producer).Name : name, ObjectId.GenerateNewId())) { }
-        public Producer(ProducerSetting setting, string id)
+        public Producer(string id) : this(id, null) { }
+        public Producer(string id, ProducerSetting setting)
         {
+            if (id == null)
+            {
+                throw new ArgumentNullException("id");
+            }
             Id = id;
             Setting = setting ?? new ProducerSetting();
             _topicQueueCountDict = new ConcurrentDictionary<string, int>();
@@ -41,14 +41,14 @@ namespace EQueue.Clients.Producers
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         public Producer Start()
         {
             _remotingClient.Start();
             _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
-            _logger.InfoFormat("[{0}] started.", Id);
+            _logger.InfoFormat("Started, producerId:{0}", Id);
             return this;
         }
         public Producer Shutdown()
@@ -58,7 +58,7 @@ namespace EQueue.Clients.Producers
             {
                 _scheduleService.ShutdownTask(taskId);
             }
-            _logger.InfoFormat("[{0}] shutdown.", Id);
+            _logger.InfoFormat("Shutdown, producerId:{0}", Id);
             return this;
         }
         public SendResult Send(Message message, object arg)
@@ -66,7 +66,7 @@ namespace EQueue.Clients.Producers
             var queueCount = GetTopicQueueCount(message.Topic);
             if (queueCount == 0)
             {
-                throw new Exception(string.Format("No available queue for topic [{0}].", message.Topic));
+                throw new Exception(string.Format("No available queue for topic [{0}], producerId:{1}.", message.Topic, Id));
             }
             var queueId = _queueSelector.SelectQueueId(queueCount, message, arg);
             var remotingRequest = BuildSendMessageRequest(message, queueId);
@@ -80,7 +80,7 @@ namespace EQueue.Clients.Producers
             var queueCount = GetTopicQueueCount(message.Topic);
             if (queueCount == 0)
             {
-                throw new Exception(string.Format("No available queue for topic [{0}].", message.Topic));
+                throw new Exception(string.Format("No available queue for topic [{0}], producerId:{1}.", message.Topic, Id));
             }
             var queueId = _queueSelector.SelectQueueId(queueCount, message, arg);
             var remotingRequest = BuildSendMessageRequest(message, queueId);
@@ -134,12 +134,12 @@ namespace EQueue.Clients.Producers
                 if (topicQueueCountFromServer != topicQueueCountOfLocal)
                 {
                     _topicQueueCountDict[topic] = topicQueueCountFromServer;
-                    _logger.DebugFormat("[{0}]: topic queue count updated, topic:{1}, queueCount:{2}", Id, topic, topicQueueCountFromServer);
+                    _logger.DebugFormat("Queue count of topic updated, producerId:{0}, topic:{1}, queueCount:{2}", Id, topic, topicQueueCountFromServer);
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("[{0}]: UpdateTopicQueueCount failed, topic:{1}", Id, topic), ex);
+                _logger.Error(string.Format("UpdateTopicQueueCount has exception, producerId:{0}, topic:{1}", Id, topic), ex);
             }
         }
         private int GetTopicQueueCountFromBroker(string topic)
@@ -152,7 +152,7 @@ namespace EQueue.Clients.Producers
             }
             else
             {
-                throw new Exception(string.Format("[{0}]: GetTopicQueueCountFromBroker has exception, remoting response code:{1}", Id, remotingResponse.Code));
+                throw new Exception(string.Format("GetTopicQueueCountFromBroker has exception, producerId:{0}, topic:{1}, remoting response code:{2}", Id, topic, remotingResponse.Code));
             }
         }
         private RemotingRequest BuildSendMessageRequest(Message message, int queueId)

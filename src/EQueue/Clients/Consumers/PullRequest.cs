@@ -68,13 +68,13 @@ namespace EQueue.Clients.Consumers
                 {
                     if (!_stoped)
                     {
-                        _logger.Error(string.Format("[{0}]: PullMessage has unknown exception. PullRequest: {1}.", ConsumerId, this), ex);
+                        _logger.Error(string.Format("PullMessage has unknown exception, pullRequest:{0}.", this), ex);
                     }
                 }
             });
             _handleMessageWorker = new Worker(HandleMessage);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().Name);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         #endregion
@@ -94,7 +94,7 @@ namespace EQueue.Clients.Consumers
 
         public override string ToString()
         {
-            return string.Format("[ConsumerId={0}, GroupName={1}, MessageQueue={2}, QueueOffset={3}, Stoped={4}]", ConsumerId, GroupName, MessageQueue, _queueOffset, _stoped);
+            return string.Format("[ConsumerId={0}, Group={1}, MessageQueue={2}, QueueOffset={3}, Stoped={4}]", ConsumerId, GroupName, MessageQueue, _queueOffset, _stoped);
         }
 
         private void PullMessage()
@@ -104,9 +104,9 @@ namespace EQueue.Clients.Consumers
             if (messageCount >= _setting.PullThresholdForQueue)
             {
                 Thread.Sleep(_setting.PullTimeDelayMillsWhenFlowControl);
-                if ((_flowControlTimes++ % 3000) == 0)
+                if ((_flowControlTimes++ % 1000) == 0)
                 {
-                    _logger.WarnFormat("[{0}]: the consumer message buffer is full, so do flow control, [messageCount={1},pullRequest={2},flowControlTimes={3}]", ConsumerId, messageCount, this, _flowControlTimes);
+                    _logger.WarnFormat("Detect that the message local process queue has too many messages, so do flow control. pullRequest={0}, queueMessageCount={1}, flowControlTimes={2}", this, messageCount, _flowControlTimes);
                 }
             }
 
@@ -129,7 +129,7 @@ namespace EQueue.Clients.Consumers
             {
                 if (!_stoped)
                 {
-                    _logger.Error(string.Format("[{0}]: PullMessage has exception. RemotingRequest: {1}, PullRequest: {2}.", ConsumerId, remotingRequest, this), ex);
+                    _logger.Error(string.Format("PullMessage has exception, pullRequest:{0}, remotingRequest:{1}.", this, remotingRequest), ex);
                 }
                 return;
             }
@@ -163,12 +163,13 @@ namespace EQueue.Clients.Consumers
                 }
                 if (!_handlingMessageDict.TryAdd(wrappedMessage.QueueMessage.MessageOffset, wrappedMessage))
                 {
-                    _logger.DebugFormat("Ignore to handle message [offset={0}, topic={1}, queueId={2}, queueOffset={3}, consumerId={4}], as it is being handling.",
+                    _logger.DebugFormat("Ignore to handle message [messageOffset={0}, topic={1}, queueId={2}, queueOffset={3}, consumerId={4}, group={5}], as it is being handling.",
                         wrappedMessage.QueueMessage.MessageOffset,
                         wrappedMessage.QueueMessage.Topic,
                         wrappedMessage.QueueMessage.QueueId,
                         wrappedMessage.QueueMessage.QueueOffset,
-                        ConsumerId);
+                        ConsumerId,
+                        GroupName);
                     return;
                 }
                 try
@@ -179,7 +180,15 @@ namespace EQueue.Clients.Consumers
                 {
                     //TODO，目前，对于消费失败（遇到异常）的消息，我们仅仅记录错误日志，然后仍将该消息移除，即让消费位置（滑动门）可以往前移动；
                     //以后，这里需要将消费失败的消息发回到Broker上的重试队列进行重试。
-                    _logger.Error("Handle message has exception. Currently, we still take this message as consumed.", ex);
+                    _logger.Error(
+                        string.Format("Handle message has exception. Currently, we still take this message as consumed. Message consume context: [messageOffset={0}, topic={1}, queueId={2}, queueOffset={3}, consumerId={4}, group={5}]",
+                        wrappedMessage.QueueMessage.MessageOffset,
+                        wrappedMessage.QueueMessage.Topic,
+                        wrappedMessage.QueueMessage.QueueId,
+                        wrappedMessage.QueueMessage.QueueOffset,
+                        ConsumerId,
+                        GroupName),
+                        ex);
                     RemoveMessage(wrappedMessage.QueueMessage.MessageOffset);
                 }
             };
