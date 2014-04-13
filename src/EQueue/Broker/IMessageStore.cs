@@ -1,12 +1,14 @@
-﻿using EQueue.Protocols;
+﻿using System;
+using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
     public interface IMessageStore
     {
-        QueueMessage StoreMessage(Message message, int queueId, long queueOffset);
+        long StoreMessage(MessageInfo messageInfo);
         QueueMessage GetMessage(long offset);
         bool RemoveMessage(long offset);
-        void Recover();
+        void Start();
+        void Shutdown();
     }
 }

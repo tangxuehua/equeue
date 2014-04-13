@@ -34,6 +34,7 @@ namespace EQueue.Broker
         }
         public void Start()
         {
+            _messageStore.Start();
             _deleteConsumedMessageTaskId = _scheduleService.ScheduleTask(
                 DeleteConsumedMessage,
                 _brokerController.Setting.DeleteMessageInterval,
@@ -41,6 +42,7 @@ namespace EQueue.Broker
         }
         public void Shutdown()
         {
+            _messageStore.Shutdown();
             _scheduleService.ShutdownTask(_deleteConsumedMessageTaskId);
         }
         public MessageStoreResult StoreMessage(Message message, int queueId)
@@ -53,9 +55,8 @@ namespace EQueue.Broker
             }
             var queue = queues[queueId];
             var queueOffset = queue.IncrementCurrentOffset();
-            var queueMessage = _messageStore.StoreMessage(message, queue.QueueId, queueOffset);
-            queue.SetQueueMessage(queueOffset, queueMessage);
-            return new MessageStoreResult(queueMessage.MessageOffset, queueMessage.QueueId, queueMessage.QueueOffset);
+            var messageOffset = _messageStore.StoreMessage(new MessageInfo(queue, queueOffset, message));
+            return new MessageStoreResult(messageOffset, queue.QueueId, queueOffset);
         }
         public IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
         {
@@ -114,7 +115,6 @@ namespace EQueue.Broker
                 return queues;
             });
         }
-
         private void DeleteConsumedMessage()
         {
             foreach (var topicQueues in _topicQueueDict.Values)

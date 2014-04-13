@@ -10,13 +10,22 @@ namespace EQueue.Broker
         private ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
         private long _currentOffset = -1;
 
-        public QueueMessage StoreMessage(Message message, int queueId, long queueOffset)
+        public long StoreMessage(MessageInfo messageInfo)
         {
             var offset = GetNextOffset();
-            var queueMessage = new QueueMessage(message.Topic, message.Body, offset, queueId, queueOffset, DateTime.Now);
+            var queueMessage = new QueueMessage(
+                messageInfo.Message.Topic,
+                messageInfo.Message.Body,
+                offset,
+                messageInfo.Queue.QueueId,
+                messageInfo.QueueOffset, DateTime.Now);
             _messageDict[offset] = queueMessage;
-            return queueMessage;
+            messageInfo.Queue.SetQueueMessage(queueMessage.QueueOffset, queueMessage);
+            return offset;
         }
+
+        public void Start() { }
+        public void Shutdown() { }
         public QueueMessage GetMessage(long offset)
         {
             QueueMessage queueMessage;
@@ -31,7 +40,6 @@ namespace EQueue.Broker
             QueueMessage queueMessage;
             return _messageDict.TryRemove(offset, out queueMessage);
         }
-        public void Recover() { }
 
         private long GetNextOffset()
         {

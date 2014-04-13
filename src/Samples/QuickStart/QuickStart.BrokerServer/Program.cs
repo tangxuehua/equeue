@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Text;
 using ECommon.Autofac;
 using ECommon.Configurations;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using EQueue.Broker;
 using EQueue.Configurations;
-using EQueue.Protocols;
 
 namespace QuickStart.BrokerServer
 {
