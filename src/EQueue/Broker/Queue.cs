@@ -35,9 +35,9 @@ namespace EQueue.Broker
         {
             return Interlocked.Increment(ref _currentOffset);
         }
-        public void SetQueueMessage(long queueOffset, QueueMessage queueMessage)
+        public void AddQueueItem(QueueMessage queueMessage)
         {
-            _queueMessageDict[queueOffset] = new QueueItem(queueMessage.MessageOffset, queueMessage.StoredTime);
+            _queueMessageDict[queueMessage.QueueOffset] = new QueueItem(queueMessage.MessageOffset, queueMessage.StoredTime);
         }
         public QueueItem GetQueueItem(long queueOffset)
         {

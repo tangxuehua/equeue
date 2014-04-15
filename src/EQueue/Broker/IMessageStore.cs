@@ -5,10 +5,10 @@ namespace EQueue.Broker
 {
     public interface IMessageStore
     {
-        long StoreMessage(MessageInfo messageInfo);
-        QueueMessage GetMessage(long offset);
-        bool RemoveMessage(long offset);
         void Start();
         void Shutdown();
+        QueueMessage StoreMessage(int queueId, long queueOffset, Message message);
+        QueueMessage GetMessage(long offset);
+        bool RemoveMessage(long offset);
     }
 }
