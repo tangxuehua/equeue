@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading;
@@ -12,16 +13,18 @@ namespace EQueue.Broker
 {
     public class SqlServerMessageStore : IMessageStore
     {
-        private readonly BlockingCollection<QueueMessage> _messageBufferQueue = new BlockingCollection<QueueMessage>();
-        private readonly ConcurrentDictionary<long, QueueMessage> _messageCacheDict = new ConcurrentDictionary<long, QueueMessage>();
+        private readonly BlockingCollection<QueueMessage> _messageQueue = new BlockingCollection<QueueMessage>();
+        private readonly ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
         private long _currentOffset = -1;
         private int _persistMessageTaskId;
-        private int _deleteMessageTaskId;
         private SqlServerMessageStoreSetting _setting;
         private DataTable _messageDataTable;
         private string _deleteMessageSQLFormat;
+        private string _selectAllMessageSQL;
+
+        public IEnumerable<QueueMessage> Messages { get { return _messageDict.Values; } }
 
         public SqlServerMessageStore(SqlServerMessageStoreSetting setting)
         {
@@ -29,51 +32,85 @@ namespace EQueue.Broker
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _messageDataTable = BuildMessageDataTable();
-            _deleteMessageSQLFormat = "delete from [" + _setting.MessageTable + "] where stored_time < '{0}'";
+            _deleteMessageSQLFormat = "delete from [" + _setting.MessageTable + "] where topic = '{0}' and queue_id = {1} and queue_offset < {2}";
+            _selectAllMessageSQL = "select * from [" + _setting.MessageTable + "] order by id asc";
         }
 
+        public void Recover()
+        {
+            RecoverAllMessages();
+        }
         public void Start()
         {
             _persistMessageTaskId = _scheduleService.ScheduleTask(PersistMessage, _setting.CommitMessageInterval, _setting.CommitMessageInterval);
-            _deleteMessageTaskId = _scheduleService.ScheduleTask(DeleteMessage, _setting.DeleteMessageInterval, _setting.DeleteMessageInterval);
         }
         public void Shutdown()
         {
             _scheduleService.ShutdownTask(_persistMessageTaskId);
-            _scheduleService.ShutdownTask(_deleteMessageTaskId);
         }
         public QueueMessage StoreMessage(int queueId, long queueOffset, Message message)
         {
             var nextOffset = GetNextOffset();
             var queueMessage = new QueueMessage(message.Topic, message.Body, nextOffset, queueId, queueOffset, DateTime.Now);
-            _messageBufferQueue.Add(queueMessage);
-            _messageCacheDict[nextOffset] = queueMessage;
+            _messageQueue.Add(queueMessage);
+            _messageDict[nextOffset] = queueMessage;
             return queueMessage;
         }
         public QueueMessage GetMessage(long offset)
         {
             QueueMessage queueMessage;
-            if (_messageCacheDict.TryGetValue(offset, out queueMessage))
+            if (_messageDict.TryGetValue(offset, out queueMessage))
             {
                 return queueMessage;
             }
             return null;
         }
-        public bool RemoveMessage(long offset)
+        public void RemoveMessage(long messageOffset)
         {
             QueueMessage queueMessage;
-            return _messageCacheDict.TryRemove(offset, out queueMessage);
+            _messageDict.TryRemove(messageOffset, out queueMessage);
         }
-
+        private void RecoverAllMessages()
+        {
+            using (var connection = new SqlConnection(_setting.ConnectionString))
+            {
+                connection.Open();
+                using (var command = new SqlCommand(_selectAllMessageSQL, connection))
+                {
+                    var maxMessageOffset = -1L;
+                    var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        var id = (long)reader["id"];
+                        var topic = (string)reader["topic"];
+                        var queueId = (int)reader["queue_id"];
+                        var queueOffset = (long)reader["queue_offset"];
+                        var body = (byte[])reader["body"];
+                        var storedTime = (DateTime)reader["stored_time"];
+                        _messageDict[id] = new QueueMessage(topic, body, id, queueId, queueOffset, storedTime);
+                        maxMessageOffset = id;
+                    }
+                    if (maxMessageOffset >= 0)
+                    {
+                        _currentOffset = maxMessageOffset;
+                    }
+                    _logger.InfoFormat("{0} messages recovered from sql server, current message offset:{1}", _messageDict.Count, _currentOffset);
+                }
+            }
+        }
         private void PersistMessage()
         {
             _messageDataTable.Rows.Clear();
-            var bufferQueueMessageCount = _messageBufferQueue.Count;
+            var bufferQueueMessageCount = _messageQueue.Count;
             var fetchCount = bufferQueueMessageCount < _setting.MessageCommitMaxCount ? bufferQueueMessageCount : _setting.MessageCommitMaxCount;
+            if (fetchCount == 0)
+            {
+                return;
+            }
 
             for (var index = 0; index < fetchCount; index++)
             {
-                var message = _messageBufferQueue.Take();
+                var message = _messageQueue.Take();
                 var row = _messageDataTable.NewRow();
                 row["id"] = message.MessageOffset;
                 row["topic"] = message.Topic;
@@ -106,6 +143,7 @@ namespace EQueue.Broker
                     try
                     {
                         sqlBulkCopy.WriteToServer(messageDataTable);
+                        _logger.DebugFormat("Bulk copied {0} message to sql server.", messageDataTable.Rows.Count);
                     }
                     catch (Exception ex)
                     {
@@ -115,20 +153,25 @@ namespace EQueue.Broker
                 }
             }
         }
-        private void DeleteMessage()
+        public void DeleteMessages(string topic, int queueId, long maxQueueOffset)
         {
             if (!IsTimeToDelete())
             {
                 return;
             }
-            var current = DateTime.Now;
-            var deleteMessageMaxTime = current;
-            var storedTimeOfCurrentExistingMinMessage = GetStoredTimeOfCurrentExistingMinMessage();
-            if (storedTimeOfCurrentExistingMinMessage != null && storedTimeOfCurrentExistingMinMessage.Value < current)
+
+            using (var connection = new SqlConnection(_setting.ConnectionString))
             {
-                deleteMessageMaxTime = storedTimeOfCurrentExistingMinMessage.Value;
+                connection.Open();
+                using (var command = new SqlCommand(string.Format(_deleteMessageSQLFormat, topic, queueId, maxQueueOffset), connection))
+                {
+                    var deletedMessageCount = command.ExecuteNonQuery();
+                    if (deletedMessageCount > 0)
+                    {
+                        _logger.DebugFormat("Deleted {0} messages from sql server, topic={1}, queueId={2}, queueOffset<{3}.", deletedMessageCount, topic, queueId, maxQueueOffset);
+                    }
+                }
             }
-            DeleteMessageBeforeTime(deleteMessageMaxTime);
         }
         private DataTable BuildMessageDataTable()
         {
@@ -145,53 +188,12 @@ namespace EQueue.Broker
         {
             return Interlocked.Increment(ref _currentOffset);
         }
-        private void DeleteMessageBeforeTime(DateTime deleteMessageMaxTime)
-        {
-            var sql = string.Format(_deleteMessageSQLFormat, deleteMessageMaxTime);
-            using (var connection = new SqlConnection(_setting.ConnectionString))
-            {
-                connection.Open();
-                using (var command = new SqlCommand(sql, connection))
-                {
-                    var deletedMessageCount = command.ExecuteNonQuery();
-                    if (deletedMessageCount > 0)
-                    {
-                        _logger.DebugFormat("Deleted {0} message from sql server, delete message max time:{1}", deletedMessageCount, deleteMessageMaxTime);
-                    }
-                }
-            }
-        }
-        private DateTime? GetStoredTimeOfCurrentExistingMinMessage()
-        {
-            var currentExistingMinOffset = GetCurrentExistingMinOffset();
-            if (currentExistingMinOffset != null)
-            {
-                var currentExistingMinMessage = GetMessage(currentExistingMinOffset.Value);
-                if (currentExistingMinMessage != null)
-                {
-                    return currentExistingMinMessage.StoredTime;
-                }
-            }
-            return null;
-        }
-        private long? GetCurrentExistingMinOffset()
-        {
-            long? minOffset = null;
-            foreach (var key in _messageCacheDict.Keys)
-            {
-                if (minOffset == null)
-                {
-                    minOffset = key;
-                }
-                else if (key < minOffset.Value)
-                {
-                    minOffset = key;
-                }
-            }
-            return minOffset;
-        }
         private bool IsTimeToDelete()
         {
+            if (_setting.DeleteMessageHourOfDay == -1)
+            {
+                return true;
+            }
             return DateTime.Now.Hour == _setting.DeleteMessageHourOfDay;
         }
     }

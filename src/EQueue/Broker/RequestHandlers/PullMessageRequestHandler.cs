@@ -32,11 +32,21 @@ namespace EQueue.Broker.Processors
             var pullMessageRequest = _binarySerializer.Deserialize<PullMessageRequest>(request.Body);
             if (pullMessageRequest.QueueOffset < 0)
             {
-                var queueOffset = _offsetManager.GetQueueOffset(
+                var lastConsumedQueueOffset = _offsetManager.GetQueueOffset(
                     pullMessageRequest.MessageQueue.Topic,
                     pullMessageRequest.MessageQueue.QueueId,
                     pullMessageRequest.ConsumerGroup);
-                var response = new PullMessageResponse(new QueueMessage[0], queueOffset + 1);
+                var queueMinOffset = _messageService.GetQueueMinOffset(
+                    pullMessageRequest.MessageQueue.Topic,
+                    pullMessageRequest.MessageQueue.QueueId);
+
+                var nextQueueOffset = lastConsumedQueueOffset + 1;
+                if (nextQueueOffset < queueMinOffset)
+                {
+                    nextQueueOffset = queueMinOffset;
+                }
+
+                var response = new PullMessageResponse(new QueueMessage[0], nextQueueOffset);
                 var responseData = _binarySerializer.Serialize(response);
                 return new RemotingResponse((int)PullStatus.NextOffsetReset, request.Sequence, responseData);
             }

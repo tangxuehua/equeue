@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using EQueue.Protocols;
 
@@ -10,6 +11,8 @@ namespace EQueue.Broker
         private ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
         private long _currentOffset = -1;
 
+        public IEnumerable<QueueMessage> Messages { get { return _messageDict.Values; } }
+
         public QueueMessage StoreMessage(int queueId, long queueOffset, Message message)
         {
             var nextOffset = GetNextOffset();
@@ -18,6 +21,7 @@ namespace EQueue.Broker
             return queueMessage;
         }
 
+        public void Recover() { }
         public void Start() { }
         public void Shutdown() { }
         public QueueMessage GetMessage(long offset)
@@ -29,10 +33,13 @@ namespace EQueue.Broker
             }
             return null;
         }
-        public bool RemoveMessage(long offset)
+        public void RemoveMessage(long messageOffset)
         {
             QueueMessage queueMessage;
-            return _messageDict.TryRemove(offset, out queueMessage);
+            _messageDict.TryRemove(messageOffset, out queueMessage);
+        }
+        public void DeleteMessages(string topic, int queueId, long maxQueueOffset)
+        {
         }
 
         private long GetNextOffset()

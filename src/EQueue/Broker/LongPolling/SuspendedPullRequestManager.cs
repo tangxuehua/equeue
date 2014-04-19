@@ -68,7 +68,7 @@ namespace EQueue.Broker.LongPolling
                 var items = entry.Key.Split(new string[] { Separator }, StringSplitOptions.None);
                 var topic = items[0];
                 var queueId = int.Parse(items[1]);
-                var queueOffset = _messageService.GetQueueOffset(topic, queueId);
+                var queueOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
                 NotifyMessageArrived(entry.Key, queueOffset);
             }
         }

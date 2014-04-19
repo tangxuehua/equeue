@@ -22,13 +22,19 @@ namespace QuickStart.BrokerServer
 
         static void InitializeEQueue()
         {
+            var messageStoreSetting = new SqlServerMessageStoreSetting
+            {
+                ConnectionString = "Data Source=(local);Initial Catalog=equeue;Integrated Security=True;",
+                DeleteMessageHourOfDay = -1
+            };
             Configuration
                 .Create()
                 .UseAutofac()
                 .RegisterCommonComponents()
                 .UseLog4Net()
                 .UseJsonNet()
-                .RegisterEQueueComponents();
+                .RegisterEQueueComponents()
+                .UseSqlServerMessageStore(messageStoreSetting);
         }
     }
 }

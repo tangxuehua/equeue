@@ -24,8 +24,8 @@ namespace QuickStart.ConsumerClient
 
             var messageHandler = new MessageHandler();
             var consumerSetting = new ConsumerSetting { HeartbeatBrokerInterval = 1000, UpdateTopicQueueCountInterval = 1000, RebalanceInterval = 1000 };
-            var consumer1 = new Consumer("Consumer1", "group1", consumerSetting).Subscribe("SampleTopic1").Subscribe("SampleTopic2").Start(messageHandler);
-            var consumer2 = new Consumer("Consumer2", "group1", consumerSetting).Subscribe("SampleTopic1").Subscribe("SampleTopic2").Start(messageHandler);
+            var consumer1 = new Consumer("Consumer1", "group1", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
+            var consumer2 = new Consumer("Consumer2", "group1", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
 
             _logger.Info("Start consumer load balance, please wait for a moment.");
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
@@ -34,7 +34,7 @@ namespace QuickStart.ConsumerClient
             {
                 var c1AllocatedQueueIds = consumer1.GetCurrentQueues().Select(x => x.QueueId);
                 var c2AllocatedQueueIds = consumer2.GetCurrentQueues().Select(x => x.QueueId);
-                if (c1AllocatedQueueIds.Count() == 4 && c2AllocatedQueueIds.Count() == 4)
+                if (c1AllocatedQueueIds.Count() == 2 && c2AllocatedQueueIds.Count() == 2)
                 {
                     _logger.Info(string.Format("Consumer load balance finished. Queue allocation result: c1:{0}, c2:{1}",
                         string.Join(",", c1AllocatedQueueIds),
@@ -77,7 +77,7 @@ namespace QuickStart.ConsumerClient
                     {
                         _watch = Stopwatch.StartNew();
                     }
-                    else if (count % 1000 == 0)
+                    else if (count % 1000 == 0 || (count - 4) % 100000 == 0)
                     {
                         _logger.InfoFormat("Total handled {0} messages, time spent:{1}", count, _watch.ElapsedMilliseconds);
                     }
