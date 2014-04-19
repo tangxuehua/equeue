@@ -79,10 +79,6 @@ namespace EQueue.Broker
                             messages.Add(message);
                         }
                     }
-                    else
-                    {
-                        break;
-                    }
                     currentQueueOffset++;
                 }
                 return messages;
