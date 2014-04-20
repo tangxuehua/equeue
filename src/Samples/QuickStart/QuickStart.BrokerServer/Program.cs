@@ -22,10 +22,15 @@ namespace QuickStart.BrokerServer
 
         static void InitializeEQueue()
         {
+            var connectionString = "Data Source=(local);Initial Catalog=equeue;Integrated Security=True;Connect Timeout=30;Min Pool Size=10;Max Pool Size=100";
             var messageStoreSetting = new SqlServerMessageStoreSetting
             {
-                ConnectionString = "Data Source=(local);Initial Catalog=equeue;Integrated Security=True;",
+                ConnectionString = connectionString,
                 DeleteMessageHourOfDay = -1
+            };
+            var offsetManagerSetting = new SqlServerOffsetManagerSetting
+            {
+                ConnectionString = connectionString
             };
             Configuration
                 .Create()
@@ -34,7 +39,8 @@ namespace QuickStart.BrokerServer
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterEQueueComponents()
-                .UseSqlServerMessageStore(messageStoreSetting);
+                .UseSqlServerMessageStore(messageStoreSetting)
+                .UseSqlServerOffsetManager(offsetManagerSetting);
         }
     }
 }

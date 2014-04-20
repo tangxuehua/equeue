@@ -22,5 +22,10 @@ namespace EQueue.Configurations
             configuration.SetDefault<IMessageStore, SqlServerMessageStore>(new SqlServerMessageStore(setting));
             return configuration;
         }
+        public static Configuration UseSqlServerOffsetManager(this Configuration configuration, SqlServerOffsetManagerSetting setting)
+        {
+            configuration.SetDefault<IOffsetManager, SqlServerOffsetManager>(new SqlServerOffsetManager(setting));
+            return configuration;
+        }
     }
 }

@@ -15,7 +15,6 @@ namespace EQueue.Broker
     {
         private readonly ILogger _logger;
         private readonly IMessageService _messageService;
-        private readonly IOffsetManager _offsetManager;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
         private readonly ClientManager _clientManager;
@@ -33,7 +32,6 @@ namespace EQueue.Broker
             ConsumerManager = new ConsumerManager();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
             _producerSocketRemotingServer = new SocketRemotingServer("ProducerRemotingServer", Setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
             _consumerSocketRemotingServer = new SocketRemotingServer("ConsumerRemotingServer", Setting.ConsumerSocketSetting, new ConsumerSocketEventListener(this));
             _clientManager = new ClientManager(this);
@@ -56,7 +54,6 @@ namespace EQueue.Broker
             _producerSocketRemotingServer.Start();
             _consumerSocketRemotingServer.Start();
             _clientManager.Start();
-            _offsetManager.Start();
             _messageService.Start();
             SuspendedPullRequestManager.Start();
             _logger.InfoFormat("Broker started, producer:[{0}:{1}], consumer:[{2}:{3}]",
@@ -71,7 +68,6 @@ namespace EQueue.Broker
             _producerSocketRemotingServer.Shutdown();
             _consumerSocketRemotingServer.Shutdown();
             _clientManager.Shutdown();
-            _offsetManager.Shutdown();
             _messageService.Shutdown();
             SuspendedPullRequestManager.Shutdown();
             return this;

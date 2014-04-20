@@ -94,7 +94,7 @@ namespace EQueue.Broker
                     {
                         _currentOffset = maxMessageOffset;
                     }
-                    _logger.InfoFormat("{0} messages recovered from sql server, current message offset:{1}", _messageDict.Count, _currentOffset);
+                    _logger.InfoFormat("{0} messages recovered, current message offset:{1}", _messageDict.Count, _currentOffset);
                 }
             }
         }
@@ -143,7 +143,7 @@ namespace EQueue.Broker
                     try
                     {
                         sqlBulkCopy.WriteToServer(messageDataTable);
-                        _logger.DebugFormat("Bulk copied {0} message to sql server.", messageDataTable.Rows.Count);
+                        _logger.DebugFormat("Bulk copied {0} message to db.", messageDataTable.Rows.Count);
                     }
                     catch (Exception ex)
                     {
@@ -168,7 +168,7 @@ namespace EQueue.Broker
                     var deletedMessageCount = command.ExecuteNonQuery();
                     if (deletedMessageCount > 0)
                     {
-                        _logger.DebugFormat("Deleted {0} messages from sql server, topic={1}, queueId={2}, queueOffset<{3}.", deletedMessageCount, topic, queueId, maxQueueOffset);
+                        _logger.DebugFormat("Deleted {0} messages, topic={1}, queueId={2}, queueOffset<{3}.", deletedMessageCount, topic, queueId, maxQueueOffset);
                     }
                 }
             }

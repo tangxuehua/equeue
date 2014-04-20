@@ -43,6 +43,8 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Broker\SqlServerOffsetManager.cs" />
+    <Compile Include="Broker\SqlServerOffsetManagerSetting.cs" />
     <Compile Include="Broker\SqlServerMessageStoreSetting.cs" />
     <Compile Include="Broker\BrokerSetting.cs" />
     <Compile Include="Broker\Client\ClientChannel.cs" />

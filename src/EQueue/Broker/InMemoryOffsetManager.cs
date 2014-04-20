@@ -19,6 +19,7 @@ namespace EQueue.Broker
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
+        public void Recover() { }
         public void Start()
         {
             _printQueueOffsetTaskId = _scheduleService.ScheduleTask(PrintQueueOffset, 5000, 5000);
