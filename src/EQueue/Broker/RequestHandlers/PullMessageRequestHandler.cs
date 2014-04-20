@@ -36,14 +36,14 @@ namespace EQueue.Broker.Processors
                     pullMessageRequest.MessageQueue.Topic,
                     pullMessageRequest.MessageQueue.QueueId,
                     pullMessageRequest.ConsumerGroup);
-                var queueMinOffset = _messageService.GetQueueMinOffset(
+                var queueCurrentOffset = _messageService.GetQueueCurrentOffset(
                     pullMessageRequest.MessageQueue.Topic,
                     pullMessageRequest.MessageQueue.QueueId);
 
                 var nextQueueOffset = lastConsumedQueueOffset + 1;
-                if (nextQueueOffset < queueMinOffset)
+                if (lastConsumedQueueOffset == -1)
                 {
-                    nextQueueOffset = queueMinOffset;
+                    nextQueueOffset = queueCurrentOffset + 1;
                 }
 
                 var response = new PullMessageResponse(new QueueMessage[0], nextQueueOffset);

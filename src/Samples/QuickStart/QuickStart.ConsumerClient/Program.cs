@@ -77,7 +77,7 @@ namespace QuickStart.ConsumerClient
                     {
                         _watch = Stopwatch.StartNew();
                     }
-                    else if (count % 1000 == 0 || (count - 4) % 100000 == 0)
+                    else if (count % 1000 == 0 || (count - 4) % 50000 == 0)
                     {
                         _logger.InfoFormat("Total handled {0} messages, time spent:{1}", count, _watch.ElapsedMilliseconds);
                     }
