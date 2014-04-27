@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using System.Threading.Tasks;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.Scheduling;
 
 namespace EQueue.Broker.LongPolling
@@ -68,7 +68,7 @@ namespace EQueue.Broker.LongPolling
                 var items = entry.Key.Split(new string[] { Separator }, StringSplitOptions.None);
                 var topic = items[0];
                 var queueId = int.Parse(items[1]);
-                var queueOffset = _messageService.GetQueueOffset(topic, queueId);
+                var queueOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
                 NotifyMessageArrived(entry.Key, queueOffset);
             }
         }

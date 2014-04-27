@@ -2,6 +2,7 @@
 {
     public interface IOffsetManager
     {
+        void Recover();
         void Start();
         void Shutdown();
         void UpdateQueueOffset(string topic, int queueId, long offset, string group);

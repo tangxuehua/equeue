@@ -1,4 +1,4 @@
-﻿using ECommon.IoC;
+﻿using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Protocols;

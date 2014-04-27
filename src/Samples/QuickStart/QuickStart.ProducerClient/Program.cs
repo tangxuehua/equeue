@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Autofac;
 using ECommon.Configurations;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;
@@ -31,8 +31,7 @@ namespace QuickStart.ProducerClient
         static void SendMessage(Producer producer, IndexEntry indexEntry)
         {
             var message = "message" + Interlocked.Increment(ref messageIndex);
-            var topic = indexEntry.Index % 2 == 0 ? "SampleTopic1" : "SampleTopic2";
-            producer.SendAsync(new Message(topic, Encoding.UTF8.GetBytes(message)), indexEntry.Index.ToString()).ContinueWith(sendTask =>
+            producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), indexEntry.Index.ToString()).ContinueWith(sendTask =>
             {
                 var finishedCount = Interlocked.Increment(ref finished);
                 if (finishedCount % 1000 == 0)
@@ -80,7 +79,8 @@ namespace QuickStart.ProducerClient
                 .RegisterCommonComponents()
                 .UseLog4Net()
                 .UseJsonNet()
-                .RegisterEQueueComponents();
+                .RegisterEQueueComponents()
+                .SetDefault<IQueueSelector, QueueAverageSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create("Program");
         }
     }

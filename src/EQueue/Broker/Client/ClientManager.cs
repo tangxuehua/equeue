@@ -1,4 +1,4 @@
-﻿using ECommon.IoC;
+﻿using ECommon.Components;
 using ECommon.Scheduling;
 
 namespace EQueue.Broker.Client

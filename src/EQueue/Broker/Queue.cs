@@ -35,9 +35,37 @@ namespace EQueue.Broker
         {
             return Interlocked.Increment(ref _currentOffset);
         }
-        public void SetQueueMessage(long queueOffset, QueueMessage queueMessage)
+        public void RecoverQueueItem(QueueMessage queueMessage)
         {
-            _queueMessageDict[queueOffset] = new QueueItem(queueMessage.MessageOffset, queueMessage.StoredTime);
+            _queueMessageDict[queueMessage.QueueOffset] = new QueueItem(queueMessage.MessageOffset, queueMessage.StoredTime);
+            if (queueMessage.QueueOffset > _currentOffset)
+            {
+                _currentOffset = queueMessage.QueueOffset;
+            }
+            if (_maxRemovedOffset == -1)
+            {
+                _maxRemovedOffset = queueMessage.QueueOffset - 1;
+            }
+        }
+        public void AddQueueItem(QueueMessage queueMessage)
+        {
+            _queueMessageDict[queueMessage.QueueOffset] = new QueueItem(queueMessage.MessageOffset, queueMessage.StoredTime);
+        }
+        public long? GetMinQueueOffset()
+        {
+            long? minOffset = null;
+            foreach (var key in _queueMessageDict.Keys)
+            {
+                if (minOffset == null)
+                {
+                    minOffset = key;
+                }
+                else if (key < minOffset.Value)
+                {
+                    minOffset = key;
+                }
+            }
+            return minOffset;
         }
         public QueueItem GetQueueItem(long queueOffset)
         {
