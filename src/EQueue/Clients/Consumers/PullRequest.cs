@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Extensions;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using ECommon.Autofac;
 using ECommon.Configurations;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;

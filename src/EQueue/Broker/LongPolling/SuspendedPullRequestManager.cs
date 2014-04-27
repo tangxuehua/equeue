@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using System.Threading.Tasks;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.Scheduling;
 
 namespace EQueue.Broker.LongPolling

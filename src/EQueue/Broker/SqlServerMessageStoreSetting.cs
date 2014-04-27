@@ -10,7 +10,7 @@
 
         public SqlServerMessageStoreSetting()
         {
-            MessageTable = "message";
+            MessageTable = "Message";
             CommitMessageInterval = 500;
             MessageCommitMaxCount = 10000;
             DeleteMessageHourOfDay = 4;

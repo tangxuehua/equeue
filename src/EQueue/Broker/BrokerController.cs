@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Net.Sockets;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Socketing;

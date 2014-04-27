@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
 

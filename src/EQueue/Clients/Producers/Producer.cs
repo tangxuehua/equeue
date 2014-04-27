@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;

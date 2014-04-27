@@ -1,30 +1,30 @@
-﻿CREATE TABLE [dbo].[message](
-    [id] [bigint] NOT NULL,
-    [topic] [varchar](128) NOT NULL,
-    [queue_id] [int] NOT NULL,
-    [queue_offset] [bigint] NOT NULL,
-    [body] [varbinary](max) NOT NULL,
-    [stored_time] [datetime] NOT NULL,
- CONSTRAINT [PK_message] PRIMARY KEY CLUSTERED 
+﻿CREATE TABLE [dbo].[Message](
+    [MessageOffset] [bigint] NOT NULL,
+    [Topic] [varchar](128) NOT NULL,
+    [QueueId] [int] NOT NULL,
+    [QueueOffset] [bigint] NOT NULL,
+    [Body] [varbinary](max) NOT NULL,
+    [StoredTime] [datetime] NOT NULL,
+ CONSTRAINT [PK_Message] PRIMARY KEY CLUSTERED 
 (
-    [id] ASC
+    [MessageOffset] ASC
 )WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
 
-CREATE TABLE [dbo].[queue_offset](
-    [version] [bigint] NOT NULL,
-    [consumer_group] [nvarchar](128) NOT NULL,
-    [topic] [nvarchar](128) NOT NULL,
-    [queue_id] [int] NOT NULL,
-    [queue_offset] [bigint] NOT NULL,
-    [timestamp] [datetime] NOT NULL,
- CONSTRAINT [PK_queue_offset_1] PRIMARY KEY CLUSTERED 
+CREATE TABLE [dbo].[QueueOffset](
+    [Version] [bigint] NOT NULL,
+    [ConsumerGroup] [nvarchar](128) NOT NULL,
+    [Topic] [nvarchar](128) NOT NULL,
+    [QueueId] [int] NOT NULL,
+    [QueueOffset] [bigint] NOT NULL,
+    [Timestamp] [datetime] NOT NULL,
+ CONSTRAINT [PK_QueueOffset] PRIMARY KEY CLUSTERED 
 (
-    [consumer_group] ASC,
-    [topic] ASC,
-    [queue_id] ASC,
-    [version] ASC
+    [ConsumerGroup] ASC,
+    [Topic] ASC,
+    [QueueId] ASC,
+    [Version] ASC
 )WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
 ) ON [PRIMARY]
 GO

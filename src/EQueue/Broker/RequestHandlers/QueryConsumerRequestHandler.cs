@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Serializing;

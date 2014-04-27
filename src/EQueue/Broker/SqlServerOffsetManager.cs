@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Data.SqlClient;
 using System.Threading;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
 
@@ -28,10 +28,10 @@ namespace EQueue.Broker
             _setting = setting;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            _getLatestVersionSQL = "select max(version) from [" + _setting.QueueOffsetTable + "]";
-            _getLatestVersionQueueOffsetSQL = "select * from [" + _setting.QueueOffsetTable + "] where version = {0}";
-            _insertNewVersionQueueOffsetSQLFormat = "insert into [" + _setting.QueueOffsetTable + "] (version,consumer_group,topic,queue_id,queue_offset,timestamp) values ({0},'{1}','{2}',{3},{4},'{5}')";
-            _deleteOldVersionQueueOffsetSQLFormat = "delete from [" + _setting.QueueOffsetTable + "] where version = {0}";
+            _getLatestVersionSQL = "select max(Version) from [" + _setting.QueueOffsetTable + "]";
+            _getLatestVersionQueueOffsetSQL = "select * from [" + _setting.QueueOffsetTable + "] where Version = {0}";
+            _insertNewVersionQueueOffsetSQLFormat = "insert into [" + _setting.QueueOffsetTable + "] (Version,ConsumerGroup,Topic,QueueId,QueueOffset,Timestamp) values ({0},'{1}','{2}',{3},{4},'{5}')";
+            _deleteOldVersionQueueOffsetSQLFormat = "delete from [" + _setting.QueueOffsetTable + "] where Version = {0}";
         }
 
         public void Recover()
@@ -95,6 +95,11 @@ namespace EQueue.Broker
 
         private void RecoverQueueOffset()
         {
+            _currentVersion = 0;
+            _lastUpdateVersion = 0;
+            _lastPersistVersion = 0;
+            _groupQueueOffsetDict.Clear();
+
             using (var connection = new SqlConnection(_setting.ConnectionString))
             {
                 connection.Open();
@@ -123,11 +128,11 @@ namespace EQueue.Broker
                     var count = 0L;
                     while (reader.Read())
                     {
-                        var version = (long)reader["version"];
-                        var group = (string)reader["consumer_group"];
-                        var topic = (string)reader["topic"];
-                        var queueId = (int)reader["queue_id"];
-                        var queueOffset = (long)reader["queue_offset"];
+                        var version = (long)reader["Version"];
+                        var group = (string)reader["ConsumerGroup"];
+                        var topic = (string)reader["Topic"];
+                        var queueId = (int)reader["QueueId"];
+                        var queueOffset = (long)reader["QueueOffset"];
 
                         UpdateQueueOffset(topic, queueId, queueOffset, group);
                         count++;

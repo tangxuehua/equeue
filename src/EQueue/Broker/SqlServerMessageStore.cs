@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using EQueue.Protocols;
@@ -32,8 +32,8 @@ namespace EQueue.Broker
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _messageDataTable = BuildMessageDataTable();
-            _deleteMessageSQLFormat = "delete from [" + _setting.MessageTable + "] where topic = '{0}' and queue_id = {1} and queue_offset < {2}";
-            _selectAllMessageSQL = "select * from [" + _setting.MessageTable + "] order by id asc";
+            _deleteMessageSQLFormat = "delete from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset < {2}";
+            _selectAllMessageSQL = "select * from [" + _setting.MessageTable + "] order by MessageOffset asc";
         }
 
         public void Recover()
@@ -72,6 +72,7 @@ namespace EQueue.Broker
         }
         private void RecoverAllMessages()
         {
+            _messageDict.Clear();
             using (var connection = new SqlConnection(_setting.ConnectionString))
             {
                 connection.Open();
@@ -81,14 +82,14 @@ namespace EQueue.Broker
                     var reader = command.ExecuteReader();
                     while (reader.Read())
                     {
-                        var id = (long)reader["id"];
-                        var topic = (string)reader["topic"];
-                        var queueId = (int)reader["queue_id"];
-                        var queueOffset = (long)reader["queue_offset"];
-                        var body = (byte[])reader["body"];
-                        var storedTime = (DateTime)reader["stored_time"];
-                        _messageDict[id] = new QueueMessage(topic, body, id, queueId, queueOffset, storedTime);
-                        maxMessageOffset = id;
+                        var messageOffset = (long)reader["MessageOffset"];
+                        var topic = (string)reader["Topic"];
+                        var queueId = (int)reader["QueueId"];
+                        var queueOffset = (long)reader["QueueOffset"];
+                        var body = (byte[])reader["Body"];
+                        var storedTime = (DateTime)reader["StoredTime"];
+                        _messageDict[messageOffset] = new QueueMessage(topic, body, messageOffset, queueId, queueOffset, storedTime);
+                        maxMessageOffset = messageOffset;
                     }
                     if (maxMessageOffset >= 0)
                     {
@@ -112,12 +113,12 @@ namespace EQueue.Broker
             {
                 var message = _messageQueue.Take();
                 var row = _messageDataTable.NewRow();
-                row["id"] = message.MessageOffset;
-                row["topic"] = message.Topic;
-                row["queueId"] = message.QueueId;
-                row["queueOffset"] = message.QueueOffset;
-                row["body"] = message.Body;
-                row["storedTime"] = message.StoredTime;
+                row["MessageOffset"] = message.MessageOffset;
+                row["Topic"] = message.Topic;
+                row["QueueId"] = message.QueueId;
+                row["QueueOffset"] = message.QueueOffset;
+                row["Body"] = message.Body;
+                row["StoredTime"] = message.StoredTime;
                 _messageDataTable.Rows.Add(row);
             }
 
@@ -133,12 +134,12 @@ namespace EQueue.Broker
                     sqlBulkCopy.BatchSize = 10000;
                     sqlBulkCopy.BulkCopyTimeout = 60;
                     sqlBulkCopy.DestinationTableName = _setting.MessageTable;
-                    sqlBulkCopy.ColumnMappings.Add("id", "id");
-                    sqlBulkCopy.ColumnMappings.Add("topic", "topic");
-                    sqlBulkCopy.ColumnMappings.Add("queueId", "queue_id");
-                    sqlBulkCopy.ColumnMappings.Add("queueOffset", "queue_offset");
-                    sqlBulkCopy.ColumnMappings.Add("body", "body");
-                    sqlBulkCopy.ColumnMappings.Add("storedTime", "stored_time");
+                    sqlBulkCopy.ColumnMappings.Add("MessageOffset", "MessageOffset");
+                    sqlBulkCopy.ColumnMappings.Add("Topic", "Topic");
+                    sqlBulkCopy.ColumnMappings.Add("QueueId", "QueueId");
+                    sqlBulkCopy.ColumnMappings.Add("QueueOffset", "QueueOffset");
+                    sqlBulkCopy.ColumnMappings.Add("Body", "Body");
+                    sqlBulkCopy.ColumnMappings.Add("StoredTime", "StoredTime");
 
                     try
                     {
@@ -176,12 +177,12 @@ namespace EQueue.Broker
         private DataTable BuildMessageDataTable()
         {
             var table = new DataTable();
-            table.Columns.Add("id", typeof(long));
-            table.Columns.Add("topic", typeof(string));
-            table.Columns.Add("queueId", typeof(int));
-            table.Columns.Add("queueOffset", typeof(long));
-            table.Columns.Add("body", typeof(byte[]));
-            table.Columns.Add("storedTime", typeof(DateTime));
+            table.Columns.Add("MessageOffset", typeof(long));
+            table.Columns.Add("Topic", typeof(string));
+            table.Columns.Add("QueueId", typeof(int));
+            table.Columns.Add("QueueOffset", typeof(long));
+            table.Columns.Add("Body", typeof(byte[]));
+            table.Columns.Add("StoredTime", typeof(DateTime));
             return table;
         }
         private long GetNextOffset()

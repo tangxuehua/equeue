@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using ECommon.IoC;
+using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using EQueue.Protocols;
@@ -10,7 +10,6 @@ namespace EQueue.Broker
 {
     public class MessageService : IMessageService
     {
-        private ConcurrentDictionary<string, long> _queueCurrentOffsetDict = new ConcurrentDictionary<string, long>();
         private ConcurrentDictionary<string, IList<Queue>> _topicQueueDict = new ConcurrentDictionary<string, IList<Queue>>();
         private readonly IMessageStore _messageStore;
         private readonly IOffsetManager _offsetManager;
@@ -33,6 +32,7 @@ namespace EQueue.Broker
         }
         public void Start()
         {
+            _topicQueueDict.Clear();
             _messageStore.Recover();
             _offsetManager.Recover();
             RecoverTopicQueues();
