@@ -70,6 +70,11 @@ namespace EQueue.Broker
             _clientManager.Shutdown();
             _messageService.Shutdown();
             SuspendedPullRequestManager.Shutdown();
+            _logger.InfoFormat("Broker shutdown, producer:[{0}:{1}], consumer:[{2}:{3}]",
+                Setting.ProducerSocketSetting.Address,
+                Setting.ProducerSocketSetting.Port,
+                Setting.ConsumerSocketSetting.Address,
+                Setting.ConsumerSocketSetting.Port);
             return this;
         }
 
@@ -81,7 +86,7 @@ namespace EQueue.Broker
             public ProducerSocketEventListener(BrokerController brokerController)
             {
                 _brokerController = brokerController;
-                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create("EQueue.Broker.ProducerSocketEventListener");
             }
 
             public void OnNewSocketAccepted(SocketInfo socketInfo)
@@ -110,7 +115,7 @@ namespace EQueue.Broker
             public ConsumerSocketEventListener(BrokerController brokerController)
             {
                 _brokerController = brokerController;
-                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create("EQueue.Broker.ConsumerSocketEventListener");
             }
 
             public void OnNewSocketAccepted(SocketInfo socketInfo)
