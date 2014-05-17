@@ -54,8 +54,8 @@ namespace EQueue.Broker
             _producerSocketRemotingServer.Start();
             _consumerSocketRemotingServer.Start();
             _clientManager.Start();
-            _messageService.Start();
             SuspendedPullRequestManager.Start();
+            _messageService.Start();
             _logger.InfoFormat("Broker started, producer:[{0}:{1}], consumer:[{2}:{3}]",
                 Setting.ProducerSocketSetting.Address,
                 Setting.ProducerSocketSetting.Port,
@@ -68,8 +68,8 @@ namespace EQueue.Broker
             _producerSocketRemotingServer.Shutdown();
             _consumerSocketRemotingServer.Shutdown();
             _clientManager.Shutdown();
-            _messageService.Shutdown();
             SuspendedPullRequestManager.Shutdown();
+            _messageService.Shutdown();
             _logger.InfoFormat("Broker shutdown, producer:[{0}:{1}], consumer:[{2}:{3}]",
                 Setting.ProducerSocketSetting.Address,
                 Setting.ProducerSocketSetting.Port,
