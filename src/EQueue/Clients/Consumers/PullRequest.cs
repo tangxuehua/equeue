@@ -3,8 +3,8 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using ECommon.Extensions;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
@@ -119,20 +119,7 @@ namespace EQueue.Clients.Consumers
             };
             var data = _binarySerializer.Serialize(request);
             var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);
-            var remotingResponse = default(RemotingResponse);
-
-            try
-            {
-                remotingResponse = _remotingClient.InvokeSync(remotingRequest, _setting.PullRequestTimeoutMilliseconds);
-            }
-            catch (Exception ex)
-            {
-                if (!_stoped)
-                {
-                    _logger.Error(string.Format("PullMessage has exception, pullRequest:{0}, remotingRequest:{1}.", this, remotingRequest), ex);
-                }
-                return;
-            }
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, _setting.PullRequestTimeoutMilliseconds);
 
             if (_stoped)
             {

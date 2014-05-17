@@ -94,16 +94,15 @@ namespace EQueue.Broker
                 _logger.DebugFormat("Accepted new producer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
             }
 
-            public void OnSocketReceiveException(SocketInfo socketInfo, Exception exception)
+            public void OnSocketException(SocketInfo socketInfo, SocketException socketException)
             {
-                var socketException = exception as SocketException;
-                if (socketException != null)
+                if (SocketUtils.IsSocketDisconnectedException(socketException))
                 {
-                    _logger.DebugFormat("Producer SocketException, address:{0}, errorCode:{1}", socketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
+                    _logger.DebugFormat("Producer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
                 }
                 else
                 {
-                    _logger.DebugFormat("Producer Exception, address:{0}, errorMsg:", socketInfo.SocketRemotingEndpointAddress, exception.Message);
+                    _logger.ErrorFormat("Producer SocketException, address:{0}, errorCode:{1}", socketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
                 }
             }
         }
@@ -123,17 +122,15 @@ namespace EQueue.Broker
                 _logger.DebugFormat("Accepted new consumer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
             }
 
-            public void OnSocketReceiveException(SocketInfo socketInfo, Exception exception)
+            public void OnSocketException(SocketInfo socketInfo, SocketException socketException)
             {
-                _brokerController.ConsumerManager.RemoveConsumer(socketInfo.SocketRemotingEndpointAddress);
-                var socketException = exception as SocketException;
-                if (socketException != null)
+                if (SocketUtils.IsSocketDisconnectedException(socketException))
                 {
-                    _logger.DebugFormat("Consumer SocketException, address:{0}, errorCode:{1}", socketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
+                    _brokerController.ConsumerManager.RemoveConsumer(socketInfo.SocketRemotingEndpointAddress);
                 }
                 else
                 {
-                    _logger.DebugFormat("Consumer Exception, address:{0}, errorMsg:", socketInfo.SocketRemotingEndpointAddress, exception.Message);
+                    _logger.ErrorFormat("Consumer SocketException, address:{0}, errorCode:{1}", socketInfo.SocketRemotingEndpointAddress, socketException.SocketErrorCode);
                 }
             }
         }

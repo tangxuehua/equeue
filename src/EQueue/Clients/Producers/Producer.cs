@@ -38,6 +38,7 @@ namespace EQueue.Clients.Producers
             _topicQueueCountDict = new ConcurrentDictionary<string, int>();
             _taskIds = new List<int>();
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
+            _remotingClient.ClientSocketConnectionChanged += HandleRemotingClientConnectionChanged;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
@@ -46,18 +47,17 @@ namespace EQueue.Clients.Producers
 
         public Producer Start()
         {
+            _remotingClient.Connect();
             _remotingClient.Start();
-            _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
+            StartBackgroundJobs();
             _logger.InfoFormat("Started, producerId:{0}", Id);
             return this;
         }
         public Producer Shutdown()
         {
             _remotingClient.Shutdown();
-            foreach (var taskId in _taskIds)
-            {
-                _scheduleService.ShutdownTask(taskId);
-            }
+            _remotingClient.ClientSocketConnectionChanged -= HandleRemotingClientConnectionChanged;
+            StopBackgroundJobs();
             _logger.InfoFormat("Shutdown, producerId:{0}", Id);
             return this;
         }
@@ -160,6 +160,30 @@ namespace EQueue.Clients.Producers
             var request = new SendMessageRequest { Message = message, QueueId = queueId };
             var data = MessageUtils.EncodeSendMessageRequest(request);
             return new RemotingRequest((int)RequestCode.SendMessage, data);
+        }
+        private void HandleRemotingClientConnectionChanged(bool isConnected)
+        {
+            if (isConnected)
+            {
+                StartBackgroundJobs();
+            }
+            else
+            {
+                StopBackgroundJobs();
+            }
+        }
+        private void StartBackgroundJobs()
+        {
+            _taskIds.Clear();
+            _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
+        }
+        private void StopBackgroundJobs()
+        {
+            foreach (var taskId in _taskIds)
+            {
+                _scheduleService.ShutdownTask(taskId);
+            }
+            _taskIds.Clear();
         }
     }
 }

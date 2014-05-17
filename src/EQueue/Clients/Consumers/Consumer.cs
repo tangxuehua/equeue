@@ -8,8 +8,6 @@ using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
-using ECommon.Socketing;
-using ECommon.Utilities;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
@@ -47,10 +45,7 @@ namespace EQueue.Clients.Consumers
 
         #region Constructors
 
-        public Consumer(string id, string groupName)
-            : this(id, groupName, new ConsumerSetting())
-        {
-        }
+        public Consumer(string id, string groupName) : this(id, groupName, new ConsumerSetting()) { }
         public Consumer(string id, string groupName, ConsumerSetting setting)
         {
             if (id == null)
@@ -65,6 +60,7 @@ namespace EQueue.Clients.Consumers
             GroupName = groupName;
             Setting = setting ?? new ConsumerSetting();
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
+            _remotingClient.ClientSocketConnectionChanged += HandleRemotingClientConnectionChanged;
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _localOffsetStore = ObjectContainer.Resolve<ILocalOffsetStore>();
@@ -79,22 +75,17 @@ namespace EQueue.Clients.Consumers
         public Consumer Start(IMessageHandler messageHandler)
         {
             _messageHandler = messageHandler;
+            _remotingClient.Connect();
             _remotingClient.Start();
-
-            _taskIds.Add(_scheduleService.ScheduleTask(Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask(SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask(PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval));
+            StartBackgroundJobs();
             _logger.InfoFormat("Started, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
         public Consumer Shutdown()
         {
             _remotingClient.Shutdown();
-            foreach (var taskId in _taskIds)
-            {
-                _scheduleService.ShutdownTask(taskId);
-            }
+            _remotingClient.ClientSocketConnectionChanged -= HandleRemotingClientConnectionChanged;
+            StopBackgroundJobs();
             _logger.InfoFormat("Shutdown, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
@@ -337,6 +328,33 @@ namespace EQueue.Clients.Consumers
             {
                 throw new Exception(string.Format("GetTopicQueueCount has exception, consumerId:{0}, group:{1}, topic:{2}, remoting response code:{3}", Id, GroupName, topic, remotingResponse.Code));
             }
+        }
+        private void HandleRemotingClientConnectionChanged(bool isConnected)
+        {
+            if (isConnected)
+            {
+                StartBackgroundJobs();
+            }
+            else
+            {
+                StopBackgroundJobs();
+            }
+        }
+        private void StartBackgroundJobs()
+        {
+            _taskIds.Clear();
+            _taskIds.Add(_scheduleService.ScheduleTask(Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask(SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask(PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval));
+        }
+        private void StopBackgroundJobs()
+        {
+            foreach (var taskId in _taskIds)
+            {
+                _scheduleService.ShutdownTask(taskId);
+            }
+            _taskIds.Clear();
         }
 
         #endregion
