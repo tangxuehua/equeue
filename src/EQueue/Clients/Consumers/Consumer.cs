@@ -347,6 +347,10 @@ namespace EQueue.Clients.Consumers
             _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
             _taskIds.Add(_scheduleService.ScheduleTask(SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval));
             _taskIds.Add(_scheduleService.ScheduleTask(PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval));
+            foreach (var pullRequest in _pullRequestDict.Values)
+            {
+                pullRequest.Start();
+            }
         }
         private void StopBackgroundJobs()
         {
@@ -355,6 +359,10 @@ namespace EQueue.Clients.Consumers
                 _scheduleService.ShutdownTask(taskId);
             }
             _taskIds.Clear();
+            foreach (var pullRequest in _pullRequestDict.Values)
+            {
+                pullRequest.Stop();
+            }
         }
 
         #endregion
