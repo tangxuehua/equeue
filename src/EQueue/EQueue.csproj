@@ -33,9 +33,9 @@
     <DocumentationFile>D:\nugetpublish\EQueue.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ECommon, Version=1.2.4.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ECommon, Version=1.2.5.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\ecommon.1.2.4\lib\net40\ECommon.dll</HintPath>
+      <HintPath>..\packages\ECommon.1.2.5\lib\net40\ECommon.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

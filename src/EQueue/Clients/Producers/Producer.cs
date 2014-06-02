@@ -72,8 +72,7 @@ namespace EQueue.Clients.Producers
             var remotingRequest = BuildSendMessageRequest(message, queueId);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, Setting.SendMessageTimeoutMilliseconds);
             var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
-            var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
-            return new SendResult(sendStatus, response.MessageOffset, response.MessageQueue, response.QueueOffset);
+            return new SendResult(SendStatus.Success, response.MessageOffset, response.MessageQueue, response.QueueOffset);
         }
         public Task<SendResult> SendAsync(Message message, object arg)
         {
@@ -91,14 +90,21 @@ namespace EQueue.Clients.Producers
                 if (remotingResponse != null)
                 {
                     var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
-                    var sendStatus = SendStatus.Success; //TODO, figure from remotingResponse.Code;
-                    var result = new SendResult(sendStatus, response.MessageOffset, response.MessageQueue, response.QueueOffset);
+                    var result = new SendResult(SendStatus.Success, response.MessageOffset, response.MessageQueue, response.QueueOffset);
                     taskCompletionSource.SetResult(result);
                 }
                 else
                 {
-                    var result = new SendResult(SendStatus.Failed, "Send message request failed or wait for response timeout.");
-                    taskCompletionSource.SetResult(result);
+                    var errorMessage = "Unknown error occurred when sending message to broker.";
+                    if (!requestTask.IsCompleted)
+                    {
+                        errorMessage = "Send message to broker timeout.";
+                    }
+                    else if (requestTask.IsFaulted)
+                    {
+                        errorMessage = requestTask.Exception.Message;
+                    }
+                    taskCompletionSource.SetResult(new SendResult(SendStatus.Failed, errorMessage));
                 }
             });
             return taskCompletionSource.Task;
