@@ -71,7 +71,7 @@ namespace EQueue.Clients.Consumers
             _handlingMessageDict = new ConcurrentDictionary<long, WrappedMessage>();
             _pullMessageWorker = new Worker(PullMessage);
             _handleMessageWorker = new Worker(HandleMessage);
-            _retryMessageWorker = new Worker(RetryMessage, 1000);
+            _retryMessageWorker = new Worker(RetryMessage, _setting.RetryMessageInterval);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
