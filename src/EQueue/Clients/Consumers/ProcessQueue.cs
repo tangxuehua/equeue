@@ -31,7 +31,10 @@ namespace EQueue.Clients.Consumers
             {
                 if (_messageDict.TryAdd(message.QueueOffset, message))
                 {
-                    _queueMaxOffset = message.QueueOffset;
+                    if (message.QueueOffset > _queueMaxOffset)
+                    {
+                        _queueMaxOffset = message.QueueOffset;
+                    }
                 }
             }
         }
