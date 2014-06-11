@@ -38,10 +38,8 @@ namespace EQueue.Broker
             RecoverTopicQueues();
             _messageStore.Start();
             _offsetManager.Start();
-            _deleteConsumedMessageTaskId = _scheduleService.ScheduleTask(
-                DeleteConsumedMessage,
-                _brokerController.Setting.DeleteMessageInterval,
-                _brokerController.Setting.DeleteMessageInterval);
+            _deleteConsumedMessageTaskId = _scheduleService.ScheduleTask("MessageService.DeleteConsumedMessage", DeleteConsumedMessage,
+                _brokerController.Setting.DeleteMessageInterval, _brokerController.Setting.DeleteMessageInterval);
         }
         public void Shutdown()
         {

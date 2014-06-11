@@ -22,7 +22,7 @@ namespace EQueue.Broker
         public void Recover() { }
         public void Start()
         {
-            _printQueueOffsetTaskId = _scheduleService.ScheduleTask(PrintQueueOffset, 5000, 5000);
+            _printQueueOffsetTaskId = _scheduleService.ScheduleTask("InMemoryOffsetManager.PrintQueueOffset", PrintQueueOffset, 5000, 5000);
         }
         public void Shutdown()
         {

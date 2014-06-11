@@ -26,7 +26,6 @@ namespace EQueue.Clients.Consumers
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly ILocalOffsetStore _localOffsetStore;
         private readonly ILogger _logger;
-        private IList<string> _consumerIds = new List<string>();
         private IMessageHandler _messageHandler;
 
         #endregion
@@ -60,7 +59,6 @@ namespace EQueue.Clients.Consumers
             GroupName = groupName;
             Setting = setting ?? new ConsumerSetting();
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
-            _remotingClient.ClientSocketConnectionChanged += HandleRemotingClientConnectionChanged;
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _localOffsetStore = ObjectContainer.Resolve<ILocalOffsetStore>();
@@ -78,6 +76,7 @@ namespace EQueue.Clients.Consumers
             _remotingClient.Connect();
             _remotingClient.Start();
             StartBackgroundJobs();
+            _remotingClient.ClientSocketConnectionChanged += HandleRemotingClientConnectionChanged;
             _logger.InfoFormat("Started, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
@@ -126,11 +125,6 @@ namespace EQueue.Clients.Consumers
             try
             {
                 consumerIdList = QueryGroupConsumers(subscriptionTopic).ToList();
-                if (_consumerIds.Count != consumerIdList.Count)
-                {
-                    _logger.DebugFormat("ConsumerIds changed, current consumerId:{0}, group:{1}, old:{2}, new:{3}", Id, GroupName, string.Join(",", _consumerIds), string.Join(",", consumerIdList));
-                    _consumerIds = consumerIdList;
-                }
             }
             catch (Exception ex)
             {
@@ -262,7 +256,7 @@ namespace EQueue.Clients.Consumers
             {
                 _remotingClient.InvokeOneway(new RemotingRequest(
                     (int)RequestCode.ConsumerHeartbeat,
-                    _binarySerializer.Serialize(new ConsumerData(Id, GroupName, SubscriptionTopics))),
+                    _binarySerializer.Serialize(new ConsumerData(Id, GroupName, _subscriptionTopics))),
                     3000);
             }
             catch (Exception ex)
@@ -270,7 +264,7 @@ namespace EQueue.Clients.Consumers
                 _logger.Error(string.Format("SendHeartbeat remoting request to broker has exception, consumerId:{0}, group:{1}", Id, GroupName), ex);
             }
         }
-        private void UpdateAllTopicQueues()
+        private void RefreshTopicQueues()
         {
             foreach (var topic in SubscriptionTopics)
             {
@@ -343,14 +337,11 @@ namespace EQueue.Clients.Consumers
         private void StartBackgroundJobs()
         {
             _taskIds.Clear();
-            _taskIds.Add(_scheduleService.ScheduleTask(Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask(SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask(PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval));
-            foreach (var pullRequest in _pullRequestDict.Values)
-            {
-                pullRequest.Start();
-            }
+            _taskIds.Add(_scheduleService.ScheduleTask("Consumer.RefreshTopicQueues", RefreshTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask("Consumer.SendHeartbeat", SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask("Consumer.Rebalance", Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask("Consumer.PersistOffset", PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval));
+            _logger.DebugFormat("Background jobs scheduled, consumerId:{0}, group:{1}", Id, GroupName);
         }
         private void StopBackgroundJobs()
         {
@@ -363,6 +354,9 @@ namespace EQueue.Clients.Consumers
             {
                 pullRequest.Stop();
             }
+            _pullRequestDict.Clear();
+            _topicQueuesDict.Clear();
+            _logger.DebugFormat("Background jobs stop requesting sent, consumerId:{0}, group:{1}", Id, GroupName);
         }
 
         #endregion

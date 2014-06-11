@@ -11,7 +11,6 @@ namespace EQueue.Broker.Processors
 {
     public class PullMessageRequestHandler : IRequestHandler
     {
-        private const int SuspendPullRequestMilliseconds = 60 * 1000;
         private BrokerController _brokerController;
         private IMessageService _messageService;
         private IOffsetManager _offsetManager;
@@ -68,7 +67,7 @@ namespace EQueue.Broker.Processors
                     pullMessageRequest,
                     context,
                     DateTime.Now,
-                    SuspendPullRequestMilliseconds,
+                    _brokerController.Setting.SuspendPullRequestMilliseconds,
                     ExecutePullRequest,
                     ExecutePullRequest,
                     ExecuteReplacedPullRequest);

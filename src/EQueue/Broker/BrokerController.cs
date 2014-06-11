@@ -28,7 +28,7 @@ namespace EQueue.Broker
         public BrokerController(BrokerSetting setting)
         {
             Setting = setting ?? new BrokerSetting();
-            SuspendedPullRequestManager = new SuspendedPullRequestManager();
+            SuspendedPullRequestManager = new SuspendedPullRequestManager(this);
             ConsumerManager = new ConsumerManager();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _messageService = ObjectContainer.Resolve<IMessageService>();

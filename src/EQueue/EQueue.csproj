@@ -84,7 +84,6 @@
     <Compile Include="Clients\Consumers\AverageAllocateMessageQueueStrategy.cs" />
     <Compile Include="Clients\Consumers\ConsumerSettings.cs" />
     <Compile Include="Clients\Consumers\PullRequestSetting.cs" />
-    <Compile Include="Clients\Consumers\WrappedMessage.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
     <Compile Include="Clients\Producers\ProducerSetting.cs" />
     <Compile Include="Clients\Producers\QueueAverageSelector.cs" />

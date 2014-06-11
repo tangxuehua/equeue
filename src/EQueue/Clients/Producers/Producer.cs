@@ -122,7 +122,7 @@ namespace EQueue.Clients.Producers
 
             return count;
         }
-        private void UpdateAllTopicQueueCount()
+        private void RefreshTopicQueueCount()
         {
             foreach (var topic in _topicQueueCountDict.Keys)
             {
@@ -181,7 +181,7 @@ namespace EQueue.Clients.Producers
         private void StartBackgroundJobs()
         {
             _taskIds.Clear();
-            _taskIds.Add(_scheduleService.ScheduleTask(UpdateAllTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask("Producer.RefreshTopicQueueCount", RefreshTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
         }
         private void StopBackgroundJobs()
         {

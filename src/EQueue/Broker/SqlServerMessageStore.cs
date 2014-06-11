@@ -42,7 +42,7 @@ namespace EQueue.Broker
         }
         public void Start()
         {
-            _persistMessageTaskId = _scheduleService.ScheduleTask(PersistMessage, _setting.CommitMessageInterval, _setting.CommitMessageInterval);
+            _persistMessageTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.PersistMessage", PersistMessage, _setting.CommitMessageInterval, _setting.CommitMessageInterval);
         }
         public void Shutdown()
         {

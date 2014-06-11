@@ -67,7 +67,7 @@ namespace AllInOne
             _logger.Info("Start consumer load balance, please wait for a moment.");
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
             var waitHandle = new ManualResetEvent(false);
-            var taskId = scheduleService.ScheduleTask(() =>
+            var taskId = scheduleService.ScheduleTask("WaitQueueAllocationComplete", () =>
             {
                 var c1AllocatedQueueIds = consumer1.GetCurrentQueues().Select(x => x.QueueId);
                 var c2AllocatedQueueIds = consumer2.GetCurrentQueues().Select(x => x.QueueId);

@@ -14,18 +14,23 @@ namespace EQueue.Broker.LongPolling
         private readonly IScheduleService _scheduleService;
         private readonly IMessageService _messageService;
         private readonly BlockingCollection<NotifyItem> _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
-        private readonly Worker _worker;
-        private int _checkHoldRequestTaskId;
+        private readonly BrokerController _brokerController;
+        private readonly Worker _notifyMessageArrivedWorker;
+        private int _checkBlockingPullRequestTaskId;
 
-        public SuspendedPullRequestManager()
+        public SuspendedPullRequestManager(BrokerController brokerController)
         {
+            _brokerController = brokerController;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _worker = new Worker(() =>
+            if (_brokerController.Setting.NotifyWhenMessageArrived)
             {
-                var notifyItem = _notifyQueue.Take();
-                NotifyMessageArrived(BuildKey(notifyItem.Topic, notifyItem.QueueId), notifyItem.QueueOffset);
-            });
+                _notifyMessageArrivedWorker = new Worker("SuspendedPullRequestManager.NotifyMessageArrived", () =>
+                {
+                    var notifyItem = _notifyQueue.Take();
+                    NotifyMessageArrived(BuildKey(notifyItem.Topic, notifyItem.QueueId), notifyItem.QueueOffset);
+                });
+            }
         }
 
         public void SuspendPullRequest(PullRequest pullRequest)
@@ -47,21 +52,30 @@ namespace EQueue.Broker.LongPolling
         }
         public void NotifyMessageArrived(string topic, int queueId, long queueOffset)
         {
-            _notifyQueue.Add(new NotifyItem { Topic = topic, QueueId = queueId, QueueOffset = queueOffset });
+            if (_brokerController.Setting.NotifyWhenMessageArrived)
+            {
+                _notifyQueue.Add(new NotifyItem { Topic = topic, QueueId = queueId, QueueOffset = queueOffset });
+            }
         }
 
         public void Start()
         {
-            _checkHoldRequestTaskId = _scheduleService.ScheduleTask(CheckHoldRequest, 1000, 1000);
-            _worker.Start();
+            _checkBlockingPullRequestTaskId = _scheduleService.ScheduleTask("SuspendedPullRequestManager.CheckBlockingPullRequest", CheckBlockingPullRequest, 1000, 1000);
+            if (_notifyMessageArrivedWorker != null)
+            {
+                _notifyMessageArrivedWorker.Start();
+            }
         }
         public void Shutdown()
         {
-            _scheduleService.ShutdownTask(_checkHoldRequestTaskId);
-            _worker.Stop();
+            _scheduleService.ShutdownTask(_checkBlockingPullRequestTaskId);
+            if (_notifyMessageArrivedWorker != null)
+            {
+                _notifyMessageArrivedWorker.Stop();
+            }
         }
 
-        private void CheckHoldRequest()
+        private void CheckBlockingPullRequest()
         {
             foreach (var entry in _queueRequestDict)
             {

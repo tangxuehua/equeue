@@ -42,7 +42,7 @@ namespace EQueue.Broker
         {
             _lastUpdateVersion = 0;
             _lastPersistVersion = 0;
-            _persistQueueOffsetTaskId = _scheduleService.ScheduleTask(PersistQueueOffset, _setting.CommitQueueOffsetInterval, _setting.CommitQueueOffsetInterval);
+            _persistQueueOffsetTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.PersistQueueOffset", PersistQueueOffset, _setting.CommitQueueOffsetInterval, _setting.CommitQueueOffsetInterval);
         }
         public void Shutdown()
         {

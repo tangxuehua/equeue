@@ -20,15 +20,16 @@ namespace EQueue.Clients.Consumers
         private readonly SocketRemotingClient _remotingClient;
         private readonly Worker _pullMessageWorker;
         private readonly Worker _handleMessageWorker;
-        private readonly Worker _retryMessageWorker;
         private readonly ILogger _logger;
         private readonly IBinarySerializer _binarySerializer;
-        private readonly BlockingCollection<WrappedMessage> _messageQueue;
-        private readonly BlockingCollection<WrappedMessage> _messageRetryQueue;
-        private readonly ConcurrentDictionary<long, WrappedMessage> _handlingMessageDict;
+        private readonly BlockingCollection<QueueMessage> _messageQueue;
+        private readonly BlockingCollection<QueueMessage> _messageRetryQueue;
+        private readonly ConcurrentDictionary<long, QueueMessage> _handlingMessageDict;
         private readonly MessageHandleMode _messageHandleMode;
         private readonly IMessageHandler _messageHandler;
+        private readonly IScheduleService _scheduleService;
         private readonly PullRequestSetting _setting;
+        private int _retryMessageTaskId;
         private long _flowControlTimes;
         private long _queueOffset;
         private bool _stoped;
@@ -66,12 +67,12 @@ namespace EQueue.Clients.Consumers
             _setting = setting;
             _messageHandleMode = messageHandleMode;
             _messageHandler = messageHandler;
-            _messageQueue = new BlockingCollection<WrappedMessage>(new ConcurrentQueue<WrappedMessage>());
-            _messageRetryQueue = new BlockingCollection<WrappedMessage>(new ConcurrentQueue<WrappedMessage>());
-            _handlingMessageDict = new ConcurrentDictionary<long, WrappedMessage>();
-            _pullMessageWorker = new Worker(PullMessage);
-            _handleMessageWorker = new Worker(HandleMessage);
-            _retryMessageWorker = new Worker(RetryMessage, _setting.RetryMessageInterval);
+            _messageQueue = new BlockingCollection<QueueMessage>(new ConcurrentQueue<QueueMessage>());
+            _messageRetryQueue = new BlockingCollection<QueueMessage>(new ConcurrentQueue<QueueMessage>());
+            _handlingMessageDict = new ConcurrentDictionary<long, QueueMessage>();
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
+            _pullMessageWorker = new Worker("PullRequest.PullMessage", PullMessage);
+            _handleMessageWorker = new Worker("PullRequest.HandleMessage", HandleMessage);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
@@ -82,13 +83,22 @@ namespace EQueue.Clients.Consumers
         {
             _pullMessageWorker.Start();
             _handleMessageWorker.Start();
-            _retryMessageWorker.Start();
+            _retryMessageTaskId = _scheduleService.ScheduleTask("PullRequest.RetryMessage", RetryMessage, _setting.RetryMessageInterval, _setting.RetryMessageInterval);
+            _stoped = false;
         }
         public void Stop()
         {
             _pullMessageWorker.Stop();
             _handleMessageWorker.Stop();
-            _retryMessageWorker.Stop();
+            _scheduleService.ShutdownTask(_retryMessageTaskId);
+            if (_messageQueue.Count == 0)
+            {
+                _messageQueue.Add(null);
+            }
+            if (_messageRetryQueue.Count == 0)
+            {
+                _messageRetryQueue.Add(null);
+            }
             _stoped = true;
         }
 
@@ -133,7 +143,7 @@ namespace EQueue.Clients.Consumers
                 {
                     _queueOffset += response.Messages.Count();
                     ProcessQueue.AddMessages(response.Messages);
-                    response.Messages.ForEach(x => _messageQueue.Add(new WrappedMessage(MessageQueue, x, ProcessQueue)));
+                    response.Messages.ForEach(queueMessage => _messageQueue.Add(queueMessage));
                 }
                 else if (remotingResponse.Code == (int)PullStatus.NextOffsetReset && response.NextOffset != null)
                 {
@@ -150,21 +160,24 @@ namespace EQueue.Clients.Consumers
         }
         private void HandleMessage()
         {
-            var wrappedMessage = _messageQueue.Take();
+            var queueMessage = _messageQueue.Take();
+            if (_stoped) return;
+            if (queueMessage == null) return;
+
             var handleAction = new Action(() =>
             {
-                if (!_handlingMessageDict.TryAdd(wrappedMessage.QueueMessage.MessageOffset, wrappedMessage))
+                if (!_handlingMessageDict.TryAdd(queueMessage.MessageOffset, queueMessage))
                 {
                     _logger.DebugFormat("Ignore to handle message [messageOffset={0}, topic={1}, queueId={2}, queueOffset={3}, consumerId={4}, group={5}], as it is being handling.",
-                        wrappedMessage.QueueMessage.MessageOffset,
-                        wrappedMessage.QueueMessage.Topic,
-                        wrappedMessage.QueueMessage.QueueId,
-                        wrappedMessage.QueueMessage.QueueOffset,
+                        queueMessage.MessageOffset,
+                        queueMessage.Topic,
+                        queueMessage.QueueId,
+                        queueMessage.QueueOffset,
                         ConsumerId,
                         GroupName);
                     return;
                 }
-                HandleMessage(wrappedMessage);
+                HandleMessage(queueMessage);
             });
             if (_messageHandleMode == MessageHandleMode.Sequential)
             {
@@ -179,13 +192,14 @@ namespace EQueue.Clients.Consumers
         {
             HandleMessage(_messageRetryQueue.Take());
         }
-        private void HandleMessage(WrappedMessage wrappedMessage)
+        private void HandleMessage(QueueMessage queueMessage)
         {
             if (_stoped) return;
+            if (queueMessage == null) return;
 
             try
             {
-                _messageHandler.Handle(wrappedMessage.QueueMessage, new MessageContext(queueMessage => RemoveHandledMessage(queueMessage.MessageOffset)));
+                _messageHandler.Handle(queueMessage, new MessageContext(currentQueueMessage => RemoveHandledMessage(currentQueueMessage.MessageOffset)));
             }
             catch (Exception ex)
             {
@@ -199,21 +213,20 @@ namespace EQueue.Clients.Consumers
                 //即便当前失败的消息的后续消息之前已经被消费过了；所以应用需要对每个消息的消费都要支持幂等，不过enode对所有的command和event的处理都支持幂等；
                 //以后，我们会在broker上支持重试队列，然后我们可以将消费失败的消息发回到broker上的重试队列，发回到broker上的重试队列成功后，
                 //就可以让当前queue的消费位置往前移动了。
-                LogMessageHandlingException(wrappedMessage, ex);
-                _messageRetryQueue.Add(wrappedMessage);
+                LogMessageHandlingException(queueMessage, ex);
+                _messageRetryQueue.Add(queueMessage);
             }
         }
         private void RemoveHandledMessage(long messageOffset)
         {
-            WrappedMessage wrappedMessage;
-            if (_handlingMessageDict.TryRemove(messageOffset, out wrappedMessage))
+            QueueMessage queueMessage;
+            if (_handlingMessageDict.TryRemove(messageOffset, out queueMessage))
             {
-                wrappedMessage.ProcessQueue.RemoveMessage(wrappedMessage.QueueMessage);
+                ProcessQueue.RemoveMessage(queueMessage);
             }
         }
-        private void LogMessageHandlingException(WrappedMessage wrappedMessage, Exception exception)
+        private void LogMessageHandlingException(QueueMessage queueMessage, Exception exception)
         {
-            var queueMessage = wrappedMessage.QueueMessage;
             _logger.Error(string.Format(
                 "Message handling has exception, message info:[messageOffset={0}, topic={1}, queueId={2}, queueOffset={3}, storedTime={4}, consumerId={5}, group={6}]",
                 queueMessage.MessageOffset,

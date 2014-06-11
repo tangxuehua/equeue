@@ -11,7 +11,7 @@
         public PullRequestSetting()
         {
             PullThresholdForQueue = 1000;
-            PullTimeDelayMillsWhenFlowControl = 1000;
+            PullTimeDelayMillsWhenFlowControl = 3000;
             PullRequestTimeoutMilliseconds = 70 * 1000;
             RetryMessageInterval = 3000;
             PullMessageBatchSize = 32;

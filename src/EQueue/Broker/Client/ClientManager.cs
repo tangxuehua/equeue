@@ -17,7 +17,7 @@ namespace EQueue.Broker.Client
 
         public void Start()
         {
-            _checkNotActiveConsumerTaskId = _scheduleService.ScheduleTask(CheckNotActiveConsumer, 10 * 1000, 10 * 1000);
+            _checkNotActiveConsumerTaskId = _scheduleService.ScheduleTask("ClientManager.CheckNotActiveConsumer", CheckNotActiveConsumer, 10 * 1000, 10 * 1000);
         }
         public void Shutdown()
         {
