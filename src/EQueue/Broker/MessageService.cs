@@ -151,20 +151,13 @@ namespace EQueue.Broker
                 foreach (var queue in topicQueues)
                 {
                     var consumedOffset = _offsetManager.GetMinOffset(queue.Topic, queue.QueueId);
-                    for (var index = queue.MaxRemovedOffset + 1; index <= consumedOffset; index++)
-                    {
-                        var queueItem = queue.RemoveQueueItem(index);
-                        if (queueItem != null)
-                        {
-                            _messageStore.RemoveMessage(queueItem.MessageOffset);
-                        }
-                    }
+                    var removedQueueItems = queue.RemoveQueueItems(consumedOffset);
                     var maxQueueOffset = consumedOffset;
                     if (maxQueueOffset >= queue.CurrentOffset)
                     {
                         maxQueueOffset = queue.CurrentOffset;
                     }
-                    _messageStore.DeleteMessages(queue.Topic, queue.QueueId, maxQueueOffset);
+                    _messageStore.DeleteMessages(queue.Topic, queue.QueueId, removedQueueItems, maxQueueOffset);
                 }
             }
         }

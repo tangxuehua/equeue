@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Threading;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using EQueue.Protocols;
@@ -154,7 +155,7 @@ namespace EQueue.Broker
                 }
             }
         }
-        public void DeleteMessages(string topic, int queueId, long maxQueueOffset)
+        public void DeleteMessages(string topic, int queueId, IEnumerable<QueueItem> removedQueueItems, long maxQueueOffset)
         {
             if (!IsTimeToDelete())
             {
@@ -172,6 +173,11 @@ namespace EQueue.Broker
                         _logger.DebugFormat("Deleted {0} messages, topic={1}, queueId={2}, queueOffset<{3}.", deletedMessageCount, topic, queueId, maxQueueOffset);
                     }
                 }
+            }
+
+            foreach (var queueItem in removedQueueItems)
+            {
+                _messageDict.Remove(queueItem.MessageOffset);
             }
         }
         private DataTable BuildMessageDataTable()

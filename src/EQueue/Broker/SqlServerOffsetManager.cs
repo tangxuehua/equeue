@@ -40,8 +40,6 @@ namespace EQueue.Broker
         }
         public void Start()
         {
-            _lastUpdateVersion = 0;
-            _lastPersistVersion = 0;
             _persistQueueOffsetTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.PersistQueueOffset", PersistQueueOffset, _setting.CommitQueueOffsetInterval, _setting.CommitQueueOffsetInterval);
         }
         public void Shutdown()
@@ -122,10 +120,10 @@ namespace EQueue.Broker
 
                 _currentVersion = maxVersion.Value;
 
-                using (var command = new SqlCommand(string.Format(_getLatestVersionQueueOffsetSQL, maxVersion), connection))
+                using (var command = new SqlCommand(string.Format(_getLatestVersionQueueOffsetSQL, maxVersion.Value), connection))
                 {
                     var reader = command.ExecuteReader();
-                    var count = 0L;
+                    var count = 0;
                     while (reader.Read())
                     {
                         var version = (long)reader["Version"];

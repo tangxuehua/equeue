@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using EQueue.Protocols;
 
@@ -75,6 +76,29 @@ namespace EQueue.Broker
                 return queueItem;
             }
             return null;
+        }
+        public IEnumerable<QueueItem> RemoveQueueItems(long maxQueueOffset)
+        {
+            var toRemoveEntries = new List<KeyValuePair<long, QueueItem>>();
+            foreach (var entry in _queueMessageDict)
+            {
+                if (entry.Key <= maxQueueOffset)
+                {
+                    toRemoveEntries.Add(entry);
+                }
+            }
+
+            var removedQueueItems = new List<QueueItem>();
+            foreach (var entry in toRemoveEntries)
+            {
+                QueueItem queueItem;
+                if (_queueMessageDict.TryRemove(entry.Key, out queueItem))
+                {
+                    removedQueueItems.Add(queueItem);
+                }
+            }
+
+            return removedQueueItems;
         }
         public QueueItem RemoveQueueItem(long queueOffset)
         {
