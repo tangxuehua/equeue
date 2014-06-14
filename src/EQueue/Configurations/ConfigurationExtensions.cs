@@ -11,7 +11,6 @@ namespace EQueue.Configurations
         {
             configuration.SetDefault<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             configuration.SetDefault<IQueueSelector, QueueHashSelector>();
-            configuration.SetDefault<ILocalOffsetStore, DefaultLocalOffsetStore>();
             configuration.SetDefault<IMessageStore, InMemoryMessageStore>();
             configuration.SetDefault<IMessageService, MessageService>();
             configuration.SetDefault<IOffsetManager, InMemoryOffsetManager>();

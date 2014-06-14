@@ -2,38 +2,50 @@
 using System.Collections.Generic;
 using ECommon.Components;
 using ECommon.Logging;
-using EQueue.Protocols;
+using ECommon.Scheduling;
 
 namespace EQueue.Broker.Client
 {
     public class ConsumerManager
     {
-        private ILogger _logger;
-        private ConcurrentDictionary<string, ConsumerGroup> _consumerGroupDict = new ConcurrentDictionary<string, ConsumerGroup>();
+        private readonly ConcurrentDictionary<string, ConsumerGroup> _consumerGroupDict = new ConcurrentDictionary<string, ConsumerGroup>();
+        private readonly IScheduleService _scheduleService;
+        private readonly ILogger _logger;
+        private readonly BrokerController _brokerController;
+        private int _scanNotActiveConsumerTaskId;
 
-        public ConsumerManager()
+        public BrokerController BrokerController
         {
+            get { return _brokerController; }
+        }
+
+        public ConsumerManager(BrokerController brokerController)
+        {
+            _brokerController = brokerController;
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
+        public void Start()
+        {
+            Clear();
+            _scanNotActiveConsumerTaskId = _scheduleService.ScheduleTask("ConsumerManager.ScanNotActiveConsumer", ScanNotActiveConsumer, _brokerController.Setting.ScanNotActiveConsumerInterval, _brokerController.Setting.ScanNotActiveConsumerInterval);
+        }
+        public void Shutdown()
+        {
+            _scheduleService.ShutdownTask(_scanNotActiveConsumerTaskId);
+        }
         public void RegisterConsumer(string groupName, ClientChannel clientChannel, IEnumerable<string> subscriptionTopics)
         {
-            var consumerGroup = _consumerGroupDict.GetOrAdd(groupName, new ConsumerGroup(groupName));
-            consumerGroup.GetOrAddChannel(clientChannel);
+            var consumerGroup = _consumerGroupDict.GetOrAdd(groupName, new ConsumerGroup(groupName, this));
+            consumerGroup.Register(clientChannel);
             consumerGroup.UpdateChannelSubscriptionTopics(clientChannel, subscriptionTopics);
         }
-        public void ScanNotActiveConsumer()
+        public void RemoveConsumer(string consumerRemotingAddress)
         {
             foreach (var consumerGroup in _consumerGroupDict.Values)
             {
-                consumerGroup.RemoteNotActiveConsumerChannels();
-            }
-        }
-        public void RemoveConsumer(string consumerChannelRemotingAddress)
-        {
-            foreach (var consumerGroup in _consumerGroupDict.Values)
-            {
-                consumerGroup.RemoveConsumerChannel(consumerChannelRemotingAddress);
+                consumerGroup.RemoveConsumer(consumerRemotingAddress);
             }
         }
         public ConsumerGroup GetConsumerGroup(string groupName)
@@ -44,6 +56,18 @@ namespace EQueue.Broker.Client
                 return consumerGroup;
             }
             return consumerGroup;
+        }
+
+        private void Clear()
+        {
+            _consumerGroupDict.Clear();
+        }
+        private void ScanNotActiveConsumer()
+        {
+            foreach (var consumerGroup in _consumerGroupDict.Values)
+            {
+                consumerGroup.RemoveNotActiveConsumers();
+            }
         }
     }
 }

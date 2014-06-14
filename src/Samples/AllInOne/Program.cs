@@ -50,7 +50,8 @@ namespace AllInOne
             var setting = new BrokerSetting();
             setting.NotifyWhenMessageArrived = false;
             setting.RemoveMessageInterval = 1000;
-            new BrokerController(setting).Initialize().Start();
+            setting.DefaultTopicQueueCount = 4;
+            new BrokerController(setting).Start();
         }
         static void StartConsumers()
         {
@@ -58,10 +59,10 @@ namespace AllInOne
 
             //Start four consumers.
             var consumerSetting = new ConsumerSetting { HeartbeatBrokerInterval = 1000, UpdateTopicQueueCountInterval = 1000, RebalanceInterval = 1000 };
-            var consumer1 = new Consumer("Consumer1", "group1", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
-            var consumer2 = new Consumer("Consumer2", "group1", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
-            var consumer3 = new Consumer("Consumer3", "group1", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
-            var consumer4 = new Consumer("Consumer4", "group1", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
+            var consumer1 = new Consumer("Consumer1", "group1", consumerSetting).Subscribe("SampleTopic").SetMessageHandler(messageHandler).Start();
+            var consumer2 = new Consumer("Consumer2", "group1", consumerSetting).Subscribe("SampleTopic").SetMessageHandler(messageHandler).Start();
+            var consumer3 = new Consumer("Consumer3", "group1", consumerSetting).Subscribe("SampleTopic").SetMessageHandler(messageHandler).Start();
+            var consumer4 = new Consumer("Consumer4", "group1", consumerSetting).Subscribe("SampleTopic").SetMessageHandler(messageHandler).Start();
 
             //Below to wait for consumer balance.
             _logger.Info("Start consumer load balance, please wait for a moment.");

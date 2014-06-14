@@ -79,7 +79,7 @@ namespace EQueue.Broker.Processors
         private void ExecutePullRequest(PullRequest pullRequest)
         {
             var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
-            if (consumerGroup != null && consumerGroup.IsConsumerChannelActive(pullRequest.RequestHandlerContext.Channel.RemotingAddress))
+            if (consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Channel.RemotingAddress))
             {
                 var pullMessageRequest = pullRequest.PullMessageRequest;
                 var messages = _messageService.GetMessages(
@@ -96,7 +96,7 @@ namespace EQueue.Broker.Processors
         private void ExecuteReplacedPullRequest(PullRequest pullRequest)
         {
             var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
-            if (consumerGroup != null && consumerGroup.IsConsumerChannelActive(pullRequest.RequestHandlerContext.Channel.RemotingAddress))
+            if (consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Channel.RemotingAddress))
             {
                 var responseData = _binarySerializer.Serialize(new PullMessageResponse(new QueueMessage[0]));
                 var remotingResponse = new RemotingResponse((int)PullStatus.Ignored, pullRequest.RemotingRequestSequence, responseData);

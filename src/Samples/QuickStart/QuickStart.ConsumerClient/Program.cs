@@ -23,8 +23,8 @@ namespace QuickStart.ConsumerClient
             InitializeEQueue();
 
             var messageHandler = new MessageHandler();
-            var consumerSetting = new ConsumerSetting { PullRequestSetting = new PullRequestSetting { PullRequestTimeoutMilliseconds = 10 * 1000 }, HeartbeatBrokerInterval = 1000, UpdateTopicQueueCountInterval = 1000, RebalanceInterval = 1000 };
-            var consumer = new Consumer("SampleConsumer", "SampleGroup", consumerSetting).Subscribe("SampleTopic").Start(messageHandler);
+            var consumerSetting = new ConsumerSetting { HeartbeatBrokerInterval = 1000, UpdateTopicQueueCountInterval = 1000, RebalanceInterval = 1000 };
+            var consumer = new Consumer("Consumer1", "Group1", consumerSetting).Subscribe("SampleTopic").SetMessageHandler(messageHandler).Start();
 
             _logger.Info("Start consumer load balance, please wait for a moment.");
             var scheduleService = ObjectContainer.Resolve<IScheduleService>();
@@ -32,9 +32,9 @@ namespace QuickStart.ConsumerClient
             var taskId = scheduleService.ScheduleTask("WaitQueueAllocationComplete", () =>
             {
                 var allocatedQueueIds = consumer.GetCurrentQueues().Select(x => x.QueueId);
-                if (allocatedQueueIds.Count() == 4)
+                if (allocatedQueueIds.Count() == 2)
                 {
-                    _logger.Info(string.Format("Consumer load balance finished. Queue allocation result: {0}", string.Join(",", allocatedQueueIds)));
+                    _logger.InfoFormat("Consumer load balance completed, allocated queueIds:{0}", string.Join(",", allocatedQueueIds));
                     waitHandle.Set();
                 }
             }, 1000, 1000);

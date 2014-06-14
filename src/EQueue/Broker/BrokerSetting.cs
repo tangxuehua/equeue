@@ -11,6 +11,8 @@ namespace EQueue.Broker
         public int RemoveMessageInterval { get; set; }
         public int SuspendPullRequestMilliseconds { get; set; }
         public int DefaultTopicQueueCount { get; set; }
+        public int ScanNotActiveConsumerInterval { get; set; }
+        public int ConsumerExpiredTimeout { get; set; }
 
         public BrokerSetting()
         {
@@ -20,6 +22,8 @@ namespace EQueue.Broker
             RemoveMessageInterval = 1000 * 60 * 10;
             SuspendPullRequestMilliseconds = 1000 * 60;
             DefaultTopicQueueCount = 1;
+            ScanNotActiveConsumerInterval = 1000 * 5;
+            ConsumerExpiredTimeout = 1000 * 60;
         }
     }
 }

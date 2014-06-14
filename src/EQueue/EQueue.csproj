@@ -48,7 +48,6 @@
     <Compile Include="Broker\SqlServerMessageStoreSetting.cs" />
     <Compile Include="Broker\BrokerSetting.cs" />
     <Compile Include="Broker\Client\ClientChannel.cs" />
-    <Compile Include="Broker\Client\ClientManager.cs" />
     <Compile Include="Broker\Client\ConsumerGroup.cs" />
     <Compile Include="Broker\Client\ConsumerManager.cs" />
     <Compile Include="Broker\SqlServerMessageStore.cs" />
@@ -68,11 +67,8 @@
     <Compile Include="Broker\Queue.cs" />
     <Compile Include="Broker\MessageService.cs" />
     <Compile Include="Broker\IMessageService.cs" />
-    <Compile Include="Clients\Consumers\DefaultLocalOffsetStore.cs" />
     <Compile Include="Clients\Consumers\MessageContext.cs" />
     <Compile Include="Clients\Consumers\IMessageContext.cs" />
-    <Compile Include="Clients\Consumers\MessageModel.cs" />
-    <Compile Include="Clients\Consumers\ILocalOffsetStore.cs" />
     <Compile Include="Clients\Producers\IQueueSelector.cs" />
     <Compile Include="Broker\InMemoryMessageStore.cs" />
     <Compile Include="Broker\IMessageStore.cs" />

@@ -15,13 +15,14 @@ namespace EQueue.Clients.Producers
 {
     public class Producer
     {
+        private readonly object _lockObject;
         private readonly ConcurrentDictionary<string, int> _topicQueueCountDict;
-        private readonly List<int> _taskIds;
         private readonly IScheduleService _scheduleService;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly IQueueSelector _queueSelector;
         private readonly ILogger _logger;
+        private int _refreshTopicQueueCountTaskId;
 
         public string Id { get; private set; }
         public ProducerSetting Setting { get; private set; }
@@ -35,10 +36,10 @@ namespace EQueue.Clients.Producers
             }
             Id = id;
             Setting = setting ?? new ProducerSetting();
+
+            _lockObject = new object();
             _topicQueueCountDict = new ConcurrentDictionary<string, int>();
-            _taskIds = new List<int>();
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
-            _remotingClient.ClientSocketConnectionChanged += HandleRemotingClientConnectionChanged;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
@@ -50,6 +51,7 @@ namespace EQueue.Clients.Producers
             _remotingClient.Connect();
             _remotingClient.Start();
             StartBackgroundJobs();
+            _remotingClient.ClientSocketConnectionChanged += HandleRemotingClientConnectionChanged;
             _logger.InfoFormat("Started, producerId:{0}", Id);
             return this;
         }
@@ -180,16 +182,37 @@ namespace EQueue.Clients.Producers
         }
         private void StartBackgroundJobs()
         {
-            _taskIds.Clear();
-            _taskIds.Add(_scheduleService.ScheduleTask("Producer.RefreshTopicQueueCount", RefreshTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
+            lock (_lockObject)
+            {
+                StopBackgroundJobsInternal();
+                StartBackgroundJobsInternal();
+            }
         }
         private void StopBackgroundJobs()
         {
-            foreach (var taskId in _taskIds)
+            lock (_lockObject)
             {
-                _scheduleService.ShutdownTask(taskId);
+                StopBackgroundJobsInternal();
             }
-            _taskIds.Clear();
+        }
+        private void StartBackgroundJobsInternal()
+        {
+            _refreshTopicQueueCountTaskId = _scheduleService.ScheduleTask("Producer.RefreshTopicQueueCount", RefreshTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval);
+            _logger.DebugFormat("Background job started, producerId:{0}", Id);
+        }
+        private void StopBackgroundJobsInternal()
+        {
+            if (_refreshTopicQueueCountTaskId > 0)
+            {
+                _scheduleService.ShutdownTask(_refreshTopicQueueCountTaskId);
+                _refreshTopicQueueCountTaskId = 0;
+            }
+            Clear();
+            _logger.DebugFormat("Background job stop requesting sent, producerId:{0}", Id);
+        }
+        private void Clear()
+        {
+            _topicQueueCountDict.Clear();
         }
     }
 }

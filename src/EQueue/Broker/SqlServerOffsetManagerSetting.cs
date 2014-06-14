@@ -4,12 +4,12 @@
     {
         public string ConnectionString { get; set; }
         public string QueueOffsetTable { get; set; }
-        public int CommitQueueOffsetInterval { get; set; }
+        public int PersistQueueOffsetInterval { get; set; }
 
         public SqlServerOffsetManagerSetting()
         {
             QueueOffsetTable = "QueueOffset";
-            CommitQueueOffsetInterval = 1000;
+            PersistQueueOffsetInterval = 1000;
         }
     }
 }

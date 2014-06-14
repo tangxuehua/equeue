@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
@@ -17,7 +16,6 @@ namespace EQueue.Broker
         private readonly IMessageService _messageService;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
-        private readonly ClientManager _clientManager;
 
         public SuspendedPullRequestManager SuspendedPullRequestManager { get; private set; }
         public ConsumerManager ConsumerManager { get; private set; }
@@ -29,33 +27,22 @@ namespace EQueue.Broker
         {
             Setting = setting ?? new BrokerSetting();
             SuspendedPullRequestManager = new SuspendedPullRequestManager(this);
-            ConsumerManager = new ConsumerManager();
+            ConsumerManager = new ConsumerManager(this);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _messageService = ObjectContainer.Resolve<IMessageService>();
             _producerSocketRemotingServer = new SocketRemotingServer("ProducerRemotingServer", Setting.ProducerSocketSetting, new ProducerSocketEventListener(this));
             _consumerSocketRemotingServer = new SocketRemotingServer("ConsumerRemotingServer", Setting.ConsumerSocketSetting, new ConsumerSocketEventListener(this));
-            _clientManager = new ClientManager(this);
             _messageService.SetBrokerContrller(this);
+            RegisterRequestHandlers();
         }
 
-        public BrokerController Initialize()
-        {
-            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler(this));
-            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueCount, new GetTopicQueueCountRequestHandler());
-            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.PullMessage, new PullMessageRequestHandler(this));
-            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryGroupConsumer, new QueryConsumerRequestHandler(this));
-            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueCount, new GetTopicQueueCountRequestHandler());
-            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
-            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.UpdateQueueOffsetRequest, new UpdateQueueOffsetRequestHandler());
-            return this;
-        }
         public BrokerController Start()
         {
             _producerSocketRemotingServer.Start();
             _consumerSocketRemotingServer.Start();
-            _clientManager.Start();
-            SuspendedPullRequestManager.Start();
             _messageService.Start();
+            ConsumerManager.Start();
+            SuspendedPullRequestManager.Start();
             _logger.InfoFormat("Broker started, producer:[{0}:{1}], consumer:[{2}:{3}]",
                 Setting.ProducerSocketSetting.Address,
                 Setting.ProducerSocketSetting.Port,
@@ -67,7 +54,7 @@ namespace EQueue.Broker
         {
             _producerSocketRemotingServer.Shutdown();
             _consumerSocketRemotingServer.Shutdown();
-            _clientManager.Shutdown();
+            ConsumerManager.Shutdown();
             SuspendedPullRequestManager.Shutdown();
             _messageService.Shutdown();
             _logger.InfoFormat("Broker shutdown, producer:[{0}:{1}], consumer:[{2}:{3}]",
@@ -76,6 +63,17 @@ namespace EQueue.Broker
                 Setting.ConsumerSocketSetting.Address,
                 Setting.ConsumerSocketSetting.Port);
             return this;
+        }
+
+        private void RegisterRequestHandlers()
+        {
+            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler(this));
+            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueCount, new GetTopicQueueCountRequestHandler());
+            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.PullMessage, new PullMessageRequestHandler(this));
+            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryGroupConsumer, new QueryConsumerRequestHandler(this));
+            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueCount, new GetTopicQueueCountRequestHandler());
+            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
+            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.UpdateQueueOffsetRequest, new UpdateQueueOffsetRequestHandler());
         }
 
         class ProducerSocketEventListener : ISocketEventListener
@@ -91,14 +89,14 @@ namespace EQueue.Broker
 
             public void OnNewSocketAccepted(SocketInfo socketInfo)
             {
-                _logger.DebugFormat("Accepted new producer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
+                _logger.InfoFormat("Accepted new producer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
             }
 
             public void OnSocketException(SocketInfo socketInfo, SocketException socketException)
             {
                 if (SocketUtils.IsSocketDisconnectedException(socketException))
                 {
-                    _logger.DebugFormat("Producer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
+                    _logger.InfoFormat("Producer disconnected, address:{0}", socketInfo.SocketRemotingEndpointAddress);
                 }
                 else
                 {
@@ -117,10 +115,7 @@ namespace EQueue.Broker
                 _logger = ObjectContainer.Resolve<ILoggerFactory>().Create("EQueue.Broker.ConsumerSocketEventListener");
             }
 
-            public void OnNewSocketAccepted(SocketInfo socketInfo)
-            {
-                _logger.DebugFormat("Accepted new consumer, address:{0}", socketInfo.SocketRemotingEndpointAddress);
-            }
+            public void OnNewSocketAccepted(SocketInfo socketInfo) { }
 
             public void OnSocketException(SocketInfo socketInfo, SocketException socketException)
             {

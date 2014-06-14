@@ -11,7 +11,6 @@ namespace EQueue.Clients.Consumers
         public int HeartbeatBrokerInterval { get; set; }
         public int PersistConsumerOffsetInterval { get; set; }
         public PullRequestSetting PullRequestSetting { get; set; }
-        public MessageModel MessageModel { get; set; }
         public MessageHandleMode MessageHandleMode { get; set; }
 
         public ConsumerSetting()
@@ -23,13 +22,12 @@ namespace EQueue.Clients.Consumers
             UpdateTopicQueueCountInterval = 1000 * 5;
             PersistConsumerOffsetInterval = 1000 * 5;
             PullRequestSetting = new PullRequestSetting();
-            MessageModel = MessageModel.Clustering;
             MessageHandleMode = MessageHandleMode.Parallel;
         }
 
         public override string ToString()
         {
-            return string.Format("[BrokerAddress={0}, BrokerPort={1}, HeartbeatBrokerInterval={2}, UpdateTopicQueueCountInterval={3}, PersistConsumerOffsetInterval={4}, RebalanceInterval={5}, PullRequestSetting={6}, MessageModel={7}, MessageHandleMode={8}]",
+            return string.Format("[BrokerAddress={0}, BrokerPort={1}, HeartbeatBrokerInterval={2}, UpdateTopicQueueCountInterval={3}, PersistConsumerOffsetInterval={4}, RebalanceInterval={5}, PullRequestSetting={6}, MessageHandleMode={7}]",
                 BrokerAddress,
                 BrokerPort,
                 HeartbeatBrokerInterval,
@@ -37,7 +35,6 @@ namespace EQueue.Clients.Consumers
                 PersistConsumerOffsetInterval,
                 RebalanceInterval,
                 PullRequestSetting,
-                MessageModel,
                 MessageHandleMode);
         }
     }

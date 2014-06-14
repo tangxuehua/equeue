@@ -32,7 +32,7 @@ namespace EQueue.Broker
         }
         public void Start()
         {
-            _topicQueueDict.Clear();
+            Clear();
             _messageStore.Recover();
             _offsetManager.Recover();
             RecoverTopicQueues();
@@ -115,6 +115,10 @@ namespace EQueue.Broker
             return GetQueues(topic).Count;
         }
 
+        private void Clear()
+        {
+            _topicQueueDict.Clear();
+        }
         private void RecoverTopicQueues()
         {
             foreach (var message in _messageStore.Messages)
