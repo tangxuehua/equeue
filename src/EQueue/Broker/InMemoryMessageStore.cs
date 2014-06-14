@@ -13,6 +13,9 @@ namespace EQueue.Broker
 
         public IEnumerable<QueueMessage> Messages { get { return _messageDict.Values; } }
 
+        public void Recover() { }
+        public void Start() { }
+        public void Shutdown() { }
         public QueueMessage StoreMessage(int queueId, long queueOffset, Message message)
         {
             var nextOffset = GetNextOffset();
@@ -20,10 +23,6 @@ namespace EQueue.Broker
             _messageDict[nextOffset] = queueMessage;
             return queueMessage;
         }
-
-        public void Recover() { }
-        public void Start() { }
-        public void Shutdown() { }
         public QueueMessage GetMessage(long offset)
         {
             QueueMessage queueMessage;
@@ -33,14 +32,7 @@ namespace EQueue.Broker
             }
             return null;
         }
-        public void RemoveMessage(long messageOffset)
-        {
-            QueueMessage queueMessage;
-            _messageDict.TryRemove(messageOffset, out queueMessage);
-        }
-        public void DeleteMessages(string topic, int queueId, long maxQueueOffset)
-        {
-        }
+        public void UpdateMaxAllowToDeleteMessageOffset(string topic, int queueId, long messageOffset) { }
 
         private long GetNextOffset()
         {

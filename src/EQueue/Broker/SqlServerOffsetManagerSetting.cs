@@ -9,7 +9,7 @@
         public SqlServerOffsetManagerSetting()
         {
             QueueOffsetTable = "QueueOffset";
-            CommitQueueOffsetInterval = 5000;
+            CommitQueueOffsetInterval = 1000;
         }
     }
 }

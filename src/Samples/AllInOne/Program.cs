@@ -49,7 +49,7 @@ namespace AllInOne
         {
             var setting = new BrokerSetting();
             setting.NotifyWhenMessageArrived = false;
-            setting.DeleteMessageInterval = 1000;
+            setting.RemoveMessageInterval = 1000;
             new BrokerController(setting).Initialize().Start();
         }
         static void StartConsumers()

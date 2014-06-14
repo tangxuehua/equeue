@@ -12,6 +12,6 @@ namespace EQueue.Broker
         void Shutdown();
         QueueMessage StoreMessage(int queueId, long queueOffset, Message message);
         QueueMessage GetMessage(long offset);
-        void DeleteMessages(string topic, int queueId, IEnumerable<QueueItem> removedQueueItems, long maxQueueOffset);
+        void UpdateMaxAllowToDeleteMessageOffset(string topic, int queueId, long messageOffset);
     }
 }
