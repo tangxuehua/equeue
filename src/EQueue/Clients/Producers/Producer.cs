@@ -22,7 +22,7 @@ namespace EQueue.Clients.Producers
         private readonly IBinarySerializer _binarySerializer;
         private readonly IQueueSelector _queueSelector;
         private readonly ILogger _logger;
-        private int _refreshTopicQueueCountTaskId;
+        private readonly List<int> _taskIds;
 
         public string Id { get; private set; }
         public ProducerSetting Setting { get; private set; }
@@ -38,6 +38,7 @@ namespace EQueue.Clients.Producers
             Setting = setting ?? new ProducerSetting();
 
             _lockObject = new object();
+            _taskIds = new List<int>();
             _topicQueueCountDict = new ConcurrentDictionary<string, int>();
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
@@ -197,21 +198,19 @@ namespace EQueue.Clients.Producers
         }
         private void StartBackgroundJobsInternal()
         {
-            _refreshTopicQueueCountTaskId = _scheduleService.ScheduleTask("Producer.RefreshTopicQueueCount", RefreshTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval);
-            _logger.DebugFormat("Background job started, producerId:{0}", Id);
+            _taskIds.Add(_scheduleService.ScheduleTask("Producer.RefreshTopicQueueCount", RefreshTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
         }
         private void StopBackgroundJobsInternal()
         {
-            if (_refreshTopicQueueCountTaskId > 0)
+            foreach (var taskId in _taskIds)
             {
-                _scheduleService.ShutdownTask(_refreshTopicQueueCountTaskId);
-                _refreshTopicQueueCountTaskId = 0;
+                _scheduleService.ShutdownTask(taskId);
             }
             Clear();
-            _logger.DebugFormat("Background job stop requesting sent, producerId:{0}", Id);
         }
         private void Clear()
         {
+            _taskIds.Clear();
             _topicQueueCountDict.Clear();
         }
     }

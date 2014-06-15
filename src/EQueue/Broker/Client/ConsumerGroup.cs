@@ -25,11 +25,11 @@ namespace EQueue.Broker.Client
 
         public void Register(ClientChannel clientChannel)
         {
-            var consumer = _consumerDict.GetOrAdd(clientChannel.ClientId, key =>
+            var consumer = _consumerDict.AddOrUpdate(clientChannel.ClientId, key =>
             {
                 _logger.InfoFormat("Consumer added into group. groupName:{0}, consumerId:{1}, remotingAddress:{2}", _groupName, clientChannel.ClientId, clientChannel.Channel.RemotingAddress);
                 return clientChannel;
-            });
+            }, (key, old) => clientChannel);
             consumer.LastUpdateTime = DateTime.Now;
         }
         public void UpdateChannelSubscriptionTopics(ClientChannel clientChannel, IEnumerable<string> subscriptionTopics)

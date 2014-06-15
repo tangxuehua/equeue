@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
@@ -357,7 +358,6 @@ namespace EQueue.Clients.Consumers
             _taskIds.Add(_scheduleService.ScheduleTask("Consumer.SendHeartbeat", SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval));
             _taskIds.Add(_scheduleService.ScheduleTask("Consumer.Rebalance", Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval));
             _taskIds.Add(_scheduleService.ScheduleTask("Consumer.PersistOffset", PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval));
-            _logger.DebugFormat("Background job started, consumerId:{0}, group:{1}", Id, GroupName);
         }
         private void StopBackgroundJobsInternal()
         {
@@ -370,7 +370,6 @@ namespace EQueue.Clients.Consumers
                 pullRequest.Stop();
             }
             Clear();
-            _logger.DebugFormat("Background job stop requesting sent, consumerId:{0}, group:{1}", Id, GroupName);
         }
         private void Clear()
         {

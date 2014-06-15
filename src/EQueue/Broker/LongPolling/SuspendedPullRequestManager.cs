@@ -10,6 +10,7 @@ namespace EQueue.Broker.LongPolling
     public class SuspendedPullRequestManager
     {
         private const string Separator = "@";
+        private readonly object _lockObject = new object();
         private BlockingCollection<NotifyItem> _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
         private readonly ConcurrentDictionary<string, PullRequest> _queueRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly IScheduleService _scheduleService;
@@ -23,6 +24,16 @@ namespace EQueue.Broker.LongPolling
             _brokerController = brokerController;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _messageService = ObjectContainer.Resolve<IMessageService>();
+
+            if (_brokerController.Setting.NotifyWhenMessageArrived)
+            {
+                _notifyMessageArrivedWorker = new Worker("SuspendedPullRequestManager.NotifyMessageArrived", () =>
+                {
+                    var notifyItem = _notifyQueue.Take();
+                    if (notifyItem == null) return;
+                    NotifyMessageArrived(BuildKey(notifyItem.Topic, notifyItem.QueueId), notifyItem.QueueOffset);
+                });
+            }
         }
 
         public void SuspendPullRequest(PullRequest pullRequest)
@@ -50,41 +61,57 @@ namespace EQueue.Broker.LongPolling
             }
         }
 
-        private void Clear()
-        {
-            _queueRequestDict.Clear();
-            _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
-        }
         public void Start()
         {
             Clear();
-
-            _checkBlockingPullRequestTaskId = _scheduleService.ScheduleTask("SuspendedPullRequestManager.CheckBlockingPullRequest", CheckBlockingPullRequest, 1000, 1000);
-
-            if (_brokerController.Setting.NotifyWhenMessageArrived)
-            {
-                _notifyMessageArrivedWorker = new Worker("SuspendedPullRequestManager.NotifyMessageArrived", () =>
-                {
-                    var notifyItem = _notifyQueue.Take();
-                    if (notifyItem == null) return;
-                    NotifyMessageArrived(BuildKey(notifyItem.Topic, notifyItem.QueueId), notifyItem.QueueOffset);
-                }).Start();
-            }
+            StartCheckBlockingPullRequestTask();
+            StartNotifyMessageArrivedWorker();
         }
         public void Shutdown()
         {
-            _scheduleService.ShutdownTask(_checkBlockingPullRequestTaskId);
+            StopCheckBlockingPullRequestTask();
+            StopNotifyMessageArrivedWorker();
+        }
 
+        private void StartCheckBlockingPullRequestTask()
+        {
+            lock (_lockObject)
+            {
+                if (_checkBlockingPullRequestTaskId == 0)
+                {
+                    _checkBlockingPullRequestTaskId = _scheduleService.ScheduleTask("SuspendedPullRequestManager.CheckBlockingPullRequest", CheckBlockingPullRequest, 1000, 1000);
+                }
+            }
+        }
+        private void StopCheckBlockingPullRequestTask()
+        {
+            lock (_lockObject)
+            {
+                if (_checkBlockingPullRequestTaskId > 0)
+                {
+                    _scheduleService.ShutdownTask(_checkBlockingPullRequestTaskId);
+                    _checkBlockingPullRequestTaskId = 0;
+                }
+            }
+        }
+        private void StartNotifyMessageArrivedWorker()
+        {
+            if (_notifyMessageArrivedWorker != null)
+            {
+                _notifyMessageArrivedWorker.Start();
+            }
+        }
+        private void StopNotifyMessageArrivedWorker()
+        {
             if (_notifyMessageArrivedWorker != null)
             {
                 _notifyMessageArrivedWorker.Stop();
-            }
-            if (_notifyQueue.Count == 0)
-            {
-                _notifyQueue.Add(null);
+                if (_notifyQueue.Count == 0)
+                {
+                    _notifyQueue.Add(null);
+                }
             }
         }
-
         private void CheckBlockingPullRequest()
         {
             foreach (var entry in _queueRequestDict)
@@ -126,6 +153,11 @@ namespace EQueue.Broker.LongPolling
             builder.Append(Separator);
             builder.Append(queueId);
             return builder.ToString();
+        }
+        private void Clear()
+        {
+            _queueRequestDict.Clear();
+            _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
         }
 
         class NotifyItem

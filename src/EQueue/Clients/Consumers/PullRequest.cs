@@ -17,6 +17,7 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Variables
 
+        private readonly object _lockObject;
         private readonly SocketRemotingClient _remotingClient;
         private readonly Worker _pullMessageWorker;
         private readonly Worker _handleMessageWorker;
@@ -62,6 +63,7 @@ namespace EQueue.Clients.Consumers
             MessageQueue = messageQueue;
             ProcessQueue = new ProcessQueue();
 
+            _lockObject = new object();
             _queueOffset = queueOffset;
             _remotingClient = remotingClient;
             _setting = setting;
@@ -81,25 +83,15 @@ namespace EQueue.Clients.Consumers
 
         public void Start()
         {
-            _pullMessageWorker.Start();
-            _handleMessageWorker.Start();
-            _retryMessageTaskId = _scheduleService.ScheduleTask("PullRequest.RetryMessage", RetryMessage, _setting.RetryMessageInterval, _setting.RetryMessageInterval);
-            _stoped = false;
+            StartPullMessageWorker();
+            StartHandleMessageWorker();
+            StartRetryMessageTask();
         }
         public void Stop()
         {
-            _pullMessageWorker.Stop();
-            _handleMessageWorker.Stop();
-            _scheduleService.ShutdownTask(_retryMessageTaskId);
-            if (_messageQueue.Count == 0)
-            {
-                _messageQueue.Add(null);
-            }
-            if (_messageRetryQueue.Count == 0)
-            {
-                _messageRetryQueue.Add(null);
-            }
-            _stoped = true;
+            StopPullMessageWorker();
+            StopHandleMessageWorker();
+            StopRetryMessageTask();
         }
 
         public override string ToString()
@@ -161,6 +153,7 @@ namespace EQueue.Clients.Consumers
         private void HandleMessage()
         {
             var queueMessage = _messageQueue.Take();
+
             if (_stoped) return;
             if (queueMessage == null) return;
 
@@ -179,6 +172,7 @@ namespace EQueue.Clients.Consumers
                 }
                 HandleMessage(queueMessage);
             });
+
             if (_messageHandleMode == MessageHandleMode.Sequential)
             {
                 handleAction();
@@ -236,6 +230,54 @@ namespace EQueue.Clients.Consumers
                 queueMessage.StoredTime,
                 ConsumerId,
                 GroupName), exception);
+        }
+
+        private void StartPullMessageWorker()
+        {
+            _stoped = false;
+            _pullMessageWorker.Start();
+        }
+        private void StopPullMessageWorker()
+        {
+            _stoped = true;
+            _pullMessageWorker.Stop();
+        }
+        private void StartHandleMessageWorker()
+        {
+            _handleMessageWorker.Start();
+        }
+        private void StopHandleMessageWorker()
+        {
+            _handleMessageWorker.Stop();
+            if (_messageQueue.Count == 0)
+            {
+                _messageQueue.Add(null);
+            }
+        }
+        private void StartRetryMessageTask()
+        {
+            lock (_lockObject)
+            {
+                if (_retryMessageTaskId == 0)
+                {
+                    _retryMessageTaskId = _scheduleService.ScheduleTask("PullRequest.RetryMessage", RetryMessage, _setting.RetryMessageInterval, _setting.RetryMessageInterval);
+                }
+            }
+        }
+        private void StopRetryMessageTask()
+        {
+            lock (_lockObject)
+            {
+                if (_retryMessageTaskId > 0)
+                {
+                    _scheduleService.ShutdownTask(_retryMessageTaskId);
+                    if (_messageRetryQueue.Count == 0)
+                    {
+                        _messageRetryQueue.Add(null);
+                    }
+                    _retryMessageTaskId = 0;
+                }
+            }
         }
     }
 }

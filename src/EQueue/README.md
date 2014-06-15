@@ -1,4 +1,4 @@
 equeue
 ======
 
-a distributed mq written by c#.
+a high performance distributed mq written by c#.
