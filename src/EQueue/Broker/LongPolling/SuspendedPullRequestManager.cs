@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ECommon.Components;
@@ -12,6 +13,7 @@ namespace EQueue.Broker.LongPolling
         private const string Separator = "@";
         private readonly object _lockObject = new object();
         private BlockingCollection<NotifyItem> _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
+        private readonly ConcurrentDictionary<string, long> _queueNotifyOffsetDict = new ConcurrentDictionary<string, long>();
         private readonly ConcurrentDictionary<string, PullRequest> _queueRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly IScheduleService _scheduleService;
         private readonly IMessageService _messageService;
@@ -31,14 +33,16 @@ namespace EQueue.Broker.LongPolling
                 {
                     var notifyItem = _notifyQueue.Take();
                     if (notifyItem == null) return;
-                    NotifyMessageArrived(BuildKey(notifyItem.Topic, notifyItem.QueueId), notifyItem.QueueOffset);
+                    _queueNotifyOffsetDict[BuildKeyPrefix(notifyItem.Topic, notifyItem.QueueId)] = notifyItem.QueueOffset;
+                    NotifyMessageArrived(notifyItem.Topic, notifyItem.QueueId, notifyItem.QueueOffset);
                 });
             }
         }
 
         public void SuspendPullRequest(PullRequest pullRequest)
         {
-            var key = BuildKey(pullRequest.PullMessageRequest.MessageQueue.Topic, pullRequest.PullMessageRequest.MessageQueue.QueueId);
+            var pullMessageRequest = pullRequest.PullMessageRequest;
+            var key = BuildKey(pullMessageRequest.MessageQueue.Topic, pullMessageRequest.MessageQueue.QueueId, pullMessageRequest.ConsumerGroup);
             var changed = false;
             var existingRequest = default(PullRequest);
             _queueRequestDict.AddOrUpdate(key, pullRequest, (x, request) =>
@@ -53,10 +57,15 @@ namespace EQueue.Broker.LongPolling
                 Task.Factory.StartNew(() => currentRequest.ReplacedAction(currentRequest));
             }
         }
-        public void NotifyMessageArrived(string topic, int queueId, long queueOffset)
+        public void NotifyNewMessage(string topic, int queueId, long queueOffset)
         {
             if (_brokerController.Setting.NotifyWhenMessageArrived)
             {
+                long offset;
+                if (_queueNotifyOffsetDict.TryGetValue(BuildKeyPrefix(topic, queueId), out offset) && queueOffset > offset + 1)
+                {
+                    return;
+                }
                 _notifyQueue.Add(new NotifyItem { Topic = topic, QueueId = queueId, QueueOffset = queueOffset });
             }
         }
@@ -79,7 +88,7 @@ namespace EQueue.Broker.LongPolling
             {
                 if (_checkBlockingPullRequestTaskId == 0)
                 {
-                    _checkBlockingPullRequestTaskId = _scheduleService.ScheduleTask("SuspendedPullRequestManager.CheckBlockingPullRequest", CheckBlockingPullRequest, 1000, 1000);
+                    _checkBlockingPullRequestTaskId = _scheduleService.ScheduleTask("SuspendedPullRequestManager.CheckBlockingPullRequest", CheckBlockingPullRequest, _brokerController.Setting.CheckBlockingPullRequestMilliseconds, _brokerController.Setting.CheckBlockingPullRequestMilliseconds);
                 }
             }
         }
@@ -120,38 +129,55 @@ namespace EQueue.Broker.LongPolling
                 var topic = items[0];
                 var queueId = int.Parse(items[1]);
                 var queueOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
-                NotifyMessageArrived(entry.Key, queueOffset);
+                NotifyMessageArrived(topic, queueId, queueOffset);
             }
         }
-        private void NotifyMessageArrived(string key, long queueOffset)
+        private void NotifyMessageArrived(string topic, int queueId, long queueOffset)
         {
-            PullRequest request;
-            if (_queueRequestDict.TryGetValue(key, out request))
+            var keyPrefix = BuildKeyPrefix(topic, queueId);
+            var keys = _queueRequestDict.Keys.Where(x => x.StartsWith(keyPrefix)).ToList();
+
+            foreach (var key in keys)
             {
-                if (queueOffset >= request.PullMessageRequest.QueueOffset)
+                PullRequest request;
+                if (_queueRequestDict.TryGetValue(key, out request))
                 {
-                    PullRequest currentRequest;
-                    if (_queueRequestDict.TryRemove(key, out currentRequest))
+                    if (queueOffset >= request.PullMessageRequest.QueueOffset)
                     {
-                        Task.Factory.StartNew(() => currentRequest.NewMessageArrivedAction(currentRequest));
+                        PullRequest currentRequest;
+                        if (_queueRequestDict.TryRemove(key, out currentRequest))
+                        {
+                            Task.Factory.StartNew(() => currentRequest.NewMessageArrivedAction(currentRequest));
+                        }
                     }
-                }
-                else if (request.IsTimeout())
-                {
-                    PullRequest currentRequest;
-                    if (_queueRequestDict.TryRemove(key, out currentRequest))
+                    else if (request.IsTimeout())
                     {
-                        Task.Factory.StartNew(() => currentRequest.TimeoutAction(currentRequest));
+                        PullRequest currentRequest;
+                        if (_queueRequestDict.TryRemove(key, out currentRequest))
+                        {
+                            Task.Factory.StartNew(() => currentRequest.TimeoutAction(currentRequest));
+                        }
                     }
                 }
             }
         }
-        private string BuildKey(string topic, int queueId)
+        private string BuildKeyPrefix(string topic, int queueId)
         {
             var builder = new StringBuilder();
             builder.Append(topic);
             builder.Append(Separator);
             builder.Append(queueId);
+            builder.Append(Separator);
+            return builder.ToString();
+        }
+        private string BuildKey(string topic, int queueId, string group)
+        {
+            var builder = new StringBuilder();
+            builder.Append(topic);
+            builder.Append(Separator);
+            builder.Append(queueId);
+            builder.Append(Separator);
+            builder.Append(group);
             return builder.ToString();
         }
         private void Clear()
