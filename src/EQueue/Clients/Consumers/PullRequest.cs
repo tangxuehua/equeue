@@ -140,6 +140,7 @@ namespace EQueue.Clients.Consumers
                 else if (remotingResponse.Code == (int)PullStatus.NextOffsetReset && response.NextOffset != null)
                 {
                     _queueOffset = response.NextOffset.Value;
+                    _logger.DebugFormat("Updated queue next consume offset. topic:{0}, queueId:{1}, queueOffset:{2}", MessageQueue.Topic, MessageQueue.QueueId, _queueOffset);
                 }
             }
             catch (Exception ex)

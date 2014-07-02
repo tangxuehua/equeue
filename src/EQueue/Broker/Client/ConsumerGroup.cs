@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
-using EQueue.Protocols;
 
 namespace EQueue.Broker.Client
 {
@@ -34,7 +33,32 @@ namespace EQueue.Broker.Client
         }
         public void UpdateChannelSubscriptionTopics(ClientChannel clientChannel, IEnumerable<string> subscriptionTopics)
         {
-            _clientSubscriptionTopicDict.AddOrUpdate(clientChannel.ClientId, subscriptionTopics, (key, old) => subscriptionTopics);
+            var subscriptionTopicChanged = false;
+            IEnumerable<string> oldSubscriptionTopics = new List<string>();
+            IEnumerable<string> newSubscriptionTopics = new List<string>();
+
+            _clientSubscriptionTopicDict.AddOrUpdate(clientChannel.ClientId,
+            key =>
+            {
+                subscriptionTopicChanged = true;
+                newSubscriptionTopics = subscriptionTopics;
+                return subscriptionTopics;
+            },
+            (key, old) =>
+            {
+                if (IsSubscriptionTopicsChanged(old.ToList(), subscriptionTopics.ToList()))
+                {
+                    subscriptionTopicChanged = true;
+                    oldSubscriptionTopics = old;
+                    newSubscriptionTopics = subscriptionTopics;
+                }
+                return subscriptionTopics;
+            });
+
+            if (subscriptionTopicChanged)
+            {
+                _logger.InfoFormat("Consumer subscription topics changed. groupName:{0}, consumerId:{1}, old:{2}, new:{3}", _groupName, clientChannel.ClientId, string.Join("|", oldSubscriptionTopics), string.Join("|", newSubscriptionTopics));
+            }
         }
         public bool IsConsumerActive(string consumerRemotingAddress)
         {
@@ -45,8 +69,18 @@ namespace EQueue.Broker.Client
             var clientChannel = _consumerDict.Values.SingleOrDefault(x => x.Channel.RemotingAddress == consumerRemotingAddress);
             if (clientChannel != null)
             {
-                clientChannel.Close();
-                _logger.InfoFormat("Consume removed from group. groupName:{0}, consumerInfo:{1}", _groupName, clientChannel);
+                ClientChannel currentClientChannel;
+                if (_consumerDict.TryRemove(clientChannel.ClientId, out currentClientChannel))
+                {
+                    clientChannel.Close();
+
+                    IEnumerable<string> subscriptionTopics;
+                    if (!_clientSubscriptionTopicDict.TryRemove(clientChannel.ClientId, out subscriptionTopics))
+                    {
+                        subscriptionTopics = new List<string>();
+                    }
+                    _logger.InfoFormat("Consumer removed from group. consumerGroup:{0}, consumerInfo:{1}, subscriptionTopics:{2}", _groupName, clientChannel, string.Join("|", subscriptionTopics));
+                }
             }
         }
         public void RemoveNotActiveConsumers()
@@ -64,6 +98,22 @@ namespace EQueue.Broker.Client
         public IEnumerable<string> GetConsumerIdsForTopic(string topic)
         {
             return _clientSubscriptionTopicDict.Where(x => x.Value.Any(y => y == topic)).Select(z => z.Key);
+        }
+
+        private bool IsSubscriptionTopicsChanged(IList<string> original, IList<string> current)
+        {
+            if (original.Count != current.Count)
+            {
+                return true;
+            }
+            for (var index = 0; index < original.Count; index++)
+            {
+                if (original[index] != current[index])
+                {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
