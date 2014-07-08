@@ -27,8 +27,7 @@ namespace EQueue.Broker
 
         private string _deleteMessageSQLFormat;
         private string _selectAllMessageSQL;
-
-        public IEnumerable<QueueMessage> Messages { get { return _messageDict.Values; } }
+        private string _batchLoadMessageSQLFormat;
 
         public SqlServerMessageStore(SqlServerMessageStoreSetting setting)
         {
@@ -37,13 +36,15 @@ namespace EQueue.Broker
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _messageDataTable = BuildMessageDataTable();
             _deleteMessageSQLFormat = "delete from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset < {2}";
-            _selectAllMessageSQL = "select * from [" + _setting.MessageTable + "] order by MessageOffset asc";
+            _selectAllMessageSQL = "select MessageOffset,Topic,QueueId,QueueOffset from [" + _setting.MessageTable + "] order by MessageOffset asc";
+            _batchLoadMessageSQLFormat = "select * from [" + _setting.MessageTable + "] where MessageOffset >= {0} and MessageOffset < {1}";
         }
 
-        public void Recover()
+        public void Recover(Action<long, string, int, long> messageRecoveredCallback)
         {
+            _logger.Info("Start to recover messages from db.");
             Clear();
-            RecoverAllMessages();
+            RecoverAllMessages(messageRecoveredCallback);
         }
         public void Start()
         {
@@ -65,16 +66,20 @@ namespace EQueue.Broker
         public QueueMessage GetMessage(long offset)
         {
             QueueMessage queueMessage;
+            if (!_messageDict.TryGetValue(offset, out queueMessage))
+            {
+                BatchLoadMessage(offset, _setting.BatchLoadMessageSize);
+            }
             if (_messageDict.TryGetValue(offset, out queueMessage))
             {
                 return queueMessage;
             }
             return null;
         }
-        public void UpdateMaxAllowToDeleteMessageOffset(string topic, int queueId, long messageOffset)
+        public void UpdateMaxAllowToDeleteQueueOffset(string topic, int queueId, long queueOffset)
         {
             var key = string.Format("{0}-{1}", topic, queueId);
-            _queueOffsetDict.AddOrUpdate(key, messageOffset, (currentKey, oldOffset) => messageOffset > oldOffset ? messageOffset : oldOffset);
+            _queueOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
         }
 
         private void Clear()
@@ -85,7 +90,7 @@ namespace EQueue.Broker
             _currentOffset = -1;
             _persistedOffset = -1;
         }
-        private void RecoverAllMessages()
+        private void RecoverAllMessages(Action<long, string, int, long> messageRecoveredCallback)
         {
             using (var connection = new SqlConnection(_setting.ConnectionString))
             {
@@ -93,6 +98,7 @@ namespace EQueue.Broker
                 using (var command = new SqlCommand(_selectAllMessageSQL, connection))
                 {
                     var maxMessageOffset = -1L;
+                    var count = 0;
                     var reader = command.ExecuteReader();
                     while (reader.Read())
                     {
@@ -100,19 +106,44 @@ namespace EQueue.Broker
                         var topic = (string)reader["Topic"];
                         var queueId = (int)reader["QueueId"];
                         var queueOffset = (long)reader["QueueOffset"];
-                        var body = (byte[])reader["Body"];
-                        var storedTime = (DateTime)reader["StoredTime"];
-                        _messageDict[messageOffset] = new QueueMessage(topic, body, messageOffset, queueId, queueOffset, storedTime);
+                        messageRecoveredCallback(messageOffset, topic, queueId, queueOffset);
                         maxMessageOffset = messageOffset;
+                        count++;
                     }
                     if (maxMessageOffset >= 0)
                     {
                         _currentOffset = maxMessageOffset;
                         _persistedOffset = maxMessageOffset;
                     }
-                    _logger.InfoFormat("{0} messages recovered, current message offset:{1}", _messageDict.Count, _currentOffset);
+                    _logger.InfoFormat("{0} messages recovered, current message offset:{1}", count, _currentOffset);
                 }
             }
+        }
+        private void BatchLoadMessage(long startOffset, int batchSize)
+        {
+            using (var connection = new SqlConnection(_setting.ConnectionString))
+            {
+                connection.Open();
+                using (var command = new SqlCommand(string.Format(_batchLoadMessageSQLFormat, startOffset, startOffset + batchSize), connection))
+                {
+                    var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        var queueMessage = PopulateMessageFromReader(reader);
+                        _messageDict[queueMessage.MessageOffset] = queueMessage;
+                    }
+                }
+            }
+        }
+        private QueueMessage PopulateMessageFromReader(IDataReader reader)
+        {
+            var messageOffset = (long)reader["MessageOffset"];
+            var topic = (string)reader["Topic"];
+            var queueId = (int)reader["QueueId"];
+            var queueOffset = (long)reader["QueueOffset"];
+            var body = (byte[])reader["Body"];
+            var storedTime = (DateTime)reader["StoredTime"];
+            return new QueueMessage(topic, body, messageOffset, queueId, queueOffset, storedTime);
         }
         private void PersistMessages()
         {
@@ -151,6 +182,16 @@ namespace EQueue.Broker
             if (BatchPersistMessages(_messageDataTable, maxMessageOffset))
             {
                 _persistedOffset = maxMessageOffset;
+
+                //If the messages are persisted, we can remove them from memory dict.
+                foreach (var message in messages)
+                {
+                    QueueMessage removedMessage;
+                    if (!_messageDict.TryRemove(message.MessageOffset, out removedMessage))
+                    {
+                        _logger.ErrorFormat("Failed to remove persisted message, messageOffset:{0}", message.MessageOffset);
+                    }
+                }
             }
         }
         private bool BatchPersistMessages(DataTable messageDataTable, long maxMessageOffset)
@@ -214,21 +255,21 @@ namespace EQueue.Broker
                 var items = entry.Key.Split(new string[] { "-" }, StringSplitOptions.None);
                 var topic = items[0];
                 var queueId = int.Parse(items[1]);
-                var offset = entry.Value;
-                DeleteMessages(topic, queueId, offset);
+                var queueOffset = entry.Value;
+                DeleteMessages(topic, queueId, queueOffset);
             }
         }
-        private void DeleteMessages(string topic, int queueId, long maxAllowToDeleteOffset)
+        private void DeleteMessages(string topic, int queueId, long maxAllowToDeleteQueueOffset)
         {
             using (var connection = new SqlConnection(_setting.ConnectionString))
             {
                 connection.Open();
-                using (var command = new SqlCommand(string.Format(_deleteMessageSQLFormat, topic, queueId, maxAllowToDeleteOffset), connection))
+                using (var command = new SqlCommand(string.Format(_deleteMessageSQLFormat, topic, queueId, maxAllowToDeleteQueueOffset), connection))
                 {
                     var deletedMessageCount = command.ExecuteNonQuery();
                     if (deletedMessageCount > 0)
                     {
-                        _logger.DebugFormat("Deleted {0} messages, topic={1}, queueId={2}, queueOffset<{3}.", deletedMessageCount, topic, queueId, maxAllowToDeleteOffset);
+                        _logger.DebugFormat("Deleted {0} messages, topic={1}, queueId={2}, queueOffset<{3}.", deletedMessageCount, topic, queueId, maxAllowToDeleteQueueOffset);
                     }
                 }
             }

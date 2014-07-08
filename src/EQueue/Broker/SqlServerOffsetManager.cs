@@ -36,6 +36,7 @@ namespace EQueue.Broker
 
         public void Recover()
         {
+            _logger.Info("Start to recover queue offset from db.");
             Clear();
             RecoverQueueOffset();
         }

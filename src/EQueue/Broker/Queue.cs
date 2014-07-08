@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using ECommon.Extensions;
@@ -9,7 +8,7 @@ namespace EQueue.Broker
 {
     public class Queue
     {
-        private ConcurrentDictionary<long, QueueItem> _queueItemDict = new ConcurrentDictionary<long, QueueItem>();
+        private ConcurrentDictionary<long, long> _queueItemDict = new ConcurrentDictionary<long, long>();
         private long _currentOffset = -1;
 
         public string Topic { get; private set; }
@@ -35,17 +34,17 @@ namespace EQueue.Broker
         {
             return Interlocked.Increment(ref _currentOffset);
         }
-        public void RecoverQueueItem(QueueMessage queueMessage)
+        public void RecoverQueueItem(long queueOffset, long messageOffset)
         {
-            _queueItemDict[queueMessage.QueueOffset] = new QueueItem(queueMessage.MessageOffset, queueMessage.StoredTime);
-            if (queueMessage.QueueOffset > _currentOffset)
+            _queueItemDict[queueOffset] = messageOffset;
+            if (queueOffset > _currentOffset)
             {
-                _currentOffset = queueMessage.QueueOffset;
+                _currentOffset = queueOffset;
             }
         }
-        public void AddQueueItem(QueueMessage queueMessage)
+        public void AddQueueItem(long queueOffset, long messageOffset)
         {
-            _queueItemDict[queueMessage.QueueOffset] = new QueueItem(queueMessage.MessageOffset, queueMessage.StoredTime);
+            _queueItemDict[queueOffset] = messageOffset;
         }
         public long? GetMinQueueOffset()
         {
@@ -63,31 +62,19 @@ namespace EQueue.Broker
             }
             return minOffset;
         }
-        public QueueItem GetQueueItem(long queueOffset)
+        public long GetMessageOffset(long queueOffset)
         {
-            QueueItem queueItem;
-            if (_queueItemDict.TryGetValue(queueOffset, out queueItem))
+            long messageOffset;
+            if (_queueItemDict.TryGetValue(queueOffset, out messageOffset))
             {
-                return queueItem;
+                return messageOffset;
             }
-            return null;
+            return -1;
         }
         public void RemoveQueueItems(long maxQueueOffset)
         {
             var toRemoveQueueOffsets = _queueItemDict.Keys.Where(key => key <= maxQueueOffset).ToList();
             toRemoveQueueOffsets.ForEach(queueOffset => _queueItemDict.Remove(queueOffset));
-        }
-    }
-
-    public class QueueItem
-    {
-        public long MessageOffset { get; private set; }
-        public DateTime StoredTime { get; private set; }
-
-        public QueueItem(long messageOffset, DateTime storedTime)
-        {
-            MessageOffset = messageOffset;
-            StoredTime = storedTime;
         }
     }
 }

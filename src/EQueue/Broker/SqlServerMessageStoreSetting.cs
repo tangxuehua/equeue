@@ -10,6 +10,7 @@
         public int BulkCopyBatchSize { get; set; }
         public int BulkCopyTimeout { get; set; }
         public int DeleteMessageHourOfDay { get; set; }
+        public int BatchLoadMessageSize { get; set; }
 
         public SqlServerMessageStoreSetting()
         {
@@ -20,6 +21,7 @@
             BulkCopyTimeout = 10;
             DeleteMessageInterval = 1000 * 60 * 10;
             DeleteMessageHourOfDay = 4;
+            BatchLoadMessageSize = 5000;
         }
     }
 }
