@@ -11,9 +11,15 @@ namespace EQueue.Configurations
         {
             configuration.SetDefault<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             configuration.SetDefault<IQueueSelector, QueueHashSelector>();
-            configuration.SetDefault<IMessageStore, InMemoryMessageStore>();
+            configuration.SetDefault<IMessageStore, InMemoryMessageStore>(new InMemoryMessageStore(new InMemoryMessageStoreSetting()));
             configuration.SetDefault<IMessageService, MessageService>();
             configuration.SetDefault<IOffsetManager, InMemoryOffsetManager>();
+            return configuration;
+        }
+
+        public static Configuration UseInMemoryMessageStore(this Configuration configuration, InMemoryMessageStoreSetting setting)
+        {
+            configuration.SetDefault<IMessageStore, InMemoryMessageStore>(new InMemoryMessageStore(setting));
             return configuration;
         }
         public static Configuration UseSqlServerMessageStore(this Configuration configuration, SqlServerMessageStoreSetting setting)

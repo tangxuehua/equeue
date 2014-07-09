@@ -6,6 +6,7 @@
         public string MessageTable { get; set; }
         public int PersistMessageInterval { get; set; }
         public int PersistMessageMaxCount { get; set; }
+        public int RemoveMessageFromMemoryInterval { get; set; }
         public int DeleteMessageInterval { get; set; }
         public int BulkCopyBatchSize { get; set; }
         public int BulkCopyTimeout { get; set; }
@@ -19,6 +20,7 @@
             PersistMessageMaxCount = 10000;
             BulkCopyBatchSize = 10000;
             BulkCopyTimeout = 10;
+            RemoveMessageFromMemoryInterval = 1000;
             DeleteMessageInterval = 1000 * 60 * 10;
             DeleteMessageHourOfDay = 4;
             BatchLoadMessageSize = 5000;

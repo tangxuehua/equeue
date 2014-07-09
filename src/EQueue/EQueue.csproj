@@ -43,6 +43,7 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Broker\InMemoryMessageStoreSetting.cs" />
     <Compile Include="Broker\SqlServerOffsetManager.cs" />
     <Compile Include="Broker\SqlServerOffsetManagerSetting.cs" />
     <Compile Include="Broker\SqlServerMessageStoreSetting.cs" />
@@ -85,6 +86,8 @@
     <Compile Include="Clients\Producers\QueueAverageSelector.cs" />
     <Compile Include="Clients\Producers\QueueHashSelector.cs" />
     <Compile Include="Configurations\ConfigurationExtensions.cs" />
+    <Compile Include="Protocols\TopicConsumeInfo.cs" />
+    <Compile Include="Protocols\TopicQueueInfo.cs" />
     <Compile Include="Protocols\QueueMessage.cs" />
     <Compile Include="Protocols\ConsumerData.cs" />
     <Compile Include="Protocols\Message.cs" />

@@ -23,6 +23,7 @@ namespace EQueue.Broker
         private long _currentOffset = -1;
         private long _persistedOffset = -1;
         private int _persistMessageTaskId;
+        private int _removeMessageFromMemoryTaskId;
         private int _deleteMessageTaskId;
 
         private string _deleteMessageSQLFormat;
@@ -49,11 +50,13 @@ namespace EQueue.Broker
         public void Start()
         {
             _persistMessageTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.PersistMessages", PersistMessages, _setting.PersistMessageInterval, _setting.PersistMessageInterval);
+            _removeMessageFromMemoryTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.RemoveConsumedMessagesFromMemory", RemoveConsumedMessagesFromMemory, _setting.RemoveMessageFromMemoryInterval, _setting.RemoveMessageFromMemoryInterval);
             _deleteMessageTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.DeleteMessages", DeleteMessages, _setting.DeleteMessageInterval, _setting.DeleteMessageInterval);
         }
         public void Shutdown()
         {
             _scheduleService.ShutdownTask(_persistMessageTaskId);
+            _scheduleService.ShutdownTask(_removeMessageFromMemoryTaskId);
             _scheduleService.ShutdownTask(_deleteMessageTaskId);
         }
         public QueueMessage StoreMessage(int queueId, long queueOffset, Message message)
@@ -89,6 +92,24 @@ namespace EQueue.Broker
             _messageDataTable.Rows.Clear();
             _currentOffset = -1;
             _persistedOffset = -1;
+        }
+
+        private void RemoveConsumedMessagesFromMemory()
+        {
+            var queueMessages = _messageDict.Values.ToList();
+            foreach (var queueMessage in queueMessages)
+            {
+                var key = string.Format("{0}-{1}", queueMessage.Topic, queueMessage.QueueId);
+                long maxAllowToDeleteQueueOffset;
+                if (_queueOffsetDict.TryGetValue(key, out maxAllowToDeleteQueueOffset) && queueMessage.QueueOffset <= maxAllowToDeleteQueueOffset)
+                {
+                    QueueMessage removedQueueMessage;
+                    if (!_messageDict.TryRemove(queueMessage.MessageOffset, out removedQueueMessage))
+                    {
+                        _logger.ErrorFormat("Failed to remove consumed message, messageOffset:{0}", queueMessage.MessageOffset);
+                    }
+                }
+            }
         }
         private void RecoverAllMessages(Action<long, string, int, long> messageRecoveredCallback)
         {
