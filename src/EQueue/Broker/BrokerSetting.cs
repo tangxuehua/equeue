@@ -23,7 +23,7 @@ namespace EQueue.Broker
             RemoveMessageInterval = 1000 * 60 * 10;
             SuspendPullRequestMilliseconds = 1000 * 60;
             CheckBlockingPullRequestMilliseconds = 1000;
-            DefaultTopicQueueCount = 1;
+            DefaultTopicQueueCount = 4;
             ScanNotActiveConsumerInterval = 1000 * 5;
             ConsumerExpiredTimeout = 1000 * 60;
         }

@@ -50,7 +50,6 @@ namespace AllInOne
             var setting = new BrokerSetting();
             setting.NotifyWhenMessageArrived = false;
             setting.RemoveMessageInterval = 1000;
-            setting.DefaultTopicQueueCount = 4;
             new BrokerController(setting).Start();
         }
         static void StartConsumers()
