@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using ECommon.Components;
@@ -204,13 +205,18 @@ namespace EQueue.Broker
             {
                 _persistedOffset = maxMessageOffset;
 
-                //If the messages are persisted, we can remove them from memory dict.
-                foreach (var message in messages)
+                //当当前进程占用物理内存的比例超过配置的比例，则当消息持久化完成后，需要把消息从内存删除
+                var currentProcessMemorySize = Process.GetCurrentProcess().PrivateMemorySize64;
+                var physicalMemorySize = _setting.MaxPhysicalMemorySize;
+                if (currentProcessMemorySize * 100 / physicalMemorySize >= _setting.MaxUseMemoryPercent)
                 {
-                    QueueMessage removedMessage;
-                    if (!_messageDict.TryRemove(message.MessageOffset, out removedMessage))
+                    foreach (var message in messages)
                     {
-                        _logger.ErrorFormat("Failed to remove persisted message, messageOffset:{0}", message.MessageOffset);
+                        QueueMessage removedMessage;
+                        if (!_messageDict.TryRemove(message.MessageOffset, out removedMessage))
+                        {
+                            _logger.ErrorFormat("Failed to remove persisted message, messageOffset:{0}", message.MessageOffset);
+                        }
                     }
                 }
             }

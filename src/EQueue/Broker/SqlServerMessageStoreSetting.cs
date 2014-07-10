@@ -12,6 +12,8 @@
         public int BulkCopyTimeout { get; set; }
         public int DeleteMessageHourOfDay { get; set; }
         public int BatchLoadMessageSize { get; set; }
+        public long MaxPhysicalMemorySize { get; set; }
+        public int MaxUseMemoryPercent { get; set; }
 
         public SqlServerMessageStoreSetting()
         {
@@ -24,6 +26,8 @@
             DeleteMessageInterval = 1000 * 60 * 10;
             DeleteMessageHourOfDay = 4;
             BatchLoadMessageSize = 5000;
+            MaxPhysicalMemorySize = 1024 * 1024 * 1000 * 4L;
+            MaxUseMemoryPercent = 50;
         }
     }
 }
