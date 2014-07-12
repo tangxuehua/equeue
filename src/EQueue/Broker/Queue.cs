@@ -14,12 +14,14 @@ namespace EQueue.Broker
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
         public long CurrentOffset { get { return _currentOffset; } }
+        public long MessageCount { get { return _queueItemDict.Count; } }
         public QueueStatus Status { get; private set; }
 
         public Queue(string topic, int queueId)
         {
             Topic = topic;
             QueueId = queueId;
+            Status = QueueStatus.Normal;
         }
 
         public void AllowEnqueue()

@@ -1,0 +1,55 @@
+﻿@model IEnumerable<EQueue.Protocols.TopicQueueInfo>
+@{
+    ViewBag.Title = "队列信息";
+}
+<div ng-controller="PostController">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th width="30%" class="vertical-center">
+                    Topic
+                </th>
+                <th width="15%" class="text-center vertical-center">
+                    QueueId
+                </th>
+                <th width="15%" class="text-center vertical-center">
+                    CurrentOffset
+                </th>
+                <th width="15%" class="text-center vertical-center">
+                    ConsumedOffset
+                </th>
+                <th width="15%" class="text-center vertical-center">
+                    MessageCount
+                </th>
+                <th width="10%" class="text-center vertical-center">
+                    Status
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td class="vertical-center">
+                        @item.Topic
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.QueueId
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.QueueCurrentOffset
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.QueueMaxConsumedOffset
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.QueueMessageCount
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.Status
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

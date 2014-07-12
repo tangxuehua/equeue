@@ -1,0 +1,49 @@
+﻿@model IEnumerable<EQueue.Protocols.TopicConsumeInfo>
+@{
+    ViewBag.Title = "队列消费信息";
+}
+<div ng-controller="PostController">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th width="20%" class="vertical-center">
+                    ConsumerGroup
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    ConsumerId
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    Topic
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    QueueId
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    ConsumedOffset
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td class="vertical-center">
+                        @item.ConsumerGroup
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ConsumerId
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.Topic
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.QueueId
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ConsumedOffset
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

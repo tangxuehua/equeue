@@ -32,7 +32,7 @@ namespace QuickStart.ConsumerClient
             var taskId = scheduleService.ScheduleTask("WaitQueueAllocationComplete", () =>
             {
                 var allocatedQueueIds = consumer.GetCurrentQueues().Select(x => x.QueueId);
-                if (allocatedQueueIds.Count() == 2)
+                if (allocatedQueueIds.Count() == 4)
                 {
                     _logger.InfoFormat("Consumer load balance completed, allocated queueIds:{0}", string.Join(",", allocatedQueueIds));
                     waitHandle.Set();

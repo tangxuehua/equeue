@@ -15,9 +15,6 @@ namespace EQueue.Protocols
         /// <summary>队列当前最大Offset
         /// </summary>
         public long QueueCurrentOffset { get; set; }
-        /// <summary>队列当前最大Offset对应的MessageOffset
-        /// </summary>
-        public long QueueCurrentMessageOffset { get; set; }
         /// <summary>队列当前被所有消费者都消费了的最大Offset
         /// </summary>
         public long QueueMaxConsumedOffset { get; set; }

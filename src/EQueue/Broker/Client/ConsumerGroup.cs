@@ -12,8 +12,11 @@ namespace EQueue.Broker.Client
         private string _groupName;
         private ConsumerManager _consumerManager;
         private ConcurrentDictionary<string, ClientChannel> _consumerDict = new ConcurrentDictionary<string, ClientChannel>();
-        private ConcurrentDictionary<string, IEnumerable<string>> _clientSubscriptionTopicDict = new ConcurrentDictionary<string, IEnumerable<string>>();
+        private ConcurrentDictionary<string, IEnumerable<string>> _consumerSubscriptionTopicDict = new ConcurrentDictionary<string, IEnumerable<string>>();
+        private ConcurrentDictionary<string, IEnumerable<string>> _consumerConsumingQueueDict = new ConcurrentDictionary<string, IEnumerable<string>>();
         private ILogger _logger;
+
+        public string GroupName { get { return _groupName; } }
 
         public ConsumerGroup(string groupName, ConsumerManager consumerManager)
         {
@@ -31,13 +34,13 @@ namespace EQueue.Broker.Client
             }, (key, old) => clientChannel);
             consumer.LastUpdateTime = DateTime.Now;
         }
-        public void UpdateChannelSubscriptionTopics(ClientChannel clientChannel, IEnumerable<string> subscriptionTopics)
+        public void UpdateConsumerSubscriptionTopics(ClientChannel clientChannel, IEnumerable<string> subscriptionTopics)
         {
             var subscriptionTopicChanged = false;
             IEnumerable<string> oldSubscriptionTopics = new List<string>();
             IEnumerable<string> newSubscriptionTopics = new List<string>();
 
-            _clientSubscriptionTopicDict.AddOrUpdate(clientChannel.ClientId,
+            _consumerSubscriptionTopicDict.AddOrUpdate(clientChannel.ClientId,
             key =>
             {
                 subscriptionTopicChanged = true;
@@ -46,7 +49,7 @@ namespace EQueue.Broker.Client
             },
             (key, old) =>
             {
-                if (IsSubscriptionTopicsChanged(old.ToList(), subscriptionTopics.ToList()))
+                if (IsStringCollectionChanged(old.ToList(), subscriptionTopics.ToList()))
                 {
                     subscriptionTopicChanged = true;
                     oldSubscriptionTopics = old;
@@ -58,6 +61,38 @@ namespace EQueue.Broker.Client
             if (subscriptionTopicChanged)
             {
                 _logger.InfoFormat("Consumer subscription topics changed. groupName:{0}, consumerId:{1}, old:{2}, new:{3}", _groupName, clientChannel.ClientId, string.Join("|", oldSubscriptionTopics), string.Join("|", newSubscriptionTopics));
+            }
+        }
+        public void UpdateConsumerConsumingQueues(ClientChannel clientChannel, IEnumerable<string> consumingQueues)
+        {
+            var consumingQueueChanged = false;
+            IEnumerable<string> oldConsumingQueues = new List<string>();
+            IEnumerable<string> newConsumingQueues = new List<string>();
+
+            _consumerConsumingQueueDict.AddOrUpdate(clientChannel.ClientId,
+            key =>
+            {
+                newConsumingQueues = consumingQueues;
+                if (consumingQueues.Count() > 0)
+                {
+                    consumingQueueChanged = true;
+                }
+                return consumingQueues;
+            },
+            (key, old) =>
+            {
+                if (IsStringCollectionChanged(old.ToList(), consumingQueues.ToList()))
+                {
+                    consumingQueueChanged = true;
+                    oldConsumingQueues = old;
+                    newConsumingQueues = consumingQueues;
+                }
+                return consumingQueues;
+            });
+
+            if (consumingQueueChanged)
+            {
+                _logger.InfoFormat("Consumer consuming queues changed. groupName:{0}, consumerId:{1}, old:{2}, new:{3}", _groupName, clientChannel.ClientId, string.Join("|", oldConsumingQueues), string.Join("|", newConsumingQueues));
             }
         }
         public bool IsConsumerActive(string consumerRemotingAddress)
@@ -75,11 +110,16 @@ namespace EQueue.Broker.Client
                     clientChannel.Close();
 
                     IEnumerable<string> subscriptionTopics;
-                    if (!_clientSubscriptionTopicDict.TryRemove(clientChannel.ClientId, out subscriptionTopics))
+                    if (!_consumerSubscriptionTopicDict.TryRemove(clientChannel.ClientId, out subscriptionTopics))
                     {
                         subscriptionTopics = new List<string>();
                     }
-                    _logger.InfoFormat("Consumer removed from group. consumerGroup:{0}, consumerInfo:{1}, subscriptionTopics:{2}", _groupName, clientChannel, string.Join("|", subscriptionTopics));
+                    IEnumerable<string> consumingQueues;
+                    if (!_consumerConsumingQueueDict.TryRemove(clientChannel.ClientId, out consumingQueues))
+                    {
+                        consumingQueues = new List<string>();
+                    }
+                    _logger.InfoFormat("Consumer removed from group. consumerGroup:{0}, consumerInfo:{1}, subscriptionTopics:{2}, consumingQueues:{3}", _groupName, clientChannel, string.Join("|", subscriptionTopics), string.Join("|", consumingQueues));
                 }
             }
         }
@@ -95,12 +135,25 @@ namespace EQueue.Broker.Client
                 }
             }
         }
+        public IEnumerable<string> GetAllConsumerIds()
+        {
+            return _consumerDict.Keys;
+        }
         public IEnumerable<string> GetConsumerIdsForTopic(string topic)
         {
-            return _clientSubscriptionTopicDict.Where(x => x.Value.Any(y => y == topic)).Select(z => z.Key);
+            return _consumerSubscriptionTopicDict.Where(x => x.Value.Any(y => y == topic)).Select(z => z.Key);
+        }
+        public IEnumerable<string> GetConsumingQueue(string consumerId)
+        {
+            IEnumerable<string> consumingQueues;
+            if (_consumerConsumingQueueDict.TryGetValue(consumerId, out consumingQueues))
+            {
+                return consumingQueues;
+            }
+            return new List<string>();
         }
 
-        private bool IsSubscriptionTopicsChanged(IList<string> original, IList<string> current)
+        private bool IsStringCollectionChanged(IList<string> original, IList<string> current)
         {
             if (original.Count != current.Count)
             {

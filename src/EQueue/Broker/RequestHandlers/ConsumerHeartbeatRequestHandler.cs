@@ -25,7 +25,7 @@ namespace EQueue.Broker.Processors
             var consumerData = _binarySerializer.Deserialize<ConsumerData>(request.Body);
             _brokerController.ConsumerManager.RegisterConsumer(
                 consumerData.GroupName,
-                new ClientChannel(consumerData.ConsumerId, context.Channel), consumerData.SubscriptionTopics);
+                new ClientChannel(consumerData.ConsumerId, context.Channel), consumerData.SubscriptionTopics, consumerData.ConsumingQueues);
             return null;
         }
     }

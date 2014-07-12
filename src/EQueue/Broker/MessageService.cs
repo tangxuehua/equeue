@@ -109,29 +109,16 @@ namespace EQueue.Broker
             }
             return -1;
         }
+
+        public IEnumerable<string> GetAllTopics()
+        {
+            return _topicQueueDict.Keys;
+        }
         public int GetTopicQueueCount(string topic)
         {
             return GetQueues(topic).Count;
         }
-
-        private void Clear()
-        {
-            _topicQueueDict.Clear();
-        }
-        private void RecoverQueueIndexForMessage(long messageOffset, string topic, int queueId, long queueOffset)
-        {
-            var queues = GetQueues(topic);
-            if (queueId >= queues.Count)
-            {
-                for (var index = queues.Count; index <= queueId; index++)
-                {
-                    queues.Add(new Queue(topic, index));
-                }
-            }
-            var queue = queues[queueId];
-            queue.RecoverQueueItem(queueOffset, messageOffset);
-        }
-        private IList<Queue> GetQueues(string topic)
+        public IList<Queue> GetQueues(string topic)
         {
             return _topicQueueDict.GetOrAdd(topic, x =>
             {
@@ -143,6 +130,25 @@ namespace EQueue.Broker
                 return queues;
             });
         }
+
+        private void Clear()
+        {
+            _topicQueueDict.Clear();
+        }
+        private void RecoverQueueIndexForMessage(long messageOffset, string topic, int queueId, long queueOffset)
+        {
+            var queues = GetQueues(topic);
+            if (queueId >= queues.Count)
+            {
+                for (var index = queues.Count(); index <= queueId; index++)
+                {
+                    queues.Add(new Queue(topic, index));
+                }
+            }
+            var queue = queues[queueId];
+            queue.RecoverQueueItem(queueOffset, messageOffset);
+        }
+
         private void RemoveConsumedMessages()
         {
             foreach (var topicQueues in _topicQueueDict.Values)

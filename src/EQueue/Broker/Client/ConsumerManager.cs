@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
@@ -35,11 +36,12 @@ namespace EQueue.Broker.Client
         {
             _scheduleService.ShutdownTask(_scanNotActiveConsumerTaskId);
         }
-        public void RegisterConsumer(string groupName, ClientChannel clientChannel, IEnumerable<string> subscriptionTopics)
+        public void RegisterConsumer(string groupName, ClientChannel clientChannel, IEnumerable<string> subscriptionTopics, IEnumerable<string> consumingQueues)
         {
             var consumerGroup = _consumerGroupDict.GetOrAdd(groupName, new ConsumerGroup(groupName, this));
             consumerGroup.Register(clientChannel);
-            consumerGroup.UpdateChannelSubscriptionTopics(clientChannel, subscriptionTopics);
+            consumerGroup.UpdateConsumerSubscriptionTopics(clientChannel, subscriptionTopics);
+            consumerGroup.UpdateConsumerConsumingQueues(clientChannel, consumingQueues);
         }
         public void RemoveConsumer(string consumerRemotingAddress)
         {
@@ -47,6 +49,10 @@ namespace EQueue.Broker.Client
             {
                 consumerGroup.RemoveConsumer(consumerRemotingAddress);
             }
+        }
+        public IEnumerable<ConsumerGroup> GetAllConsumerGroups()
+        {
+            return _consumerGroupDict.Values.ToList();
         }
         public ConsumerGroup GetConsumerGroup(string groupName)
         {
