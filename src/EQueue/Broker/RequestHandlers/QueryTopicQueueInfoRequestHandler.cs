@@ -28,7 +28,7 @@ namespace EQueue.Broker.Processors
 
             foreach (var topic in topicList)
             {
-                var queues = _messageService.GetQueues(topic).ToList();
+                var queues = _messageService.GetQueues(topic, false).ToList();
                 foreach (var queue in queues)
                 {
                     var topicQueueInfo = new TopicQueueInfo();

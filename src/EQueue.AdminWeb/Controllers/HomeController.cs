@@ -1,4 +1,5 @@
 ﻿using System.Web.Mvc;
+using EQueue.AdminWeb.Models;
 
 namespace EQueue.AdminWeb.Controllers
 {
@@ -13,11 +14,22 @@ namespace EQueue.AdminWeb.Controllers
 
         public ActionResult Index(string topic)
         {
-            return View(_queryService.GetTopicQueueInfo(topic));
+            var topicQueueInfos = _queryService.GetTopicQueueInfo(topic);
+            return View(new TopicQueueViewModel
+            {
+                Topic = topic,
+                TopicQueueInfos = topicQueueInfos
+            });
         }
         public ActionResult ConsumeInfo(string group, string topic)
         {
-            return View(_queryService.GetTopicConsumeInfo(group, topic));
+            var topicConsumeInfos = _queryService.GetTopicConsumeInfo(group, topic);
+            return View(new TopicConsumeViewModel
+            {
+                Group = group,
+                Topic = topic,
+                TopicConsumeInfos = topicConsumeInfos
+            });
         }
     }
 }

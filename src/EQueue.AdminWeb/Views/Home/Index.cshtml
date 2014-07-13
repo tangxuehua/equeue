@@ -1,8 +1,17 @@
-﻿@model IEnumerable<EQueue.Protocols.TopicQueueInfo>
+﻿@model EQueue.AdminWeb.Models.TopicQueueViewModel
 @{
-    ViewBag.Title = "队列信息";
+    ViewBag.Title = "队列基本信息";
 }
-<div ng-controller="PostController">
+
+<div>
+    @using (Html.BeginForm("Index", "Home", new { }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+    {
+        <div class="form-group">
+            @Html.LabelFor(m => m.Topic, new { @class = "control-label" })
+            @Html.TextBoxFor(m => m.Topic, new { @class = "form-control", @style = "display:inline-block" })
+            <input type="submit" value="查询" class="btn btn-default" />
+        </div>
+    }
     <table class="table table-striped">
         <thead>
             <tr>
@@ -27,7 +36,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Model)
+            @foreach (var item in Model.TopicQueueInfos)
             {
                 <tr>
                     <td class="vertical-center">

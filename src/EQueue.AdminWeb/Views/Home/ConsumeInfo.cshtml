@@ -1,8 +1,18 @@
-﻿@model IEnumerable<EQueue.Protocols.TopicConsumeInfo>
+﻿@model EQueue.AdminWeb.Models.TopicConsumeViewModel
 @{
     ViewBag.Title = "队列消费信息";
 }
-<div ng-controller="PostController">
+<div>
+    @using (Html.BeginForm("ConsumeInfo", "Home", new { }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+    {
+        <div class="form-group">
+            @Html.LabelFor(m => m.Group, new { @class = "control-label" })
+            @Html.TextBoxFor(m => m.Group, new { @class = "form-control", @style = "display:inline-block" })
+            @Html.LabelFor(m => m.Topic, new { @class = "control-label" })
+            @Html.TextBoxFor(m => m.Topic, new { @class = "form-control", @style = "display:inline-block" })
+            <input type="submit" value="查询" class="btn btn-default" />
+        </div>
+    }
     <table class="table table-striped">
         <thead>
             <tr>
@@ -24,7 +34,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Model)
+            @foreach (var item in Model.TopicConsumeInfos)
             {
                 <tr>
                     <td class="vertical-center">

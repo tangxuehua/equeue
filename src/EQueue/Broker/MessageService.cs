@@ -51,7 +51,7 @@ namespace EQueue.Broker
         }
         public MessageStoreResult StoreMessage(Message message, int queueId)
         {
-            var queues = GetQueues(message.Topic);
+            var queues = GetQueues(message.Topic, true);
             var queueCount = queues.Count;
             if (queueId >= queueCount || queueId < 0)
             {
@@ -65,7 +65,7 @@ namespace EQueue.Broker
         }
         public IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
         {
-            var queues = GetQueues(topic);
+            var queues = GetQueues(topic, true);
             var queue = queues.SingleOrDefault(x => x.QueueId == queueId);
             if (queue != null)
             {
@@ -112,7 +112,7 @@ namespace EQueue.Broker
         }
         public long GetQueueCurrentOffset(string topic, int queueId)
         {
-            var queues = GetQueues(topic);
+            var queues = GetQueues(topic, true);
             var queue = queues.SingleOrDefault(x => x.QueueId == queueId);
             if (queue != null)
             {
@@ -127,19 +127,31 @@ namespace EQueue.Broker
         }
         public int GetTopicQueueCount(string topic)
         {
-            return GetQueues(topic).Count;
+            return GetQueues(topic, true).Count;
         }
-        public IList<Queue> GetQueues(string topic)
+        public IList<Queue> GetQueues(string topic, bool autoCreateQueue)
         {
-            return _topicQueueDict.GetOrAdd(topic, x =>
+            if (autoCreateQueue)
             {
-                var queues = new List<Queue>();
-                for (var index = 0; index < _brokerController.Setting.DefaultTopicQueueCount; index++)
+                return _topicQueueDict.GetOrAdd(topic, x =>
                 {
-                    queues.Add(new Queue(x, index));
+                    var queues = new List<Queue>();
+                    for (var index = 0; index < _brokerController.Setting.DefaultTopicQueueCount; index++)
+                    {
+                        queues.Add(new Queue(x, index));
+                    }
+                    return queues;
+                });
+            }
+            else
+            {
+                IList<Queue> queues;
+                if (_topicQueueDict.TryGetValue(topic, out queues))
+                {
+                    return queues;
                 }
-                return queues;
-            });
+                return new List<Queue>();
+            }
         }
 
         private void Clear()
@@ -148,7 +160,7 @@ namespace EQueue.Broker
         }
         private void RecoverQueueIndexForMessage(long messageOffset, string topic, int queueId, long queueOffset)
         {
-            var queues = GetQueues(topic);
+            var queues = GetQueues(topic, true);
             if (queueId >= queues.Count)
             {
                 for (var index = queues.Count(); index <= queueId; index++)
