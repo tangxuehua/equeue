@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using ECommon.Components;
@@ -18,6 +19,11 @@ namespace EQueue.Broker
         private readonly ILogger _logger;
         private long _currentOffset = -1;
         private int _removeMessageFromMemoryTaskId;
+
+        public bool SupportBatchLoadQueueIndex
+        {
+            get { return false; }
+        }
 
         public InMemoryMessageStore(InMemoryMessageStoreSetting setting)
         {
@@ -55,6 +61,10 @@ namespace EQueue.Broker
         {
             var key = string.Format("{0}-{1}", topic, queueId);
             _queueOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
+        }
+        public IDictionary<long, long> BatchLoadQueueIndex(string topic, int queueId, long startQueueOffset)
+        {
+            throw new NotImplementedException();
         }
 
         private void RemoveConsumedMessagesFromMemory()

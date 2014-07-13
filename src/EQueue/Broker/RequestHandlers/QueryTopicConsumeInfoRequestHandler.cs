@@ -74,6 +74,34 @@ namespace EQueue.Broker.Processors
                 }
             }
 
+            topicConsumeInfoList.Sort((x, y) =>
+            {
+                var result = string.Compare(x.ConsumerGroup, y.ConsumerGroup);
+                if (result != 0)
+                {
+                    return result;
+                }
+                result = string.Compare(x.ConsumerId, y.ConsumerId);
+                if (result != 0)
+                {
+                    return result;
+                }
+                result = string.Compare(x.Topic, y.Topic);
+                if (result != 0)
+                {
+                    return result;
+                }
+                if (x.QueueId > y.QueueId)
+                {
+                    return 1;
+                }
+                else if (x.QueueId < y.QueueId)
+                {
+                    return -1;
+                }
+                return 0;
+            });
+
             return topicConsumeInfoList;
         }
         private TopicConsumeInfo BuildTopicConsumeInfo(string group, string consumerId, string topic, int queueId)

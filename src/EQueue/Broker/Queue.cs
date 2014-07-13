@@ -14,7 +14,19 @@ namespace EQueue.Broker
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
         public long CurrentOffset { get { return _currentOffset; } }
-        public long MessageCount { get { return _queueItemDict.Count; } }
+        public long GetMessageCount()
+        {
+            return _queueItemDict.Count;
+        }
+        public long GetMessageRealCount()
+        {
+            var minOffset = GetMinQueueOffset();
+            if (minOffset == null)
+            {
+                return 0L;
+            }
+            return _currentOffset - minOffset.Value + 1;
+        }
         public QueueStatus Status { get; private set; }
 
         public Queue(string topic, int queueId)
@@ -24,7 +36,7 @@ namespace EQueue.Broker
             Status = QueueStatus.Normal;
         }
 
-        public void AllowEnqueue()
+        public void EnableEnqueue()
         {
             Status = QueueStatus.Normal;
         }
@@ -36,15 +48,18 @@ namespace EQueue.Broker
         {
             return Interlocked.Increment(ref _currentOffset);
         }
-        public void RecoverQueueItem(long queueOffset, long messageOffset)
+        public void RecoverQueueIndex(long queueOffset, long messageOffset, bool allowSetQueueIndex)
         {
-            _queueItemDict[queueOffset] = messageOffset;
+            if (allowSetQueueIndex)
+            {
+                SetQueueIndex(queueOffset, messageOffset);
+            }
             if (queueOffset > _currentOffset)
             {
                 _currentOffset = queueOffset;
             }
         }
-        public void AddQueueItem(long queueOffset, long messageOffset)
+        public void SetQueueIndex(long queueOffset, long messageOffset)
         {
             _queueItemDict[queueOffset] = messageOffset;
         }
@@ -73,10 +88,25 @@ namespace EQueue.Broker
             }
             return -1;
         }
-        public void RemoveQueueItems(long maxQueueOffset)
+        public void RemoveQueueIndex(long maxQueueOffset)
         {
             var toRemoveQueueOffsets = _queueItemDict.Keys.Where(key => key <= maxQueueOffset).ToList();
             toRemoveQueueOffsets.ForEach(queueOffset => _queueItemDict.Remove(queueOffset));
+        }
+        public long RemoveLastQueueIndex(long requireRemoveCount)
+        {
+            var queueOffset = _queueItemDict.Keys.LastOrDefault();
+            var totalRemovedCount = 0;
+            while (queueOffset >= 0L && totalRemovedCount < requireRemoveCount)
+            {
+                long messageOffset;
+                if (_queueItemDict.TryRemove(queueOffset, out messageOffset))
+                {
+                    totalRemovedCount++;
+                }
+                queueOffset--;
+            }
+            return totalRemovedCount;
         }
     }
 }

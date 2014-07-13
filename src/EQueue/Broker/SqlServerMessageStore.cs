@@ -25,11 +25,18 @@ namespace EQueue.Broker
         private long _persistedOffset = -1;
         private int _persistMessageTaskId;
         private int _removeMessageFromMemoryTaskId;
+        private int _removeConsumedMessageFromMemoryTaskId;
         private int _deleteMessageTaskId;
 
         private string _deleteMessageSQLFormat;
         private string _selectAllMessageSQL;
         private string _batchLoadMessageSQLFormat;
+        private string _batchLoadQueueIndexSQLFormat;
+
+        public bool SupportBatchLoadQueueIndex
+        {
+            get { return true; }
+        }
 
         public SqlServerMessageStore(SqlServerMessageStoreSetting setting)
         {
@@ -40,6 +47,7 @@ namespace EQueue.Broker
             _deleteMessageSQLFormat = "delete from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset < {2}";
             _selectAllMessageSQL = "select MessageOffset,Topic,QueueId,QueueOffset from [" + _setting.MessageTable + "] order by MessageOffset asc";
             _batchLoadMessageSQLFormat = "select * from [" + _setting.MessageTable + "] where MessageOffset >= {0} and MessageOffset < {1}";
+            _batchLoadQueueIndexSQLFormat = "select QueueOffset,MessageOffset from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset >= {2} and QueueOffset < {3}";
         }
 
         public void Recover(Action<long, string, int, long> messageRecoveredCallback)
@@ -51,13 +59,15 @@ namespace EQueue.Broker
         public void Start()
         {
             _persistMessageTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.PersistMessages", PersistMessages, _setting.PersistMessageInterval, _setting.PersistMessageInterval);
-            _removeMessageFromMemoryTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.RemoveConsumedMessagesFromMemory", RemoveConsumedMessagesFromMemory, _setting.RemoveMessageFromMemoryInterval, _setting.RemoveMessageFromMemoryInterval);
+            _removeMessageFromMemoryTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.RemoveMessagesFromMemory", RemoveMessagesFromMemory, _setting.RemoveMessagesFromMemoryInterval, _setting.RemoveMessagesFromMemoryInterval);
+            _removeConsumedMessageFromMemoryTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.RemoveConsumedMessagesFromMemory", RemoveConsumedMessagesFromMemory, _setting.RemoveConsumedMessagesFromMemoryInterval, _setting.RemoveConsumedMessagesFromMemoryInterval);
             _deleteMessageTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.DeleteMessages", DeleteMessages, _setting.DeleteMessageInterval, _setting.DeleteMessageInterval);
         }
         public void Shutdown()
         {
             _scheduleService.ShutdownTask(_persistMessageTaskId);
             _scheduleService.ShutdownTask(_removeMessageFromMemoryTaskId);
+            _scheduleService.ShutdownTask(_removeConsumedMessageFromMemoryTaskId);
             _scheduleService.ShutdownTask(_deleteMessageTaskId);
         }
         public QueueMessage StoreMessage(int queueId, long queueOffset, Message message)
@@ -85,6 +95,25 @@ namespace EQueue.Broker
             var key = string.Format("{0}-{1}", topic, queueId);
             _queueOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
         }
+        public IDictionary<long, long> BatchLoadQueueIndex(string topic, int queueId, long startQueueOffset)
+        {
+            using (var connection = new SqlConnection(_setting.ConnectionString))
+            {
+                connection.Open();
+                using (var command = new SqlCommand(string.Format(_batchLoadQueueIndexSQLFormat, topic, queueId, startQueueOffset, startQueueOffset + _setting.BatchLoadQueueIndexSize), connection))
+                {
+                    var reader = command.ExecuteReader();
+                    var dict = new Dictionary<long, long>();
+                    while (reader.Read())
+                    {
+                        var queueOffset = (long)reader["QueueOffset"];
+                        var messageOffset = (long)reader["MessageOffset"];
+                        dict[queueOffset] = messageOffset;
+                    }
+                    return dict;
+                }
+            }
+        }
 
         private void Clear()
         {
@@ -94,7 +123,29 @@ namespace EQueue.Broker
             _currentOffset = -1;
             _persistedOffset = -1;
         }
-
+        private void RemoveMessagesFromMemory()
+        {
+            var currentTotalCount = _messageDict.Count;
+            var exceedCount = currentTotalCount - _setting.MessageMaxCacheSize;
+            if (exceedCount > 0)
+            {
+                var totalRemovedCount = 0;
+                var currentMessageOffet = _persistedOffset;
+                while (totalRemovedCount < exceedCount && currentMessageOffet >= 0)
+                {
+                    QueueMessage removedMessage;
+                    if (_messageDict.TryRemove(currentMessageOffet, out removedMessage))
+                    {
+                        totalRemovedCount++;
+                    }
+                    currentMessageOffet--;
+                }
+                if (totalRemovedCount > 0)
+                {
+                    _logger.InfoFormat("Exceed message max cache size, exceed count:{0}, current total count:{1}, total removed count:{2}", exceedCount, currentTotalCount, totalRemovedCount);
+                }
+            }
+        }
         private void RemoveConsumedMessagesFromMemory()
         {
             var queueMessages = _messageDict.Values.ToList();
@@ -204,21 +255,6 @@ namespace EQueue.Broker
             if (BatchPersistMessages(_messageDataTable, maxMessageOffset))
             {
                 _persistedOffset = maxMessageOffset;
-
-                //当当前进程占用物理内存的比例超过配置的比例，则当消息持久化完成后，需要把消息从内存删除
-                var currentProcessMemorySize = Process.GetCurrentProcess().PrivateMemorySize64;
-                var physicalMemorySize = _setting.MaxPhysicalMemorySize;
-                if (currentProcessMemorySize * 100 / physicalMemorySize >= _setting.MaxUseMemoryPercent)
-                {
-                    foreach (var message in messages)
-                    {
-                        QueueMessage removedMessage;
-                        if (!_messageDict.TryRemove(message.MessageOffset, out removedMessage))
-                        {
-                            _logger.ErrorFormat("Failed to remove persisted message, messageOffset:{0}", message.MessageOffset);
-                        }
-                    }
-                }
             }
         }
         private bool BatchPersistMessages(DataTable messageDataTable, long maxMessageOffset)
