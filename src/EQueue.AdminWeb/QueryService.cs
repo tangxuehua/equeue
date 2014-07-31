@@ -30,7 +30,7 @@ namespace EQueue.AdminWeb
             }
             else
             {
-                throw new Exception(string.Format("QueryTopicQueueInfo has exception, topic:{0}}", topic));
+                throw new Exception(string.Format("QueryTopicQueueInfo has exception, topic:{0}", topic));
             }
         }
         public IEnumerable<TopicConsumeInfo> GetTopicConsumeInfo(string group, string topic)
@@ -44,7 +44,7 @@ namespace EQueue.AdminWeb
             }
             else
             {
-                throw new Exception(string.Format("QueryTopicConsumeInfo has exception, group:{0}, topic:{1}}", group, topic));
+                throw new Exception(string.Format("QueryTopicConsumeInfo has exception, group:{0}, topic:{1}", group, topic));
             }
         }
     }
