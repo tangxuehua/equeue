@@ -12,7 +12,8 @@ namespace EQueue.Broker
         IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize);
         long GetQueueCurrentOffset(string topic, int queueId);
         IEnumerable<string> GetAllTopics();
-        IList<Queue> GetQueues(string topic, bool autoCreateQueue);
+        IList<Queue> GetQueues(string topic);
+        IList<Queue> QueryQueues(string topic);
         int GetTopicQueueCount(string topic);
     }
 }

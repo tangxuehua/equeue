@@ -15,10 +15,13 @@ namespace EQueue.Protocols
         /// <summary>队列当前最大Offset
         /// </summary>
         public long QueueCurrentOffset { get; set; }
+        /// <summary>队列当前最小Offset
+        /// </summary>
+        public long QueueMinOffset { get; set; }
         /// <summary>队列当前被所有消费者都消费了的最大Offset
         /// </summary>
         public long QueueMaxConsumedOffset { get; set; }
-        /// <summary>队列中的目前还没被消费的消息数
+        /// <summary>队列中的目前还存在的消息数
         /// </summary>
         public long QueueMessageCount { get; set; }
         /// <summary>队列的状态

@@ -28,15 +28,17 @@ namespace EQueue.Broker.Processors
 
             foreach (var topic in topicList)
             {
-                var queues = _messageService.GetQueues(topic, false).ToList();
+                var queues = _messageService.QueryQueues(topic).ToList();
                 foreach (var queue in queues)
                 {
+                    var queueMinOffset = queue.GetMinQueueOffset();
                     var topicQueueInfo = new TopicQueueInfo();
                     topicQueueInfo.Topic = queue.Topic;
                     topicQueueInfo.QueueId = queue.QueueId;
                     topicQueueInfo.QueueCurrentOffset = queue.CurrentOffset;
+                    topicQueueInfo.QueueMinOffset = queueMinOffset != null ? queueMinOffset.Value : -1L;
                     topicQueueInfo.QueueMessageCount = queue.GetMessageRealCount();
-                    topicQueueInfo.QueueMaxConsumedOffset = _offsetManager.GetMinOffset(topic, queue.QueueId);
+                    topicQueueInfo.QueueMaxConsumedOffset = _offsetManager.GetMinOffset(queue.Topic, queue.QueueId);
                     topicQueueInfo.Status = queue.Status;
                     topicQueueInfoList.Add(topicQueueInfo);
                 }

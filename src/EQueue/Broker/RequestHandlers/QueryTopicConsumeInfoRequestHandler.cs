@@ -28,8 +28,8 @@ namespace EQueue.Broker.Processors
 
             if (!string.IsNullOrEmpty(queryTopicConsumeInfoRequest.GroupName))
             {
-                var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(queryTopicConsumeInfoRequest.GroupName);
-                if (consumerGroup != null)
+                var consumerGroups = _brokerController.ConsumerManager.QueryConsumerGroup(queryTopicConsumeInfoRequest.GroupName);
+                foreach (var consumerGroup in consumerGroups)
                 {
                     foreach (var topicConsumeInfo in GetTopicConsumeInfoForGroup(consumerGroup, queryTopicConsumeInfoRequest.Topic))
                     {
@@ -56,7 +56,7 @@ namespace EQueue.Broker.Processors
         private IEnumerable<TopicConsumeInfo> GetTopicConsumeInfoForGroup(ConsumerGroup consumerGroup, string currentTopic)
         {
             var topicConsumeInfoList = new List<TopicConsumeInfo>();
-            var consumerIdList = string.IsNullOrEmpty(currentTopic) ? consumerGroup.GetAllConsumerIds().ToList() : consumerGroup.GetConsumerIdsForTopic(currentTopic).ToList();
+            var consumerIdList = string.IsNullOrEmpty(currentTopic) ? consumerGroup.GetAllConsumerIds().ToList() : consumerGroup.QueryConsumerIdsForTopic(currentTopic).ToList();
             consumerIdList.Sort();
 
             foreach (var consumerId in consumerIdList)
@@ -67,7 +67,7 @@ namespace EQueue.Broker.Processors
                     var items = consumingQueue.Split('-');
                     var topic = items[0];
                     var queueId = int.Parse(items[1]);
-                    if (string.IsNullOrEmpty(currentTopic) || topic == currentTopic)
+                    if (string.IsNullOrEmpty(currentTopic) || topic.Contains(currentTopic))
                     {
                         topicConsumeInfoList.Add(BuildTopicConsumeInfo(consumerGroup.GroupName, consumerId, topic, queueId));
                     }

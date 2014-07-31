@@ -63,6 +63,10 @@ namespace EQueue.Broker.Client
             }
             return consumerGroup;
         }
+        public IEnumerable<ConsumerGroup> QueryConsumerGroup(string groupName)
+        {
+            return _consumerGroupDict.Where(x => x.Key.Contains(groupName)).Select(x => x.Value);
+        }
 
         private void Clear()
         {

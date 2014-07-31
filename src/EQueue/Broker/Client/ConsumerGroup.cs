@@ -143,6 +143,10 @@ namespace EQueue.Broker.Client
         {
             return _consumerSubscriptionTopicDict.Where(x => x.Value.Any(y => y == topic)).Select(z => z.Key);
         }
+        public IEnumerable<string> QueryConsumerIdsForTopic(string topic)
+        {
+            return _consumerSubscriptionTopicDict.Where(x => x.Value.Any(y => y.Contains(topic))).Select(z => z.Key);
+        }
         public IEnumerable<string> GetConsumingQueue(string consumerId)
         {
             IEnumerable<string> consumingQueues;
