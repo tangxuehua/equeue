@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ECommon.Components;
+using ECommon.Logging;
 using ECommon.Scheduling;
 
 namespace EQueue.Broker.LongPolling
@@ -18,6 +19,7 @@ namespace EQueue.Broker.LongPolling
         private readonly IScheduleService _scheduleService;
         private readonly IMessageService _messageService;
         private readonly BrokerController _brokerController;
+        private readonly ILogger _logger;
         private Worker _notifyMessageArrivedWorker;
         private int _checkBlockingPullRequestTaskId;
 
@@ -26,6 +28,7 @@ namespace EQueue.Broker.LongPolling
             _brokerController = brokerController;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _messageService = ObjectContainer.Resolve<IMessageService>();
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
 
             if (_brokerController.Setting.NotifyWhenMessageArrived)
             {
@@ -45,7 +48,17 @@ namespace EQueue.Broker.LongPolling
             var key = BuildKey(pullMessageRequest.MessageQueue.Topic, pullMessageRequest.MessageQueue.QueueId, pullMessageRequest.ConsumerGroup);
             var changed = false;
             var existingRequest = default(PullRequest);
-            _queueRequestDict.AddOrUpdate(key, pullRequest, (x, request) =>
+            _queueRequestDict.AddOrUpdate(key, x =>
+            {
+                _logger.DebugFormat("Added new PullRequest, Id:{0}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
+                    pullRequest.Id,
+                    pullRequest.SuspendStartTime,
+                    pullRequest.PullMessageRequest.ConsumerGroup,
+                    pullRequest.PullMessageRequest.MessageQueue.Topic,
+                    pullRequest.PullMessageRequest.MessageQueue.QueueId,
+                    pullRequest.PullMessageRequest.QueueOffset);
+                return pullRequest;
+            }, (x, request) =>
             {
                 existingRequest = request;
                 changed = true;
@@ -53,6 +66,14 @@ namespace EQueue.Broker.LongPolling
             });
             if (changed && existingRequest != null)
             {
+                _logger.DebugFormat("Replaced existing PullRequest, new PullRequest Id:{0}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
+                    existingRequest.Id,
+                    existingRequest.SuspendStartTime,
+                    existingRequest.PullMessageRequest.ConsumerGroup,
+                    existingRequest.PullMessageRequest.MessageQueue.Topic,
+                    existingRequest.PullMessageRequest.MessageQueue.QueueId,
+                    existingRequest.PullMessageRequest.QueueOffset);
+
                 var currentRequest = existingRequest;
                 Task.Factory.StartNew(() => currentRequest.ReplacedAction(currentRequest));
             }
@@ -147,6 +168,14 @@ namespace EQueue.Broker.LongPolling
                         PullRequest currentRequest;
                         if (_queueRequestDict.TryRemove(key, out currentRequest))
                         {
+                            _logger.DebugFormat("New message arrived for PullRequest, PullRequest Id:{0}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
+                                currentRequest.Id,
+                                currentRequest.SuspendStartTime,
+                                currentRequest.PullMessageRequest.ConsumerGroup,
+                                currentRequest.PullMessageRequest.MessageQueue.Topic,
+                                currentRequest.PullMessageRequest.MessageQueue.QueueId,
+                                currentRequest.PullMessageRequest.QueueOffset);
+
                             Task.Factory.StartNew(() => currentRequest.NewMessageArrivedAction(currentRequest));
                         }
                     }
@@ -155,6 +184,14 @@ namespace EQueue.Broker.LongPolling
                         PullRequest currentRequest;
                         if (_queueRequestDict.TryRemove(key, out currentRequest))
                         {
+                            _logger.DebugFormat("PullRequest timeout, PullRequest Id:{0}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
+                                currentRequest.Id,
+                                currentRequest.SuspendStartTime,
+                                currentRequest.PullMessageRequest.ConsumerGroup,
+                                currentRequest.PullMessageRequest.MessageQueue.Topic,
+                                currentRequest.PullMessageRequest.MessageQueue.QueueId,
+                                currentRequest.PullMessageRequest.QueueOffset);
+
                             Task.Factory.StartNew(() => currentRequest.TimeoutAction(currentRequest));
                         }
                     }

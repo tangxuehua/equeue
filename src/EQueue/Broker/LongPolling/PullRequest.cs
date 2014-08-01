@@ -1,11 +1,13 @@
 ﻿using System;
 using ECommon.Remoting;
+using ECommon.Utilities;
 using EQueue.Protocols;
 
 namespace EQueue.Broker.LongPolling
 {
     public class PullRequest
     {
+        public string Id { get; private set; }
         public long RemotingRequestSequence { get; private set; }
         public PullMessageRequest PullMessageRequest { get; private set; }
         public IRequestHandlerContext RequestHandlerContext { get; private set; }
@@ -25,6 +27,7 @@ namespace EQueue.Broker.LongPolling
             Action<PullRequest> timeoutAction,
             Action<PullRequest> replacedAction)
         {
+            Id = ObjectId.GenerateNewStringId();
             RemotingRequestSequence = remotingRequestSequence;
             PullMessageRequest = pullMessageRequest;
             RequestHandlerContext = requestHandlerContext;
