@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
@@ -7,22 +6,20 @@ using EQueue.Protocols;
 
 namespace EQueue.Broker.Processors
 {
-    public class GetTopicQueueCountRequestHandler : IRequestHandler
+    public class GetTopicQueueIdsForConsumerRequestHandler : IRequestHandler
     {
         private IMessageService _messageService;
-        private ILogger _logger;
 
-        public GetTopicQueueCountRequestHandler()
+        public GetTopicQueueIdsForConsumerRequestHandler()
         {
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
             var topic = Encoding.UTF8.GetString(request.Body);
-            var queueCount = _messageService.GetTopicQueueCount(topic);
-            var data = BitConverter.GetBytes(queueCount);
+            var queueIds = _messageService.GetQueueIdsForConsumer(topic);
+            var data = Encoding.UTF8.GetBytes(string.Join(",", queueIds));
             return new RemotingResponse((int)ResponseCode.Success, request.Sequence, data);
         }
     }

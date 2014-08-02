@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Producers
@@ -7,9 +9,13 @@ namespace EQueue.Clients.Producers
     {
         private long _index;
 
-        public int SelectQueueId(int totalQueueCount, Message message, object arg)
+        public int SelectQueueId(IList<int> availableQueueIds, Message message, object arg)
         {
-            return (int)(Interlocked.Increment(ref _index) % totalQueueCount);
+            if (availableQueueIds.Count == 0)
+            {
+                throw new Exception(string.Format("No available queue for topic [{0}].", message.Topic));
+            }
+            return availableQueueIds[(int)(Interlocked.Increment(ref _index) % availableQueueIds.Count)];
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ECommon.Components;
@@ -16,7 +17,7 @@ namespace EQueue.Clients.Producers
     public class Producer
     {
         private readonly object _lockObject;
-        private readonly ConcurrentDictionary<string, int> _topicQueueCountDict;
+        private readonly ConcurrentDictionary<string, IList<int>> _topicQueueIdsDict;
         private readonly IScheduleService _scheduleService;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
@@ -39,7 +40,7 @@ namespace EQueue.Clients.Producers
 
             _lockObject = new object();
             _taskIds = new List<int>();
-            _topicQueueCountDict = new ConcurrentDictionary<string, int>();
+            _topicQueueIdsDict = new ConcurrentDictionary<string, IList<int>>();
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
@@ -66,12 +67,8 @@ namespace EQueue.Clients.Producers
         }
         public SendResult Send(Message message, object arg)
         {
-            var queueCount = GetTopicQueueCount(message.Topic);
-            if (queueCount == 0)
-            {
-                throw new Exception(string.Format("No available queue for topic [{0}], producerId:{1}.", message.Topic, Id));
-            }
-            var queueId = _queueSelector.SelectQueueId(queueCount, message, arg);
+            var queueIds = GetTopicQueueIds(message.Topic);
+            var queueId = _queueSelector.SelectQueueId(queueIds, message, arg);
             var remotingRequest = BuildSendMessageRequest(message, queueId);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, Setting.SendMessageTimeoutMilliseconds);
             var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
@@ -79,12 +76,8 @@ namespace EQueue.Clients.Producers
         }
         public Task<SendResult> SendAsync(Message message, object arg)
         {
-            var queueCount = GetTopicQueueCount(message.Topic);
-            if (queueCount == 0)
-            {
-                throw new Exception(string.Format("No available queue for topic [{0}], producerId:{1}.", message.Topic, Id));
-            }
-            var queueId = _queueSelector.SelectQueueId(queueCount, message, arg);
+            var queueIds = GetTopicQueueIds(message.Topic);
+            var queueId = _queueSelector.SelectQueueId(queueIds, message, arg);
             var remotingRequest = BuildSendMessageRequest(message, queueId);
             var taskCompletionSource = new TaskCompletionSource<SendResult>();
             _remotingClient.InvokeAsync(remotingRequest, Setting.SendMessageTimeoutMilliseconds).ContinueWith((requestTask) =>
@@ -113,55 +106,56 @@ namespace EQueue.Clients.Producers
             return taskCompletionSource.Task;
         }
 
-        private int GetTopicQueueCount(string topic)
+        private IList<int> GetTopicQueueIds(string topic)
         {
-            int count;
-            if (!_topicQueueCountDict.TryGetValue(topic, out count))
+            IList<int> queueIds;
+            if (!_topicQueueIdsDict.TryGetValue(topic, out queueIds))
             {
-                var countFromServer = GetTopicQueueCountFromBroker(topic);
-                _topicQueueCountDict[topic] = countFromServer;
-                count = countFromServer;
+                var queueIdsFromServer = GetTopicQueueIdsFromServer(topic).ToList();
+                _topicQueueIdsDict[topic] = queueIdsFromServer;
+                queueIds = queueIdsFromServer;
             }
 
-            return count;
+            return queueIds;
         }
         private void RefreshTopicQueueCount()
         {
-            foreach (var topic in _topicQueueCountDict.Keys)
+            foreach (var topic in _topicQueueIdsDict.Keys)
             {
-                UpdateTopicQueueCount(topic);
+                UpdateTopicQueues(topic);
             }
         }
-        private void UpdateTopicQueueCount(string topic)
+        private void UpdateTopicQueues(string topic)
         {
             try
             {
-                var topicQueueCountFromServer = GetTopicQueueCountFromBroker(topic);
-                int count;
-                var topicQueueCountOfLocal = _topicQueueCountDict.TryGetValue(topic, out count) ? count : 0;
+                var topicQueueIdsFromServer = GetTopicQueueIdsFromServer(topic).ToList();
+                IList<int> currentQueueIds;
+                var topicQueueIdsOfLocal = _topicQueueIdsDict.TryGetValue(topic, out currentQueueIds) ? currentQueueIds : new List<int>();
 
-                if (topicQueueCountFromServer != topicQueueCountOfLocal)
+                if (IsIntCollectionChanged(topicQueueIdsFromServer, topicQueueIdsOfLocal))
                 {
-                    _topicQueueCountDict[topic] = topicQueueCountFromServer;
-                    _logger.DebugFormat("Queue count of topic updated, producerId:{0}, topic:{1}, queueCount:{2}", Id, topic, topicQueueCountFromServer);
+                    _topicQueueIdsDict[topic] = topicQueueIdsFromServer;
+                    _logger.DebugFormat("Queues of topic changed, producerId:{0}, topic:{1}, old queueIds:{2}, new queueIds:{3}}", Id, topic, string.Join(":", topicQueueIdsOfLocal), string.Join(":", topicQueueIdsFromServer));
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("UpdateTopicQueueCount has exception, producerId:{0}, topic:{1}", Id, topic), ex);
+                _logger.Error(string.Format("UpdateTopicQueues has exception, producerId:{0}, topic:{1}", Id, topic), ex);
             }
         }
-        private int GetTopicQueueCountFromBroker(string topic)
+        private IEnumerable<int> GetTopicQueueIdsFromServer(string topic)
         {
-            var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueCount, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
+            var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForProducer, Encoding.UTF8.GetBytes(topic));
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
-                return BitConverter.ToInt32(remotingResponse.Body, 0);
+                var queueIds = Encoding.UTF8.GetString(remotingResponse.Body);
+                return queueIds.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x));
             }
             else
             {
-                throw new Exception(string.Format("GetTopicQueueCountFromBroker has exception, producerId:{0}, topic:{1}, remoting response code:{2}", Id, topic, remotingResponse.Code));
+                throw new Exception(string.Format("GetTopicQueueIds has exception, producerId:{0}, topic:{1}, remoting response code:{2}", Id, topic, remotingResponse.Code));
             }
         }
         private RemotingRequest BuildSendMessageRequest(Message message, int queueId)
@@ -211,7 +205,22 @@ namespace EQueue.Clients.Producers
         private void Clear()
         {
             _taskIds.Clear();
-            _topicQueueCountDict.Clear();
+            _topicQueueIdsDict.Clear();
+        }
+        private bool IsIntCollectionChanged(IList<int> first, IList<int> second)
+        {
+            if (first.Count != second.Count)
+            {
+                return true;
+            }
+            for (var index = 0; index < first.Count; index++)
+            {
+                if (first[index] != second[index])
+                {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

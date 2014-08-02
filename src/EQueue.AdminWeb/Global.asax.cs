@@ -26,7 +26,7 @@ namespace EQueue.AdminWeb
                 .UseLog4Net()
                 .UseJsonNet();
 
-            configuration.SetDefault<QueryService, QueryService>();
+            configuration.SetDefault<MessageService, MessageService>();
 
             RegisterControllers();
         }

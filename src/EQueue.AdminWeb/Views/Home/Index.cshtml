@@ -15,26 +15,29 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th width="30%" class="vertical-center">
+                <th width="20%" class="vertical-center">
                     Topic
                 </th>
-                <th width="15%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     QueueId
                 </th>
-                <th width="15%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     CurrentOffset
                 </th>
-                <th width="15%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     MinOffset
                 </th>
-                <th width="15%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     ConsumedOffset
                 </th>
-                <th width="15%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     MessageCount
                 </th>
                 <th width="10%" class="text-center vertical-center">
                     Status
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    操作
                 </th>
             </tr>
         </thead>
@@ -62,6 +65,12 @@
                     </td>
                     <td class="text-center vertical-center">
                         @item.Status
+                    </td>
+                    <td class="text-center vertical-center">
+                        @Html.ActionLink("新增", "AddQueue", new { topic = item.Topic })
+                        @Html.ActionLink("禁用", "DisableQueue", new { topic = item.Topic, queueId = item.QueueId })
+                        @Html.ActionLink("启用", "EnableQueue", new { topic = item.Topic, queueId = item.QueueId })
+                        @Html.ActionLink("删除", "RemoveQueue", new { topic = item.Topic, queueId = item.QueueId })
                     </td>
                 </tr>
             }

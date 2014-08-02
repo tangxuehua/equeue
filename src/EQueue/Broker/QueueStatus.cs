@@ -3,6 +3,6 @@
     public enum QueueStatus
     {
         Normal = 1,
-        EnqueueDisabled = 2
+        Disabled = 2
     }
 }

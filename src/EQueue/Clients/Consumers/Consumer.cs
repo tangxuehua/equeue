@@ -279,19 +279,20 @@ namespace EQueue.Clients.Consumers
         {
             try
             {
-                var topicQueueCountFromServer = GetTopicQueueCount(topic);
-                IList<MessageQueue> currentMessageQueues;
-                var topicQueueCountOfLocal = _topicQueuesDict.TryGetValue(topic, out currentMessageQueues) ? currentMessageQueues.Count : 0;
+                var topicQueueIdsFromServer = GetTopicQueueIdsFromServer(topic).ToList();
+                IList<MessageQueue> currentQueues;
+                var topicQueuesOfLocal = _topicQueuesDict.TryGetValue(topic, out currentQueues) ? currentQueues : new List<MessageQueue>();
+                var topicQueueIdsOfLocal = topicQueuesOfLocal.Select(x => x.QueueId).ToList();
 
-                if (topicQueueCountFromServer != topicQueueCountOfLocal)
+                if (IsIntCollectionChanged(topicQueueIdsFromServer, topicQueueIdsOfLocal))
                 {
                     var messageQueues = new List<MessageQueue>();
-                    for (var index = 0; index < topicQueueCountFromServer; index++)
+                    foreach (var queueId in topicQueueIdsFromServer)
                     {
-                        messageQueues.Add(new MessageQueue(topic, index));
+                        messageQueues.Add(new MessageQueue(topic, queueId));
                     }
                     _topicQueuesDict[topic] = messageQueues;
-                    _logger.DebugFormat("Queue count of topic updated, consumerId:{0}, group:{1}, topic:{2}, queueCount:{3}", Id, GroupName, topic, topicQueueCountFromServer);
+                    _logger.DebugFormat("Queues of topic changed, consumerId:{0}, group:{1}, topic:{2}, old queueIds:{3}, new queueIds:{4}", Id, GroupName, topic, string.Join(":", topicQueueIdsOfLocal), string.Join(":", topicQueueIdsFromServer));
                 }
             }
             catch (Exception ex)
@@ -314,17 +315,18 @@ namespace EQueue.Clients.Consumers
                 throw new Exception(string.Format("QueryGroupConsumers has exception, consumerId:{0}, group:{1}, topic:{2}, remoting response code:{3}", Id, GroupName, topic, remotingResponse.Code));
             }
         }
-        private int GetTopicQueueCount(string topic)
+        private IEnumerable<int> GetTopicQueueIdsFromServer(string topic)
         {
-            var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueCount, Encoding.UTF8.GetBytes(topic));
+            var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForConsumer, Encoding.UTF8.GetBytes(topic));
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
-                return BitConverter.ToInt32(remotingResponse.Body, 0);
+                var queueIds = Encoding.UTF8.GetString(remotingResponse.Body);
+                return queueIds.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x));
             }
             else
             {
-                throw new Exception(string.Format("GetTopicQueueCount has exception, consumerId:{0}, group:{1}, topic:{2}, remoting response code:{3}", Id, GroupName, topic, remotingResponse.Code));
+                throw new Exception(string.Format("GetTopicQueueIds has exception, consumerId:{0}, group:{1}, topic:{2}, remoting response code:{3}", Id, GroupName, topic, remotingResponse.Code));
             }
         }
         private void HandleRemotingClientConnectionChanged(bool isConnected)
@@ -377,6 +379,21 @@ namespace EQueue.Clients.Consumers
             _taskIds.Clear();
             _pullRequestDict.Clear();
             _topicQueuesDict.Clear();
+        }
+        private bool IsIntCollectionChanged(IList<int> first, IList<int> second)
+        {
+            if (first.Count != second.Count)
+            {
+                return true;
+            }
+            for (var index = 0; index < first.Count; index++)
+            {
+                if (first[index] != second[index])
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         #endregion

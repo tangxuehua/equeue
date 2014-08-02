@@ -36,13 +36,13 @@ namespace EQueue.Broker
             Status = QueueStatus.Normal;
         }
 
-        public void EnableEnqueue()
+        public void Enable()
         {
             Status = QueueStatus.Normal;
         }
-        public void DisableEnqueue()
+        public void Disable()
         {
-            Status = QueueStatus.EnqueueDisabled;
+            Status = QueueStatus.Disabled;
         }
         public long IncrementCurrentOffset()
         {

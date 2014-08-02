@@ -34,9 +34,10 @@ namespace QuickStart.ProducerClient
             producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), indexEntry.Index.ToString()).ContinueWith(sendTask =>
             {
                 var finishedCount = Interlocked.Increment(ref finished);
-                if (finishedCount % 1000 == 0)
+                if (finishedCount % 20 == 0)
                 {
                     _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
+                    Thread.Sleep(5000);
                 }
                 if (indexEntry.Index < indexEntry.Total)
                 {
