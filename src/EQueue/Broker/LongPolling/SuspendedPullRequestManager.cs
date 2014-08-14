@@ -50,13 +50,14 @@ namespace EQueue.Broker.LongPolling
             var existingRequest = default(PullRequest);
             _queueRequestDict.AddOrUpdate(key, x =>
             {
-                _logger.DebugFormat("Added new PullRequest, Id:{0}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
+                _logger.DebugFormat("Added new PullRequest, Id:{0}, RequestSequence:{6}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
                     pullRequest.Id,
                     pullRequest.SuspendStartTime,
                     pullRequest.PullMessageRequest.ConsumerGroup,
                     pullRequest.PullMessageRequest.MessageQueue.Topic,
                     pullRequest.PullMessageRequest.MessageQueue.QueueId,
-                    pullRequest.PullMessageRequest.QueueOffset);
+                    pullRequest.PullMessageRequest.QueueOffset,
+                    pullRequest.RemotingRequestSequence);
                 return pullRequest;
             }, (x, request) =>
             {
@@ -66,13 +67,14 @@ namespace EQueue.Broker.LongPolling
             });
             if (changed && existingRequest != null)
             {
-                _logger.DebugFormat("Replaced existing PullRequest, new PullRequest Id:{0}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
+                _logger.DebugFormat("Replaced existing PullRequest, new PullRequest Id:{0}, RequestSequence:{6}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
                     existingRequest.Id,
                     existingRequest.SuspendStartTime,
                     existingRequest.PullMessageRequest.ConsumerGroup,
                     existingRequest.PullMessageRequest.MessageQueue.Topic,
                     existingRequest.PullMessageRequest.MessageQueue.QueueId,
-                    existingRequest.PullMessageRequest.QueueOffset);
+                    existingRequest.PullMessageRequest.QueueOffset,
+                    pullRequest.RemotingRequestSequence);
 
                 var currentRequest = existingRequest;
                 Task.Factory.StartNew(() => currentRequest.ReplacedAction(currentRequest));
@@ -168,13 +170,14 @@ namespace EQueue.Broker.LongPolling
                         PullRequest currentRequest;
                         if (_queueRequestDict.TryRemove(key, out currentRequest))
                         {
-                            _logger.DebugFormat("New message arrived for PullRequest, PullRequest Id:{0}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
+                            _logger.DebugFormat("New message arrived for PullRequest, PullRequest Id:{0}, RequestSequence:{6}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
                                 currentRequest.Id,
                                 currentRequest.SuspendStartTime,
                                 currentRequest.PullMessageRequest.ConsumerGroup,
                                 currentRequest.PullMessageRequest.MessageQueue.Topic,
                                 currentRequest.PullMessageRequest.MessageQueue.QueueId,
-                                currentRequest.PullMessageRequest.QueueOffset);
+                                currentRequest.PullMessageRequest.QueueOffset,
+                                currentRequest.RemotingRequestSequence);
 
                             Task.Factory.StartNew(() => currentRequest.NewMessageArrivedAction(currentRequest));
                         }
@@ -184,13 +187,14 @@ namespace EQueue.Broker.LongPolling
                         PullRequest currentRequest;
                         if (_queueRequestDict.TryRemove(key, out currentRequest))
                         {
-                            _logger.DebugFormat("PullRequest timeout, PullRequest Id:{0}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
+                            _logger.DebugFormat("PullRequest timeout, PullRequest Id:{0}, RequestSequence:{6}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
                                 currentRequest.Id,
                                 currentRequest.SuspendStartTime,
                                 currentRequest.PullMessageRequest.ConsumerGroup,
                                 currentRequest.PullMessageRequest.MessageQueue.Topic,
                                 currentRequest.PullMessageRequest.MessageQueue.QueueId,
-                                currentRequest.PullMessageRequest.QueueOffset);
+                                currentRequest.PullMessageRequest.QueueOffset,
+                                currentRequest.RemotingRequestSequence);
 
                             Task.Factory.StartNew(() => currentRequest.TimeoutAction(currentRequest));
                         }
