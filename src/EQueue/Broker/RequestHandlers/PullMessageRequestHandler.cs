@@ -62,17 +62,26 @@ namespace EQueue.Broker.Processors
             }
             else
             {
-                var pullRequest = new PullRequest(
-                    request.Sequence,
-                    pullMessageRequest,
-                    context,
-                    DateTime.Now,
-                    _brokerController.Setting.SuspendPullRequestMilliseconds,
-                    ExecutePullRequest,
-                    ExecutePullRequest,
-                    ExecuteReplacedPullRequest);
-                _brokerController.SuspendedPullRequestManager.SuspendPullRequest(pullRequest);
-                return null;
+                if (pullMessageRequest.SuspendPullRequestMilliseconds > 0)
+                {
+                    var pullRequest = new PullRequest(
+                        request.Sequence,
+                        pullMessageRequest,
+                        context,
+                        DateTime.Now,
+                        pullMessageRequest.SuspendPullRequestMilliseconds,
+                        ExecutePullRequest,
+                        ExecutePullRequest,
+                        ExecuteReplacedPullRequest);
+                    _brokerController.SuspendedPullRequestManager.SuspendPullRequest(pullRequest);
+                    return null;
+                }
+                else
+                {
+                    var pullMessageResponse = new PullMessageResponse(messages);
+                    var responseData = _binarySerializer.Serialize(pullMessageResponse);
+                    return new RemotingResponse((int)PullStatus.NoNewMessage, request.Sequence, responseData);
+                }
             }
         }
 

@@ -9,6 +9,7 @@ namespace EQueue.Clients.Consumers
         private ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
         private long _queueMaxOffset = -1L;
 
+        public bool IsDropped { get; set; }
         public long PreviousConsumedMinQueueOffset { get; private set; }
 
         public ProcessQueue()

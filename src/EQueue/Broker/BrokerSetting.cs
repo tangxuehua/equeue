@@ -11,7 +11,6 @@ namespace EQueue.Broker
         public bool NotifyWhenMessageArrived { get; set; }
         public int RemoveMessageInterval { get; set; }
         public int RemoveQueueIndexInterval { get; set; }
-        public int SuspendPullRequestMilliseconds { get; set; }
         public int CheckBlockingPullRequestMilliseconds { get; set; }
         public int DefaultTopicQueueCount { get; set; }
         public int ScanNotActiveConsumerInterval { get; set; }
@@ -26,7 +25,6 @@ namespace EQueue.Broker
             NotifyWhenMessageArrived = true;
             RemoveMessageInterval = 1000 * 60 * 10;
             RemoveQueueIndexInterval = 1000 * 5;
-            SuspendPullRequestMilliseconds = 1000 * 60;
             CheckBlockingPullRequestMilliseconds = 1000;
             DefaultTopicQueueCount = 4;
             ScanNotActiveConsumerInterval = 1000 * 5;

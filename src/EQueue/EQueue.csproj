@@ -75,6 +75,7 @@
     <Compile Include="Broker\Queue.cs" />
     <Compile Include="Broker\MessageService.cs" />
     <Compile Include="Broker\IMessageService.cs" />
+    <Compile Include="Clients\Consumers\ConsumingMessage.cs" />
     <Compile Include="Clients\Consumers\MessageContext.cs" />
     <Compile Include="Clients\Consumers\IMessageContext.cs" />
     <Compile Include="Clients\Producers\IQueueSelector.cs" />
@@ -87,7 +88,6 @@
     <Compile Include="Clients\Consumers\IAllocateMessageQueueStrategy.cs" />
     <Compile Include="Clients\Consumers\AverageAllocateMessageQueueStrategy.cs" />
     <Compile Include="Clients\Consumers\ConsumerSettings.cs" />
-    <Compile Include="Clients\Consumers\PullRequestSetting.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
     <Compile Include="Clients\Producers\ProducerSetting.cs" />
     <Compile Include="Clients\Producers\QueueAverageSelector.cs" />
