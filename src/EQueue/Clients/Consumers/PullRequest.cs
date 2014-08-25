@@ -1,4 +1,5 @@
-﻿using EQueue.Protocols;
+﻿using System;
+using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {
@@ -9,6 +10,7 @@ namespace EQueue.Clients.Consumers
         public MessageQueue MessageQueue { get; private set; }
         public ProcessQueue ProcessQueue { get; private set; }
         public long NextConsumeOffset { get; set; }
+        public DateTime PullStartTime { get; set; }
 
         public PullRequest(string consumerId, string groupName, MessageQueue messageQueue, long nextConsumeOffset)
         {

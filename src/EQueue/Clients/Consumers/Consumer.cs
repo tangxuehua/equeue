@@ -18,6 +18,7 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Members
 
+        private const int DefaultTimeout = 600000;
         private readonly object _lockObject;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
@@ -37,6 +38,7 @@ namespace EQueue.Clients.Consumers
         private IMessageHandler _messageHandler;
         private long _flowControlTimes;
         private bool _stoped;
+        private bool _isBrokerServerConnected;
 
         #endregion
 
@@ -103,10 +105,11 @@ namespace EQueue.Clients.Consumers
         public Consumer Start()
         {
             _stoped = false;
+            _remotingClient.ClientSocketConnectionChanged += HandleRemotingClientConnectionChanged;
             _remotingClient.Connect();
+            _isBrokerServerConnected = true;
             _remotingClient.Start();
             StartBackgroundJobs();
-            _remotingClient.ClientSocketConnectionChanged += HandleRemotingClientConnectionChanged;
             _logger.InfoFormat("Started, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
@@ -177,6 +180,8 @@ namespace EQueue.Clients.Consumers
                 var data = _binarySerializer.Serialize(request);
                 var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);
 
+                pullRequest.PullStartTime = DateTime.Now;
+                _logger.InfoFormat("Pull message start, request sequence:{0}", remotingRequest.Sequence);
                 _remotingClient.InvokeAsync(remotingRequest, Setting.PullRequestTimeoutMilliseconds).ContinueWith(pullTask =>
                 {
                     if (_stoped) return;
@@ -186,13 +191,15 @@ namespace EQueue.Clients.Consumers
                     {
                         if (pullTask.Exception != null)
                         {
-                            _logger.Error(string.Format("Process pull result has exception, pullRequest:{0}", pullRequest), pullTask.Exception);
+                            _logger.Error(string.Format("The pull result has exception, isBrokerServerConnected:{0}, pullRequest:{1}", _isBrokerServerConnected, pullRequest), pullTask.Exception);
                             _pullRequestQueue.Add(pullRequest);
                             return;
                         }
 
                         var remotingResponse = pullTask.Result;
                         var response = _binarySerializer.Deserialize<PullMessageResponse>(remotingResponse.Body);
+
+                        _logger.InfoFormat("Pull message back, request sequence:{0}, pull status:{1}, timespent:{2}", remotingRequest.Sequence, remotingResponse.Code, (DateTime.Now - pullRequest.PullStartTime).TotalMilliseconds);
 
                         if (remotingResponse.Code == (int)PullStatus.Found && response.Messages.Count() > 0)
                         {
@@ -211,6 +218,7 @@ namespace EQueue.Clients.Consumers
 
                         if (_stoped) return;
                         if (pullRequest.ProcessQueue.IsDropped) return;
+                        if (remotingResponse.Code == (int)PullStatus.Ignored) return;
 
                         _pullRequestQueue.Add(pullRequest);
                     }
@@ -219,7 +227,7 @@ namespace EQueue.Clients.Consumers
                         if (_stoped) return;
                         if (pullRequest.ProcessQueue.IsDropped) return;
 
-                        _logger.Error(string.Format("Process pull result has exception, pullRequest:{0}", pullRequest), ex);
+                        _logger.Error(string.Format("Process pull result has exception, isBrokerServerConnected:{0}, pullRequest:{1}", _isBrokerServerConnected, pullRequest), ex);
                         _pullRequestQueue.Add(pullRequest);
                     }
                 });
@@ -435,7 +443,7 @@ namespace EQueue.Clients.Consumers
 
                     var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, consumedMinQueueOffset);
                     var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
-                    _remotingClient.InvokeOneway(remotingRequest, 10000);
+                    _remotingClient.InvokeOneway(remotingRequest, DefaultTimeout);
                     _logger.DebugFormat("Sent queue consume offset to broker. group:{0}, consumerId:{1}, topic:{2}, queueId:{3}, offset:{4}",
                         GroupName,
                         Id,
@@ -456,8 +464,7 @@ namespace EQueue.Clients.Consumers
                 var consumingQueues = _pullRequestDict.Values.ToList().Select(x => string.Format("{0}-{1}", x.MessageQueue.Topic, x.MessageQueue.QueueId)).ToList();
                 _remotingClient.InvokeOneway(new RemotingRequest(
                     (int)RequestCode.ConsumerHeartbeat,
-                    _binarySerializer.Serialize(new ConsumerData(Id, GroupName, _subscriptionTopics, consumingQueues))),
-                    3000);
+                    _binarySerializer.Serialize(new ConsumerData(Id, GroupName, _subscriptionTopics, consumingQueues))), DefaultTimeout);
             }
             catch (Exception ex)
             {
@@ -500,7 +507,10 @@ namespace EQueue.Clients.Consumers
         {
             var queryConsumerRequest = _binarySerializer.Serialize(new QueryConsumerRequest(GroupName, topic));
             var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, queryConsumerRequest);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
+            _logger.InfoFormat("QueryGroupConsumers start, request sequence:{0}", remotingRequest.Sequence);
+            var start = DateTime.Now;
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, DefaultTimeout);
+            _logger.InfoFormat("QueryGroupConsumers end, request sequence:{0}, timespent:{1}", remotingRequest.Sequence, (DateTime.Now - start).TotalMilliseconds);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -514,7 +524,10 @@ namespace EQueue.Clients.Consumers
         private IEnumerable<int> GetTopicQueueIdsFromServer(string topic)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForConsumer, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
+            _logger.InfoFormat("GetTopicQueueIdsFromServer start, request sequence:{0}", remotingRequest.Sequence);
+            var start = DateTime.Now;
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, DefaultTimeout);
+            _logger.InfoFormat("GetTopicQueueIdsFromServer end, request sequence:{0}, timespent:{1}", remotingRequest.Sequence, (DateTime.Now - start).TotalMilliseconds);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var queueIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -529,10 +542,12 @@ namespace EQueue.Clients.Consumers
         {
             if (isConnected)
             {
+                _isBrokerServerConnected = true;
                 StartBackgroundJobs();
             }
             else
             {
+                _isBrokerServerConnected = false;
                 StopBackgroundJobs();
             }
         }
