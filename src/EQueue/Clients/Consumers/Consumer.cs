@@ -18,7 +18,7 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Members
 
-        private const int DefaultTimeout = 600000;
+        private const int DefaultTimeout = 10000;
         private readonly object _lockObject;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
