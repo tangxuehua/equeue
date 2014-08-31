@@ -181,7 +181,6 @@ namespace EQueue.Clients.Consumers
                 var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);
 
                 pullRequest.PullStartTime = DateTime.Now;
-                _logger.InfoFormat("Pull message start, request sequence:{0}", remotingRequest.Sequence);
                 _remotingClient.InvokeAsync(remotingRequest, Setting.PullRequestTimeoutMilliseconds).ContinueWith(pullTask =>
                 {
                     if (_stoped) return;
@@ -198,8 +197,6 @@ namespace EQueue.Clients.Consumers
 
                         var remotingResponse = pullTask.Result;
                         var response = _binarySerializer.Deserialize<PullMessageResponse>(remotingResponse.Body);
-
-                        _logger.InfoFormat("Pull message back, request sequence:{0}, pull status:{1}, timespent:{2}", remotingRequest.Sequence, remotingResponse.Code, (DateTime.Now - pullRequest.PullStartTime).TotalMilliseconds);
 
                         if (remotingResponse.Code == (int)PullStatus.Found && response.Messages.Count() > 0)
                         {
@@ -507,10 +504,7 @@ namespace EQueue.Clients.Consumers
         {
             var queryConsumerRequest = _binarySerializer.Serialize(new QueryConsumerRequest(GroupName, topic));
             var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, queryConsumerRequest);
-            _logger.InfoFormat("QueryGroupConsumers start, request sequence:{0}", remotingRequest.Sequence);
-            var start = DateTime.Now;
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, DefaultTimeout);
-            _logger.InfoFormat("QueryGroupConsumers end, request sequence:{0}, timespent:{1}", remotingRequest.Sequence, (DateTime.Now - start).TotalMilliseconds);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -524,10 +518,7 @@ namespace EQueue.Clients.Consumers
         private IEnumerable<int> GetTopicQueueIdsFromServer(string topic)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForConsumer, Encoding.UTF8.GetBytes(topic));
-            _logger.InfoFormat("GetTopicQueueIdsFromServer start, request sequence:{0}", remotingRequest.Sequence);
-            var start = DateTime.Now;
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, DefaultTimeout);
-            _logger.InfoFormat("GetTopicQueueIdsFromServer end, request sequence:{0}, timespent:{1}", remotingRequest.Sequence, (DateTime.Now - start).TotalMilliseconds);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var queueIds = Encoding.UTF8.GetString(remotingResponse.Body);
