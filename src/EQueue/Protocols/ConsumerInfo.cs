@@ -4,7 +4,7 @@ using EQueue.Broker;
 namespace EQueue.Protocols
 {
     [Serializable]
-    public class TopicConsumeInfo
+    public class ConsumerInfo
     {
         /// <summary>消费者的分组
         /// </summary>

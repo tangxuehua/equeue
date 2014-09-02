@@ -140,7 +140,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="Models\TopicConsumeViewModel.cs" />
+    <Compile Include="Models\ConsumerViewModel.cs" />
     <Compile Include="Models\TopicQueueViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MessageService.cs" />
@@ -168,7 +168,7 @@
     <Content Include="Views\Shared\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
-    <Content Include="Views\Home\ConsumeInfo.cshtml" />
+    <Content Include="Views\Home\ConsumerInfo.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EQueue\EQueue.csproj">

@@ -1,9 +1,9 @@
 ﻿@model EQueue.AdminWeb.Models.TopicConsumeViewModel
 @{
-    ViewBag.Title = "队列消费信息";
+    ViewBag.Title = "在线消费者信息";
 }
 <div>
-    @using (Html.BeginForm("ConsumeInfo", "Home", new { }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+    @using (Html.BeginForm("ConsumerInfo", "Home", new { }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
     {
         <div class="form-group">
             @Html.LabelFor(m => m.Group, new { @class = "control-label" })
@@ -34,7 +34,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Model.TopicConsumeInfos)
+            @foreach (var item in Model.ConsumerInfos)
             {
                 <tr>
                     <td class="vertical-center">

@@ -12,7 +12,7 @@
         GetTopicQueueIdsForProducer = 17,
         GetTopicQueueIdsForConsumer = 18,
         QueryTopicQueueInfo = 1001,
-        QueryTopicConsumeInfo = 1002,
+        QueryConsumerInfo = 1002,
         AddQueue = 1003,
         RemoveQueue = 1004,
         EnableQueue = 1005,

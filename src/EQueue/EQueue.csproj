@@ -46,11 +46,12 @@
     <Compile Include="Broker\InMemoryMessageStoreSetting.cs" />
     <Compile Include="Broker\RequestHandlers\DisableQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\EnableQueueRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\QueryConsumerRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\RemoveQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetTopicQueueIdsForProducerRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\AddQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\QueryTopicQueueInfoRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\QueryTopicConsumeInfoRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\QueryConsumerInfoRequestHandler.cs" />
     <Compile Include="Broker\SqlServerOffsetManager.cs" />
     <Compile Include="Broker\SqlServerOffsetManagerSetting.cs" />
     <Compile Include="Broker\SqlServerMessageStoreSetting.cs" />
@@ -70,7 +71,6 @@
     <Compile Include="Broker\RequestHandlers\PullMessageRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetTopicQueueIdsForConsumerRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\UpdateQueueOffsetRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\QueryConsumerRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\SendMessageRequestHandler.cs" />
     <Compile Include="Broker\Queue.cs" />
     <Compile Include="Broker\MessageService.cs" />
@@ -98,8 +98,8 @@
     <Compile Include="Protocols\RemoveQueueRequest.cs" />
     <Compile Include="Protocols\AddQueueRequest.cs" />
     <Compile Include="Protocols\QueryTopicQueueInfoRequest.cs" />
-    <Compile Include="Protocols\QueryTopicConsumeInfoRequest.cs" />
-    <Compile Include="Protocols\TopicConsumeInfo.cs" />
+    <Compile Include="Protocols\QueryConsumerInfoRequest.cs" />
+    <Compile Include="Protocols\ConsumerInfo.cs" />
     <Compile Include="Protocols\TopicQueueInfo.cs" />
     <Compile Include="Protocols\QueueMessage.cs" />
     <Compile Include="Protocols\ConsumerData.cs" />

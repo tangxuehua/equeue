@@ -21,14 +21,14 @@ namespace EQueue.AdminWeb.Controllers
                 TopicQueueInfos = topicQueueInfos
             });
         }
-        public ActionResult ConsumeInfo(string group, string topic)
+        public ActionResult ConsumerInfo(string group, string topic)
         {
-            var topicConsumeInfos = _messageService.GetTopicConsumeInfo(group, topic);
-            return View(new TopicConsumeViewModel
+            var consumerInfos = _messageService.GetConsumerInfo(group, topic);
+            return View(new ConsumerViewModel
             {
                 Group = group,
                 Topic = topic,
-                TopicConsumeInfos = topicConsumeInfos
+                ConsumerInfos = consumerInfos
             });
         }
         public ActionResult AddQueue(string topic)

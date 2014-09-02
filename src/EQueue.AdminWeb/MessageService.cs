@@ -33,14 +33,14 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("QueryTopicQueueInfo has exception, topic:{0}", topic));
             }
         }
-        public IEnumerable<TopicConsumeInfo> GetTopicConsumeInfo(string group, string topic)
+        public IEnumerable<ConsumerInfo> GetConsumerInfo(string group, string topic)
         {
-            var requestData = _binarySerializer.Serialize(new QueryTopicConsumeInfoRequest(group, topic));
-            var remotingRequest = new RemotingRequest((int)RequestCode.QueryTopicConsumeInfo, requestData);
+            var requestData = _binarySerializer.Serialize(new QueryConsumerInfoRequest(group, topic));
+            var remotingRequest = new RemotingRequest((int)RequestCode.QueryConsumerInfo, requestData);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
-                return _binarySerializer.Deserialize<IEnumerable<TopicConsumeInfo>>(remotingResponse.Body);
+                return _binarySerializer.Deserialize<IEnumerable<ConsumerInfo>>(remotingResponse.Body);
             }
             else
             {

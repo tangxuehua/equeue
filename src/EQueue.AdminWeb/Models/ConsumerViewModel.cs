@@ -3,10 +3,10 @@ using EQueue.Protocols;
 
 namespace EQueue.AdminWeb.Models
 {
-    public class TopicConsumeViewModel
+    public class ConsumerViewModel
     {
         public string Group { get; set; }
         public string Topic { get; set; }
-        public IEnumerable<TopicConsumeInfo> TopicConsumeInfos { get; set; }
+        public IEnumerable<ConsumerInfo> ConsumerInfos { get; set; }
     }
 }

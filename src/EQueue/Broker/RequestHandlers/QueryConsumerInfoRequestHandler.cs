@@ -8,13 +8,13 @@ using EQueue.Protocols;
 
 namespace EQueue.Broker.Processors
 {
-    public class QueryTopicConsumeInfoRequestHandler : IRequestHandler
+    public class QueryConsumerInfoRequestHandler : IRequestHandler
     {
         private BrokerController _brokerController;
         private IBinarySerializer _binarySerializer;
         private IOffsetManager _offsetManager;
 
-        public QueryTopicConsumeInfoRequestHandler(BrokerController brokerController)
+        public QueryConsumerInfoRequestHandler(BrokerController brokerController)
         {
             _brokerController = brokerController;
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
@@ -23,17 +23,17 @@ namespace EQueue.Broker.Processors
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
-            var queryTopicConsumeInfoRequest = _binarySerializer.Deserialize<QueryTopicConsumeInfoRequest>(request.Body);
-            var topicConsumeInfoList = new List<TopicConsumeInfo>();
+            var queryConsumerInfoRequest = _binarySerializer.Deserialize<QueryConsumerInfoRequest>(request.Body);
+            var consumerInfoList = new List<ConsumerInfo>();
 
-            if (!string.IsNullOrEmpty(queryTopicConsumeInfoRequest.GroupName))
+            if (!string.IsNullOrEmpty(queryConsumerInfoRequest.GroupName))
             {
-                var consumerGroups = _brokerController.ConsumerManager.QueryConsumerGroup(queryTopicConsumeInfoRequest.GroupName);
+                var consumerGroups = _brokerController.ConsumerManager.QueryConsumerGroup(queryConsumerInfoRequest.GroupName);
                 foreach (var consumerGroup in consumerGroups)
                 {
-                    foreach (var topicConsumeInfo in GetTopicConsumeInfoForGroup(consumerGroup, queryTopicConsumeInfoRequest.Topic))
+                    foreach (var topicConsumeInfo in GetConsumerInfoForGroup(consumerGroup, queryConsumerInfoRequest.Topic))
                     {
-                        topicConsumeInfoList.Add(topicConsumeInfo);
+                        consumerInfoList.Add(topicConsumeInfo);
                     }
                 }
             }
@@ -42,20 +42,20 @@ namespace EQueue.Broker.Processors
                 var consumerGroups = _brokerController.ConsumerManager.GetAllConsumerGroups();
                 foreach (var consumerGroup in consumerGroups)
                 {
-                    foreach (var topicConsumeInfo in GetTopicConsumeInfoForGroup(consumerGroup, queryTopicConsumeInfoRequest.Topic))
+                    foreach (var topicConsumeInfo in GetConsumerInfoForGroup(consumerGroup, queryConsumerInfoRequest.Topic))
                     {
-                        topicConsumeInfoList.Add(topicConsumeInfo);
+                        consumerInfoList.Add(topicConsumeInfo);
                     }
                 }
             }
 
-            var data = _binarySerializer.Serialize(topicConsumeInfoList);
+            var data = _binarySerializer.Serialize(consumerInfoList);
             return new RemotingResponse((int)ResponseCode.Success, request.Sequence, data);
         }
 
-        private IEnumerable<TopicConsumeInfo> GetTopicConsumeInfoForGroup(ConsumerGroup consumerGroup, string currentTopic)
+        private IEnumerable<ConsumerInfo> GetConsumerInfoForGroup(ConsumerGroup consumerGroup, string currentTopic)
         {
-            var topicConsumeInfoList = new List<TopicConsumeInfo>();
+            var consumerInfoList = new List<ConsumerInfo>();
             var consumerIdList = string.IsNullOrEmpty(currentTopic) ? consumerGroup.GetAllConsumerIds().ToList() : consumerGroup.QueryConsumerIdsForTopic(currentTopic).ToList();
             consumerIdList.Sort();
 
@@ -69,12 +69,12 @@ namespace EQueue.Broker.Processors
                     var queueId = int.Parse(items[1]);
                     if (string.IsNullOrEmpty(currentTopic) || topic.Contains(currentTopic))
                     {
-                        topicConsumeInfoList.Add(BuildTopicConsumeInfo(consumerGroup.GroupName, consumerId, topic, queueId));
+                        consumerInfoList.Add(BuildConsumerInfo(consumerGroup.GroupName, consumerId, topic, queueId));
                     }
                 }
             }
 
-            topicConsumeInfoList.Sort((x, y) =>
+            consumerInfoList.Sort((x, y) =>
             {
                 var result = string.Compare(x.ConsumerGroup, y.ConsumerGroup);
                 if (result != 0)
@@ -102,17 +102,17 @@ namespace EQueue.Broker.Processors
                 return 0;
             });
 
-            return topicConsumeInfoList;
+            return consumerInfoList;
         }
-        private TopicConsumeInfo BuildTopicConsumeInfo(string group, string consumerId, string topic, int queueId)
+        private ConsumerInfo BuildConsumerInfo(string group, string consumerId, string topic, int queueId)
         {
-            var topicConsumeInfo = new TopicConsumeInfo();
-            topicConsumeInfo.ConsumerGroup = group;
-            topicConsumeInfo.ConsumerId = consumerId;
-            topicConsumeInfo.Topic = topic;
-            topicConsumeInfo.QueueId = queueId;
-            topicConsumeInfo.ConsumedOffset = _offsetManager.GetQueueOffset(topic, queueId, group);
-            return topicConsumeInfo;
+            var consumerInfo = new ConsumerInfo();
+            consumerInfo.ConsumerGroup = group;
+            consumerInfo.ConsumerId = consumerId;
+            consumerInfo.Topic = topic;
+            consumerInfo.QueueId = queueId;
+            consumerInfo.ConsumedOffset = _offsetManager.GetQueueOffset(topic, queueId, group);
+            return consumerInfo;
         }
     }
 }
