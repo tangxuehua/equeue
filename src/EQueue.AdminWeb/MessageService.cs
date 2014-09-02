@@ -44,6 +44,20 @@ namespace EQueue.AdminWeb
             }
             else
             {
+                throw new Exception(string.Format("QueryConsumerInfo has exception, group:{0}, topic:{1}", group, topic));
+            }
+        }
+        public IEnumerable<TopicConsumeInfo> GetTopicConsumeInfo(string group, string topic)
+        {
+            var requestData = _binarySerializer.Serialize(new QueryTopicConsumeInfoRequest(group, topic));
+            var remotingRequest = new RemotingRequest((int)RequestCode.QueryTopicConsumeInfo, requestData);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
+            if (remotingResponse.Code == (int)ResponseCode.Success)
+            {
+                return _binarySerializer.Deserialize<IEnumerable<TopicConsumeInfo>>(remotingResponse.Body);
+            }
+            else
+            {
                 throw new Exception(string.Format("QueryTopicConsumeInfo has exception, group:{0}, topic:{1}", group, topic));
             }
         }

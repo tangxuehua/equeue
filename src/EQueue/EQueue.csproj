@@ -46,6 +46,7 @@
     <Compile Include="Broker\InMemoryMessageStoreSetting.cs" />
     <Compile Include="Broker\RequestHandlers\DisableQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\EnableQueueRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\QueryTopicConsumeInfoRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\QueryConsumerRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\RemoveQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetTopicQueueIdsForProducerRequestHandler.cs" />
@@ -93,8 +94,10 @@
     <Compile Include="Clients\Producers\QueueAverageSelector.cs" />
     <Compile Include="Clients\Producers\QueueHashSelector.cs" />
     <Compile Include="Configurations\ConfigurationExtensions.cs" />
+    <Compile Include="Protocols\TopicConsumeInfo.cs" />
     <Compile Include="Protocols\DisableQueueRequest.cs" />
     <Compile Include="Protocols\EnableQueueRequest.cs" />
+    <Compile Include="Protocols\QueryTopicConsumeInfoRequest.cs" />
     <Compile Include="Protocols\RemoveQueueRequest.cs" />
     <Compile Include="Protocols\AddQueueRequest.cs" />
     <Compile Include="Protocols\QueryTopicQueueInfoRequest.cs" />

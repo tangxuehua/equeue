@@ -140,6 +140,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\TopicConsumeViewModel.cs" />
     <Compile Include="Models\ConsumerViewModel.cs" />
     <Compile Include="Models\TopicQueueViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -183,6 +184,9 @@
     <Content Include="packages.config">
       <SubType>Designer</SubType>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Home\TopicConsumeInfo.cshtml" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

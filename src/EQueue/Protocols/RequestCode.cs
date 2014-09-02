@@ -16,6 +16,7 @@
         AddQueue = 1003,
         RemoveQueue = 1004,
         EnableQueue = 1005,
-        DisableQueue = 1006
+        DisableQueue = 1006,
+        QueryTopicConsumeInfo = 1007,
     }
 }

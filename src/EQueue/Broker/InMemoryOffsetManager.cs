@@ -1,6 +1,10 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
+using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
@@ -59,6 +63,28 @@ namespace EQueue.Broker
             }
 
             return minOffset;
+        }
+        public IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic)
+        {
+            var entryList = _dict.Where(x => string.IsNullOrEmpty(groupName) || x.Key.Contains(groupName));
+            var topicConsumeInfoList = new List<TopicConsumeInfo>();
+
+            foreach (var entry in entryList)
+            {
+                foreach (var subEntry in entry.Value.Where(x => string.IsNullOrEmpty(topic) || x.Key.Split(new string[] { "-" }, StringSplitOptions.None)[0].Contains(topic)))
+                {
+                    var items = subEntry.Key.Split(new string[] { "-" }, StringSplitOptions.None);
+                    topicConsumeInfoList.Add(new TopicConsumeInfo
+                    {
+                        ConsumerGroup = entry.Key,
+                        Topic = items[0],
+                        QueueId = int.Parse(items[1]),
+                        ConsumedOffset = subEntry.Value
+                    });
+                }
+            }
+
+            return topicConsumeInfoList;
         }
     }
 }
