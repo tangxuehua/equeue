@@ -1,0 +1,59 @@
+﻿@model EQueue.AdminWeb.Models.TopicConsumeViewModel
+@{
+    ViewBag.Title = "队列消费信息";
+}
+<div>
+    @using (Html.BeginForm("TopicConsumeInfo", "Home", new { }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+    {
+        <div class="form-group">
+            @Html.LabelFor(m => m.Group, new { @class = "control-label" })
+            @Html.TextBoxFor(m => m.Group, new { @class = "form-control", @style = "display:inline-block" })
+            @Html.LabelFor(m => m.Topic, new { @class = "control-label" })
+            @Html.TextBoxFor(m => m.Topic, new { @class = "form-control", @style = "display:inline-block" })
+            <input type="submit" value="查询" class="btn btn-default" />
+        </div>
+    }
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th width="20%" class="vertical-center">
+                    ConsumerGroup
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    Topic
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    QueueId
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    ConsumedOffset
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    HasActiveConsumer
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.TopicConsumeInfos)
+            {
+                <tr>
+                    <td class="vertical-center">
+                        @item.ConsumerGroup
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.Topic
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.QueueId
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ConsumedOffset
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.HasConsumer
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
