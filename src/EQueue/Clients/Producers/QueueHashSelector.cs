@@ -12,12 +12,19 @@ namespace EQueue.Clients.Producers
             {
                 throw new Exception(string.Format("No available queue for topic [{0}].", message.Topic));
             }
-            var value = arg.GetHashCode();
-            if (value < 0)
+            unchecked
             {
-                value = Math.Abs(value);
+                int hash = 23;
+                foreach (char c in arg.ToString())
+                {
+                    hash = (hash << 5) - hash + c;
+                }
+                if (hash < 0)
+                {
+                    hash = Math.Abs(hash);
+                }
+                return availableQueueIds[(int)(hash % availableQueueIds.Count)];
             }
-            return availableQueueIds[(int)(value % availableQueueIds.Count)];
         }
     }
 }
