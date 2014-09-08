@@ -15,7 +15,7 @@ namespace QuickStart.BrokerServer
             InitializeEQueue();
             var setting = new BrokerSetting();
             setting.NotifyWhenMessageArrived = false;
-            setting.RemoveMessageInterval = 1000;
+            setting.RemoveConsumedMessageInterval = 1000;
             new BrokerController(setting).Start();
             Console.ReadLine();
         }

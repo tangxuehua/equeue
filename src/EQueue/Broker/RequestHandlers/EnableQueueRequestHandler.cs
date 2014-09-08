@@ -20,7 +20,7 @@ namespace EQueue.Broker.Processors
         {
             var enableQueueRequest = _binarySerializer.Deserialize<EnableQueueRequest>(request.Body);
             _messageService.EnableQueue(enableQueueRequest.Topic, enableQueueRequest.QueueId);
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, new byte[0]);
+            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, new byte[1] { 1 });
         }
     }
 }

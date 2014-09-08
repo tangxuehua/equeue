@@ -9,8 +9,8 @@ namespace EQueue.Broker
         public SocketSetting ConsumerSocketSetting { get; set; }
         public SocketSetting AdminSocketSetting { get; set; }
         public bool NotifyWhenMessageArrived { get; set; }
-        public int RemoveMessageInterval { get; set; }
-        public int RemoveQueueIndexInterval { get; set; }
+        public int RemoveConsumedMessageInterval { get; set; }
+        public int RemoveExceedMaxCacheQueueIndexInterval { get; set; }
         public int CheckBlockingPullRequestMilliseconds { get; set; }
         public int DefaultTopicQueueCount { get; set; }
         public int ScanNotActiveConsumerInterval { get; set; }
@@ -23,8 +23,8 @@ namespace EQueue.Broker
             ConsumerSocketSetting = new SocketSetting { Address = SocketUtils.GetLocalIPV4().ToString(), Port = 5001, Backlog = 5000 };
             AdminSocketSetting = new SocketSetting { Address = SocketUtils.GetLocalIPV4().ToString(), Port = 5002, Backlog = 5000 };
             NotifyWhenMessageArrived = true;
-            RemoveMessageInterval = 1000 * 60 * 10;
-            RemoveQueueIndexInterval = 1000 * 5;
+            RemoveConsumedMessageInterval = 1000 * 5;
+            RemoveExceedMaxCacheQueueIndexInterval = 1000 * 5;
             CheckBlockingPullRequestMilliseconds = 1000;
             DefaultTopicQueueCount = 4;
             ScanNotActiveConsumerInterval = 1000 * 5;

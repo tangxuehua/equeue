@@ -8,6 +8,7 @@ using ECommon.Components;
 using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
+using ECommon.Remoting.Exceptions;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using EQueue.Protocols;
@@ -18,18 +19,18 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Members
 
-        private const int DefaultTimeout = 10000;
+        private const int DefaultTimeout = 30 * 1000;
         private readonly object _lockObject;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly List<string> _subscriptionTopics;
+        private readonly List<int> _taskIds;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict;
         private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict;
         private readonly ConcurrentDictionary<long, ConsumingMessage> _handlingMessageDict;
         private readonly BlockingCollection<PullRequest> _pullRequestQueue;
         private readonly BlockingCollection<ConsumingMessage> _consumingMessageQueue;
         private readonly BlockingCollection<ConsumingMessage> _messageRetryQueue;
-        private readonly List<int> _taskIds;
         private readonly IScheduleService _scheduleService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly Worker _executePullRequestWorker;
@@ -161,7 +162,7 @@ namespace EQueue.Clients.Consumers
 
                 if (messageCount >= Setting.PullThresholdForQueue)
                 {
-                    Task.Factory.StartDelayedTask(Setting.PullTimeDelayMillsWhenFlowControl, () => _pullRequestQueue.Add(pullRequest));
+                    Task.Factory.StartDelayedTask(Setting.PullTimeDelayMillsWhenFlowControl, () => SchedulePullRequest(pullRequest));
                     if ((_flowControlTimes++ % 100) == 0)
                     {
                         _logger.DebugFormat("Detect that the message process queue has too many messages, so do flow control. pullRequest={0}, queueMessageCount={1}, flowControlTimes={2}", pullRequest, messageCount, _flowControlTimes);
@@ -190,8 +191,7 @@ namespace EQueue.Clients.Consumers
                     {
                         if (pullTask.Exception != null)
                         {
-                            _logger.Error(string.Format("The pull result has exception, isBrokerServerConnected:{0}, pullRequest:{1}", _isBrokerServerConnected, pullRequest), pullTask.Exception);
-                            _pullRequestQueue.Add(pullRequest);
+                            SchedulePullRequest(pullRequest);
                             return;
                         }
 
@@ -209,23 +209,27 @@ namespace EQueue.Clients.Consumers
                         }
                         else if (remotingResponse.Code == (int)PullStatus.NextOffsetReset && response.NextOffset != null)
                         {
+                            var oldConsumeOffset = pullRequest.NextConsumeOffset;
                             pullRequest.NextConsumeOffset = response.NextOffset.Value;
-                            _logger.DebugFormat("Updated queue next consume offset. topic:{0}, queueId:{1}, nextConsumeOffset:{2}", pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, pullRequest.NextConsumeOffset);
+                            _logger.DebugFormat("Updated queue next consume offset. topic:{0}, queueId:{1}, old offset:{2}, new offset:{3}", pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, oldConsumeOffset, pullRequest.NextConsumeOffset);
                         }
 
                         if (_stoped) return;
                         if (pullRequest.ProcessQueue.IsDropped) return;
                         if (remotingResponse.Code == (int)PullStatus.Ignored) return;
 
-                        _pullRequestQueue.Add(pullRequest);
+                        SchedulePullRequest(pullRequest);
                     }
                     catch (Exception ex)
                     {
                         if (_stoped) return;
                         if (pullRequest.ProcessQueue.IsDropped) return;
 
-                        _logger.Error(string.Format("Process pull result has exception, isBrokerServerConnected:{0}, pullRequest:{1}", _isBrokerServerConnected, pullRequest), ex);
-                        _pullRequestQueue.Add(pullRequest);
+                        if (_isBrokerServerConnected)
+                        {
+                            _logger.Error(string.Format("Process pull result has exception, pullRequest:{0}", pullRequest), ex);
+                        }
+                        SchedulePullRequest(pullRequest);
                     }
                 });
             }
@@ -234,9 +238,16 @@ namespace EQueue.Clients.Consumers
                 if (_stoped) return;
                 if (pullRequest.ProcessQueue.IsDropped) return;
 
-                _logger.Error(string.Format("PullMessage has exception, pullRequest:{0}", pullRequest), ex);
-                _pullRequestQueue.Add(pullRequest);
+                if (_isBrokerServerConnected)
+                {
+                    _logger.Error(string.Format("PullMessage has exception, pullRequest:{0}", pullRequest), ex);
+                }
+                SchedulePullRequest(pullRequest);
             }
+        }
+        private void SchedulePullRequest(PullRequest pullRequest)
+        {
+            _pullRequestQueue.Add(pullRequest);
         }
         private void HandleMessage()
         {
@@ -244,6 +255,7 @@ namespace EQueue.Clients.Consumers
 
             if (_stoped) return;
             if (consumingMessage == null) return;
+            if (consumingMessage.ProcessQueue.IsDropped) return;
 
             var handleAction = new Action(() =>
             {
@@ -393,7 +405,7 @@ namespace EQueue.Clients.Consumers
                     var request = new PullRequest(Id, GroupName, messageQueue, -1);
                     if (_pullRequestDict.TryAdd(key, request))
                     {
-                        _pullRequestQueue.Add(request);
+                        SchedulePullRequest(request);
                         _logger.DebugFormat("Added pull request, consumerId:{0}, group:{1}, topic={2}, queueId={3}", Id, GroupName, request.MessageQueue.Topic, request.MessageQueue.QueueId);
                     }
                 }
@@ -451,7 +463,10 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("PersistOffset has exception, consumerId:{0}, group:{1}, topic:{2}, queueId:{3}", Id, GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId), ex);
+                if (_isBrokerServerConnected)
+                {
+                    _logger.Error(string.Format("PersistOffset has exception, consumerId:{0}, group:{1}, topic:{2}, queueId:{3}", Id, GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId), ex);
+                }
             }
         }
         private void SendHeartbeat()
@@ -465,7 +480,10 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                _logger.Error(string.Format("SendHeartbeat remoting request to broker has exception, consumerId:{0}, group:{1}", Id, GroupName), ex);
+                if (_isBrokerServerConnected)
+                {
+                    _logger.Error(string.Format("SendHeartbeat remoting request to broker has exception, consumerId:{0}, group:{1}", Id, GroupName), ex);
+                }
             }
         }
         private void RefreshTopicQueues()
@@ -573,6 +591,10 @@ namespace EQueue.Clients.Consumers
             foreach (var taskId in _taskIds)
             {
                 _scheduleService.ShutdownTask(taskId);
+            }
+            foreach (var pullRequest in _pullRequestDict.Values)
+            {
+                pullRequest.ProcessQueue.IsDropped = true;
             }
 
             _executePullRequestWorker.Stop();

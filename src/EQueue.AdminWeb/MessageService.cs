@@ -101,5 +101,15 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("DisableQueue has exception, topic:{0}", topic));
             }
         }
+        public void RemoveQueueOffsetInfo(string consumerGroup, string topic, int queueId)
+        {
+            var requestData = _binarySerializer.Serialize(new RemoveQueueOffsetInfoRequest(consumerGroup, topic, queueId));
+            var remotingRequest = new RemotingRequest((int)RequestCode.RemoveQueueOffsetInfo, requestData);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code != (int)ResponseCode.Success)
+            {
+                throw new Exception(string.Format("RemoveQueueOffsetInfo has exception, topic:{0}", topic));
+            }
+        }
     }
 }

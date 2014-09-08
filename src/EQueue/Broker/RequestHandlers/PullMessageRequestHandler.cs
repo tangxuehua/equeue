@@ -78,9 +78,19 @@ namespace EQueue.Broker.Processors
                 }
                 else
                 {
-                    var pullMessageResponse = new PullMessageResponse(messages);
-                    var responseData = _binarySerializer.Serialize(pullMessageResponse);
-                    return new RemotingResponse((int)PullStatus.NoNewMessage, request.Sequence, responseData);
+                    var queueMinOffset = _messageService.GetQueueMinOffset(pullMessageRequest.MessageQueue.Topic, pullMessageRequest.MessageQueue.QueueId);
+                    if (queueMinOffset > pullMessageRequest.QueueOffset)
+                    {
+                        var response = new PullMessageResponse(new QueueMessage[0], queueMinOffset);
+                        var responseData = _binarySerializer.Serialize(response);
+                        return new RemotingResponse((int)PullStatus.NextOffsetReset, request.Sequence, responseData);
+                    }
+                    else
+                    {
+                        var response = new PullMessageResponse(messages);
+                        var responseData = _binarySerializer.Serialize(response);
+                        return new RemotingResponse((int)PullStatus.NoNewMessage, request.Sequence, responseData);
+                    }
                 }
             }
         }
@@ -96,10 +106,31 @@ namespace EQueue.Broker.Processors
                     pullMessageRequest.MessageQueue.QueueId,
                     pullMessageRequest.QueueOffset,
                     pullMessageRequest.PullMessageBatchSize);
-                var pullMessageResponse = new PullMessageResponse(messages);
-                var responseData = _binarySerializer.Serialize(pullMessageResponse);
-                var remotingResponse = new RemotingResponse(messages.Count() > 0 ? (int)PullStatus.Found : (int)PullStatus.NoNewMessage, pullRequest.RemotingRequestSequence, responseData);
-                pullRequest.RequestHandlerContext.SendRemotingResponse(remotingResponse);
+
+                if (messages.Count() > 0)
+                {
+                    var response = new PullMessageResponse(messages);
+                    var responseData = _binarySerializer.Serialize(response);
+                    var remotingResponse = new RemotingResponse((int)PullStatus.Found, pullRequest.RemotingRequestSequence, responseData);
+                    pullRequest.RequestHandlerContext.SendRemotingResponse(remotingResponse);
+                    return;
+                }
+
+                var queueMinOffset = _messageService.GetQueueMinOffset(pullMessageRequest.MessageQueue.Topic, pullMessageRequest.MessageQueue.QueueId);
+                if (queueMinOffset > pullMessageRequest.QueueOffset)
+                {
+                    var response = new PullMessageResponse(new QueueMessage[0], queueMinOffset);
+                    var responseData = _binarySerializer.Serialize(response);
+                    var remotingResponse = new RemotingResponse((int)PullStatus.NextOffsetReset, pullRequest.RemotingRequestSequence, responseData);
+                    pullRequest.RequestHandlerContext.SendRemotingResponse(remotingResponse);
+                }
+                else
+                {
+                    var response = new PullMessageResponse(new QueueMessage[0]);
+                    var responseData = _binarySerializer.Serialize(response);
+                    var remotingResponse = new RemotingResponse((int)PullStatus.NoNewMessage, pullRequest.RemotingRequestSequence, responseData);
+                    pullRequest.RequestHandlerContext.SendRemotingResponse(remotingResponse);
+                }
             }
         }
         private void ExecuteReplacedPullRequest(PullRequest pullRequest)

@@ -61,5 +61,10 @@ namespace EQueue.AdminWeb.Controllers
             _messageService.DisableQueue(topic, queueId);
             return RedirectToAction("Index");
         }
+        public ActionResult RemoveQueueOffsetInfo(string consumerGroup, string topic, int queueId)
+        {
+            _messageService.RemoveQueueOffsetInfo(consumerGroup, topic, queueId);
+            return RedirectToAction("Index");
+        }
     }
 }

@@ -10,7 +10,7 @@ namespace EQueue.Broker
 {
     public class InMemoryOffsetManager : IOffsetManager
     {
-        private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _dict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
+        private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupQueueOffsetDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
         private readonly ILogger _logger;
 
         public InMemoryOffsetManager()
@@ -31,7 +31,7 @@ namespace EQueue.Broker
         public long GetQueueOffset(string topic, int queueId, string group)
         {
             ConcurrentDictionary<string, long> queueOffsetDict;
-            if (_dict.TryGetValue(group, out queueOffsetDict))
+            if (_groupQueueOffsetDict.TryGetValue(group, out queueOffsetDict))
             {
                 long offset;
                 var key = string.Format("{0}-{1}", topic, queueId);
@@ -46,7 +46,7 @@ namespace EQueue.Broker
         {
             var key = string.Format("{0}-{1}", topic, queueId);
             var minOffset = -1L;
-            foreach (var queueOffsetDict in _dict.Values)
+            foreach (var queueOffsetDict in _groupQueueOffsetDict.Values)
             {
                 long offset;
                 if (queueOffsetDict.TryGetValue(key, out offset))
@@ -64,9 +64,34 @@ namespace EQueue.Broker
 
             return minOffset;
         }
+        public void RemoveQueueOffset(string topic, int queueId)
+        {
+            var key = string.Format("{0}-{1}", topic, queueId);
+            foreach (var groupEntry in _groupQueueOffsetDict)
+            {
+                long offset;
+                if (!groupEntry.Value.TryRemove(key, out offset))
+                {
+                    _logger.ErrorFormat("Try to remove queue offset failed, topic:{0}, queueId:{1}, consumer group:{2}", topic, queueId, groupEntry.Key);
+                }
+            }
+        }
+        public void RemoveQueueOffset(string consumerGroup, string topic, int queueId)
+        {
+            ConcurrentDictionary<string, long> queueOffsetDict;
+            if (_groupQueueOffsetDict.TryGetValue(consumerGroup, out queueOffsetDict))
+            {
+                var key = string.Format("{0}-{1}", topic, queueId);
+                long offset;
+                if (!queueOffsetDict.TryRemove(key, out offset))
+                {
+                    _logger.ErrorFormat("Try to remove queue offset failed, topic:{0}, queueId:{1}, consumer group:{2}", topic, queueId, consumerGroup);
+                }
+            }
+        }
         public IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic)
         {
-            var entryList = _dict.Where(x => string.IsNullOrEmpty(groupName) || x.Key.Contains(groupName));
+            var entryList = _groupQueueOffsetDict.Where(x => string.IsNullOrEmpty(groupName) || x.Key.Contains(groupName));
             var topicConsumeInfoList = new List<TopicConsumeInfo>();
 
             foreach (var entry in entryList)

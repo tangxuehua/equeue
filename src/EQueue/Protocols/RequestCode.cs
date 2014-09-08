@@ -18,5 +18,6 @@
         EnableQueue = 1005,
         DisableQueue = 1006,
         QueryTopicConsumeInfo = 1007,
+        RemoveQueueOffsetInfo = 1008,
     }
 }

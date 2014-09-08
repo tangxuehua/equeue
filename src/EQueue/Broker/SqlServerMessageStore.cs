@@ -24,7 +24,7 @@ namespace EQueue.Broker
         private long _currentOffset = -1;
         private long _persistedOffset = -1;
         private int _persistMessageTaskId;
-        private int _removeMessageFromMemoryTaskId;
+        private int _removeExceedMaxCacheMessageFromMemoryTaskId;
         private int _removeConsumedMessageFromMemoryTaskId;
         private int _deleteMessageTaskId;
 
@@ -59,14 +59,14 @@ namespace EQueue.Broker
         public void Start()
         {
             _persistMessageTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.PersistMessages", PersistMessages, _setting.PersistMessageInterval, _setting.PersistMessageInterval);
-            _removeMessageFromMemoryTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.RemoveMessagesFromMemory", RemoveMessagesFromMemory, _setting.RemoveMessagesFromMemoryInterval, _setting.RemoveMessagesFromMemoryInterval);
-            _removeConsumedMessageFromMemoryTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.RemoveConsumedMessagesFromMemory", RemoveConsumedMessagesFromMemory, _setting.RemoveConsumedMessagesFromMemoryInterval, _setting.RemoveConsumedMessagesFromMemoryInterval);
+            _removeExceedMaxCacheMessageFromMemoryTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.RemoveExceedMaxCacheMessageFromMemory", RemoveExceedMaxCacheMessageFromMemory, _setting.RemoveExceedMaxCacheMessageFromMemoryInterval, _setting.RemoveExceedMaxCacheMessageFromMemoryInterval);
+            _removeConsumedMessageFromMemoryTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.RemoveConsumedMessageFromMemory", RemoveConsumedMessageFromMemory, _setting.RemoveConsumedMessageFromMemoryInterval, _setting.RemoveConsumedMessageFromMemoryInterval);
             _deleteMessageTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.DeleteMessages", DeleteMessages, _setting.DeleteMessageInterval, _setting.DeleteMessageInterval);
         }
         public void Shutdown()
         {
             _scheduleService.ShutdownTask(_persistMessageTaskId);
-            _scheduleService.ShutdownTask(_removeMessageFromMemoryTaskId);
+            _scheduleService.ShutdownTask(_removeExceedMaxCacheMessageFromMemoryTaskId);
             _scheduleService.ShutdownTask(_removeConsumedMessageFromMemoryTaskId);
             _scheduleService.ShutdownTask(_deleteMessageTaskId);
         }
@@ -123,7 +123,7 @@ namespace EQueue.Broker
             _currentOffset = -1;
             _persistedOffset = -1;
         }
-        private void RemoveMessagesFromMemory()
+        private void RemoveExceedMaxCacheMessageFromMemory()
         {
             var currentTotalCount = _messageDict.Count;
             var exceedCount = currentTotalCount - _setting.MessageMaxCacheSize;
@@ -146,7 +146,7 @@ namespace EQueue.Broker
                 }
             }
         }
-        private void RemoveConsumedMessagesFromMemory()
+        private void RemoveConsumedMessageFromMemory()
         {
             var queueMessages = _messageDict.Values.ToList();
             foreach (var queueMessage in queueMessages)

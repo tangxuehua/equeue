@@ -5,21 +5,21 @@ using EQueue.Protocols;
 
 namespace EQueue.Broker.Processors
 {
-    public class AddQueueRequestHandler : IRequestHandler
+    public class RemoveQueueOffsetInfoRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IMessageService _messageService;
+        private IOffsetManager _offsetManager;
 
-        public AddQueueRequestHandler()
+        public RemoveQueueOffsetInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _messageService = ObjectContainer.Resolve<IMessageService>();
+            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
-            var addQueueRequest = _binarySerializer.Deserialize<AddQueueRequest>(request.Body);
-            _messageService.AddQueue(addQueueRequest.Topic);
+            var removeQueueOffsetInfoRequest = _binarySerializer.Deserialize<RemoveQueueOffsetInfoRequest>(request.Body);
+            _offsetManager.RemoveQueueOffset(removeQueueOffsetInfoRequest.ConsumerGroup, removeQueueOffsetInfoRequest.Topic, removeQueueOffsetInfoRequest.QueueId);
             return new RemotingResponse((int)ResponseCode.Success, request.Sequence, new byte[1] { 1 });
         }
     }

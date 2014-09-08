@@ -18,8 +18,8 @@ namespace EQueue.Broker
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
         private BrokerController _brokerController;
-        private int _removeConsumedMessagesTaskId;
-        private int _removeQueueIndexTaskId;
+        private int _removeConsumedMessageTaskId;
+        private int _removeExceedMaxCacheQueueIndexTaskId;
         private long _totalRecoveredQueueIndex;
 
         public MessageService(IMessageStore messageStore, IOffsetManager offsetManager, IScheduleService scheduleService)
@@ -41,15 +41,15 @@ namespace EQueue.Broker
             _messageStore.Recover(RecoverQueueIndexForMessage);
             _messageStore.Start();
             _offsetManager.Start();
-            _removeConsumedMessagesTaskId = _scheduleService.ScheduleTask("MessageService.RemoveConsumedMessages", RemoveConsumedMessages, _brokerController.Setting.RemoveMessageInterval, _brokerController.Setting.RemoveMessageInterval);
-            _removeQueueIndexTaskId = _scheduleService.ScheduleTask("MessageService.RemoveQueueIndex", RemoveQueueIndex, _brokerController.Setting.RemoveQueueIndexInterval, _brokerController.Setting.RemoveQueueIndexInterval);
+            _removeConsumedMessageTaskId = _scheduleService.ScheduleTask("MessageService.RemoveConsumedMessage", RemoveConsumedMessage, _brokerController.Setting.RemoveConsumedMessageInterval, _brokerController.Setting.RemoveConsumedMessageInterval);
+            _removeExceedMaxCacheQueueIndexTaskId = _scheduleService.ScheduleTask("MessageService.RemoveExceedMaxCacheQueueIndex", RemoveExceedMaxCacheQueueIndex, _brokerController.Setting.RemoveExceedMaxCacheQueueIndexInterval, _brokerController.Setting.RemoveExceedMaxCacheQueueIndexInterval);
         }
         public void Shutdown()
         {
             _messageStore.Shutdown();
             _offsetManager.Shutdown();
-            _scheduleService.ShutdownTask(_removeConsumedMessagesTaskId);
-            _scheduleService.ShutdownTask(_removeQueueIndexTaskId);
+            _scheduleService.ShutdownTask(_removeConsumedMessageTaskId);
+            _scheduleService.ShutdownTask(_removeExceedMaxCacheQueueIndexTaskId);
         }
         public MessageStoreResult StoreMessage(Message message, int queueId)
         {
@@ -125,6 +125,17 @@ namespace EQueue.Broker
             }
             return -1;
         }
+        public long GetQueueMinOffset(string topic, int queueId)
+        {
+            var queues = GetQueues(topic);
+            var queue = queues.SingleOrDefault(x => x.QueueId == queueId);
+            if (queue != null)
+            {
+                var offset = queue.GetMinQueueOffset();
+                return offset != null ? offset.Value : -1;
+            }
+            return -1;
+        }
 
         public IEnumerable<string> GetAllTopics()
         {
@@ -164,6 +175,8 @@ namespace EQueue.Broker
             if (queue != null)
             {
                 queues.Remove(queue);
+                _offsetManager.RemoveQueueOffset(topic, queueId);
+                _messageStore.UpdateMaxAllowToDeleteQueueOffset(topic, queueId, long.MaxValue);
             }
         }
         public void EnableQueue(string topic, int queueId)
@@ -214,7 +227,7 @@ namespace EQueue.Broker
             queue.RecoverQueueIndex(queueOffset, messageOffset, allowSetQueueIndex);
             _totalRecoveredQueueIndex++;
         }
-        private void RemoveConsumedMessages()
+        private void RemoveConsumedMessage()
         {
             foreach (var topicQueues in _topicQueueDict.Values)
             {
@@ -230,7 +243,7 @@ namespace EQueue.Broker
                 }
             }
         }
-        private void RemoveQueueIndex()
+        private void RemoveExceedMaxCacheQueueIndex()
         {
             if (!_messageStore.SupportBatchLoadQueueIndex)
             {

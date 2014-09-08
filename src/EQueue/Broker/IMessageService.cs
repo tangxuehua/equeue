@@ -14,6 +14,7 @@ namespace EQueue.Broker
         IEnumerable<string> GetAllTopics();
         IEnumerable<int> GetQueueIdsForProducer(string topic);
         IEnumerable<int> GetQueueIdsForConsumer(string topic);
+        long GetQueueMinOffset(string topic, int queueId);
         IList<Queue> QueryQueues(string topic);
         void AddQueue(string topic);
         void RemoveQueue(string topic, int queueId);
