@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using EQueue.Protocols;
 
@@ -69,11 +70,7 @@ namespace EQueue.Broker
             var key = string.Format("{0}-{1}", topic, queueId);
             foreach (var groupEntry in _groupQueueOffsetDict)
             {
-                long offset;
-                if (!groupEntry.Value.TryRemove(key, out offset))
-                {
-                    _logger.ErrorFormat("Try to remove queue offset failed, topic:{0}, queueId:{1}, consumer group:{2}", topic, queueId, groupEntry.Key);
-                }
+                groupEntry.Value.Remove(key);
             }
         }
         public void RemoveQueueOffset(string consumerGroup, string topic, int queueId)
@@ -83,9 +80,9 @@ namespace EQueue.Broker
             {
                 var key = string.Format("{0}-{1}", topic, queueId);
                 long offset;
-                if (!queueOffsetDict.TryRemove(key, out offset))
+                if (queueOffsetDict.TryRemove(key, out offset))
                 {
-                    _logger.ErrorFormat("Try to remove queue offset failed, topic:{0}, queueId:{1}, consumer group:{2}", topic, queueId, consumerGroup);
+                    _logger.DebugFormat("Remove queue offset success, topic:{0}, queueId:{1}, consumer group:{2}", topic, queueId, consumerGroup);
                 }
             }
         }
