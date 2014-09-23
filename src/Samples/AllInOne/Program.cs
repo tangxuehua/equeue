@@ -101,7 +101,7 @@ namespace AllInOne
                 for (var index = 1; index <= total; index++)
                 {
                     var message = "message" + Interlocked.Increment(ref messageIndex);
-                    producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), index).ContinueWith(sendTask =>
+                    producer.SendAsync(new Message("SampleTopic", 100, Encoding.UTF8.GetBytes(message)), index).ContinueWith(sendTask =>
                     {
                         var finishedCount = Interlocked.Increment(ref finished);
                         if (finishedCount % 1000 == 0)

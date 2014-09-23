@@ -31,7 +31,7 @@ namespace QuickStart.ProducerClient
         static void SendMessage(Producer producer, IndexEntry indexEntry)
         {
             var message = "message" + Interlocked.Increment(ref messageIndex);
-            producer.SendAsync(new Message("SampleTopic", Encoding.UTF8.GetBytes(message)), indexEntry.Index.ToString()).ContinueWith(sendTask =>
+            producer.SendAsync(new Message("SampleTopic", 100, Encoding.UTF8.GetBytes(message)), indexEntry.Index.ToString()).ContinueWith(sendTask =>
             {
                 var finishedCount = Interlocked.Increment(ref finished);
                 if (finishedCount % 1000 == 0)

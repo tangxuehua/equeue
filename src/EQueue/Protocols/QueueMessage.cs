@@ -10,7 +10,8 @@ namespace EQueue.Protocols
         public long QueueOffset { get; private set; }
         public DateTime StoredTime { get; private set; }
 
-        public QueueMessage(string topic, byte[] body, long messageOffset, int queueId, long queueOffset, DateTime storedTime) : base(topic, body)
+        public QueueMessage(string topic, int code, byte[] body, long messageOffset, int queueId, long queueOffset, DateTime storedTime)
+            : base(topic, code, body)
         {
             MessageOffset = messageOffset;
             QueueId = queueId;

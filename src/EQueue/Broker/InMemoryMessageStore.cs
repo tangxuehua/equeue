@@ -44,7 +44,7 @@ namespace EQueue.Broker
         public QueueMessage StoreMessage(int queueId, long queueOffset, Message message)
         {
             var nextOffset = GetNextOffset();
-            var queueMessage = new QueueMessage(message.Topic, message.Body, nextOffset, queueId, queueOffset, DateTime.Now);
+            var queueMessage = new QueueMessage(message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, DateTime.Now);
             _messageDict[nextOffset] = queueMessage;
             return queueMessage;
         }
