@@ -56,6 +56,10 @@ namespace EQueue.Broker.Processors
                 pullMessageRequest.PullMessageBatchSize);
             if (messages.Count() > 0)
             {
+                _logger.InfoFormat("Pulled messages, topic:{0}, queueId:{1}, msgCount:{2}",
+                    pullMessageRequest.MessageQueue.Topic,
+                    pullMessageRequest.MessageQueue.QueueId,
+                    messages.Count());
                 var pullMessageResponse = new PullMessageResponse(messages);
                 var responseData = _binarySerializer.Serialize(pullMessageResponse);
                 return new RemotingResponse((int)PullStatus.Found, request.Sequence, responseData);
@@ -98,7 +102,7 @@ namespace EQueue.Broker.Processors
         private void ExecutePullRequest(PullRequest pullRequest)
         {
             var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
-            if (consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Channel.RemotingAddress))
+            if (consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Channel.RemoteEndPoint.ToString()))
             {
                 var pullMessageRequest = pullRequest.PullMessageRequest;
                 var messages = _messageService.GetMessages(
@@ -136,7 +140,7 @@ namespace EQueue.Broker.Processors
         private void ExecuteReplacedPullRequest(PullRequest pullRequest)
         {
             var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
-            if (consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Channel.RemotingAddress))
+            if (consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Channel.RemoteEndPoint.ToString()))
             {
                 var responseData = _binarySerializer.Serialize(new PullMessageResponse(new QueueMessage[0]));
                 var remotingResponse = new RemotingResponse((int)PullStatus.Ignored, pullRequest.RemotingRequestSequence, responseData);

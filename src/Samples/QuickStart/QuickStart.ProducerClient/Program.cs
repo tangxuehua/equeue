@@ -17,46 +17,39 @@ using EQueue.Protocols;
 
 namespace QuickStart.ProducerClient
 {
-    class IndexEntry
-    {
-        public int Index;
-        public int Total;
-    }
     class Program
     {
         static int finished;
         static int messageIndex;
-        static Stopwatch watch = Stopwatch.StartNew();
+        static Stopwatch watch;
 
-        static void SendMessage(Producer producer, IndexEntry indexEntry)
-        {
-            var message = "message" + Interlocked.Increment(ref messageIndex);
-            producer.SendAsync(new Message("SampleTopic", 100, Encoding.UTF8.GetBytes(message)), indexEntry.Index.ToString()).ContinueWith(sendTask =>
-            {
-                var finishedCount = Interlocked.Increment(ref finished);
-                if (finishedCount % 1000 == 0)
-                {
-                    _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
-                }
-                if (indexEntry.Index < indexEntry.Total)
-                {
-                    indexEntry.Index++;
-                    SendMessage(producer, indexEntry);
-                }
-            });
-        }
         static void Main(string[] args)
         {
             InitializeEQueue();
 
-            var scheduleService = ObjectContainer.Resolve<IScheduleService>();
             var producer = new Producer("Producer1").Start();
-            var total = 1000;
-            var parallelCount = 10;
+            var parallelCount = 4;
+            var messageSize = 1024;
+            var messageCount = 2500;
+            var message = new byte[messageSize];
 
             var action = new Action(() =>
             {
-                SendMessage(producer, new IndexEntry { Index = 1, Total = total });
+                for (var index = 0; index < messageCount; index++)
+                {
+                    producer.SendAsync(new Message("SampleTopic", 100, message), Interlocked.Increment(ref messageIndex)).ContinueWith(sendTask =>
+                    {
+                        var finishedCount = Interlocked.Increment(ref finished);
+                        if (finishedCount == 1)
+                        {
+                            watch = Stopwatch.StartNew();
+                        }
+                        if (finishedCount % 1000 == 0)
+                        {
+                            _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
+                        }
+                    });
+                }
             });
 
             var actions = new List<Action>();

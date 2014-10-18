@@ -3,18 +3,20 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
+using ECommon.Socketing;
 using EQueue.Protocols;
 using EQueue.Utils;
 
 namespace EQueue.Clients.Producers
 {
-    public class Producer
+    public class Producer : ISocketClientEventListener
     {
         private readonly object _lockObject;
         private readonly ConcurrentDictionary<string, IList<int>> _topicQueueIdsDict;
@@ -23,6 +25,7 @@ namespace EQueue.Clients.Producers
         private readonly IBinarySerializer _binarySerializer;
         private readonly IQueueSelector _queueSelector;
         private readonly ILogger _logger;
+        private readonly AutoResetEvent _waitSocketConnectHandle;
         private readonly List<int> _taskIds;
 
         public string Id { get; private set; }
@@ -41,27 +44,24 @@ namespace EQueue.Clients.Producers
             _lockObject = new object();
             _taskIds = new List<int>();
             _topicQueueIdsDict = new ConcurrentDictionary<string, IList<int>>();
-            _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
+            _remotingClient = new SocketRemotingClient(null, Setting.BrokerProducerIPEndPoint, this);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+            _waitSocketConnectHandle = new AutoResetEvent(false);
         }
 
         public Producer Start()
         {
-            _remotingClient.Connect();
             _remotingClient.Start();
-            StartBackgroundJobs();
-            _remotingClient.ClientSocketConnectionChanged += HandleRemotingClientConnectionChanged;
+            _waitSocketConnectHandle.WaitOne();
             _logger.InfoFormat("Started, producerId:{0}", Id);
             return this;
         }
         public Producer Shutdown()
         {
             _remotingClient.Shutdown();
-            _remotingClient.ClientSocketConnectionChanged -= HandleRemotingClientConnectionChanged;
-            StopBackgroundJobs();
             _logger.InfoFormat("Shutdown, producerId:{0}", Id);
             return this;
         }
@@ -221,6 +221,20 @@ namespace EQueue.Clients.Producers
                 }
             }
             return false;
+        }
+
+        void ISocketClientEventListener.OnConnectionClosed(ECommon.TcpTransport.ITcpConnectionInfo connectionInfo, System.Net.Sockets.SocketError socketError)
+        {
+            StopBackgroundJobs();
+        }
+        void ISocketClientEventListener.OnConnectionEstablished(ECommon.TcpTransport.ITcpConnectionInfo connectionInfo)
+        {
+            _waitSocketConnectHandle.Set();
+            StartBackgroundJobs();
+        }
+        void ISocketClientEventListener.OnConnectionFailed(ECommon.TcpTransport.ITcpConnectionInfo connectionInfo, System.Net.Sockets.SocketError socketError)
+        {
+
         }
     }
 }

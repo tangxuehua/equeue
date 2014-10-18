@@ -6,11 +6,11 @@ namespace EQueue.Broker.Client
     public class ClientChannel
     {
         public string ClientId { get; private set; }
-        public IChannel Channel { get; private set; }
+        public ISocketChannel Channel { get; private set; }
         public DateTime LastUpdateTime { get; set; }
         public DateTime? ClosedTime { get; private set; }
 
-        public ClientChannel(string clientId, IChannel channel)
+        public ClientChannel(string clientId, ISocketChannel channel)
         {
             ClientId = clientId;
             Channel = channel;

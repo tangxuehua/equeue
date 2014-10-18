@@ -29,7 +29,7 @@ namespace EQueue.Broker.Client
         {
             var consumer = _consumerDict.AddOrUpdate(clientChannel.ClientId, key =>
             {
-                _logger.InfoFormat("Consumer added into group. groupName:{0}, consumerId:{1}, remotingAddress:{2}", _groupName, clientChannel.ClientId, clientChannel.Channel.RemotingAddress);
+                _logger.InfoFormat("Consumer added into group. groupName:{0}, consumerId:{1}, remotingAddress:{2}", _groupName, clientChannel.ClientId, clientChannel.Channel.RemoteEndPoint.ToString());
                 return clientChannel;
             }, (key, old) => clientChannel);
             consumer.LastUpdateTime = DateTime.Now;
@@ -97,11 +97,11 @@ namespace EQueue.Broker.Client
         }
         public bool IsConsumerActive(string consumerRemotingAddress)
         {
-            return _consumerDict.Values.Any(x => x.Channel.RemotingAddress == consumerRemotingAddress);
+            return _consumerDict.Values.Any(x => x.Channel.RemoteEndPoint.ToString() == consumerRemotingAddress);
         }
         public void RemoveConsumer(string consumerRemotingAddress)
         {
-            var clientChannel = _consumerDict.Values.SingleOrDefault(x => x.Channel.RemotingAddress == consumerRemotingAddress);
+            var clientChannel = _consumerDict.Values.SingleOrDefault(x => x.Channel.RemoteEndPoint.ToString() == consumerRemotingAddress);
             if (clientChannel != null)
             {
                 ClientChannel currentClientChannel;

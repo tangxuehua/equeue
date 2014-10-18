@@ -2,7 +2,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Extensions;
@@ -11,11 +13,13 @@ using ECommon.Remoting;
 using ECommon.Remoting.Exceptions;
 using ECommon.Scheduling;
 using ECommon.Serializing;
+using ECommon.Socketing;
+using ECommon.TcpTransport;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {
-    public class Consumer
+    public class Consumer : ISocketClientEventListener
     {
         #region Private Members
 
@@ -36,6 +40,7 @@ namespace EQueue.Clients.Consumers
         private readonly Worker _executePullRequestWorker;
         private readonly Worker _handleMessageWorker;
         private readonly ILogger _logger;
+        private readonly AutoResetEvent _waitSocketConnectHandle;
         private IMessageHandler _messageHandler;
         private long _flowControlTimes;
         private bool _stoped;
@@ -81,13 +86,14 @@ namespace EQueue.Clients.Consumers
             _messageRetryQueue = new BlockingCollection<ConsumingMessage>(new ConcurrentQueue<ConsumingMessage>());
             _handlingMessageDict = new ConcurrentDictionary<long, ConsumingMessage>();
             _taskIds = new List<int>();
-            _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.BrokerPort);
+            _remotingClient = new SocketRemotingClient(null, Setting.BrokerConsumerIPEndPoint, this);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
             _executePullRequestWorker = new Worker("Consumer.ExecutePullRequest", ExecutePullRequest);
             _handleMessageWorker = new Worker("Consumer.HandleMessage", HandleMessage);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+            _waitSocketConnectHandle = new AutoResetEvent(false);
         }
 
         #endregion
@@ -106,11 +112,8 @@ namespace EQueue.Clients.Consumers
         public Consumer Start()
         {
             _stoped = false;
-            _remotingClient.ClientSocketConnectionChanged += HandleRemotingClientConnectionChanged;
-            _remotingClient.Connect();
-            _isBrokerServerConnected = true;
             _remotingClient.Start();
-            StartBackgroundJobs();
+            _waitSocketConnectHandle.WaitOne();
             _logger.InfoFormat("Started, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
@@ -118,8 +121,6 @@ namespace EQueue.Clients.Consumers
         {
             _stoped = true;
             _remotingClient.Shutdown();
-            _remotingClient.ClientSocketConnectionChanged -= HandleRemotingClientConnectionChanged;
-            StopBackgroundJobs();
             _logger.InfoFormat("Shutdown, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
@@ -547,19 +548,6 @@ namespace EQueue.Clients.Consumers
                 throw new Exception(string.Format("GetTopicQueueIds has exception, consumerId:{0}, group:{1}, topic:{2}, remoting response code:{3}", Id, GroupName, topic, remotingResponse.Code));
             }
         }
-        private void HandleRemotingClientConnectionChanged(bool isConnected)
-        {
-            if (isConnected)
-            {
-                _isBrokerServerConnected = true;
-                StartBackgroundJobs();
-            }
-            else
-            {
-                _isBrokerServerConnected = false;
-                StopBackgroundJobs();
-            }
-        }
         private void StartBackgroundJobs()
         {
             lock (_lockObject)
@@ -638,5 +626,20 @@ namespace EQueue.Clients.Consumers
         }
 
         #endregion
+
+        void ISocketClientEventListener.OnConnectionClosed(ITcpConnectionInfo connectionInfo, SocketError socketError)
+        {
+            _isBrokerServerConnected = false;
+            StopBackgroundJobs();
+        }
+        void ISocketClientEventListener.OnConnectionEstablished(ITcpConnectionInfo connectionInfo)
+        {
+            _isBrokerServerConnected = true;
+            _waitSocketConnectHandle.Set();
+            StartBackgroundJobs();
+        }
+        void ISocketClientEventListener.OnConnectionFailed(ITcpConnectionInfo connectionInfo, SocketError socketError)
+        {
+        }
     }
 }

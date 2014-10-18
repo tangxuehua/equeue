@@ -1,11 +1,12 @@
-﻿using ECommon.Socketing;
+﻿using System.Net;
+using ECommon.Socketing;
+using ECommon.Utilities;
 
 namespace EQueue.Clients.Consumers
 {
     public class ConsumerSetting
     {
-        public string BrokerAddress { get; set; }
-        public int BrokerPort { get; set; }
+        public IPEndPoint BrokerConsumerIPEndPoint { get; set; }
         public int RebalanceInterval { get; set; }
         public int UpdateTopicQueueCountInterval { get; set; }
         public int HeartbeatBrokerInterval { get; set; }
@@ -20,8 +21,7 @@ namespace EQueue.Clients.Consumers
 
         public ConsumerSetting()
         {
-            BrokerAddress = SocketUtils.GetLocalIPV4().ToString();
-            BrokerPort = 5001;
+            BrokerConsumerIPEndPoint = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
             RebalanceInterval = 1000 * 5;
             HeartbeatBrokerInterval = 1000 * 5;
             UpdateTopicQueueCountInterval = 1000 * 5;
