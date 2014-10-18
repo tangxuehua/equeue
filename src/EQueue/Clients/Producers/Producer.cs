@@ -3,11 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
+using ECommon.Remoting.Exceptions;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
@@ -25,7 +25,6 @@ namespace EQueue.Clients.Producers
         private readonly IBinarySerializer _binarySerializer;
         private readonly IQueueSelector _queueSelector;
         private readonly ILogger _logger;
-        private readonly AutoResetEvent _waitSocketConnectHandle;
         private readonly List<int> _taskIds;
 
         public string Id { get; private set; }
@@ -49,13 +48,11 @@ namespace EQueue.Clients.Producers
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            _waitSocketConnectHandle = new AutoResetEvent(false);
         }
 
         public Producer Start()
         {
             _remotingClient.Start();
-            _waitSocketConnectHandle.WaitOne();
             _logger.InfoFormat("Started, producerId:{0}", Id);
             return this;
         }
@@ -82,6 +79,19 @@ namespace EQueue.Clients.Producers
             var taskCompletionSource = new TaskCompletionSource<SendResult>();
             _remotingClient.InvokeAsync(remotingRequest, Setting.SendMessageTimeoutMilliseconds).ContinueWith((requestTask) =>
             {
+                if (requestTask.Exception != null && requestTask.Exception.InnerExceptions.Count > 0)
+                {
+                    if (requestTask.Exception.InnerExceptions.First() is RemotingTimeoutException)
+                    {
+                        taskCompletionSource.SetResult(new SendResult(SendStatus.Timeout, requestTask.Exception.InnerExceptions[0].Message));
+                    }
+                    else
+                    {
+                        taskCompletionSource.SetResult(new SendResult(SendStatus.Failed, requestTask.Exception.InnerExceptions[0].Message));
+                    }
+                    return;
+                }
+
                 var remotingResponse = requestTask.Result;
                 if (remotingResponse != null)
                 {
@@ -229,12 +239,10 @@ namespace EQueue.Clients.Producers
         }
         void ISocketClientEventListener.OnConnectionEstablished(ECommon.TcpTransport.ITcpConnectionInfo connectionInfo)
         {
-            _waitSocketConnectHandle.Set();
             StartBackgroundJobs();
         }
         void ISocketClientEventListener.OnConnectionFailed(ECommon.TcpTransport.ITcpConnectionInfo connectionInfo, System.Net.Sockets.SocketError socketError)
         {
-
         }
     }
 }

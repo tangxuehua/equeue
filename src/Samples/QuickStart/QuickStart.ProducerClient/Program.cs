@@ -39,14 +39,21 @@ namespace QuickStart.ProducerClient
                 {
                     producer.SendAsync(new Message("SampleTopic", 100, message), Interlocked.Increment(ref messageIndex)).ContinueWith(sendTask =>
                     {
-                        var finishedCount = Interlocked.Increment(ref finished);
-                        if (finishedCount == 1)
+                        if (sendTask.Result.SendStatus == SendStatus.Success)
                         {
-                            watch = Stopwatch.StartNew();
+                            var finishedCount = Interlocked.Increment(ref finished);
+                            if (finishedCount == 1)
+                            {
+                                watch = Stopwatch.StartNew();
+                            }
+                            if (finishedCount % 1000 == 0)
+                            {
+                                _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
+                            }
                         }
-                        if (finishedCount % 1000 == 0)
+                        else
                         {
-                            _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
+                            _logger.Error("Sent message timeout.");
                         }
                     });
                 }

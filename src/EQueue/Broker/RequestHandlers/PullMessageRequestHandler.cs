@@ -56,10 +56,6 @@ namespace EQueue.Broker.Processors
                 pullMessageRequest.PullMessageBatchSize);
             if (messages.Count() > 0)
             {
-                _logger.InfoFormat("Pulled messages, topic:{0}, queueId:{1}, msgCount:{2}",
-                    pullMessageRequest.MessageQueue.Topic,
-                    pullMessageRequest.MessageQueue.QueueId,
-                    messages.Count());
                 var pullMessageResponse = new PullMessageResponse(messages);
                 var responseData = _binarySerializer.Serialize(pullMessageResponse);
                 return new RemotingResponse((int)PullStatus.Found, request.Sequence, responseData);
