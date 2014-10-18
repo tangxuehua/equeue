@@ -12,7 +12,7 @@ namespace EQueue.Clients.Producers
         public ProducerSetting()
         {
             BrokerProducerIPEndPoint = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
-            SendMessageTimeoutMilliseconds = 1000 * 10;
+            SendMessageTimeoutMilliseconds = 1000 * 60;
             UpdateTopicQueueCountInterval = 1000 * 5;
         }
     }

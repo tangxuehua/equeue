@@ -30,7 +30,7 @@ namespace QuickStart.ProducerClient
             var producer = new Producer("Producer1").Start();
             var parallelCount = 4;
             var messageSize = 1024;
-            var messageCount = 2500;
+            var messageCount = 25000;
             var message = new byte[messageSize];
 
             var action = new Action(() =>
@@ -46,7 +46,7 @@ namespace QuickStart.ProducerClient
                             {
                                 watch = Stopwatch.StartNew();
                             }
-                            if (finishedCount % 1000 == 0)
+                            if (finishedCount % 10000 == 0)
                             {
                                 _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
                             }

@@ -1,10 +1,11 @@
-﻿using ECommon.Socketing;
+﻿using System.Net;
+using ECommon.Utilities;
 
 namespace EQueue.AdminWeb
 {
     public class Settings
     {
-        public static string BrokerAddress = SocketUtils.GetLocalIPV4().ToString();
+        public static IPAddress BrokerAddress = SocketUtils.GetLocalIPV4();
         public static int BrokerPort = 5002;
     }
 }

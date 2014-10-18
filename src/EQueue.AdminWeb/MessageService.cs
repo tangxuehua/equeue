@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Protocols;
@@ -13,8 +14,7 @@ namespace EQueue.AdminWeb
 
         public MessageService(IBinarySerializer binarySerializer)
         {
-            _remotingClient = new SocketRemotingClient(Settings.BrokerAddress, Settings.BrokerPort);
-            _remotingClient.Connect();
+            _remotingClient = new SocketRemotingClient("AdminClient", new IPEndPoint(Settings.BrokerAddress, Settings.BrokerPort));
             _remotingClient.Start();
             _binarySerializer = binarySerializer;
         }
