@@ -20,6 +20,7 @@ namespace EQueue.Broker.LongPolling
         private readonly IMessageService _messageService;
         private readonly BrokerController _brokerController;
         private readonly ILogger _logger;
+        private readonly TaskFactory _taskFactory;
         private Worker _notifyMessageArrivedWorker;
         private int _checkBlockingPullRequestTaskId;
 
@@ -29,6 +30,7 @@ namespace EQueue.Broker.LongPolling
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _messageService = ObjectContainer.Resolve<IMessageService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+            _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(brokerController.Setting.NotifyMessageArrivedThreadMaxCount));
 
             if (_brokerController.Setting.NotifyWhenMessageArrived)
             {
@@ -77,7 +79,7 @@ namespace EQueue.Broker.LongPolling
                     pullRequest.RemotingRequestSequence);
 
                 var currentRequest = existingRequest;
-                Task.Factory.StartNew(() => currentRequest.ReplacedAction(currentRequest));
+                _taskFactory.StartNew(() => currentRequest.ReplacedAction(currentRequest));
             }
         }
         public void NotifyNewMessage(string topic, int queueId, long queueOffset)
@@ -179,7 +181,7 @@ namespace EQueue.Broker.LongPolling
                                 currentRequest.PullMessageRequest.QueueOffset,
                                 currentRequest.RemotingRequestSequence);
 
-                            Task.Factory.StartNew(() => currentRequest.NewMessageArrivedAction(currentRequest));
+                            _taskFactory.StartNew(() => currentRequest.NewMessageArrivedAction(currentRequest));
                         }
                     }
                     else if (request.IsTimeout())
@@ -196,7 +198,7 @@ namespace EQueue.Broker.LongPolling
                                 currentRequest.PullMessageRequest.QueueOffset,
                                 currentRequest.RemotingRequestSequence);
 
-                            Task.Factory.StartNew(() => currentRequest.TimeoutAction(currentRequest));
+                            _taskFactory.StartNew(() => currentRequest.TimeoutAction(currentRequest));
                         }
                     }
                 }

@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using ECommon.Socketing;
 using ECommon.Utilities;
 
 namespace EQueue.Clients.Consumers
@@ -7,6 +6,8 @@ namespace EQueue.Clients.Consumers
     public class ConsumerSetting
     {
         public IPEndPoint BrokerConsumerIPEndPoint { get; set; }
+        public int ConsumeThreadMaxCount { get; set; }
+        public int DefaultTimeoutMilliseconds { get; set; }
         public int RebalanceInterval { get; set; }
         public int UpdateTopicQueueCountInterval { get; set; }
         public int HeartbeatBrokerInterval { get; set; }
@@ -22,6 +23,8 @@ namespace EQueue.Clients.Consumers
         public ConsumerSetting()
         {
             BrokerConsumerIPEndPoint = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
+            ConsumeThreadMaxCount = 64;
+            DefaultTimeoutMilliseconds = 60 * 1000;
             RebalanceInterval = 1000 * 5;
             HeartbeatBrokerInterval = 1000 * 5;
             UpdateTopicQueueCountInterval = 1000 * 5;

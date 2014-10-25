@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Autofac;
@@ -28,44 +26,34 @@ namespace QuickStart.ProducerClient
             InitializeEQueue();
 
             var producer = new Producer("Producer1").Start();
-            var parallelCount = 4;
             var messageSize = 1024;
-            var messageCount = 25000;
+            var messageCount = 100000;
             var message = new byte[messageSize];
-
-            var action = new Action(() =>
+            var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(4));
+            var sendCallback = new Action<Task<SendResult>>(sendTask =>
             {
-                for (var index = 0; index < messageCount; index++)
+                if (sendTask.Result.SendStatus == SendStatus.Success)
                 {
-                    producer.SendAsync(new Message("SampleTopic", 100, message), Interlocked.Increment(ref messageIndex)).ContinueWith(sendTask =>
+                    var finishedCount = Interlocked.Increment(ref finished);
+                    if (finishedCount == 1)
                     {
-                        if (sendTask.Result.SendStatus == SendStatus.Success)
-                        {
-                            var finishedCount = Interlocked.Increment(ref finished);
-                            if (finishedCount == 1)
-                            {
-                                watch = Stopwatch.StartNew();
-                            }
-                            if (finishedCount % 10000 == 0)
-                            {
-                                _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
-                            }
-                        }
-                        else
-                        {
-                            _logger.Error("Sent message timeout.");
-                        }
-                    });
+                        watch = Stopwatch.StartNew();
+                    }
+                    if (finishedCount % 10000 == 0)
+                    {
+                        _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
+                    }
+                }
+                else
+                {
+                    _logger.Error("Sent message timeout.");
                 }
             });
 
-            var actions = new List<Action>();
-            for (var index = 0; index < parallelCount; index++)
+            for (var index = 0; index < messageCount; index++)
             {
-                actions.Add(action);
+                producer.SendAsync(new Message("SampleTopic", 100, message), Interlocked.Increment(ref messageIndex)).ContinueWith(sendCallback);
             }
-
-            Parallel.Invoke(actions.ToArray());
 
             Console.ReadLine();
         }

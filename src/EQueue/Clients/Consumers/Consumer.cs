@@ -23,12 +23,12 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Members
 
-        private const int DefaultTimeout = 30 * 1000;
         private readonly object _lockObject;
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly List<string> _subscriptionTopics;
         private readonly List<int> _taskIds;
+        private readonly TaskFactory _taskFactory;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict;
         private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict;
         private readonly ConcurrentDictionary<long, ConsumingMessage> _handlingMessageDict;
@@ -86,6 +86,7 @@ namespace EQueue.Clients.Consumers
             _messageRetryQueue = new BlockingCollection<ConsumingMessage>(new ConcurrentQueue<ConsumingMessage>());
             _handlingMessageDict = new ConcurrentDictionary<long, ConsumingMessage>();
             _taskIds = new List<int>();
+            _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Setting.ConsumeThreadMaxCount));
             _remotingClient = new SocketRemotingClient(null, Setting.BrokerConsumerIPEndPoint, this);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
@@ -280,7 +281,7 @@ namespace EQueue.Clients.Consumers
             }
             else if (Setting.MessageHandleMode == MessageHandleMode.Parallel)
             {
-                Task.Factory.StartNew(handleAction);
+                _taskFactory.StartNew(handleAction);
             }
         }
         private void RetryMessage()
@@ -453,7 +454,7 @@ namespace EQueue.Clients.Consumers
 
                     var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, consumedMinQueueOffset);
                     var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
-                    _remotingClient.InvokeOneway(remotingRequest, DefaultTimeout);
+                    _remotingClient.InvokeOneway(remotingRequest, Setting.DefaultTimeoutMilliseconds);
                     _logger.DebugFormat("Sent queue consume offset to broker. group:{0}, consumerId:{1}, topic:{2}, queueId:{3}, offset:{4}",
                         GroupName,
                         Id,
@@ -477,7 +478,7 @@ namespace EQueue.Clients.Consumers
                 var consumingQueues = _pullRequestDict.Values.ToList().Select(x => string.Format("{0}-{1}", x.MessageQueue.Topic, x.MessageQueue.QueueId)).ToList();
                 _remotingClient.InvokeOneway(new RemotingRequest(
                     (int)RequestCode.ConsumerHeartbeat,
-                    _binarySerializer.Serialize(new ConsumerData(Id, GroupName, _subscriptionTopics, consumingQueues))), DefaultTimeout);
+                    _binarySerializer.Serialize(new ConsumerData(Id, GroupName, _subscriptionTopics, consumingQueues))), Setting.DefaultTimeoutMilliseconds);
             }
             catch (Exception ex)
             {
@@ -523,7 +524,7 @@ namespace EQueue.Clients.Consumers
         {
             var queryConsumerRequest = _binarySerializer.Serialize(new QueryConsumerRequest(GroupName, topic));
             var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, queryConsumerRequest);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, DefaultTimeout);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, Setting.DefaultTimeoutMilliseconds);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -537,7 +538,7 @@ namespace EQueue.Clients.Consumers
         private IEnumerable<int> GetTopicQueueIdsFromServer(string topic)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForConsumer, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, DefaultTimeout);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, Setting.DefaultTimeoutMilliseconds);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var queueIds = Encoding.UTF8.GetString(remotingResponse.Body);
