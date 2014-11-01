@@ -8,7 +8,6 @@ using ECommon.Configurations;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;
-using ECommon.Scheduling;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
 using EQueue.Protocols;
@@ -29,7 +28,6 @@ namespace QuickStart.ProducerClient
             var messageSize = 1024;
             var messageCount = 100000;
             var message = new byte[messageSize];
-            var taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(4));
             var sendCallback = new Action<Task<SendResult>>(sendTask =>
             {
                 if (sendTask.Result.SendStatus == SendStatus.Success)
