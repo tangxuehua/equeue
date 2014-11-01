@@ -14,7 +14,6 @@ namespace EQueue.Broker.LongPolling
         private const string Separator = "@";
         private readonly object _lockObject = new object();
         private BlockingCollection<NotifyItem> _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
-        private readonly ConcurrentDictionary<string, long> _queueNotifyOffsetDict = new ConcurrentDictionary<string, long>();
         private readonly ConcurrentDictionary<string, PullRequest> _queueRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly IScheduleService _scheduleService;
         private readonly IMessageService _messageService;
@@ -38,7 +37,6 @@ namespace EQueue.Broker.LongPolling
                 {
                     var notifyItem = _notifyQueue.Take();
                     if (notifyItem == null) return;
-                    _queueNotifyOffsetDict[BuildKeyPrefix(notifyItem.Topic, notifyItem.QueueId)] = notifyItem.QueueOffset;
                     NotifyMessageArrived(notifyItem.Topic, notifyItem.QueueId, notifyItem.QueueOffset);
                 });
             }
@@ -50,7 +48,8 @@ namespace EQueue.Broker.LongPolling
             var key = BuildKey(pullMessageRequest.MessageQueue.Topic, pullMessageRequest.MessageQueue.QueueId, pullMessageRequest.ConsumerGroup);
             var changed = false;
             var existingRequest = default(PullRequest);
-            _queueRequestDict.AddOrUpdate(key, x =>
+
+            var currentPullRequest = _queueRequestDict.AddOrUpdate(key, x =>
             {
                 _logger.DebugFormat("Added new PullRequest, Id:{0}, RequestSequence:{6}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
                     pullRequest.Id,
@@ -67,6 +66,9 @@ namespace EQueue.Broker.LongPolling
                 changed = true;
                 return pullRequest;
             });
+
+            CheckNewMessageExist(key, currentPullRequest.PullMessageRequest.MessageQueue.Topic, currentPullRequest.PullMessageRequest.MessageQueue.QueueId, currentPullRequest.PullMessageRequest.QueueOffset);
+
             if (changed && existingRequest != null)
             {
                 _logger.DebugFormat("Replaced existing PullRequest, new PullRequest Id:{0}, RequestSequence:{6}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
@@ -86,11 +88,6 @@ namespace EQueue.Broker.LongPolling
         {
             if (_brokerController.Setting.NotifyWhenMessageArrived)
             {
-                long offset;
-                if (_queueNotifyOffsetDict.TryGetValue(BuildKeyPrefix(topic, queueId), out offset) && queueOffset > offset + 1)
-                {
-                    return;
-                }
                 _notifyQueue.Add(new NotifyItem { Topic = topic, QueueId = queueId, QueueOffset = queueOffset });
             }
         }
@@ -157,6 +154,27 @@ namespace EQueue.Broker.LongPolling
                 NotifyMessageArrived(topic, queueId, queueOffset);
             }
         }
+        private void CheckNewMessageExist(string key, string topic, int queueId, long queueOffset)
+        {
+            var currentQueueOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
+            if (currentQueueOffset >= queueOffset)
+            {
+                PullRequest currentRequest;
+                if (_queueRequestDict.TryRemove(key, out currentRequest))
+                {
+                    _logger.DebugFormat("New message arrived for PullRequest, current message queueOffset:{7}, PullRequest Id:{0}, RequestSequence:{6}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
+                        currentRequest.Id,
+                        currentRequest.SuspendStartTime,
+                        currentRequest.PullMessageRequest.ConsumerGroup,
+                        currentRequest.PullMessageRequest.MessageQueue.Topic,
+                        currentRequest.PullMessageRequest.MessageQueue.QueueId,
+                        currentRequest.PullMessageRequest.QueueOffset,
+                        currentRequest.RemotingRequestSequence,
+                        currentQueueOffset);
+                    _taskFactory.StartNew(() => currentRequest.NewMessageArrivedAction(currentRequest));
+                }
+            }
+        }
         private void NotifyMessageArrived(string topic, int queueId, long queueOffset)
         {
             var keyPrefix = BuildKeyPrefix(topic, queueId);
@@ -172,14 +190,15 @@ namespace EQueue.Broker.LongPolling
                         PullRequest currentRequest;
                         if (_queueRequestDict.TryRemove(key, out currentRequest))
                         {
-                            _logger.DebugFormat("New message arrived for PullRequest, PullRequest Id:{0}, RequestSequence:{6}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
+                            _logger.DebugFormat("New message arrived for PullRequest, current message queueOffset:{7}, PullRequest Id:{0}, RequestSequence:{6}, SuspendStartTime:{1}, ConsumerGroup:{2}, Topic:{3}, QueueId:{4}, QueueOffset:{5}",
                                 currentRequest.Id,
                                 currentRequest.SuspendStartTime,
                                 currentRequest.PullMessageRequest.ConsumerGroup,
                                 currentRequest.PullMessageRequest.MessageQueue.Topic,
                                 currentRequest.PullMessageRequest.MessageQueue.QueueId,
                                 currentRequest.PullMessageRequest.QueueOffset,
-                                currentRequest.RemotingRequestSequence);
+                                currentRequest.RemotingRequestSequence,
+                                queueOffset);
 
                             _taskFactory.StartNew(() => currentRequest.NewMessageArrivedAction(currentRequest));
                         }

@@ -207,7 +207,7 @@ namespace EQueue.Clients.Consumers
                             {
                                 _consumingMessageQueue.Add(new ConsumingMessage(message, pullRequest.ProcessQueue));
                             }
-                            pullRequest.NextConsumeOffset += response.Messages.Count();
+                            pullRequest.NextConsumeOffset = response.Messages.Last().QueueOffset + 1;
                         }
                         else if (remotingResponse.Code == (int)PullStatus.NextOffsetReset && response.NextOffset != null)
                         {
