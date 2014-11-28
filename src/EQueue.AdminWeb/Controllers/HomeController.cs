@@ -1,4 +1,5 @@
 ﻿using System.Web.Mvc;
+using ECommon.Serializing;
 using EQueue.AdminWeb.Models;
 
 namespace EQueue.AdminWeb.Controllers
@@ -6,10 +7,12 @@ namespace EQueue.AdminWeb.Controllers
     public class HomeController : Controller
     {
         private MessageService _messageService;
+        private IBinarySerializer _binarySerializer;
 
-        public HomeController(MessageService messageService)
+        public HomeController(MessageService messageService, IBinarySerializer binarySerializer)
         {
             _messageService = messageService;
+            _binarySerializer = binarySerializer;
         }
 
         public ActionResult Index(string topic)
@@ -39,6 +42,27 @@ namespace EQueue.AdminWeb.Controllers
                 Group = group,
                 Topic = topic,
                 TopicConsumeInfos = topicConsumeInfos
+            });
+        }
+        public ActionResult Messages(string topic, int? queueId, int? code)
+        {
+            var messages = _messageService.QueryMessages(topic, queueId, code);
+            return View(new MessagesViewModel
+            {
+                Topic = topic,
+                QueueId = queueId,
+                Code = code,
+                Messages = messages
+            });
+        }
+        public ActionResult Message(long messageOffset)
+        {
+            var message = _messageService.GetMessageDetail(messageOffset);
+            return View(new MessageViewModel
+            {
+                MessageOffset = messageOffset,
+                Message = message,
+                //MessageContent = _binarySerializer.Deserialize  TODO
             });
         }
         public ActionResult AddQueue(string topic)

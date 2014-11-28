@@ -140,6 +140,8 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\MessageViewModel.cs" />
+    <Compile Include="Models\MessagesViewModel.cs" />
     <Compile Include="Models\TopicConsumeViewModel.cs" />
     <Compile Include="Models\ConsumerViewModel.cs" />
     <Compile Include="Models\TopicQueueViewModel.cs" />
@@ -187,6 +189,12 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Views\Home\TopicConsumeInfo.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Home\MessagesViewModel.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Home\MessageViewModel.cshtml" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

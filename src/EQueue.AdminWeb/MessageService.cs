@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using ECommon.Remoting;
 using ECommon.Serializing;
@@ -109,6 +110,34 @@ namespace EQueue.AdminWeb
             if (remotingResponse.Code != (int)ResponseCode.Success)
             {
                 throw new Exception(string.Format("RemoveQueueOffsetInfo has exception, topic:{0}", topic));
+            }
+        }
+        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code)
+        {
+            var requestData = _binarySerializer.Serialize(new QueryMessageRequest(topic, queueId, code));
+            var remotingRequest = new RemotingRequest((int)RequestCode.QueryMessage, requestData);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code != (int)ResponseCode.Success)
+            {
+                return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.Body);
+            }
+            else
+            {
+                throw new Exception(string.Format("QueryMessage has exception, topic:{0}, queueId:{1}, code:{2}", topic, queueId, code));
+            }
+        }
+        public QueueMessage GetMessageDetail(long messageOffset)
+        {
+            var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageOffset));
+            var remotingRequest = new RemotingRequest((int)RequestCode.GetMessageDetail, requestData);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code != (int)ResponseCode.Success)
+            {
+                return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.Body).SingleOrDefault();
+            }
+            else
+            {
+                throw new Exception(string.Format("GetMessageDetail has exception, messageOffset:{0}", messageOffset));
             }
         }
     }

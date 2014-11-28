@@ -66,6 +66,10 @@ namespace EQueue.Broker
         {
             throw new NotImplementedException();
         }
+        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code)
+        {
+            return _messageDict.Values.ToList();
+        }
 
         private void RemoveConsumedMessagesFromMemory()
         {

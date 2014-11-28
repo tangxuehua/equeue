@@ -1,0 +1,67 @@
+﻿@model EQueue.AdminWeb.Models.MessagesViewModel
+@{
+    ViewBag.Title = "消息列表";
+}
+<div>
+    @using (Html.BeginForm("Messages", "Home", new { }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+    {
+        <div class="form-group">
+            @Html.LabelFor(m => m.Topic, new { @class = "control-label" })
+            @Html.TextBoxFor(m => m.Topic, new { @class = "form-control", @style = "display:inline-block" })
+            @Html.LabelFor(m => m.QueueId, new { @class = "control-label" })
+            @Html.TextBoxFor(m => m.QueueId, new { @class = "form-control", @style = "display:inline-block" })
+            @Html.LabelFor(m => m.Code, new { @class = "control-label" })
+            @Html.TextBoxFor(m => m.Code, new { @class = "form-control", @style = "display:inline-block" })
+            <input type="submit" value="查询" class="btn btn-default" />
+        </div>
+    }
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th width="15%" class="vertical-center">
+                    MessageOffset
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    Topic
+                </th>
+                <th width="15%" class="text-center vertical-center">
+                    QueueId
+                </th>
+                <th width="15%" class="text-center vertical-center">
+                    QueueOffset
+                </th>
+                <th width="15%" class="text-center vertical-center">
+                    Code
+                </th>
+                <th width="20%" class="text-center vertical-center">
+                    StoredTime
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var message in Model.Messages)
+            {
+                <tr>
+                    <td class="vertical-center">
+                        @Html.ActionLink(message.MessageOffset.ToString(), "Message", new { messageOffset = message.MessageOffset }, new { target = "_blank" })
+                    </td>
+                    <td class="text-center vertical-center">
+                        @message.Topic
+                    </td>
+                    <td class="text-center vertical-center">
+                        @message.QueueId
+                    </td>
+                    <td class="text-center vertical-center">
+                        @message.QueueOffset
+                    </td>
+                    <td class="text-center vertical-center">
+                        @message.Code
+                    </td>
+                    <td class="text-center vertical-center">
+                        @message.StoredTime
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

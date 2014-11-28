@@ -114,6 +114,50 @@ namespace EQueue.Broker
                 }
             }
         }
+        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code)
+        {
+            var sql = "select MessageOffset,Topic,QueueId,QueueOffset,Code,StoredTime from [" + _setting.MessageTable + "]";
+            var hasCondition = false;
+            if (!string.IsNullOrWhiteSpace(topic))
+            {
+                sql += string.Format(" where Topic = '{0}'", topic);
+                hasCondition = true;
+            }
+            if (queueId != null)
+            {
+                var prefix = hasCondition ? " and " : " where ";
+                sql += prefix + string.Format("QueueId = {0}", queueId.Value);
+                if (!hasCondition)
+                {
+                    hasCondition = true;
+                }
+            }
+            if (code != null)
+            {
+                var prefix = hasCondition ? " and " : " where ";
+                sql += prefix + string.Format("Code = {0}", code.Value);
+            }
+            using (var connection = new SqlConnection(_setting.ConnectionString))
+            {
+                connection.Open();
+                using (var command = new SqlCommand(sql, connection))
+                {
+                    var reader = command.ExecuteReader();
+                    var messages = new List<QueueMessage>();
+                    while (reader.Read())
+                    {
+                        var messageOffset = (long)reader["MessageOffset"];
+                        var messageTopic = (string)reader["Topic"];
+                        var messageQueueId = (int)reader["QueueId"];
+                        var messageQueueOffset = (long)reader["QueueOffset"];
+                        var messageCode = (int)reader["Code"];
+                        var messageStoredTime = (DateTime)reader["StoredTime"];
+                        messages.Add(new QueueMessage(messageTopic, messageCode, null, messageOffset, messageQueueId, messageQueueOffset, messageStoredTime));
+                    }
+                    return messages;
+                }
+            }
+        }
 
         private void Clear()
         {
