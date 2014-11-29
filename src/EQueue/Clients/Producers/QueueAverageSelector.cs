@@ -9,7 +9,7 @@ namespace EQueue.Clients.Producers
     {
         private long _index;
 
-        public int SelectQueueId(IList<int> availableQueueIds, Message message, object arg)
+        public int SelectQueueId(IList<int> availableQueueIds, Message message, string routingKey)
         {
             if (availableQueueIds.Count == 0)
             {

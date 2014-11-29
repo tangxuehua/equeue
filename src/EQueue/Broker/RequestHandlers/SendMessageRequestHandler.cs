@@ -25,7 +25,7 @@ namespace EQueue.Broker.Processors
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
             var sendMessageRequest = MessageUtils.DecodeSendMessageRequest(request.Body);
-            var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.QueueId);
+            var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.QueueId, sendMessageRequest.RoutingKey);
             _brokerController.SuspendedPullRequestManager.NotifyNewMessage(sendMessageRequest.Message.Topic, storeResult.QueueId, storeResult.QueueOffset);
             var sendMessageResponse = new SendMessageResponse(
                 storeResult.MessageOffset,

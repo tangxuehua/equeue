@@ -70,10 +70,10 @@ namespace EQueue.Broker
             _scheduleService.ShutdownTask(_removeConsumedMessageFromMemoryTaskId);
             _scheduleService.ShutdownTask(_deleteMessageTaskId);
         }
-        public QueueMessage StoreMessage(int queueId, long queueOffset, Message message)
+        public QueueMessage StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
         {
             var nextOffset = GetNextOffset();
-            var queueMessage = new QueueMessage(message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, DateTime.Now);
+            var queueMessage = new QueueMessage(message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, DateTime.Now, routingKey);
             _messageDict[nextOffset] = queueMessage;
             return queueMessage;
         }
@@ -152,7 +152,8 @@ namespace EQueue.Broker
                         var messageQueueOffset = (long)reader["QueueOffset"];
                         var messageCode = (int)reader["Code"];
                         var messageStoredTime = (DateTime)reader["StoredTime"];
-                        messages.Add(new QueueMessage(messageTopic, messageCode, null, messageOffset, messageQueueId, messageQueueOffset, messageStoredTime));
+                        var messageRoutingKey = (string)reader["RoutingKey"];
+                        messages.Add(new QueueMessage(messageTopic, messageCode, null, messageOffset, messageQueueId, messageQueueOffset, messageStoredTime, messageRoutingKey));
                     }
                     return messages;
                 }
@@ -261,7 +262,8 @@ namespace EQueue.Broker
             var code = (int)reader["Code"];
             var body = (byte[])reader["Body"];
             var storedTime = (DateTime)reader["StoredTime"];
-            return new QueueMessage(topic, code, body, messageOffset, queueId, queueOffset, storedTime);
+            var routingKey = (string)reader["RoutingKey"];
+            return new QueueMessage(topic, code, body, messageOffset, queueId, queueOffset, storedTime, routingKey);
         }
         private void TryPersistMessages()
         {
@@ -316,6 +318,7 @@ namespace EQueue.Broker
                 row["Code"] = message.Code;
                 row["Body"] = message.Body;
                 row["StoredTime"] = message.StoredTime;
+                row["RoutingKey"] = message.RoutingKey;
                 _messageDataTable.Rows.Add(row);
             }
 
@@ -349,6 +352,7 @@ namespace EQueue.Broker
                     copy.ColumnMappings.Add("Code", "Code");
                     copy.ColumnMappings.Add("Body", "Body");
                     copy.ColumnMappings.Add("StoredTime", "StoredTime");
+                    copy.ColumnMappings.Add("RoutingKey", "RoutingKey");
 
                     try
                     {
@@ -377,6 +381,7 @@ namespace EQueue.Broker
             table.Columns.Add("Code", typeof(int));
             table.Columns.Add("Body", typeof(byte[]));
             table.Columns.Add("StoredTime", typeof(DateTime));
+            table.Columns.Add("RoutingKey", typeof(string));
             return table;
         }
         private void DeleteMessages()

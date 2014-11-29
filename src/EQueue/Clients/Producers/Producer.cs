@@ -11,6 +11,7 @@ using ECommon.Remoting.Exceptions;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
+using ECommon.Utilities;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -62,20 +63,22 @@ namespace EQueue.Clients.Producers
             _logger.InfoFormat("Shutdown, producerId:{0}", Id);
             return this;
         }
-        public SendResult Send(Message message, object arg)
+        public SendResult Send(Message message, object routingKey)
         {
+            var currentRoutingKey = GetStringRoutingKey(routingKey);
             var queueIds = GetTopicQueueIds(message.Topic);
-            var queueId = _queueSelector.SelectQueueId(queueIds, message, arg);
-            var remotingRequest = BuildSendMessageRequest(message, queueId);
+            var queueId = _queueSelector.SelectQueueId(queueIds, message, currentRoutingKey);
+            var remotingRequest = BuildSendMessageRequest(message, queueId, currentRoutingKey);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, Setting.SendMessageTimeoutMilliseconds);
             var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
             return new SendResult(SendStatus.Success, response.MessageOffset, response.MessageQueue, response.QueueOffset);
         }
-        public Task<SendResult> SendAsync(Message message, object arg)
+        public Task<SendResult> SendAsync(Message message, object routingKey)
         {
+            var currentRoutingKey = GetStringRoutingKey(routingKey);
             var queueIds = GetTopicQueueIds(message.Topic);
-            var queueId = _queueSelector.SelectQueueId(queueIds, message, arg);
-            var remotingRequest = BuildSendMessageRequest(message, queueId);
+            var queueId = _queueSelector.SelectQueueId(queueIds, message, currentRoutingKey);
+            var remotingRequest = BuildSendMessageRequest(message, queueId, currentRoutingKey);
             var taskCompletionSource = new TaskCompletionSource<SendResult>();
             _remotingClient.InvokeAsync(remotingRequest, Setting.SendMessageTimeoutMilliseconds).ContinueWith((requestTask) =>
             {
@@ -116,6 +119,13 @@ namespace EQueue.Clients.Producers
             return taskCompletionSource.Task;
         }
 
+        private string GetStringRoutingKey(object routingKey)
+        {
+            Ensure.NotNull(routingKey, "routingKey");
+            var ret = routingKey.ToString();
+            Ensure.NotNullOrEmpty(ret, "routingKey");
+            return ret;
+        }
         private IList<int> GetTopicQueueIds(string topic)
         {
             IList<int> queueIds;
@@ -168,9 +178,9 @@ namespace EQueue.Clients.Producers
                 throw new Exception(string.Format("GetTopicQueueIds has exception, producerId:{0}, topic:{1}, remoting response code:{2}", Id, topic, remotingResponse.Code));
             }
         }
-        private RemotingRequest BuildSendMessageRequest(Message message, int queueId)
+        private RemotingRequest BuildSendMessageRequest(Message message, int queueId, object routingKey)
         {
-            var request = new SendMessageRequest { Message = message, QueueId = queueId };
+            var request = new SendMessageRequest { Message = message, QueueId = queueId, RoutingKey = routingKey.ToString() };
             var data = MessageUtils.EncodeSendMessageRequest(request);
             return new RemotingRequest((int)RequestCode.SendMessage, data);
         }

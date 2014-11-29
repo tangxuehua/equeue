@@ -48,9 +48,13 @@ namespace QuickStart.ProducerClient
                 }
             });
 
-            for (var index = 0; index < messageCount; index++)
+            for (var i = 0; i < 100; i++)
             {
-                producer.SendAsync(new Message("SampleTopic", 100, message), Interlocked.Increment(ref messageIndex)).ContinueWith(sendCallback);
+                for (var index = 1; index <= messageCount; index++)
+                {
+                    producer.SendAsync(new Message("SampleTopic", 100, message), Interlocked.Increment(ref messageIndex)).ContinueWith(sendCallback);
+                }
+                Thread.Sleep(40000);
             }
 
             Console.ReadLine();

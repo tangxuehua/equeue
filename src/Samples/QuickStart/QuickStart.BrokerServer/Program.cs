@@ -14,7 +14,7 @@ namespace QuickStart.BrokerServer
         {
             InitializeEQueue();
             var setting = new BrokerSetting();
-            setting.NotifyWhenMessageArrived = false;
+            setting.NotifyWhenMessageArrived = true;
             setting.RemoveConsumedMessageInterval = 1000;
             new BrokerController(setting).Start();
             Console.ReadLine();
@@ -22,13 +22,26 @@ namespace QuickStart.BrokerServer
 
         static void InitializeEQueue()
         {
+            var connectionString = @"Server=(local);Initial Catalog=EQueue;uid=sa;pwd=howareyou;Connect Timeout=30;Min Pool Size=10;Max Pool Size=100";
+            var messageStoreSetting = new SqlServerMessageStoreSetting
+            {
+                ConnectionString = connectionString,
+                DeleteMessageHourOfDay = -1
+            };
+            var offsetManagerSetting = new SqlServerOffsetManagerSetting
+            {
+                ConnectionString = connectionString
+            };
+
             Configuration
                 .Create()
                 .UseAutofac()
                 .RegisterCommonComponents()
                 .UseLog4Net()
                 .UseJsonNet()
-                .RegisterEQueueComponents();
+                .RegisterEQueueComponents()
+                .UseSqlServerMessageStore(messageStoreSetting)
+                .UseSqlServerOffsetManager(offsetManagerSetting);
         }
     }
 }

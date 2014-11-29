@@ -6,7 +6,7 @@ namespace EQueue.Clients.Producers
 {
     public class QueueHashSelector : IQueueSelector
     {
-        public int SelectQueueId(IList<int> availableQueueIds, Message message, object arg)
+        public int SelectQueueId(IList<int> availableQueueIds, Message message, string routingKey)
         {
             if (availableQueueIds.Count == 0)
             {
@@ -15,7 +15,7 @@ namespace EQueue.Clients.Producers
             unchecked
             {
                 int hash = 23;
-                foreach (char c in arg.ToString())
+                foreach (char c in routingKey)
                 {
                     hash = (hash << 5) - hash + c;
                 }

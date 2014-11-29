@@ -6,6 +6,7 @@
     [Code] [int] NOT NULL,
     [Body] [varbinary](max) NOT NULL,
     [StoredTime] [datetime] NOT NULL,
+    [RoutingKey] [varchar](128) NOT NULL,
  CONSTRAINT [PK_Message] PRIMARY KEY CLUSTERED 
 (
     [MessageOffset] ASC

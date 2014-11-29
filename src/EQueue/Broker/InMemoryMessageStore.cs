@@ -41,10 +41,10 @@ namespace EQueue.Broker
         {
             _scheduleService.ShutdownTask(_removeMessageFromMemoryTaskId);
         }
-        public QueueMessage StoreMessage(int queueId, long queueOffset, Message message)
+        public QueueMessage StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
         {
             var nextOffset = GetNextOffset();
-            var queueMessage = new QueueMessage(message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, DateTime.Now);
+            var queueMessage = new QueueMessage(message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, DateTime.Now, routingKey);
             _messageDict[nextOffset] = queueMessage;
             return queueMessage;
         }

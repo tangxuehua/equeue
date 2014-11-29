@@ -9,14 +9,16 @@ namespace EQueue.Protocols
         public int QueueId { get; private set; }
         public long QueueOffset { get; private set; }
         public DateTime StoredTime { get; private set; }
+        public string RoutingKey { get; private set; }
 
-        public QueueMessage(string topic, int code, byte[] body, long messageOffset, int queueId, long queueOffset, DateTime storedTime)
+        public QueueMessage(string topic, int code, byte[] body, long messageOffset, int queueId, long queueOffset, DateTime storedTime, string routingKey)
             : base(topic, code, body)
         {
             MessageOffset = messageOffset;
             QueueId = queueId;
             QueueOffset = queueOffset;
             StoredTime = storedTime;
+            RoutingKey = routingKey;
         }
     }
 }

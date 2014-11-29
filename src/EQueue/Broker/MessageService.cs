@@ -51,7 +51,7 @@ namespace EQueue.Broker
             _scheduleService.ShutdownTask(_removeConsumedMessageTaskId);
             _scheduleService.ShutdownTask(_removeExceedMaxCacheQueueIndexTaskId);
         }
-        public MessageStoreResult StoreMessage(Message message, int queueId)
+        public MessageStoreResult StoreMessage(Message message, int queueId, string routingKey)
         {
             var queues = GetQueues(message.Topic);
             if (queues.Count == 0)
@@ -64,7 +64,7 @@ namespace EQueue.Broker
                 throw new InvalidQueueIdException(message.Topic, queues.Select(x => x.QueueId), queueId);
             }
             var queueOffset = queue.IncrementCurrentOffset();
-            var queueMessage = _messageStore.StoreMessage(queueId, queueOffset, message);
+            var queueMessage = _messageStore.StoreMessage(queueId, queueOffset, message, routingKey);
             queue.SetQueueIndex(queueMessage.QueueOffset, queueMessage.MessageOffset);
             return new MessageStoreResult(queueMessage.MessageOffset, queueMessage.QueueId, queueMessage.QueueOffset);
         }

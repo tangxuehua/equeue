@@ -5,6 +5,6 @@ namespace EQueue.Clients.Producers
 {
     public interface IQueueSelector
     {
-        int SelectQueueId(IList<int> availableQueueIds, Message message, object arg);
+        int SelectQueueId(IList<int> availableQueueIds, Message message, string routingKey);
     }
 }
