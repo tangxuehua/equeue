@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using ECommon.TcpTransport.Utils;
 using EQueue.Protocols;
 
 namespace EQueue.Utils

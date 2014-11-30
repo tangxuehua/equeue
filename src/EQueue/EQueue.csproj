@@ -129,11 +129,7 @@
     <Compile Include="Protocols\SendMessageResponse.cs" />
     <Compile Include="Protocols\QueryConsumerRequest.cs" />
     <Compile Include="Protocols\UpdateQueueOffsetRequest.cs" />
-    <Compile Include="Utils\ByteTypeData.cs" />
-    <Compile Include="Utils\ByteTypeDataUtils.cs" />
     <Compile Include="Utils\MessageUtils.cs" />
-    <Compile Include="Utils\StringTypeData.cs" />
-    <Compile Include="Utils\TypeData.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
