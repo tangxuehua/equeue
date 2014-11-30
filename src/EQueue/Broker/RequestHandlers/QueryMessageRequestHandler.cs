@@ -1,5 +1,4 @@
 ﻿using ECommon.Components;
-using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Protocols;
@@ -20,8 +19,9 @@ namespace EQueue.Broker.Processors
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
             var queryMessageRequest = _binarySerializer.Deserialize<QueryMessageRequest>(request.Body);
-            var messages = _messageService.QueryMessages(queryMessageRequest.Topic, queryMessageRequest.QueueId, queryMessageRequest.Code);
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, _binarySerializer.Serialize(new PullMessageResponse(messages)));
+            var total = 0;
+            var messages = _messageService.QueryMessages(queryMessageRequest.Topic, queryMessageRequest.QueueId, queryMessageRequest.Code, queryMessageRequest.RoutingKey, queryMessageRequest.PageIndex, queryMessageRequest.PageSize, out total);
+            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, _binarySerializer.Serialize(new QueryMessageResponse(total, messages)));
         }
     }
 }

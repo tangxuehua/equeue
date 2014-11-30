@@ -26,7 +26,7 @@ namespace EQueue.Broker.Processors
             {
                 messages.Add(message);
             }
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, _binarySerializer.Serialize(new PullMessageResponse(messages)));
+            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, _binarySerializer.Serialize(messages));
         }
     }
 }

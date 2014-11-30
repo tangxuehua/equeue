@@ -1,12 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using EQueue.Protocols;
 
 namespace EQueue.AdminWeb.Models
 {
     public class MessageViewModel
     {
-        public long MessageOffset { get; set; }
-        public QueueMessage Message { get; set; }
-        public string MessageContent { get; set; }
+        public string SearchMessageOffset { get; set; }
+        public string MessageOffset { get; set; }
+        public string QueueId { get; set; }
+        public string QueueOffset { get; set; }
+        public string Topic { get; set; }
+        public string Code { get; set; }
+        public string StoredTime { get; set; }
+        public string RoutingKey { get; set; }
+        public string Content { get; set; }
     }
 }

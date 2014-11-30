@@ -112,18 +112,19 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("RemoveQueueOffsetInfo has exception, topic:{0}", topic));
             }
         }
-        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code)
+        public QueryMessageResponse QueryMessages(string topic, int? queueId, int? code, string routingKey, int pageIndex, int pageSize)
         {
-            var requestData = _binarySerializer.Serialize(new QueryMessageRequest(topic, queueId, code));
+            var request = new QueryMessageRequest(topic, queueId, code, routingKey, pageIndex, pageSize);
+            var requestData = _binarySerializer.Serialize(request);
             var remotingRequest = new RemotingRequest((int)RequestCode.QueryMessage, requestData);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
-            if (remotingResponse.Code != (int)ResponseCode.Success)
+            if (remotingResponse.Code == (int)ResponseCode.Success)
             {
-                return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.Body);
+                return _binarySerializer.Deserialize<QueryMessageResponse>(remotingResponse.Body);
             }
             else
             {
-                throw new Exception(string.Format("QueryMessage has exception, topic:{0}, queueId:{1}, code:{2}", topic, queueId, code));
+                throw new Exception(string.Format("QueryMessage has exception, request:{0}", request));
             }
         }
         public QueueMessage GetMessageDetail(long messageOffset)
@@ -131,7 +132,7 @@ namespace EQueue.AdminWeb
             var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageOffset));
             var remotingRequest = new RemotingRequest((int)RequestCode.GetMessageDetail, requestData);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
-            if (remotingResponse.Code != (int)ResponseCode.Success)
+            if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.Body).SingleOrDefault();
             }

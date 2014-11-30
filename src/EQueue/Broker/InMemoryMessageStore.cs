@@ -66,9 +66,33 @@ namespace EQueue.Broker
         {
             throw new NotImplementedException();
         }
-        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code)
+        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code, string routingKey, int pageIndex, int pageSize, out int total)
         {
-            return _messageDict.Values.ToList();
+            var source = _messageDict.Values;
+            var predicate = new Func<QueueMessage, bool>(x =>
+            {
+                var pass = true;
+                if (!string.IsNullOrEmpty(topic))
+                {
+                    pass = x.Topic == topic;
+                }
+                if (pass && queueId != null)
+                {
+                    pass = x.QueueId == queueId.Value;
+                }
+                if (pass && code != null)
+                {
+                    pass = x.Code == code.Value;
+                }
+                if (pass && !string.IsNullOrEmpty(routingKey))
+                {
+                    pass = x.RoutingKey == routingKey;
+                }
+                return pass;
+            });
+
+            total = source.Count(predicate);
+            return source.Where(predicate).Skip((pageIndex - 1) * pageSize).Take(pageSize);
         }
 
         private void RemoveConsumedMessagesFromMemory()

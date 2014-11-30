@@ -20,7 +20,7 @@ namespace EQueue.Broker
         void RemoveQueue(string topic, int queueId);
         void EnableQueue(string topic, int queueId);
         void DisableQueue(string topic, int queueId);
-        IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code);
+        IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code, string routingKey, int pageIndex, int pageSize, out int total);
         QueueMessage GetMessageDetail(long messageOffset);
     }
 }

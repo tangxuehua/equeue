@@ -14,6 +14,6 @@ namespace EQueue.Broker
         QueueMessage GetMessage(long offset);
         void UpdateMaxAllowToDeleteQueueOffset(string topic, int queueId, long queueOffset);
         IDictionary<long, long> BatchLoadQueueIndex(string topic, int queueId, long startQueueOffset);
-        IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code);
+        IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code, string routingKey, int pageIndex, int pageSize, out int total);
     }
 }

@@ -1,5 +1,6 @@
-﻿using System.Web.Mvc;
-using ECommon.Serializing;
+﻿using System.Text;
+using System.Web.Mvc;
+using EQueue.AdminWeb.Controls;
 using EQueue.AdminWeb.Models;
 
 namespace EQueue.AdminWeb.Controllers
@@ -7,12 +8,10 @@ namespace EQueue.AdminWeb.Controllers
     public class HomeController : Controller
     {
         private MessageService _messageService;
-        private IBinarySerializer _binarySerializer;
 
-        public HomeController(MessageService messageService, IBinarySerializer binarySerializer)
+        public HomeController(MessageService messageService)
         {
             _messageService = messageService;
-            _binarySerializer = binarySerializer;
         }
 
         public ActionResult Index(string topic)
@@ -44,26 +43,50 @@ namespace EQueue.AdminWeb.Controllers
                 TopicConsumeInfos = topicConsumeInfos
             });
         }
-        public ActionResult Messages(string topic, int? queueId, int? code)
+        public ActionResult Messages(string topic, int? queueId, int? code, string routingKey, int? page)
         {
-            var messages = _messageService.QueryMessages(topic, queueId, code);
+            var currentPage = page ?? 1;
+            var size = 20;
+            if (currentPage <= 0) currentPage = 1;
+
+            var result = _messageService.QueryMessages(topic, queueId, code, routingKey, currentPage, size);
+
+            ViewBag.Topic = topic;
+            ViewBag.QueueId = queueId;
+            ViewBag.Code = code;
+            ViewBag.RoutingKey = routingKey;
+            ViewBag.Pager = Pager.Items(result.Total).PerPage(size).Move(currentPage).Segment(5).Center();
+
             return View(new MessagesViewModel
             {
                 Topic = topic,
                 QueueId = queueId,
                 Code = code,
-                Messages = messages
+                RoutingKey = routingKey,
+                Total = result.Total,
+                Messages = result.Messages
             });
         }
-        public ActionResult Message(long messageOffset)
+        public ActionResult Message(long? searchMessageOffset)
         {
-            var message = _messageService.GetMessageDetail(messageOffset);
-            return View(new MessageViewModel
+            if (searchMessageOffset == null)
             {
-                MessageOffset = messageOffset,
-                Message = message,
-                //MessageContent = _binarySerializer.Deserialize  TODO
-            });
+                return View(new MessageViewModel());
+            }
+            var message = _messageService.GetMessageDetail(searchMessageOffset.Value);
+            var model = new MessageViewModel { SearchMessageOffset = searchMessageOffset.Value.ToString() };
+            if (message != null)
+            {
+                model.MessageOffset = message.MessageOffset.ToString();
+                model.QueueId = message.QueueId.ToString();
+                model.QueueOffset = message.QueueOffset.ToString();
+                model.RoutingKey = message.RoutingKey;
+                model.Code = message.Code.ToString();
+                model.Content = Encoding.UTF8.GetString(message.Body);
+                model.Topic = message.Topic;
+                model.StoredTime = message.StoredTime.ToString();
+            }
+            return View(model);
         }
         public ActionResult AddQueue(string topic)
         {

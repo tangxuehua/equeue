@@ -114,19 +114,19 @@ namespace EQueue.Broker
                 }
             }
         }
-        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code)
+        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code, string routingKey, int pageIndex, int pageSize, out int total)
         {
-            var sql = "select MessageOffset,Topic,QueueId,QueueOffset,Code,StoredTime from [" + _setting.MessageTable + "]";
+            var whereSql = string.Empty;
             var hasCondition = false;
             if (!string.IsNullOrWhiteSpace(topic))
             {
-                sql += string.Format(" where Topic = '{0}'", topic);
+                whereSql += string.Format(" where Topic = '{0}'", topic);
                 hasCondition = true;
             }
             if (queueId != null)
             {
                 var prefix = hasCondition ? " and " : " where ";
-                sql += prefix + string.Format("QueueId = {0}", queueId.Value);
+                whereSql += prefix + string.Format("QueueId = {0}", queueId.Value);
                 if (!hasCondition)
                 {
                     hasCondition = true;
@@ -135,12 +135,31 @@ namespace EQueue.Broker
             if (code != null)
             {
                 var prefix = hasCondition ? " and " : " where ";
-                sql += prefix + string.Format("Code = {0}", code.Value);
+                whereSql += prefix + string.Format("Code = {0}", code.Value);
             }
+            if (!string.IsNullOrWhiteSpace(routingKey))
+            {
+                var prefix = hasCondition ? " and " : " where ";
+                whereSql += prefix + string.Format("RoutingKey = {0}", routingKey);
+            }
+
             using (var connection = new SqlConnection(_setting.ConnectionString))
             {
                 connection.Open();
-                using (var command = new SqlCommand(sql, connection))
+                var countSql = string.Format(@"select count(1) from {0}{1}", _setting.MessageTable, whereSql);
+                using (var command = new SqlCommand(countSql, connection))
+                {
+                    total = (int)command.ExecuteScalar();
+                }
+
+                var pageSql = string.Format(@"
+                        SELECT * FROM (
+                            SELECT ROW_NUMBER() OVER (ORDER BY m.MessageOffset desc) AS RowNumber,m.MessageOffset,m.Topic,m.QueueId,m.QueueOffset,m.Code,m.StoredTime,m.RoutingKey
+                            FROM {0} m{1}) AS Total
+                        WHERE RowNumber >= {2} AND RowNumber <= {3}",
+                    _setting.MessageTable, whereSql, (pageIndex - 1) * pageSize + 1, pageIndex * pageSize);
+
+                using (var command = new SqlCommand(pageSql, connection))
                 {
                     var reader = command.ExecuteReader();
                     var messages = new List<QueueMessage>();

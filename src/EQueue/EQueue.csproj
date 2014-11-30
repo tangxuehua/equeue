@@ -98,6 +98,7 @@
     <Compile Include="Clients\Producers\QueueHashSelector.cs" />
     <Compile Include="Configurations\ConfigurationExtensions.cs" />
     <Compile Include="Protocols\GetMessageDetailRequest.cs" />
+    <Compile Include="Protocols\QueryMessageResponse.cs" />
     <Compile Include="Protocols\QueryMessageRequest.cs" />
     <Compile Include="Protocols\RemoveQueueOffsetInfoRequest.cs" />
     <Compile Include="Protocols\TopicConsumeInfo.cs" />

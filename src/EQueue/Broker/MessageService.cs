@@ -195,9 +195,9 @@ namespace EQueue.Broker
                 queue.Disable();
             }
         }
-        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code)
+        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code, string routingKey, int pageIndex, int pageSize, out int total)
         {
-            return _messageStore.QueryMessages(topic, queueId, code);
+            return _messageStore.QueryMessages(topic, queueId, code, routingKey, pageIndex, pageSize, out total);
         }
         public QueueMessage GetMessageDetail(long messageOffset)
         {
