@@ -178,7 +178,8 @@ namespace EQueue.Clients.Consumers
                     MessageQueue = pullRequest.MessageQueue,
                     QueueOffset = pullRequest.NextConsumeOffset,
                     PullMessageBatchSize = Setting.PullMessageBatchSize,
-                    SuspendPullRequestMilliseconds = Setting.SuspendPullRequestMilliseconds
+                    SuspendPullRequestMilliseconds = Setting.SuspendPullRequestMilliseconds,
+                    ConsumeFromWhere = Setting.ConsumeFromWhere
                 };
                 var data = _binarySerializer.Serialize(request);
                 var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);

@@ -39,12 +39,15 @@ namespace EQueue.Broker.Processors
                 var nextQueueOffset = lastConsumedQueueOffset + 1;
                 if (lastConsumedQueueOffset == -1)
                 {
-                    var minOffset = _messageService.GetQueueMinOffset(pullMessageRequest.MessageQueue.Topic, pullMessageRequest.MessageQueue.QueueId);
-                    if (minOffset >= 0)
+                    if (pullMessageRequest.ConsumeFromWhere == ConsumeFromWhere.FirstOffset)
                     {
-                        nextQueueOffset = minOffset;
+                        nextQueueOffset = _messageService.GetQueueMinOffset(pullMessageRequest.MessageQueue.Topic, pullMessageRequest.MessageQueue.QueueId);
                     }
                     else
+                    {
+                        nextQueueOffset = _messageService.GetQueueCurrentOffset(pullMessageRequest.MessageQueue.Topic, pullMessageRequest.MessageQueue.QueueId);
+                    }
+                    if (nextQueueOffset < 0)
                     {
                         nextQueueOffset = 0;
                     }

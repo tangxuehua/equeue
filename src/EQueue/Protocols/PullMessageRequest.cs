@@ -11,5 +11,6 @@ namespace EQueue.Protocols
         public long QueueOffset { get; set; }
         public int PullMessageBatchSize { get; set; }
         public long SuspendPullRequestMilliseconds { get; set; }
+        public ConsumeFromWhere ConsumeFromWhere { get; set; }
     }
 }

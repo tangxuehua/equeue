@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using ECommon.Utilities;
+using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {
@@ -19,6 +20,7 @@ namespace EQueue.Clients.Consumers
         public int RetryMessageInterval { get; set; }
         public int PullMessageBatchSize { get; set; }
         public MessageHandleMode MessageHandleMode { get; set; }
+        public ConsumeFromWhere ConsumeFromWhere { get; set; }
 
         public ConsumerSetting()
         {
@@ -36,6 +38,7 @@ namespace EQueue.Clients.Consumers
             RetryMessageInterval = 3000;
             PullMessageBatchSize = 32;
             MessageHandleMode = MessageHandleMode.Parallel;
+            ConsumeFromWhere = ConsumeFromWhere.LastOffset;
         }
     }
 }
