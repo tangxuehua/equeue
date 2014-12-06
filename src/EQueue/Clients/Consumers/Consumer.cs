@@ -87,7 +87,7 @@ namespace EQueue.Clients.Consumers
             _handlingMessageDict = new ConcurrentDictionary<long, ConsumingMessage>();
             _taskIds = new List<int>();
             _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Setting.ConsumeThreadMaxCount));
-            _remotingClient = new SocketRemotingClient(null, Setting.BrokerConsumerIPEndPoint, this);
+            _remotingClient = new SocketRemotingClient(null, Setting.BrokerConsumerIPEndPoint, null, this);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
@@ -214,7 +214,7 @@ namespace EQueue.Clients.Consumers
                         {
                             var oldConsumeOffset = pullRequest.NextConsumeOffset;
                             pullRequest.NextConsumeOffset = response.NextOffset.Value;
-                            _logger.DebugFormat("Updated queue next consume offset. topic:{0}, queueId:{1}, old offset:{2}, new offset:{3}", pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, oldConsumeOffset, pullRequest.NextConsumeOffset);
+                            _logger.InfoFormat("Reset queue next consume offset. topic:{0}, queueId:{1}, old offset:{2}, new offset:{3}", pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, oldConsumeOffset, pullRequest.NextConsumeOffset);
                         }
 
                         if (_stoped) return;

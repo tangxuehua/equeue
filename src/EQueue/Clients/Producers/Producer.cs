@@ -44,7 +44,7 @@ namespace EQueue.Clients.Producers
             _lockObject = new object();
             _taskIds = new List<int>();
             _topicQueueIdsDict = new ConcurrentDictionary<string, IList<int>>();
-            _remotingClient = new SocketRemotingClient(null, Setting.BrokerProducerIPEndPoint, this);
+            _remotingClient = new SocketRemotingClient(null, Setting.BrokerProducerIPEndPoint, null, this);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();

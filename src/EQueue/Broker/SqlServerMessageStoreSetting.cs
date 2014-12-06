@@ -19,13 +19,13 @@
         public SqlServerMessageStoreSetting()
         {
             MessageTable = "Message";
-            PersistMessageInterval = 500;
-            PersistMessageMaxCount = 10000;
-            BulkCopyBatchSize = 10000;
-            BulkCopyTimeout = 10;
+            PersistMessageInterval = 1000;
+            PersistMessageMaxCount = 5000;
+            BulkCopyBatchSize = 5000;
+            BulkCopyTimeout = 60;
             RemoveExceedMaxCacheMessageFromMemoryInterval = 1000 * 5;
             RemoveConsumedMessageFromMemoryInterval = 1000 * 5;
-            DeleteMessageInterval = 1000 * 60 * 10;
+            DeleteMessageInterval = 1000 * 60 * 5;
             DeleteMessageHourOfDay = 4;
             BatchLoadMessageSize = 5000;
             BatchLoadQueueIndexSize = 5000;

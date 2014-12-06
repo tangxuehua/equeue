@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using EQueue.Protocols;
@@ -97,18 +98,14 @@ namespace EQueue.Broker
 
         private void RemoveConsumedMessagesFromMemory()
         {
-            var queueMessages = _messageDict.Values.ToList();
+            var queueMessages = _messageDict.Values;
             foreach (var queueMessage in queueMessages)
             {
                 var key = string.Format("{0}-{1}", queueMessage.Topic, queueMessage.QueueId);
                 long maxAllowToDeleteQueueOffset;
                 if (_queueOffsetDict.TryGetValue(key, out maxAllowToDeleteQueueOffset) && queueMessage.QueueOffset <= maxAllowToDeleteQueueOffset)
                 {
-                    QueueMessage removedQueueMessage;
-                    if (!_messageDict.TryRemove(queueMessage.MessageOffset, out removedQueueMessage))
-                    {
-                        _logger.ErrorFormat("Failed to remove consumed message, messageOffset:{0}", queueMessage.MessageOffset);
-                    }
+                    _messageDict.Remove(queueMessage.MessageOffset);
                 }
             }
         }

@@ -259,7 +259,7 @@ namespace EQueue.Broker
             }
 
             var queueEntryList = new List<KeyValuePair<Queue, long>>();
-            foreach (var queues in _topicQueueDict.Values.ToList())
+            foreach (var queues in _topicQueueDict.Values)
             {
                 foreach (var queue in queues)
                 {

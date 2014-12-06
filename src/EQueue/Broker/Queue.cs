@@ -90,7 +90,7 @@ namespace EQueue.Broker
         }
         public void RemoveQueueIndex(long maxQueueOffset)
         {
-            var toRemoveQueueOffsets = _queueItemDict.Keys.Where(key => key <= maxQueueOffset).ToList();
+            var toRemoveQueueOffsets = _queueItemDict.Keys.Where(key => key <= maxQueueOffset);
             toRemoveQueueOffsets.ForEach(queueOffset => _queueItemDict.Remove(queueOffset));
         }
         public long RemoveLastQueueIndex(long requireRemoveCount)
