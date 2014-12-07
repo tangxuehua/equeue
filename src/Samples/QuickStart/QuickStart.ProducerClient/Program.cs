@@ -26,7 +26,7 @@ namespace QuickStart.ProducerClient
 
             var producer = new Producer("Producer1").Start();
             var messageSize = 1024;
-            var messageCount = 100000;
+            var messageCount = 1000000;
             var message = new byte[messageSize];
             var sendCallback = new Action<Task<SendResult>>(sendTask =>
             {
@@ -51,6 +51,10 @@ namespace QuickStart.ProducerClient
             for (var index = 1; index <= messageCount; index++)
             {
                 producer.SendAsync(new Message("SampleTopic", 100, message), Interlocked.Increment(ref messageIndex)).ContinueWith(sendCallback);
+                if (index % 10000 == 0)
+                {
+                    Thread.Sleep(3000);
+                }
             }
 
             Console.ReadLine();

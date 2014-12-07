@@ -25,7 +25,7 @@
             BulkCopyTimeout = 60;
             RemoveExceedMaxCacheMessageFromMemoryInterval = 1000 * 5;
             RemoveConsumedMessageFromMemoryInterval = 1000 * 5;
-            DeleteMessageInterval = 1000 * 60 * 5;
+            DeleteMessageInterval = 1000 * 60 * 10;
             DeleteMessageHourOfDay = 4;
             BatchLoadMessageSize = 5000;
             BatchLoadQueueIndexSize = 5000;

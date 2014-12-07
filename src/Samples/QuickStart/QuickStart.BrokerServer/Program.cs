@@ -15,7 +15,8 @@ namespace QuickStart.BrokerServer
             InitializeEQueue();
             var setting = new BrokerSetting();
             setting.NotifyWhenMessageArrived = true;
-            setting.RemoveConsumedMessageInterval = 1000;
+            setting.RemoveConsumedMessageInterval = 1000 * 1000 * 10;
+            setting.QueueIndexMaxCacheSize = 200000;
             new BrokerController(setting).Start();
             Console.ReadLine();
         }
@@ -26,7 +27,8 @@ namespace QuickStart.BrokerServer
             var messageStoreSetting = new SqlServerMessageStoreSetting
             {
                 ConnectionString = connectionString,
-                DeleteMessageHourOfDay = -1
+                DeleteMessageHourOfDay = -1,
+                MessageMaxCacheSize = 200000
             };
             var offsetManagerSetting = new SqlServerOffsetManagerSetting
             {
