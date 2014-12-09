@@ -394,7 +394,7 @@ namespace EQueue.Clients.Consumers
                 {
                     pullRequest.ProcessQueue.IsDropped = true;
                     PersistOffset(pullRequest);
-                    _logger.DebugFormat("Dropped pull request, consumerId:{0}, group:{1}, topic={2}, queueId={3}", Id, GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId);
+                    _logger.InfoFormat("Dropped pull request, consumerId:{0}, group:{1}, topic={2}, queueId={3}", Id, GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId);
                 }
             }
 
@@ -409,7 +409,7 @@ namespace EQueue.Clients.Consumers
                     if (_pullRequestDict.TryAdd(key, request))
                     {
                         SchedulePullRequest(request);
-                        _logger.DebugFormat("Added pull request, consumerId:{0}, group:{1}, topic={2}, queueId={3}", Id, GroupName, request.MessageQueue.Topic, request.MessageQueue.QueueId);
+                        _logger.InfoFormat("Added pull request, consumerId:{0}, group:{1}, topic={2}, queueId={3}", Id, GroupName, request.MessageQueue.Topic, request.MessageQueue.QueueId);
                     }
                 }
             }
