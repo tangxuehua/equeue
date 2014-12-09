@@ -178,7 +178,7 @@ namespace EQueue.Broker.LongPolling
         private void NotifyMessageArrived(string topic, int queueId, long queueOffset)
         {
             var keyPrefix = BuildKeyPrefix(topic, queueId);
-            var keys = _queueRequestDict.Keys.Where(x => x.StartsWith(keyPrefix)).ToList();
+            var keys = _queueRequestDict.Keys.Where(x => x.StartsWith(keyPrefix));
 
             foreach (var key in keys)
             {

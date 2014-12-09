@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using ECommon.Components;
 using ECommon.Extensions;
 using ECommon.Logging;
@@ -18,9 +19,10 @@ namespace EQueue.Broker
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
         private BrokerController _brokerController;
-        private int _removeConsumedMessageTaskId;
+        private int _removeConsumedQueueIndexTaskId;
         private int _removeExceedMaxCacheQueueIndexTaskId;
         private long _totalRecoveredQueueIndex;
+        private int _isRemovingConsumedQueueIndex;
 
         public MessageService(IMessageStore messageStore, IOffsetManager offsetManager, IScheduleService scheduleService)
         {
@@ -41,14 +43,14 @@ namespace EQueue.Broker
             _messageStore.Recover(RecoverQueueIndexForMessage);
             _messageStore.Start();
             _offsetManager.Start();
-            _removeConsumedMessageTaskId = _scheduleService.ScheduleTask("MessageService.RemoveConsumedMessage", RemoveConsumedMessage, _brokerController.Setting.RemoveConsumedMessageInterval, _brokerController.Setting.RemoveConsumedMessageInterval);
+            _removeConsumedQueueIndexTaskId = _scheduleService.ScheduleTask("MessageService.RemoveConsumedQueueIndex", RemoveConsumedQueueIndex, _brokerController.Setting.RemoveConsumedMessageInterval, _brokerController.Setting.RemoveConsumedMessageInterval);
             _removeExceedMaxCacheQueueIndexTaskId = _scheduleService.ScheduleTask("MessageService.RemoveExceedMaxCacheQueueIndex", RemoveExceedMaxCacheQueueIndex, _brokerController.Setting.RemoveExceedMaxCacheQueueIndexInterval, _brokerController.Setting.RemoveExceedMaxCacheQueueIndexInterval);
         }
         public void Shutdown()
         {
             _messageStore.Shutdown();
             _offsetManager.Shutdown();
-            _scheduleService.ShutdownTask(_removeConsumedMessageTaskId);
+            _scheduleService.ShutdownTask(_removeConsumedQueueIndexTaskId);
             _scheduleService.ShutdownTask(_removeExceedMaxCacheQueueIndexTaskId);
         }
         public MessageStoreResult StoreMessage(Message message, int queueId, string routingKey)
@@ -86,6 +88,10 @@ namespace EQueue.Broker
                         {
                             messages.Add(message);
                         }
+                        else
+                        {
+                            _logger.ErrorFormat("Cannot find the message by messageOffset, please check if the message exist. topic:{0}, queueId:{1}, queueOffset:{2}, messageOffset:{3}", topic, queueId, currentQueueOffset, messageOffset);
+                        }
                     }
                     else
                     {
@@ -107,6 +113,14 @@ namespace EQueue.Broker
                                 {
                                     messages.Add(message);
                                 }
+                                else
+                                {
+                                    _logger.ErrorFormat("Cannot find the message by messageOffset after batch loading queue index, please check if the message exist. topic:{0}, queueId:{1}, queueOffset:{2}, messageOffset:{3}", topic, queueId, currentQueueOffset, messageOffset);
+                                }
+                            }
+                            else
+                            {
+                                _logger.ErrorFormat("Cannot find the messageOffset by queueOffset, please check if the message exist. topic:{0}, queueId:{1}, queueOffset:{0}", topic, queueId, currentQueueOffset);
                             }
                         }
                     }
@@ -235,21 +249,52 @@ namespace EQueue.Broker
             queue.RecoverQueueIndex(queueOffset, messageOffset, allowSetQueueIndex);
             _totalRecoveredQueueIndex++;
         }
-        private void RemoveConsumedMessage()
+        private void RemoveConsumedQueueIndex()
         {
-            foreach (var topicQueues in _topicQueueDict.Values)
+            if (Interlocked.CompareExchange(ref _isRemovingConsumedQueueIndex, 1, 0) == 0)
             {
-                foreach (var queue in topicQueues)
+                try
                 {
-                    var consumedQueueOffset = _offsetManager.GetMinOffset(queue.Topic, queue.QueueId);
-                    if (consumedQueueOffset > queue.CurrentOffset)
+                    var totalRemovedCount = 0L;
+                    foreach (var topicQueues in _topicQueueDict.Values)
                     {
-                        consumedQueueOffset = queue.CurrentOffset;
+                        foreach (var queue in topicQueues)
+                        {
+                            var consumedQueueOffset = _offsetManager.GetMinOffset(queue.Topic, queue.QueueId);
+                            if (consumedQueueOffset > queue.CurrentOffset)
+                            {
+                                consumedQueueOffset = queue.CurrentOffset;
+                            }
+                            totalRemovedCount += queue.RemoveConsumedQueueIndex(consumedQueueOffset);
+                            _messageStore.UpdateMaxAllowToDeleteQueueOffset(queue.Topic, queue.QueueId, consumedQueueOffset);
+                        }
                     }
-                    queue.RemoveQueueIndex(consumedQueueOffset);
-                    _messageStore.UpdateMaxAllowToDeleteQueueOffset(queue.Topic, queue.QueueId, consumedQueueOffset);
+                    if (totalRemovedCount > 0)
+                    {
+                        _logger.InfoFormat("Auto removed {0} consumed queue index from memory.", totalRemovedCount);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("Failed to remove consumed queue index.", ex);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _isRemovingConsumedQueueIndex, 0);
                 }
             }
+        }
+        private long GetAllQueueIndexCount()
+        {
+            var totalQueueIndexCount = 0L;
+            foreach (var queues in _topicQueueDict.Values)
+            {
+                foreach (var queue in queues)
+                {
+                    totalQueueIndexCount += queue.GetMessageCount();
+                }
+            }
+            return totalQueueIndexCount;
         }
         private void RemoveExceedMaxCacheQueueIndex()
         {
@@ -258,22 +303,32 @@ namespace EQueue.Broker
                 return;
             }
 
-            var queueEntryList = new List<KeyValuePair<Queue, long>>();
-            foreach (var queues in _topicQueueDict.Values.ToList())
-            {
-                foreach (var queue in queues)
-                {
-                    queueEntryList.Add(new KeyValuePair<Queue, long>(queue, queue.GetMessageCount()));
-                }
-            }
-            var totalQueueIndexCount = queueEntryList.Sum(x => x.Value);
-            var exceedCount = totalQueueIndexCount - _brokerController.Setting.QueueIndexMaxCacheSize;
+            var exceedCount = GetAllQueueIndexCount() - _brokerController.Setting.QueueIndexMaxCacheSize;
             if (exceedCount > 0)
             {
+                //First we should remove all the consumed queue index from memory.
+                RemoveConsumedQueueIndex();
+
+                var queueEntryList = new List<KeyValuePair<Queue, long>>();
+                foreach (var queues in _topicQueueDict.Values)
+                {
+                    foreach (var queue in queues)
+                    {
+                        queueEntryList.Add(new KeyValuePair<Queue, long>(queue, queue.GetMessageCount()));
+                    }
+                }
+                var totalUnConsumedQueueIndexCount = queueEntryList.Sum(x => x.Value);
+                var unconsumedExceedCount = totalUnConsumedQueueIndexCount - _brokerController.Setting.QueueIndexMaxCacheSize;
+                if (unconsumedExceedCount <= 0)
+                {
+                    return;
+                }
+
+                //If the remaining queue index count still exceed the max queue index cache size, then we try to remove all the exceeded unconsumed queue indexes.
                 var totalRemovedCount = 0L;
                 foreach (var entry in queueEntryList)
                 {
-                    var queueToRemoveCount = exceedCount * entry.Value / totalQueueIndexCount;
+                    var queueToRemoveCount = unconsumedExceedCount * entry.Value / totalUnConsumedQueueIndexCount;
                     if (queueToRemoveCount > 0)
                     {
                         totalRemovedCount += entry.Key.RemoveLastQueueIndex(queueToRemoveCount);
@@ -281,7 +336,7 @@ namespace EQueue.Broker
                 }
                 if (totalRemovedCount > 0)
                 {
-                    _logger.InfoFormat("Exceed queue index max cache size, exceed count:{0}, current total count:{1}, total removed count:{2}", exceedCount, totalQueueIndexCount, totalRemovedCount);
+                    _logger.InfoFormat("Auto removed {0} consumed queue indexes which exceed the max cache size, current total unconsumed queue index count:{1}, current exceed count:{2}", totalRemovedCount, totalUnConsumedQueueIndexCount, exceedCount);
                 }
             }
         }

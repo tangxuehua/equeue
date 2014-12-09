@@ -88,15 +88,24 @@ namespace EQueue.Broker
             }
             return -1;
         }
-        public void RemoveQueueIndex(long maxQueueOffset)
+        public long RemoveConsumedQueueIndex(long maxConsumedQueueOffset)
         {
-            var toRemoveQueueOffsets = _queueItemDict.Keys.Where(key => key <= maxQueueOffset).ToList();
-            toRemoveQueueOffsets.ForEach(queueOffset => _queueItemDict.Remove(queueOffset));
+            var totalRemovedCount = 0L;
+            var allRemoveQueueOffsets = _queueItemDict.Keys.Where(key => key <= maxConsumedQueueOffset);
+            foreach (var consumedQueueOffset in allRemoveQueueOffsets)
+            {
+                long messageOffset;
+                if (_queueItemDict.TryRemove(consumedQueueOffset, out messageOffset))
+                {
+                    totalRemovedCount++;
+                }
+            }
+            return totalRemovedCount;
         }
         public long RemoveLastQueueIndex(long requireRemoveCount)
         {
             var queueOffset = _queueItemDict.Keys.LastOrDefault();
-            var totalRemovedCount = 0;
+            var totalRemovedCount = 0L;
             while (queueOffset >= 0L && totalRemovedCount < requireRemoveCount)
             {
                 long messageOffset;

@@ -26,7 +26,8 @@ namespace QuickStart.ConsumerClient
             {
                 HeartbeatBrokerInterval = 1000,
                 UpdateTopicQueueCountInterval = 1000,
-                RebalanceInterval = 1000
+                RebalanceInterval = 1000,
+                ConsumeFromWhere = ConsumeFromWhere.FirstOffset
             };
             var consumer = new Consumer("Consumer1", "Group1", consumerSetting).Subscribe("SampleTopic").SetMessageHandler(messageHandler).Start();
 

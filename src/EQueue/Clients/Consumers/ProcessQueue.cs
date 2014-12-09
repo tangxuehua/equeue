@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using ECommon.Extensions;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
@@ -41,8 +42,7 @@ namespace EQueue.Clients.Consumers
         }
         public void RemoveMessage(QueueMessage message)
         {
-            QueueMessage removedMessage;
-            _messageDict.TryRemove(message.QueueOffset, out removedMessage);
+            _messageDict.Remove(message.QueueOffset);
         }
         public int GetMessageCount()
         {

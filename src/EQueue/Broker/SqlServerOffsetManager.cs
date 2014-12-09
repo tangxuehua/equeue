@@ -157,19 +157,19 @@ namespace EQueue.Broker
             {
                 connection.Open();
 
-                long? maxVersion;
+                long? maxVersion = null;
                 using (var command = new SqlCommand(_getLatestVersionSQL, connection))
                 {
                     var result = command.ExecuteScalar();
-                    if (result == null || result == DBNull.Value)
+                    if (result != null && result != DBNull.Value)
                     {
-                        return;
+                        maxVersion = (long)result;
                     }
-                    maxVersion = (long)result;
                 }
 
                 if (maxVersion == null)
                 {
+                    _logger.Info("0 queue offset records recovered from db.");
                     return;
                 }
 
