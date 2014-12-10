@@ -460,6 +460,8 @@ namespace EQueue.Broker
 
             foreach (var entry in _queueAllowToDeleteOffsetDict)
             {
+                if (entry.Value <= 0) continue;
+
                 long maxPersistedOffset;
                 if (!_queueMaxPersistedOffsetDict.TryGetValue(entry.Key, out maxPersistedOffset))
                 {

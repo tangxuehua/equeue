@@ -41,12 +41,12 @@ namespace EQueue.Broker
 
         public BrokerController Start()
         {
-            _producerSocketRemotingServer.Start();
-            _consumerSocketRemotingServer.Start();
-            _adminSocketRemotingServer.Start();
             _messageService.Start();
             ConsumerManager.Start();
             SuspendedPullRequestManager.Start();
+            _consumerSocketRemotingServer.Start();
+            _producerSocketRemotingServer.Start();
+            _adminSocketRemotingServer.Start();
             _logger.InfoFormat("Broker started, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerIPEndPoint, Setting.ConsumerIPEndPoint, Setting.AdminIPEndPoint);
             return this;
         }
