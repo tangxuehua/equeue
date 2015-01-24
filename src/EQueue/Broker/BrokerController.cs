@@ -32,9 +32,9 @@ namespace EQueue.Broker
             ConsumerManager = new ConsumerManager(this);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _producerSocketRemotingServer = new SocketRemotingServer("ProducerRemotingServer", Setting.ProducerIPEndPoint);
-            _consumerSocketRemotingServer = new SocketRemotingServer("ConsumerRemotingServer", Setting.ConsumerIPEndPoint, new ConsumerSocketServerEventListener(this));
-            _adminSocketRemotingServer = new SocketRemotingServer("AdminRemotingServer", Setting.AdminIPEndPoint);
+            _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.ProducerIPEndPoint);
+            _consumerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ConsumerRemotingServer", Setting.ConsumerIPEndPoint, new ConsumerSocketServerEventListener(this));
+            _adminSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.AdminRemotingServer", Setting.AdminIPEndPoint);
             _messageService.SetBrokerContrller(this);
             RegisterRequestHandlers();
         }
