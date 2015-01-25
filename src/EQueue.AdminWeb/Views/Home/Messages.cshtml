@@ -26,25 +26,25 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th width="14%" class="vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     MessageOffset
                 </th>
-                <th width="20%" class="text-center vertical-center">
+                <th width="20%" class="vertical-center">
                     Topic
                 </th>
-                <th width="12%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     QueueId
                 </th>
-                <th width="12%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     QueueOffset
                 </th>
-                <th width="12%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     Code
                 </th>
-                <th width="15%" class="text-center vertical-center">
+                <th width="20%" class="vertical-center">
                     RoutingKey
                 </th>
-                <th width="15%" class="text-center vertical-center">
+                <th width="20%" class="vertical-center">
                     StoredTime
                 </th>
             </tr>
@@ -53,10 +53,10 @@
             @foreach (var message in Model.Messages)
             {
                 <tr>
-                    <td class="vertical-center">
+                    <td class="text-center vertical-center">
                         @Html.ActionLink(message.MessageOffset.ToString(), "Message", new { searchMessageOffset = message.MessageOffset }, new { target = "_blank" })
                     </td>
-                    <td class="text-center vertical-center">
+                    <td class="vertical-center">
                         @message.Topic
                     </td>
                     <td class="text-center vertical-center">
@@ -68,10 +68,10 @@
                     <td class="text-center vertical-center">
                         @message.Code
                     </td>
-                    <td class="text-center vertical-center">
+                    <td class="vertical-center">
                         @message.RoutingKey
                     </td>
-                    <td class="text-center vertical-center">
+                    <td class="vertical-center">
                         @message.StoredTime
                     </td>
                 </tr>

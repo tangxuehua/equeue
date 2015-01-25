@@ -16,10 +16,13 @@ namespace EQueue.AdminWeb
         public MessageService(IBinarySerializer binarySerializer)
         {
             _remotingClient = new SocketRemotingClient("AdminClient", new IPEndPoint(Settings.BrokerAddress, Settings.BrokerPort));
-            _remotingClient.Start();
             _binarySerializer = binarySerializer;
         }
 
+        public void Start()
+        {
+            _remotingClient.Start();
+        }
         public IEnumerable<TopicQueueInfo> GetTopicQueueInfo(string topic)
         {
             var requestData = _binarySerializer.Serialize(new QueryTopicQueueInfoRequest(topic));

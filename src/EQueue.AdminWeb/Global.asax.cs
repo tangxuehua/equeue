@@ -27,7 +27,7 @@ namespace EQueue.AdminWeb
                 .UseJsonNet();
 
             configuration.SetDefault<MessageService, MessageService>();
-
+            ObjectContainer.Resolve<MessageService>().Start();
             RegisterControllers();
         }
 
