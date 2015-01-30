@@ -143,7 +143,7 @@ namespace EQueue.Broker
             if (!string.IsNullOrWhiteSpace(routingKey))
             {
                 var prefix = hasCondition ? " and " : " where ";
-                whereSql += prefix + string.Format("RoutingKey = {0}", routingKey);
+                whereSql += prefix + string.Format("RoutingKey = '{0}'", routingKey);
             }
 
             using (var connection = new SqlConnection(_setting.ConnectionString))
