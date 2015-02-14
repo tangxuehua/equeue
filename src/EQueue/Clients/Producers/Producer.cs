@@ -23,7 +23,6 @@ namespace EQueue.Clients.Producers
         private readonly ConcurrentDictionary<string, IList<int>> _topicQueueIdsDict;
         private readonly IScheduleService _scheduleService;
         private readonly SocketRemotingClient _remotingClient;
-        private readonly IBinarySerializer _binarySerializer;
         private readonly IQueueSelector _queueSelector;
         private readonly ILogger _logger;
         private readonly List<int> _taskIds;
@@ -46,7 +45,6 @@ namespace EQueue.Clients.Producers
             _topicQueueIdsDict = new ConcurrentDictionary<string, IList<int>>();
             _remotingClient = new SocketRemotingClient(null, Setting.BrokerProducerIPEndPoint, null, this);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }

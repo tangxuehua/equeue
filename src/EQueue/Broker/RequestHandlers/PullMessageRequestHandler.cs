@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
@@ -31,7 +32,7 @@ namespace EQueue.Broker.Processors
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
         {
-            var pullMessageRequest = _binarySerializer.Deserialize<PullMessageRequest>(request.Body);
+            var pullMessageRequest = DeserializePullMessageRequest(request.Body);
             var topic = pullMessageRequest.MessageQueue.Topic;
             var queueId = pullMessageRequest.MessageQueue.QueueId;
             var pullOffset = pullMessageRequest.QueueOffset;
@@ -178,6 +179,13 @@ namespace EQueue.Broker.Processors
                     queueCurrentOffset++;
                 }
                 return queueCurrentOffset;
+            }
+        }
+        private static PullMessageRequest DeserializePullMessageRequest(byte[] data)
+        {
+            using (var stream = new MemoryStream(data))
+            {
+                return PullMessageRequest.ReadFromStream(stream);
             }
         }
     }

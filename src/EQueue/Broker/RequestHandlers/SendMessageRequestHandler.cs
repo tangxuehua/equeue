@@ -11,7 +11,6 @@ namespace EQueue.Broker.Processors
     public class SendMessageRequestHandler : IRequestHandler
     {
         private IMessageService _messageService;
-        private IBinarySerializer _binarySerializer;
         private BrokerController _brokerController;
         private ILogger _logger;
 
@@ -19,7 +18,6 @@ namespace EQueue.Broker.Processors
         {
             _brokerController = brokerController;
             _messageService = ObjectContainer.Resolve<IMessageService>();
-            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -181,7 +182,7 @@ namespace EQueue.Clients.Consumers
                     SuspendPullRequestMilliseconds = Setting.SuspendPullRequestMilliseconds,
                     ConsumeFromWhere = Setting.ConsumeFromWhere
                 };
-                var data = _binarySerializer.Serialize(request);
+                var data = SerializePullMessageRequest(request);
                 var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);
 
                 pullRequest.PullStartTime = DateTime.Now;
@@ -625,6 +626,14 @@ namespace EQueue.Clients.Consumers
                 }
             }
             return false;
+        }
+        private static byte[] SerializePullMessageRequest(PullMessageRequest request)
+        {
+            using (var stream = new MemoryStream())
+            {
+                PullMessageRequest.WriteToStream(request, stream);
+                return stream.ToArray();
+            }
         }
 
         #endregion

@@ -2,7 +2,7 @@
 {
     public enum ConsumeFromWhere
     {
-        FirstOffset,
+        FirstOffset = 1,
         LastOffset
     }
 }
