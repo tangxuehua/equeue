@@ -1,4 +1,5 @@
-﻿using ECommon.Components;
+﻿using System.Text;
+using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Serializing;
@@ -27,11 +28,7 @@ namespace EQueue.Broker.Processors
             var sendMessageRequest = MessageUtils.DecodeSendMessageRequest(request.Body);
             var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.QueueId, sendMessageRequest.RoutingKey);
             _brokerController.SuspendedPullRequestManager.NotifyNewMessage(sendMessageRequest.Message.Topic, storeResult.QueueId, storeResult.QueueOffset);
-            var sendMessageResponse = new SendMessageResponse(
-                storeResult.MessageOffset,
-                new MessageQueue(sendMessageRequest.Message.Topic, storeResult.QueueId),
-                storeResult.QueueOffset);
-            var responseData = _binarySerializer.Serialize(sendMessageResponse);
+            var responseData = Encoding.UTF8.GetBytes(string.Format("{0}:{1}", storeResult.MessageOffset, storeResult.QueueOffset));
             return new RemotingResponse((int)ResponseCode.Success, request.Sequence, responseData);
         }
     }

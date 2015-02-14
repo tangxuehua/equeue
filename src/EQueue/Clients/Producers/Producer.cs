@@ -70,8 +70,8 @@ namespace EQueue.Clients.Producers
             var queueId = _queueSelector.SelectQueueId(queueIds, message, currentRoutingKey);
             var remotingRequest = BuildSendMessageRequest(message, queueId, currentRoutingKey);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, Setting.SendMessageTimeoutMilliseconds);
-            var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
-            return new SendResult(SendStatus.Success, response.MessageOffset, response.MessageQueue, response.QueueOffset);
+            var response = Encoding.UTF8.GetString(remotingResponse.Body).Split(':');
+            return new SendResult(SendStatus.Success, long.Parse(response[0]), new MessageQueue(message.Topic, queueId), long.Parse(response[1]));
         }
         public Task<SendResult> SendAsync(Message message, object routingKey)
         {
@@ -98,8 +98,8 @@ namespace EQueue.Clients.Producers
                 var remotingResponse = requestTask.Result;
                 if (remotingResponse != null)
                 {
-                    var response = _binarySerializer.Deserialize<SendMessageResponse>(remotingResponse.Body);
-                    var result = new SendResult(SendStatus.Success, response.MessageOffset, response.MessageQueue, response.QueueOffset);
+                    var response = Encoding.UTF8.GetString(remotingResponse.Body).Split(':');
+                    var result = new SendResult(SendStatus.Success, long.Parse(response[0]), new MessageQueue(message.Topic, queueId), long.Parse(response[1]));
                     taskCompletionSource.SetResult(result);
                 }
                 else
