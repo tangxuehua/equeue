@@ -11,12 +11,14 @@ namespace EQueue.Broker.Processors
         private BrokerController _brokerController;
         private IBinarySerializer _binarySerializer;
         private IOffsetManager _offsetManager;
+        private IMessageService _messageService;
 
         public QueryTopicConsumeInfoRequestHandler(BrokerController brokerController)
         {
             _brokerController = brokerController;
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
+            _messageService = ObjectContainer.Resolve<IMessageService>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
@@ -51,6 +53,9 @@ namespace EQueue.Broker.Processors
             {
                 var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(topicConsumeInfo.ConsumerGroup);
                 topicConsumeInfo.HasConsumer = consumerGroup != null && consumerGroup.GetAllConsumerIds().Count() > 0;
+                var queueCurrentOffset = _messageService.GetQueueCurrentOffset(topicConsumeInfo.Topic, topicConsumeInfo.QueueId);
+                topicConsumeInfo.QueueMaxOffset = queueCurrentOffset;
+                topicConsumeInfo.UnConsumedMessageCount = topicConsumeInfo.QueueMaxOffset - topicConsumeInfo.ConsumedOffset;
             }
 
             var data = _binarySerializer.Serialize(topicConsumeInfoList);

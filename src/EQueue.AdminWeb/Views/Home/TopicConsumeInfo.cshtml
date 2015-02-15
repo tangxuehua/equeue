@@ -28,12 +28,18 @@
                     QueueId
                 </th>
                 <th width="10%" class="text-center vertical-center">
+                    QueueMaxOffset
+                </th>
+                <th width="10%" class="text-center vertical-center">
                     ConsumedOffset
+                </th>
+                <th width="10%" class="text-center vertical-center">
+                    UnConsumedCount
                 </th>
                 <th width="10%" class="text-center vertical-center">
                     HasActiveConsumer
                 </th>
-                <th width="40%" class="text-center vertical-center">
+                <th width="20%" class="text-center vertical-center">
                     操作
                 </th>
             </tr>
@@ -51,9 +57,15 @@
                     <td class="text-center vertical-center">
                         @item.QueueId
                     </td>
+                    <th class="text-center vertical-center">
+                        @item.QueueMaxOffset
+                    </th>
                     <td class="text-center vertical-center">
                         @item.ConsumedOffset
                     </td>
+                    <th class="text-center vertical-center">
+                        @item.UnConsumedMessageCount
+                    </th>
                     <td class="text-center vertical-center">
                         @item.HasConsumer
                     </td>

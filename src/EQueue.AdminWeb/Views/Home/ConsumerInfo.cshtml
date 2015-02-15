@@ -27,11 +27,17 @@
                 <th width="20%" class="vertical-center">
                     Topic
                 </th>
-                <th width="20%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     QueueId
                 </th>
-                <th width="20%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
+                    QueueMaxOffset
+                </th>
+                <th width="10%" class="text-center vertical-center">
                     ConsumedOffset
+                </th>
+                <th width="10%" class="text-center vertical-center">
+                    UnConsumedCount
                 </th>
             </tr>
         </thead>
@@ -52,7 +58,13 @@
                         @item.QueueId
                     </td>
                     <td class="text-center vertical-center">
+                        @item.QueueMaxOffset
+                    </td>
+                    <td class="text-center vertical-center">
                         @item.ConsumedOffset
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.UnConsumedMessageCount
                     </td>
                 </tr>
             }
