@@ -17,12 +17,12 @@ namespace EQueue.Broker.Processors
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var queryMessageRequest = _binarySerializer.Deserialize<QueryMessageRequest>(request.Body);
+            var request = _binarySerializer.Deserialize<QueryMessageRequest>(remotingRequest.Body);
             var total = 0;
-            var messages = _messageService.QueryMessages(queryMessageRequest.Topic, queryMessageRequest.QueueId, queryMessageRequest.Code, queryMessageRequest.RoutingKey, queryMessageRequest.PageIndex, queryMessageRequest.PageSize, out total).ToList();
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, _binarySerializer.Serialize(new QueryMessageResponse(total, messages)));
+            var messages = _messageService.QueryMessages(request.Topic, request.QueueId, request.Code, request.RoutingKey, request.PageIndex, request.PageSize, out total).ToList();
+            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, _binarySerializer.Serialize(new QueryMessageResponse(total, messages)));
         }
     }
 }

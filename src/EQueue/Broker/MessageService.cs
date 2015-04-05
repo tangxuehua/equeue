@@ -68,7 +68,7 @@ namespace EQueue.Broker
             var queueOffset = queue.IncrementCurrentOffset();
             var queueMessage = _messageStore.StoreMessage(queueId, queueOffset, message, routingKey);
             queue.SetQueueIndex(queueMessage.QueueOffset, queueMessage.MessageOffset);
-            return new MessageStoreResult(queueMessage.MessageOffset, queueMessage.QueueId, queueMessage.QueueOffset);
+            return new MessageStoreResult(queueMessage.MessageId, queueMessage.MessageOffset, queueMessage.QueueId, queueMessage.QueueOffset);
         }
         public IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
         {
@@ -151,6 +151,19 @@ namespace EQueue.Broker
             return -1;
         }
 
+        public BrokerStatisticInfo GetBrokerStatisticInfo()
+        {
+            var statisticInfo = new BrokerStatisticInfo();
+            statisticInfo.TopicCount = GetAllTopics().Count();
+            statisticInfo.QueueCount = GetAllQueueCount();
+            statisticInfo.UnConsumedQueueMessageCount = GetAllUnConusmedMessageCount();
+            statisticInfo.InMemoryQueueMessageCount = GetAllQueueIndexCount();
+            statisticInfo.CurrentMessageOffset = _messageStore.CurrentMessageOffset;
+            statisticInfo.PersistedMessageOffset = _messageStore.PersistedMessageOffset;
+            statisticInfo.MinMessageOffset = GetMinMessageOffset();
+            statisticInfo.ConsumerGroupCount = _offsetManager.GetConsumerGroupCount();
+            return statisticInfo;
+        }
         public IEnumerable<string> GetAllTopics()
         {
             return _topicQueueDict.Keys;
@@ -190,7 +203,7 @@ namespace EQueue.Broker
             {
                 queues.Remove(queue);
                 _offsetManager.RemoveQueueOffset(topic, queueId);
-                _messageStore.UpdateMaxAllowToDeleteQueueOffset(topic, queueId, long.MaxValue);
+                _messageStore.UpdateConsumedQueueOffset(topic, queueId, long.MaxValue);
             }
         }
         public void EnableQueue(string topic, int queueId)
@@ -213,9 +226,9 @@ namespace EQueue.Broker
         {
             return _messageStore.QueryMessages(topic, queueId, code, routingKey, pageIndex, pageSize, out total);
         }
-        public QueueMessage GetMessageDetail(long messageOffset)
+        public QueueMessage GetMessageDetail(long? messageOffset, string messageId)
         {
-            return _messageStore.GetMessage(messageOffset);
+            return _messageStore.FindMessage(messageOffset, messageId);
         }
 
         private void Clear()
@@ -255,7 +268,6 @@ namespace EQueue.Broker
             {
                 try
                 {
-                    var totalRemovedCount = 0L;
                     foreach (var topicQueues in _topicQueueDict.Values)
                     {
                         foreach (var queue in topicQueues)
@@ -265,13 +277,9 @@ namespace EQueue.Broker
                             {
                                 consumedQueueOffset = queue.CurrentOffset;
                             }
-                            totalRemovedCount += queue.RemoveConsumedQueueIndex(consumedQueueOffset);
-                            _messageStore.UpdateMaxAllowToDeleteQueueOffset(queue.Topic, queue.QueueId, consumedQueueOffset);
+                            queue.RemoveConsumedQueueIndex(consumedQueueOffset);
+                            _messageStore.UpdateConsumedQueueOffset(queue.Topic, queue.QueueId, consumedQueueOffset);
                         }
-                    }
-                    if (totalRemovedCount > 0)
-                    {
-                        _logger.InfoFormat("Auto removed {0} consumed queue index from memory.", totalRemovedCount);
                     }
                 }
                 catch (Exception ex)
@@ -284,6 +292,15 @@ namespace EQueue.Broker
                 }
             }
         }
+        private int GetAllQueueCount()
+        {
+            var totalQueueCount = 0;
+            foreach (var queues in _topicQueueDict.Values)
+            {
+                totalQueueCount += queues.Count;
+            }
+            return totalQueueCount;
+        }
         private long GetAllQueueIndexCount()
         {
             var totalQueueIndexCount = 0L;
@@ -295,6 +312,34 @@ namespace EQueue.Broker
                 }
             }
             return totalQueueIndexCount;
+        }
+        private long GetAllUnConusmedMessageCount()
+        {
+            var totalUnConsumedMessageCount = 0L;
+            foreach (var queues in _topicQueueDict.Values)
+            {
+                foreach (var queue in queues)
+                {
+                    totalUnConsumedMessageCount += queue.GetMessageRealCount();
+                }
+            }
+            return totalUnConsumedMessageCount;
+        }
+        private long GetMinMessageOffset()
+        {
+            var minMessageOffset = -1L;
+            foreach (var queues in _topicQueueDict.Values)
+            {
+                foreach (var queue in queues)
+                {
+                    var offset = queue.GetMinQueueOffset();
+                    if (offset != null && (minMessageOffset == -1 || offset.Value < minMessageOffset))
+                    {
+                        minMessageOffset = offset.Value;
+                    }
+                }
+            }
+            return minMessageOffset;
         }
         private void RemoveExceedMaxCacheQueueIndex()
         {
@@ -328,15 +373,15 @@ namespace EQueue.Broker
                 var totalRemovedCount = 0L;
                 foreach (var entry in queueEntryList)
                 {
-                    var queueToRemoveCount = unconsumedExceedCount * entry.Value / totalUnConsumedQueueIndexCount;
-                    if (queueToRemoveCount > 0)
+                    var requireRemoveCount = unconsumedExceedCount * entry.Value / totalUnConsumedQueueIndexCount;
+                    if (requireRemoveCount > 0)
                     {
-                        totalRemovedCount += entry.Key.RemoveLastQueueIndex(queueToRemoveCount);
+                        totalRemovedCount += entry.Key.RemoveRequiredQueueIndexFromLast(requireRemoveCount);
                     }
                 }
                 if (totalRemovedCount > 0)
                 {
-                    _logger.InfoFormat("Auto removed {0} consumed queue indexes which exceed the max cache size, current total unconsumed queue index count:{1}, current exceed count:{2}", totalRemovedCount, totalUnConsumedQueueIndexCount, exceedCount);
+                    _logger.InfoFormat("Auto removed {0} unconsumed queue indexes which exceed the max queue cache size, current total unconsumed queue index count:{1}, current exceed count:{2}", totalRemovedCount, totalUnConsumedQueueIndexCount, exceedCount);
                 }
             }
         }

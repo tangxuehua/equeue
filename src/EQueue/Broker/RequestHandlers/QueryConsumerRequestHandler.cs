@@ -22,19 +22,19 @@ namespace EQueue.Broker.Processors
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var queryConsumerRequest = _binarySerializer.Deserialize<QueryConsumerRequest>(request.Body);
-            var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(queryConsumerRequest.GroupName);
+            var request = _binarySerializer.Deserialize<QueryConsumerRequest>(remotingRequest.Body);
+            var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(request.GroupName);
             var consumerIdList = new List<string>();
             if (consumerGroup != null)
             {
-                consumerIdList = consumerGroup.GetConsumerIdsForTopic(queryConsumerRequest.Topic).ToList();
+                consumerIdList = consumerGroup.GetConsumerIdsForTopic(request.Topic).ToList();
                 consumerIdList.Sort();
             }
             var consumerIds = string.Join(",", consumerIdList);
             var data = Encoding.UTF8.GetBytes(consumerIds);
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, data);
+            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, data);
         }
     }
 }

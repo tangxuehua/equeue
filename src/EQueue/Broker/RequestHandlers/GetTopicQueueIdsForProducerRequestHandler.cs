@@ -14,12 +14,12 @@ namespace EQueue.Broker.Processors
             _messageService = ObjectContainer.Resolve<IMessageService>();
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var topic = Encoding.UTF8.GetString(request.Body);
+            var topic = Encoding.UTF8.GetString(remotingRequest.Body);
             var queueIds = _messageService.GetQueueIdsForProducer(topic);
             var data = Encoding.UTF8.GetBytes(string.Join(",", queueIds));
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, data);
+            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, data);
         }
     }
 }

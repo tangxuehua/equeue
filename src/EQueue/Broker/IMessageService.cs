@@ -8,6 +8,7 @@ namespace EQueue.Broker
         void Start();
         void Shutdown();
         void SetBrokerContrller(BrokerController brokerController);
+        BrokerStatisticInfo GetBrokerStatisticInfo();
         MessageStoreResult StoreMessage(Message message, int queueId, string routingKey);
         IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize);
         long GetQueueCurrentOffset(string topic, int queueId);
@@ -21,6 +22,6 @@ namespace EQueue.Broker
         void EnableQueue(string topic, int queueId);
         void DisableQueue(string topic, int queueId);
         IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code, string routingKey, int pageIndex, int pageSize, out int total);
-        QueueMessage GetMessageDetail(long messageOffset);
+        QueueMessage GetMessageDetail(long? messageOffset, string messageId);
     }
 }

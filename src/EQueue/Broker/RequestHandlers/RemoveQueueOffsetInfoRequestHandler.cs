@@ -16,11 +16,11 @@ namespace EQueue.Broker.Processors
             _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var removeQueueOffsetInfoRequest = _binarySerializer.Deserialize<RemoveQueueOffsetInfoRequest>(request.Body);
-            _offsetManager.RemoveQueueOffset(removeQueueOffsetInfoRequest.ConsumerGroup, removeQueueOffsetInfoRequest.Topic, removeQueueOffsetInfoRequest.QueueId);
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, new byte[1] { 1 });
+            var request = _binarySerializer.Deserialize<RemoveQueueOffsetInfoRequest>(remotingRequest.Body);
+            _offsetManager.RemoveQueueOffset(request.ConsumerGroup, request.Topic, request.QueueId);
+            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, new byte[1] { 1 });
         }
     }
 }

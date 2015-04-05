@@ -7,6 +7,7 @@ using ECommon.Components;
 using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
+using ECommon.Utilities;
 using EQueue.Protocols;
 
 namespace EQueue.Broker
@@ -21,6 +22,14 @@ namespace EQueue.Broker
         private long _currentOffset = -1;
         private int _removeMessageFromMemoryTaskId;
 
+        public long CurrentMessageOffset
+        {
+            get { return _currentOffset; }
+        }
+        public long PersistedMessageOffset
+        {
+            get { return _currentOffset; }
+        }
         public bool SupportBatchLoadQueueIndex
         {
             get { return false; }
@@ -44,8 +53,9 @@ namespace EQueue.Broker
         }
         public QueueMessage StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
         {
+            var messageId = ObjectId.GenerateNewStringId();
             var nextOffset = GetNextOffset();
-            var queueMessage = new QueueMessage(message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, DateTime.Now, routingKey);
+            var queueMessage = new QueueMessage(messageId, message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, message.CreatedTime, DateTime.Now, DateTime.Now, routingKey);
             _messageDict[nextOffset] = queueMessage;
             return queueMessage;
         }
@@ -58,7 +68,24 @@ namespace EQueue.Broker
             }
             return null;
         }
-        public void UpdateMaxAllowToDeleteQueueOffset(string topic, int queueId, long queueOffset)
+        public QueueMessage FindMessage(long? offset, string messageId)
+        {
+            var predicate = new Func<QueueMessage, bool>(x =>
+            {
+                var pass = true;
+                if (pass && offset != null)
+                {
+                    pass = x.MessageOffset == offset.Value;
+                }
+                if (!string.IsNullOrWhiteSpace(messageId))
+                {
+                    pass = x.MessageId == messageId;
+                }
+                return pass;
+            });
+            return _messageDict.Values.SingleOrDefault(predicate);
+        }
+        public void UpdateConsumedQueueOffset(string topic, int queueId, long queueOffset)
         {
             var key = string.Format("{0}-{1}", topic, queueId);
             _queueOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);

@@ -16,11 +16,11 @@ namespace EQueue.Broker.Processors
             _messageService = ObjectContainer.Resolve<IMessageService>();
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var removeQueueRequest = _binarySerializer.Deserialize<RemoveQueueRequest>(request.Body);
-            _messageService.RemoveQueue(removeQueueRequest.Topic, removeQueueRequest.QueueId);
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, new byte[1] { 1 });
+            var request = _binarySerializer.Deserialize<RemoveQueueRequest>(remotingRequest.Body);
+            _messageService.RemoveQueue(request.Topic, request.QueueId);
+            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, new byte[1] { 1 });
         }
     }
 }

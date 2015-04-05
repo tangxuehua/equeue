@@ -23,6 +23,10 @@ namespace EQueue.Broker
         public void Start() { }
         public void Shutdown() { }
 
+        public int GetConsumerGroupCount()
+        {
+            return _groupQueueOffsetDict.Keys.Count;
+        }
         public void UpdateQueueOffset(string topic, int queueId, long offset, string group)
         {
             var queueOffsetDict = _groupQueueOffsetDict.GetOrAdd(group, new ConcurrentDictionary<string, long>());

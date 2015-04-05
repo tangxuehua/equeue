@@ -17,16 +17,16 @@ namespace EQueue.Broker.Processors
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var getMessageDetailRequest = _binarySerializer.Deserialize<GetMessageDetailRequest>(request.Body);
-            var message = _messageService.GetMessageDetail(getMessageDetailRequest.MessageOffset);
+            var request = _binarySerializer.Deserialize<GetMessageDetailRequest>(remotingRequest.Body);
+            var message = _messageService.GetMessageDetail(request.MessageOffset, request.MessageId);
             var messages = new List<QueueMessage>();
             if (message != null)
             {
                 messages.Add(message);
             }
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, _binarySerializer.Serialize(messages));
+            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, _binarySerializer.Serialize(messages));
         }
     }
 }

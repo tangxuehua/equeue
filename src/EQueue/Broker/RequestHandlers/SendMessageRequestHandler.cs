@@ -21,13 +21,13 @@ namespace EQueue.Broker.Processors
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var sendMessageRequest = MessageUtils.DecodeSendMessageRequest(request.Body);
-            var storeResult = _messageService.StoreMessage(sendMessageRequest.Message, sendMessageRequest.QueueId, sendMessageRequest.RoutingKey);
-            _brokerController.SuspendedPullRequestManager.NotifyNewMessage(sendMessageRequest.Message.Topic, storeResult.QueueId, storeResult.QueueOffset);
-            var responseData = Encoding.UTF8.GetBytes(string.Format("{0}:{1}", storeResult.MessageOffset, storeResult.QueueOffset));
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, responseData);
+            var request = MessageUtils.DecodeSendMessageRequest(remotingRequest.Body);
+            var storeResult = _messageService.StoreMessage(request.Message, request.QueueId, request.RoutingKey);
+            _brokerController.SuspendedPullRequestManager.NotifyNewMessage(request.Message.Topic, storeResult.QueueId, storeResult.QueueOffset);
+            var responseData = Encoding.UTF8.GetBytes(string.Format("{0}:{1}:{2}", storeResult.MessageOffset, storeResult.QueueOffset, storeResult.MessageId));
+            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, responseData);
         }
     }
 }

@@ -21,10 +21,10 @@ namespace EQueue.Broker.Processors
             _messageService = ObjectContainer.Resolve<IMessageService>();
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var queryTopicConsumeInfoRequest = _binarySerializer.Deserialize<QueryTopicConsumeInfoRequest>(request.Body);
-            var topicConsumeInfoList = _offsetManager.QueryTopicConsumeInfos(queryTopicConsumeInfoRequest.GroupName, queryTopicConsumeInfoRequest.Topic).ToList();
+            var request = _binarySerializer.Deserialize<QueryTopicConsumeInfoRequest>(remotingRequest.Body);
+            var topicConsumeInfoList = _offsetManager.QueryTopicConsumeInfos(request.GroupName, request.Topic).ToList();
 
             topicConsumeInfoList.Sort((x, y) =>
             {
@@ -59,7 +59,7 @@ namespace EQueue.Broker.Processors
             }
 
             var data = _binarySerializer.Serialize(topicConsumeInfoList);
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, data);
+            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, data);
         }
     }
 }

@@ -23,17 +23,17 @@ namespace EQueue.Broker.Processors
             _messageService = ObjectContainer.Resolve<IMessageService>();
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var queryConsumerInfoRequest = _binarySerializer.Deserialize<QueryConsumerInfoRequest>(request.Body);
+            var request = _binarySerializer.Deserialize<QueryConsumerInfoRequest>(remotingRequest.Body);
             var consumerInfoList = new List<ConsumerInfo>();
 
-            if (!string.IsNullOrEmpty(queryConsumerInfoRequest.GroupName))
+            if (!string.IsNullOrEmpty(request.GroupName))
             {
-                var consumerGroups = _brokerController.ConsumerManager.QueryConsumerGroup(queryConsumerInfoRequest.GroupName);
+                var consumerGroups = _brokerController.ConsumerManager.QueryConsumerGroup(request.GroupName);
                 foreach (var consumerGroup in consumerGroups)
                 {
-                    foreach (var topicConsumeInfo in GetConsumerInfoForGroup(consumerGroup, queryConsumerInfoRequest.Topic))
+                    foreach (var topicConsumeInfo in GetConsumerInfoForGroup(consumerGroup, request.Topic))
                     {
                         consumerInfoList.Add(topicConsumeInfo);
                     }
@@ -44,7 +44,7 @@ namespace EQueue.Broker.Processors
                 var consumerGroups = _brokerController.ConsumerManager.GetAllConsumerGroups();
                 foreach (var consumerGroup in consumerGroups)
                 {
-                    foreach (var topicConsumeInfo in GetConsumerInfoForGroup(consumerGroup, queryConsumerInfoRequest.Topic))
+                    foreach (var topicConsumeInfo in GetConsumerInfoForGroup(consumerGroup, request.Topic))
                     {
                         consumerInfoList.Add(topicConsumeInfo);
                     }
@@ -52,7 +52,7 @@ namespace EQueue.Broker.Processors
             }
 
             var data = _binarySerializer.Serialize(consumerInfoList);
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, data);
+            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, data);
         }
 
         private IEnumerable<ConsumerInfo> GetConsumerInfoForGroup(ConsumerGroup consumerGroup, string currentTopic)

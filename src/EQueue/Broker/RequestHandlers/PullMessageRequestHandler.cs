@@ -30,38 +30,38 @@ namespace EQueue.Broker.Processors
             _emptyResponseData = _binarySerializer.Serialize(new PullMessageResponse(new QueueMessage[0]));
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var pullMessageRequest = DeserializePullMessageRequest(request.Body);
-            var topic = pullMessageRequest.MessageQueue.Topic;
-            var queueId = pullMessageRequest.MessageQueue.QueueId;
-            var pullOffset = pullMessageRequest.QueueOffset;
+            var request = DeserializePullMessageRequest(remotingRequest.Body);
+            var topic = request.MessageQueue.Topic;
+            var queueId = request.MessageQueue.QueueId;
+            var pullOffset = request.QueueOffset;
 
             //如果消费者第一次过来拉取消息，则计算下一个应该拉取的位置，并返回给消费者
             if (pullOffset < 0)
             {
-                var nextConsumeOffset = GetNextConsumeOffset(topic, queueId, pullMessageRequest.ConsumerGroup, pullMessageRequest.ConsumeFromWhere);
-                return BuildNextOffsetResetResponse(request.Sequence, nextConsumeOffset);
+                var nextConsumeOffset = GetNextConsumeOffset(topic, queueId, request.ConsumerGroup, request.ConsumeFromWhere);
+                return BuildNextOffsetResetResponse(remotingRequest.Sequence, nextConsumeOffset);
             }
 
             //尝试拉取消息
-            var messages = _messageService.GetMessages(topic, queueId, pullOffset, pullMessageRequest.PullMessageBatchSize);
+            var messages = _messageService.GetMessages(topic, queueId, pullOffset, request.PullMessageBatchSize);
 
             //如果消息存在，则返回消息
             if (messages.Count() > 0)
             {
-                return BuildFoundResponse(request.Sequence, messages);
+                return BuildFoundResponse(remotingRequest.Sequence, messages);
             }
 
             //消息不存在，如果挂起时间大于0，则挂起请求
-            if (pullMessageRequest.SuspendPullRequestMilliseconds > 0)
+            if (request.SuspendPullRequestMilliseconds > 0)
             {
                 var pullRequest = new PullRequest(
-                    request.Sequence,
-                    pullMessageRequest,
+                    remotingRequest.Sequence,
+                    request,
                     context,
                     DateTime.Now,
-                    pullMessageRequest.SuspendPullRequestMilliseconds,
+                    request.SuspendPullRequestMilliseconds,
                     ExecutePullRequest,
                     ExecutePullRequest,
                     ExecuteReplacedPullRequest);
@@ -76,11 +76,11 @@ namespace EQueue.Broker.Processors
             //如果pullOffset比队列的第一个消息的offset还要小或者比队列的最后一个消息的offset+1还要大，则将pullOffset重置为第一个消息的offset
             if (pullOffset < queueMinOffset || pullOffset > queueCurrentOffset + 1)
             {
-                return BuildNextOffsetResetResponse(request.Sequence, queueMinOffset);
+                return BuildNextOffsetResetResponse(remotingRequest.Sequence, queueMinOffset);
             }
             else
             {
-                return BuildNoNewMessageResponse(request.Sequence);
+                return BuildNoNewMessageResponse(remotingRequest.Sequence);
             }
         }
 

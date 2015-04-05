@@ -8,6 +8,7 @@ namespace EQueue.Broker
         void Recover();
         void Start();
         void Shutdown();
+        int GetConsumerGroupCount();
         void UpdateQueueOffset(string topic, int queueId, long offset, string group);
         long GetQueueOffset(string topic, int queueId, string group);
         long GetMinOffset(string topic, int queueId);

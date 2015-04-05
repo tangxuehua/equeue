@@ -102,7 +102,7 @@ namespace EQueue.Broker
             }
             return totalRemovedCount;
         }
-        public long RemoveLastQueueIndex(long requireRemoveCount)
+        public long RemoveRequiredQueueIndexFromLast(long requireRemoveCount)
         {
             var queueOffset = _queueItemDict.Keys.LastOrDefault();
             var totalRemovedCount = 0L;

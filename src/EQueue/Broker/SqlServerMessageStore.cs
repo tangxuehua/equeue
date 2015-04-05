@@ -9,14 +9,16 @@ using ECommon.Components;
 using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
+using ECommon.Utilities;
 using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
     public class SqlServerMessageStore : IMessageStore
     {
+        private readonly byte[] EmptyBody = new byte[0];
         private readonly ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
-        private readonly ConcurrentDictionary<string, long> _queueAllowToDeleteOffsetDict = new ConcurrentDictionary<string, long>();
+        private readonly ConcurrentDictionary<string, long> _queueConsumedOffsetDict = new ConcurrentDictionary<string, long>();
         private readonly ConcurrentDictionary<string, long> _queueMaxPersistedOffsetDict = new ConcurrentDictionary<string, long>();
         private readonly DataTable _messageDataTable;
         private readonly IScheduleService _scheduleService;
@@ -36,6 +38,17 @@ namespace EQueue.Broker
         private readonly string _batchLoadMessageSQLFormat;
         private readonly string _batchLoadQueueIndexSQLFormat;
 
+        public long CurrentMessageOffset
+        {
+            get { return _currentMessageOffset; }
+        }
+        public long PersistedMessageOffset
+        {
+            get
+            {
+                return _persistedMessageOffset;
+            }
+        }
         public bool SupportBatchLoadQueueIndex
         {
             get { return true; }
@@ -75,8 +88,9 @@ namespace EQueue.Broker
         }
         public QueueMessage StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
         {
+            var messageId = ObjectId.GenerateNewStringId();
             var nextOffset = GetNextOffset();
-            var queueMessage = new QueueMessage(message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, DateTime.Now, routingKey);
+            var queueMessage = new QueueMessage(messageId, message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, message.CreatedTime, DateTime.Now, DateTime.Now, routingKey);
             _messageDict[nextOffset] = queueMessage;
             return queueMessage;
         }
@@ -93,10 +107,42 @@ namespace EQueue.Broker
             }
             return null;
         }
-        public void UpdateMaxAllowToDeleteQueueOffset(string topic, int queueId, long queueOffset)
+        public QueueMessage FindMessage(long? offset, string messageId)
+        {
+            var whereSql = string.Empty;
+            var hasCondition = false;
+
+            if (offset != null)
+            {
+                whereSql += string.Format(" where MessageOffset = {0}", offset.Value);
+                hasCondition = true;
+            }
+            if (!string.IsNullOrWhiteSpace(messageId))
+            {
+                var prefix = hasCondition ? " and " : " where ";
+                whereSql += prefix + string.Format("MessageId = '{0}'", messageId);
+            }
+
+            using (var connection = new SqlConnection(_setting.ConnectionString))
+            {
+                connection.Open();
+                var sql = string.Format("select * from {0}{1}", _setting.MessageTable, whereSql);
+                using (var command = new SqlCommand(sql, connection))
+                {
+                    var reader = command.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        return PopulateMessageFromReader(reader);
+                    }
+                }
+            }
+
+            return null;
+        }
+        public void UpdateConsumedQueueOffset(string topic, int queueId, long queueOffset)
         {
             var key = string.Format("{0}-{1}", topic, queueId);
-            _queueAllowToDeleteOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
+            _queueConsumedOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
         }
         public IDictionary<long, long> BatchLoadQueueIndex(string topic, int queueId, long startQueueOffset)
         {
@@ -121,6 +167,7 @@ namespace EQueue.Broker
         {
             var whereSql = string.Empty;
             var hasCondition = false;
+
             if (!string.IsNullOrWhiteSpace(topic))
             {
                 whereSql += string.Format(" where Topic = '{0}'", topic);
@@ -139,6 +186,10 @@ namespace EQueue.Broker
             {
                 var prefix = hasCondition ? " and " : " where ";
                 whereSql += prefix + string.Format("Code = {0}", code.Value);
+                if (!hasCondition)
+                {
+                    hasCondition = true;
+                }
             }
             if (!string.IsNullOrWhiteSpace(routingKey))
             {
@@ -157,7 +208,7 @@ namespace EQueue.Broker
 
                 var pageSql = string.Format(@"
                         SELECT * FROM (
-                            SELECT ROW_NUMBER() OVER (ORDER BY m.MessageOffset desc) AS RowNumber,m.MessageOffset,m.Topic,m.QueueId,m.QueueOffset,m.Code,m.StoredTime,m.RoutingKey
+                            SELECT ROW_NUMBER() OVER (ORDER BY m.MessageOffset desc) AS RowNumber,m.MessageId,m.MessageOffset,m.Topic,m.QueueId,m.QueueOffset,m.Code,m.CreatedTime,m.ArrivedTime,m.StoredTime,m.RoutingKey
                             FROM {0} m{1}) AS Total
                         WHERE RowNumber >= {2} AND RowNumber <= {3}",
                     _setting.MessageTable, whereSql, (pageIndex - 1) * pageSize + 1, pageIndex * pageSize);
@@ -168,14 +219,7 @@ namespace EQueue.Broker
                     var messages = new List<QueueMessage>();
                     while (reader.Read())
                     {
-                        var messageOffset = (long)reader["MessageOffset"];
-                        var messageTopic = (string)reader["Topic"];
-                        var messageQueueId = (int)reader["QueueId"];
-                        var messageQueueOffset = (long)reader["QueueOffset"];
-                        var messageCode = (int)reader["Code"];
-                        var messageStoredTime = (DateTime)reader["StoredTime"];
-                        var messageRoutingKey = (string)reader["RoutingKey"];
-                        messages.Add(new QueueMessage(messageTopic, messageCode, null, messageOffset, messageQueueId, messageQueueOffset, messageStoredTime, messageRoutingKey));
+                        messages.Add(PopulateMessageFromReader(reader));
                     }
                     return messages;
                 }
@@ -185,7 +229,7 @@ namespace EQueue.Broker
         private void Clear()
         {
             _messageDict.Clear();
-            _queueAllowToDeleteOffsetDict.Clear();
+            _queueConsumedOffsetDict.Clear();
             _queueMaxPersistedOffsetDict.Clear();
             _messageDataTable.Rows.Clear();
             _currentMessageOffset = -1;
@@ -223,7 +267,7 @@ namespace EQueue.Broker
                 }
                 if (totalRemovedCount > 0)
                 {
-                    _logger.InfoFormat("Auto removed {0} unconsumed messages which exceed the max cache size, current total unconsumed message count:{1}, current exceed count:{2}", totalRemovedCount, currentTotalCount, exceedCount);
+                    _logger.InfoFormat("Auto removed {0} unconsumed messages which exceed the max cache size, current total unconsumed message count:{1}, current exceed count:{2}, currentMessageOffset:{3}, currentPersistedMessageOffset:{4}", totalRemovedCount, currentTotalCount, exceedCount, currentMessageOffset, currentPersistedMessageOffet);
                 }
                 else
                 {
@@ -239,22 +283,29 @@ namespace EQueue.Broker
                 try
                 {
                     var totalRemovedCount = 0;
+                    var maxRemovedMessageOffset = 0L;
                     foreach (var queueMessage in _messageDict.Values)
                     {
                         var key = string.Format("{0}-{1}", queueMessage.Topic, queueMessage.QueueId);
-                        long maxAllowToDeleteQueueOffset;
-                        if (_queueAllowToDeleteOffsetDict.TryGetValue(key, out maxAllowToDeleteQueueOffset) && queueMessage.QueueOffset <= maxAllowToDeleteQueueOffset)
+                        var queueConsumedOffset = 0L;
+                        if (_queueConsumedOffsetDict.TryGetValue(key, out queueConsumedOffset)
+                            && queueMessage.MessageOffset <= _persistedMessageOffset
+                            && queueMessage.QueueOffset <= queueConsumedOffset)
                         {
                             QueueMessage removedMessage;
                             if (_messageDict.TryRemove(queueMessage.MessageOffset, out removedMessage))
                             {
                                 totalRemovedCount++;
+                                if (removedMessage.MessageOffset > maxRemovedMessageOffset)
+                                {
+                                    maxRemovedMessageOffset = removedMessage.MessageOffset;
+                                }
                             }
                         }
                     }
                     if (totalRemovedCount > 0)
                     {
-                        _logger.InfoFormat("Auto removed {0} consumed messages from memory.", totalRemovedCount);
+                        _logger.InfoFormat("Auto removed {0} consumed messages from memory, maxRemovedMessageOffset: {1}, currentPersistedMessageOffset: {2}", totalRemovedCount, maxRemovedMessageOffset, _persistedMessageOffset);
                     }
                 }
                 catch (Exception ex)
@@ -279,7 +330,7 @@ namespace EQueue.Broker
                     var reader = command.ExecuteReader();
                     while (reader.Read())
                     {
-                        var queueMessage = PopulateMessageFromReader(reader);
+                        var queueMessage = PopulateMessageFromReader(reader, true);
                         if (count < _setting.MessageMaxCacheSize)
                         {
                             _messageDict[queueMessage.MessageOffset] = queueMessage;
@@ -314,17 +365,24 @@ namespace EQueue.Broker
                 }
             }
         }
-        private QueueMessage PopulateMessageFromReader(IDataReader reader)
+        private QueueMessage PopulateMessageFromReader(IDataReader reader, bool populateBody = false)
         {
+            var messageId = (string)reader["MessageId"];
             var messageOffset = (long)reader["MessageOffset"];
             var topic = (string)reader["Topic"];
             var queueId = (int)reader["QueueId"];
             var queueOffset = (long)reader["QueueOffset"];
             var code = (int)reader["Code"];
-            var body = (byte[])reader["Body"];
+            byte[] body = EmptyBody;
+            if (populateBody)
+            {
+                body = (byte[])reader["Body"];
+            }
+            var createdTime = (DateTime)reader["CreatedTime"];
+            var arrivedTime = (DateTime)reader["ArrivedTime"];
             var storedTime = (DateTime)reader["StoredTime"];
             var routingKey = (string)reader["RoutingKey"];
-            return new QueueMessage(topic, code, body, messageOffset, queueId, queueOffset, storedTime, routingKey);
+            return new QueueMessage(messageId, topic, code, body, messageOffset, queueId, queueOffset, createdTime, arrivedTime, storedTime, routingKey);
         }
         private void TryPersistMessages()
         {
@@ -358,6 +416,7 @@ namespace EQueue.Broker
                 QueueMessage message;
                 if (_messageDict.TryGetValue(currentOffset, out message))
                 {
+                    message.StoredTime = DateTime.Now;
                     messages.Add(message);
                 }
                 currentOffset++;
@@ -365,6 +424,10 @@ namespace EQueue.Broker
 
             if (messages.Count == 0)
             {
+                if (_persistedMessageOffset < _currentMessageOffset)
+                {
+                    _logger.WarnFormat("No messages were found to persist, but the persistedMessageOffset is small than the currentMaxMessageOffset. persistedMessageOffset: {0}, currentMaxMessageOffset: {1}", _persistedMessageOffset, _currentMessageOffset);
+                }
                 return true;
             }
 
@@ -373,12 +436,15 @@ namespace EQueue.Broker
             foreach (var message in messages)
             {
                 var row = _messageDataTable.NewRow();
+                row["MessageId"] = message.MessageId;
                 row["MessageOffset"] = message.MessageOffset;
                 row["Topic"] = message.Topic;
                 row["QueueId"] = message.QueueId;
                 row["QueueOffset"] = message.QueueOffset;
                 row["Code"] = message.Code;
                 row["Body"] = message.Body;
+                row["CreatedTime"] = message.CreatedTime;
+                row["ArrivedTime"] = message.ArrivedTime;
                 row["StoredTime"] = message.StoredTime;
                 row["RoutingKey"] = message.RoutingKey;
                 _messageDataTable.Rows.Add(row);
@@ -412,12 +478,15 @@ namespace EQueue.Broker
                     copy.BatchSize = _setting.BulkCopyBatchSize;
                     copy.BulkCopyTimeout = _setting.BulkCopyTimeout;
                     copy.DestinationTableName = _setting.MessageTable;
+                    copy.ColumnMappings.Add("MessageId", "MessageId");
                     copy.ColumnMappings.Add("MessageOffset", "MessageOffset");
                     copy.ColumnMappings.Add("Topic", "Topic");
                     copy.ColumnMappings.Add("QueueId", "QueueId");
                     copy.ColumnMappings.Add("QueueOffset", "QueueOffset");
                     copy.ColumnMappings.Add("Code", "Code");
                     copy.ColumnMappings.Add("Body", "Body");
+                    copy.ColumnMappings.Add("CreatedTime", "CreatedTime");
+                    copy.ColumnMappings.Add("ArrivedTime", "ArrivedTime");
                     copy.ColumnMappings.Add("StoredTime", "StoredTime");
                     copy.ColumnMappings.Add("RoutingKey", "RoutingKey");
 
@@ -441,12 +510,15 @@ namespace EQueue.Broker
         private DataTable BuildMessageDataTable()
         {
             var table = new DataTable();
+            table.Columns.Add("MessageId", typeof(string));
             table.Columns.Add("MessageOffset", typeof(long));
             table.Columns.Add("Topic", typeof(string));
             table.Columns.Add("QueueId", typeof(int));
             table.Columns.Add("QueueOffset", typeof(long));
             table.Columns.Add("Code", typeof(int));
             table.Columns.Add("Body", typeof(byte[]));
+            table.Columns.Add("CreatedTime", typeof(DateTime));
+            table.Columns.Add("ArrivedTime", typeof(DateTime));
             table.Columns.Add("StoredTime", typeof(DateTime));
             table.Columns.Add("RoutingKey", typeof(string));
             return table;
@@ -458,7 +530,7 @@ namespace EQueue.Broker
                 return;
             }
 
-            foreach (var entry in _queueAllowToDeleteOffsetDict)
+            foreach (var entry in _queueConsumedOffsetDict)
             {
                 if (entry.Value <= 0) continue;
 

@@ -53,6 +53,10 @@ namespace EQueue.Broker
             _scheduleService.ShutdownTask(_persistQueueOffsetTaskId);
         }
 
+        public int GetConsumerGroupCount()
+        {
+            return _groupQueueOffsetDict.Keys.Count;
+        }
         public void UpdateQueueOffset(string topic, int queueId, long offset, string group)
         {
             UpdateQueueOffsetInternal(topic, queueId, offset, group);

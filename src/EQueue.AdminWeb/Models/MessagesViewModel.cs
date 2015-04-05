@@ -5,6 +5,7 @@ namespace EQueue.AdminWeb.Models
 {
     public class MessagesViewModel
     {
+        public string MessageId { get; set; }
         public string Topic { get; set; }
         public int? QueueId { get; set; }
         public int? Code { get; set; }

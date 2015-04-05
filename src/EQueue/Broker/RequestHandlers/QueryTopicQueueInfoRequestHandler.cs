@@ -20,11 +20,11 @@ namespace EQueue.Broker.Processors
             _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var queryTopicConsumeInfoRequest = _binarySerializer.Deserialize<QueryTopicQueueInfoRequest>(request.Body);
+            var request = _binarySerializer.Deserialize<QueryTopicQueueInfoRequest>(remotingRequest.Body);
             var topicQueueInfoList = new List<TopicQueueInfo>();
-            var topicList = !string.IsNullOrEmpty(queryTopicConsumeInfoRequest.Topic) ? new List<string> { queryTopicConsumeInfoRequest.Topic } : _messageService.GetAllTopics().ToList();
+            var topicList = !string.IsNullOrEmpty(request.Topic) ? new List<string> { request.Topic } : _messageService.GetAllTopics().ToList();
 
             foreach (var topic in topicList)
             {
@@ -45,7 +45,7 @@ namespace EQueue.Broker.Processors
             }
 
             var data = _binarySerializer.Serialize(topicQueueInfoList);
-            return new RemotingResponse((int)ResponseCode.Success, request.Sequence, data);
+            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, data);
         }
     }
 }

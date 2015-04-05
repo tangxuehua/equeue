@@ -1,10 +1,13 @@
 ﻿CREATE TABLE [dbo].[Message](
     [MessageOffset] [bigint] NOT NULL,
+    [MessageId] [varchar](32) NOT NULL,
     [Topic] [varchar](128) NOT NULL,
     [QueueId] [int] NOT NULL,
     [QueueOffset] [bigint] NOT NULL,
     [Code] [int] NOT NULL,
     [Body] [varbinary](max) NOT NULL,
+    [CreatedTime] [datetime] NOT NULL,
+    [ArrivedTime] [datetime] NOT NULL,
     [StoredTime] [datetime] NOT NULL,
     [RoutingKey] [varchar](128) NOT NULL,
  CONSTRAINT [PK_Message] PRIMARY KEY CLUSTERED 

@@ -20,9 +20,9 @@ namespace EQueue.Broker.Processors
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
-        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest request)
+        public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var consumerData = _binarySerializer.Deserialize<ConsumerData>(request.Body);
+            var consumerData = _binarySerializer.Deserialize<ConsumerData>(remotingRequest.Body);
             _brokerController.ConsumerManager.RegisterConsumer(
                 consumerData.GroupName,
                 new ClientChannel(consumerData.ConsumerId, context.Channel), consumerData.SubscriptionTopics, consumerData.ConsumingQueues);

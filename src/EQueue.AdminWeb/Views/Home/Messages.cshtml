@@ -29,22 +29,28 @@
                 <th width="10%" class="text-center vertical-center">
                     MessageOffset
                 </th>
-                <th width="20%" class="vertical-center">
+                <th width="15%" class="vertical-center">
                     Topic
                 </th>
-                <th width="10%" class="text-center vertical-center">
+                <th width="5%" class="text-center vertical-center">
                     QueueId
                 </th>
                 <th width="10%" class="text-center vertical-center">
                     QueueOffset
                 </th>
-                <th width="10%" class="text-center vertical-center">
+                <th width="5%" class="text-center vertical-center">
                     Code
                 </th>
-                <th width="20%" class="vertical-center">
+                <th width="10%" class="vertical-center">
                     RoutingKey
                 </th>
-                <th width="20%" class="vertical-center">
+                <th width="15%" class="vertical-center">
+                    CreatedTime
+                </th>
+                <th width="15%" class="vertical-center">
+                    ArrivedTime
+                </th>
+                <th width="15%" class="vertical-center">
                     StoredTime
                 </th>
             </tr>
@@ -70,6 +76,12 @@
                     </td>
                     <td class="vertical-center">
                         @message.RoutingKey
+                    </td>
+                    <td class="vertical-center">
+                        @message.CreatedTime
+                    </td>
+                    <td class="vertical-center">
+                        @message.ArrivedTime
                     </td>
                     <td class="vertical-center">
                         @message.StoredTime

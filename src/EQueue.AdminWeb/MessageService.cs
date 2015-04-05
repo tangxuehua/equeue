@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Protocols;
@@ -15,13 +16,26 @@ namespace EQueue.AdminWeb
 
         public MessageService(IBinarySerializer binarySerializer)
         {
-            _remotingClient = new SocketRemotingClient("AdminClient", new IPEndPoint(Settings.BrokerAddress, Settings.BrokerPort));
+            _remotingClient = new SocketRemotingClient(new IPEndPoint(Settings.BrokerAddress, Settings.BrokerPort));
             _binarySerializer = binarySerializer;
         }
 
         public void Start()
         {
-            _remotingClient.Start();
+            Task.Factory.StartNew(() => _remotingClient.Start());
+        }
+        public BrokerStatisticInfo QueryBrokerStatisticInfo()
+        {
+            var remotingRequest = new RemotingRequest((int)RequestCode.QueryBrokerStatisticInfo, new byte[0]);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code == (int)ResponseCode.Success)
+            {
+                return _binarySerializer.Deserialize<BrokerStatisticInfo>(remotingResponse.Body);
+            }
+            else
+            {
+                throw new Exception("QueryBrokerStatisticInfo failed.");
+            }
         }
         public IEnumerable<TopicQueueInfo> GetTopicQueueInfo(string topic)
         {
@@ -130,9 +144,9 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("QueryMessage has exception, request:{0}", request));
             }
         }
-        public QueueMessage GetMessageDetail(long messageOffset)
+        public QueueMessage GetMessageDetail(long? messageOffset, string messageId)
         {
-            var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageOffset));
+            var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageOffset, messageId));
             var remotingRequest = new RemotingRequest((int)RequestCode.GetMessageDetail, requestData);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
@@ -141,7 +155,7 @@ namespace EQueue.AdminWeb
             }
             else
             {
-                throw new Exception(string.Format("GetMessageDetail has exception, messageOffset:{0}", messageOffset));
+                throw new Exception(string.Format("GetMessageDetail has exception, messageOffset:{0}, messageId:{1}", messageOffset, messageId));
             }
         }
     }

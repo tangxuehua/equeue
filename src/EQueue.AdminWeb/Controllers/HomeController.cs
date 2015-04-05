@@ -14,7 +14,23 @@ namespace EQueue.AdminWeb.Controllers
             _messageService = messageService;
         }
 
-        public ActionResult Index(string topic)
+        public ActionResult Index()
+        {
+            var result = _messageService.QueryBrokerStatisticInfo();
+            return View(new BrokerStatisticInfoViewModel
+            {
+                TopicCount = result.TopicCount,
+                QueueCount = result.QueueCount,
+                ConsumerGroupCount = result.ConsumerGroupCount,
+                InMemoryQueueMessageCount = result.InMemoryQueueMessageCount,
+                UnConsumedQueueMessageCount = result.UnConsumedQueueMessageCount,
+                CurrentMessageOffset = result.CurrentMessageOffset,
+                PersistedMessageOffset = result.PersistedMessageOffset,
+                UnPersistedMessageCount = result.CurrentMessageOffset - result.PersistedMessageOffset,
+                MinMessageOffset = result.MinMessageOffset
+            });
+        }
+        public ActionResult TopicInfo(string topic)
         {
             var topicQueueInfos = _messageService.GetTopicQueueInfo(topic);
             return View(new TopicQueueViewModel
@@ -67,16 +83,17 @@ namespace EQueue.AdminWeb.Controllers
                 Messages = result.Messages
             });
         }
-        public ActionResult Message(long? searchMessageOffset)
+        public ActionResult Message(long? searchMessageOffset, string searchMessageId)
         {
-            if (searchMessageOffset == null)
+            if (searchMessageOffset == null && string.IsNullOrWhiteSpace(searchMessageId))
             {
                 return View(new MessageViewModel());
             }
-            var message = _messageService.GetMessageDetail(searchMessageOffset.Value);
-            var model = new MessageViewModel { SearchMessageOffset = searchMessageOffset.Value.ToString() };
+            var message = _messageService.GetMessageDetail(searchMessageOffset, searchMessageId);
+            var model = new MessageViewModel { SearchMessageOffset = searchMessageOffset != null ? searchMessageOffset.Value.ToString() : null, SearchMessageId = searchMessageId };
             if (message != null)
             {
+                model.MessageId = message.MessageId;
                 model.MessageOffset = message.MessageOffset.ToString();
                 model.QueueId = message.QueueId.ToString();
                 model.QueueOffset = message.QueueOffset.ToString();
@@ -84,6 +101,8 @@ namespace EQueue.AdminWeb.Controllers
                 model.Code = message.Code.ToString();
                 model.Content = Encoding.UTF8.GetString(message.Body);
                 model.Topic = message.Topic;
+                model.CreatedTime = message.CreatedTime.ToString();
+                model.ArrivedTime = message.ArrivedTime.ToString();
                 model.StoredTime = message.StoredTime.ToString();
             }
             return View(model);
