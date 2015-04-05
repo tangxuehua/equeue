@@ -27,6 +27,18 @@ namespace EQueue.Broker
         {
             return _groupQueueOffsetDict.Keys.Count;
         }
+        public void DeleteQueue(string topic, int queueId)
+        {
+            var key = string.Format("{0}-{1}", topic, queueId);
+            foreach (var groupEntry in _groupQueueOffsetDict)
+            {
+                long offset;
+                if (groupEntry.Value.TryRemove(key, out offset))
+                {
+                    _logger.DebugFormat("Deleted queue offset, topic:{0}, queueId:{1}, consumer group:{2}, consumedOffset:{3}", topic, queueId, groupEntry.Key, offset);
+                }
+            }
+        }
         public void UpdateQueueOffset(string topic, int queueId, long offset, string group)
         {
             var queueOffsetDict = _groupQueueOffsetDict.GetOrAdd(group, new ConcurrentDictionary<string, long>());
@@ -68,14 +80,6 @@ namespace EQueue.Broker
             }
 
             return minOffset;
-        }
-        public void RemoveQueueOffset(string topic, int queueId)
-        {
-            var key = string.Format("{0}-{1}", topic, queueId);
-            foreach (var groupEntry in _groupQueueOffsetDict)
-            {
-                groupEntry.Value.Remove(key);
-            }
         }
         public void RemoveQueueOffset(string consumerGroup, string topic, int queueId)
         {

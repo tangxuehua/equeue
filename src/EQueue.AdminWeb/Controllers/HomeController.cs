@@ -110,27 +110,27 @@ namespace EQueue.AdminWeb.Controllers
         public ActionResult AddQueue(string topic)
         {
             _messageService.AddQueue(topic);
-            return RedirectToAction("Index");
+            return RedirectToAction("TopicInfo");
         }
         public ActionResult RemoveQueue(string topic, int queueId)
         {
             _messageService.RemoveQueue(topic, queueId);
-            return RedirectToAction("Index");
+            return RedirectToAction("TopicInfo");
         }
         public ActionResult EnableQueue(string topic, int queueId)
         {
             _messageService.EnableQueue(topic, queueId);
-            return RedirectToAction("Index");
+            return RedirectToAction("TopicInfo");
         }
         public ActionResult DisableQueue(string topic, int queueId)
         {
             _messageService.DisableQueue(topic, queueId);
-            return RedirectToAction("Index");
+            return RedirectToAction("TopicInfo");
         }
         public ActionResult RemoveQueueOffsetInfo(string consumerGroup, string topic, int queueId)
         {
             _messageService.RemoveQueueOffsetInfo(consumerGroup, topic, queueId);
-            return RedirectToAction("Index");
+            return RedirectToAction("TopicInfo");
         }
     }
 }

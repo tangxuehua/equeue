@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
@@ -24,7 +25,7 @@ namespace EQueue.Broker.Processors
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var request = _binarySerializer.Deserialize<QueryTopicConsumeInfoRequest>(remotingRequest.Body);
-            var topicConsumeInfoList = _offsetManager.QueryTopicConsumeInfos(request.GroupName, request.Topic).ToList();
+            var topicConsumeInfoList = _offsetManager.QueryTopicConsumeInfos(request.GroupName, request.Topic).ToList().Where(x => _messageService.IsQueueExist(x.Topic, x.QueueId)).ToList();
 
             topicConsumeInfoList.Sort((x, y) =>
             {

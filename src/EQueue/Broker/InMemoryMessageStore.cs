@@ -15,7 +15,7 @@ namespace EQueue.Broker
     public class InMemoryMessageStore : IMessageStore
     {
         private readonly ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
-        private readonly ConcurrentDictionary<string, long> _queueOffsetDict = new ConcurrentDictionary<string, long>();
+        private readonly ConcurrentDictionary<string, long> _queueConsumedOffsetDict = new ConcurrentDictionary<string, long>();
         private readonly InMemoryMessageStoreSetting _setting;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
@@ -85,10 +85,17 @@ namespace EQueue.Broker
             });
             return _messageDict.Values.SingleOrDefault(predicate);
         }
+        public void DeleteQueue(string topic, int queueId)
+        {
+            var key = string.Format("{0}-{1}", topic, queueId);
+            var messages = _messageDict.Values.Where(x => x.Topic == topic && x.QueueId == queueId);
+            messages.ForEach(x => _messageDict.Remove(x.MessageOffset));
+            _queueConsumedOffsetDict.Remove(key);
+        }
         public void UpdateConsumedQueueOffset(string topic, int queueId, long queueOffset)
         {
             var key = string.Format("{0}-{1}", topic, queueId);
-            _queueOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
+            _queueConsumedOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
         }
         public IDictionary<long, long> BatchLoadQueueIndex(string topic, int queueId, long startQueueOffset)
         {
@@ -130,7 +137,7 @@ namespace EQueue.Broker
             {
                 var key = string.Format("{0}-{1}", queueMessage.Topic, queueMessage.QueueId);
                 long maxAllowToDeleteQueueOffset;
-                if (_queueOffsetDict.TryGetValue(key, out maxAllowToDeleteQueueOffset) && queueMessage.QueueOffset <= maxAllowToDeleteQueueOffset)
+                if (_queueConsumedOffsetDict.TryGetValue(key, out maxAllowToDeleteQueueOffset) && queueMessage.QueueOffset <= maxAllowToDeleteQueueOffset)
                 {
                     _messageDict.Remove(queueMessage.MessageOffset);
                 }

@@ -144,6 +144,15 @@ namespace EQueue.Broker
             var key = string.Format("{0}-{1}", topic, queueId);
             _queueConsumedOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
         }
+        public void DeleteQueue(string topic, int queueId)
+        {
+            var key = string.Format("{0}-{1}", topic, queueId);
+            var messages = _messageDict.Values.Where(x => x.Topic == topic && x.QueueId == queueId);
+            messages.ForEach(x => _messageDict.Remove(x.MessageOffset));
+            _queueConsumedOffsetDict.Remove(key);
+            _queueMaxPersistedOffsetDict.Remove(key);
+            DeleteMessages(topic, queueId, long.MaxValue);
+        }
         public IDictionary<long, long> BatchLoadQueueIndex(string topic, int queueId, long startQueueOffset)
         {
             using (var connection = new SqlConnection(_setting.ConnectionString))

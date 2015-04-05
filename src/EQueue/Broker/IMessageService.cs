@@ -11,6 +11,7 @@ namespace EQueue.Broker
         BrokerStatisticInfo GetBrokerStatisticInfo();
         MessageStoreResult StoreMessage(Message message, int queueId, string routingKey);
         IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize);
+        bool IsQueueExist(string topic, int queueId);
         long GetQueueCurrentOffset(string topic, int queueId);
         IEnumerable<string> GetAllTopics();
         IEnumerable<int> GetQueueIdsForProducer(string topic);

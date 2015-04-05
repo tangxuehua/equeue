@@ -50,6 +50,10 @@ namespace EQueue.Broker.Client
                 consumerGroup.RemoveConsumer(consumerRemotingAddress);
             }
         }
+        public bool IsConsumerExistForQueue(string topic, int queueId)
+        {
+            return _consumerGroupDict.Values.Any(x => x.IsConsumerExistForQueue(topic, queueId));
+        }
         public IEnumerable<ConsumerGroup> GetAllConsumerGroups()
         {
             return _consumerGroupDict.Values.ToList();

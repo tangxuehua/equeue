@@ -120,7 +120,7 @@ namespace EQueue.Broker
                             }
                             else
                             {
-                                _logger.ErrorFormat("Cannot find the messageOffset by queueOffset, please check if the message exist. topic:{0}, queueId:{1}, queueOffset:{0}", topic, queueId, currentQueueOffset);
+                                _logger.ErrorFormat("Cannot find the messageOffset by queueOffset, please check if the message exist. topic:{0}, queueId:{1}, queueOffset:{2}", topic, queueId, currentQueueOffset);
                             }
                         }
                     }
@@ -128,6 +128,11 @@ namespace EQueue.Broker
                 return messages;
             }
             return new QueueMessage[0];
+        }
+        public bool IsQueueExist(string topic, int queueId)
+        {
+            IList<Queue> queues;
+            return _topicQueueDict.TryGetValue(topic, out queues) && queues.Any(x => x.QueueId == queueId);
         }
         public long GetQueueCurrentOffset(string topic, int queueId)
         {
@@ -201,9 +206,24 @@ namespace EQueue.Broker
             var queue = queues.SingleOrDefault(x => x.QueueId == queueId);
             if (queue != null)
             {
+                //检查队列状态是否是已禁用
+                if (queue.Status != QueueStatus.Disabled)
+                {
+                    throw new Exception("Queue status is not disabled, cannot be deleted.");
+                }
+                //检查是否有在线的消费者
+                if (_brokerController.ConsumerManager.IsConsumerExistForQueue(topic, queueId))
+                {
+                    throw new Exception("Queue is not allowed to delete as there are consumers online of this queue.");
+                }
+                //检查是否有未消费完的消息
+                if (queue.GetMessageRealCount() > 0L)
+                {
+                    throw new Exception("Queue is not allowed to delete as there are messages exist in this queue.");
+                }
                 queues.Remove(queue);
-                _offsetManager.RemoveQueueOffset(topic, queueId);
-                _messageStore.UpdateConsumedQueueOffset(topic, queueId, long.MaxValue);
+                _messageStore.DeleteQueue(topic, queueId);
+                _offsetManager.DeleteQueue(topic, queueId);
             }
         }
         public void EnableQueue(string topic, int queueId)

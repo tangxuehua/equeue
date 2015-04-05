@@ -12,6 +12,7 @@ namespace EQueue.Broker
         void Recover(Action<long, string, int, long> messageRecoveredCallback);
         void Start();
         void Shutdown();
+        void DeleteQueue(string topic, int queueId);
         QueueMessage StoreMessage(int queueId, long queueOffset, Message message, string routingKey);
         QueueMessage GetMessage(long offset);
         QueueMessage FindMessage(long? offset, string messageId);
