@@ -129,7 +129,7 @@ namespace EQueue.Broker.Client
             {
                 var channelRemotingAddress = entry.Key;
                 var clientChannel = entry.Value;
-                if (clientChannel.IsTimeout(_consumerManager.BrokerController.Setting.ConsumerExpiredTimeout))
+                if (clientChannel.IsTimeout(BrokerController.Instance.Setting.ConsumerExpiredTimeout))
                 {
                     RemoveConsumer(channelRemotingAddress);
                 }

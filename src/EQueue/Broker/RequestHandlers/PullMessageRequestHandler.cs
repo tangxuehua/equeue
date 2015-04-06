@@ -6,6 +6,7 @@ using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Serializing;
+using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Protocols;
 
@@ -13,17 +14,21 @@ namespace EQueue.Broker.Processors
 {
     public class PullMessageRequestHandler : IRequestHandler
     {
-        private BrokerController _brokerController;
+        private ConsumerManager _consumerManager;
+        private SuspendedPullRequestManager _suspendedPullRequestManager;
         private IMessageService _messageService;
+        private IQueueService _queueService;
         private IOffsetManager _offsetManager;
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
         private byte[] _emptyResponseData;
 
-        public PullMessageRequestHandler(BrokerController brokerController)
+        public PullMessageRequestHandler()
         {
-            _brokerController = brokerController;
+            _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
+            _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
             _messageService = ObjectContainer.Resolve<IMessageService>();
+            _queueService = ObjectContainer.Resolve<IQueueService>();
             _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
@@ -65,13 +70,13 @@ namespace EQueue.Broker.Processors
                     ExecutePullRequest,
                     ExecutePullRequest,
                     ExecuteReplacedPullRequest);
-                _brokerController.SuspendedPullRequestManager.SuspendPullRequest(pullRequest);
+                _suspendedPullRequestManager.SuspendPullRequest(pullRequest);
                 return null;
             }
 
             //获取队列的第一个消息以及最后一个消息的offset
-            var queueMinOffset = _messageService.GetQueueMinOffset(topic, queueId);
-            var queueCurrentOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
+            var queueMinOffset = _queueService.GetQueueMinOffset(topic, queueId);
+            var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
 
             //如果pullOffset比队列的第一个消息的offset还要小或者比队列的最后一个消息的offset+1还要大，则将pullOffset重置为第一个消息的offset
             if (pullOffset < queueMinOffset || pullOffset > queueCurrentOffset + 1)
@@ -105,8 +110,8 @@ namespace EQueue.Broker.Processors
             }
 
             //获取队列的第一个消息以及最后一个消息的offset
-            var queueMinOffset = _messageService.GetQueueMinOffset(topic, queueId);
-            var queueCurrentOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
+            var queueMinOffset = _queueService.GetQueueMinOffset(topic, queueId);
+            var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
 
             //如果pullOffset比队列的第一个消息的offset还要小或者比队列的最后一个消息的offset+1还要大，则将pullOffset重置为第一个消息的offset
             if (pullOffset < queueMinOffset || pullOffset > queueCurrentOffset + 1)
@@ -127,7 +132,7 @@ namespace EQueue.Broker.Processors
         }
         private bool IsPullRequestValid(PullRequest pullRequest)
         {
-            var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
+            var consumerGroup = _consumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
             return consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Channel.RemoteEndPoint.ToString());
         }
         private RemotingResponse BuildNoNewMessageResponse(long requestSequence)
@@ -160,7 +165,7 @@ namespace EQueue.Broker.Processors
 
             if (consumerFromWhere == ConsumeFromWhere.FirstOffset)
             {
-                var queueMinOffset = _messageService.GetQueueMinOffset(topic, queueId);
+                var queueMinOffset = _queueService.GetQueueMinOffset(topic, queueId);
                 if (queueMinOffset < 0)
                 {
                     queueMinOffset = 0;
@@ -169,7 +174,7 @@ namespace EQueue.Broker.Processors
             }
             else
             {
-                var queueCurrentOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
+                var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
                 if (queueCurrentOffset < 0)
                 {
                     queueCurrentOffset = 0;

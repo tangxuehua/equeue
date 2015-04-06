@@ -71,6 +71,10 @@ namespace EQueue.Clients.Producers
             var currentRoutingKey = GetStringRoutingKey(routingKey);
             var queueIds = GetTopicQueueIds(message.Topic);
             var queueId = _queueSelector.SelectQueueId(queueIds, message, currentRoutingKey);
+            if (queueId < 0)
+            {
+                throw new Exception(string.Format("No available routing queue for topic [{0}].", message.Topic));
+            }
             var remotingRequest = BuildSendMessageRequest(message, queueId, currentRoutingKey);
             var remotingResponse = await _remotingClient.InvokeAsync(remotingRequest, timeoutMilliseconds);
 

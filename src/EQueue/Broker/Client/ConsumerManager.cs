@@ -12,29 +12,30 @@ namespace EQueue.Broker.Client
         private readonly ConcurrentDictionary<string, ConsumerGroup> _consumerGroupDict = new ConcurrentDictionary<string, ConsumerGroup>();
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
-        private readonly BrokerController _brokerController;
-        private int _scanNotActiveConsumerTaskId;
+        private readonly IList<int> _taskIds;
 
-        public BrokerController BrokerController
+        public ConsumerManager()
         {
-            get { return _brokerController; }
-        }
-
-        public ConsumerManager(BrokerController brokerController)
-        {
-            _brokerController = brokerController;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+            _taskIds = new List<int>();
         }
 
         public void Start()
         {
-            Clear();
-            _scanNotActiveConsumerTaskId = _scheduleService.ScheduleTask("ConsumerManager.ScanNotActiveConsumer", ScanNotActiveConsumer, _brokerController.Setting.ScanNotActiveConsumerInterval, _brokerController.Setting.ScanNotActiveConsumerInterval);
+            _consumerGroupDict.Clear();
+            foreach (var taskId in _taskIds)
+            {
+                _scheduleService.ShutdownTask(taskId);
+            }
+            _taskIds.Add(_scheduleService.ScheduleTask("ConsumerManager.ScanNotActiveConsumer", ScanNotActiveConsumer, BrokerController.Instance.Setting.ScanNotActiveConsumerInterval, BrokerController.Instance.Setting.ScanNotActiveConsumerInterval));
         }
         public void Shutdown()
         {
-            _scheduleService.ShutdownTask(_scanNotActiveConsumerTaskId);
+            foreach (var taskId in _taskIds)
+            {
+                _scheduleService.ShutdownTask(taskId);
+            }
         }
         public void RegisterConsumer(string groupName, ClientChannel clientChannel, IEnumerable<string> subscriptionTopics, IEnumerable<string> consumingQueues)
         {
@@ -72,10 +73,6 @@ namespace EQueue.Broker.Client
             return _consumerGroupDict.Where(x => x.Key.Contains(groupName)).Select(x => x.Value);
         }
 
-        private void Clear()
-        {
-            _consumerGroupDict.Clear();
-        }
         private void ScanNotActiveConsumer()
         {
             foreach (var consumerGroup in _consumerGroupDict.Values)

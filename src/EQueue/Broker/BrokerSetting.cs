@@ -13,10 +13,10 @@ namespace EQueue.Broker
         public int RemoveExceedMaxCacheQueueIndexInterval { get; set; }
         public int CheckBlockingPullRequestMilliseconds { get; set; }
         public int NotifyMessageArrivedThreadMaxCount { get; set; }
-        public int DefaultTopicQueueCount { get; set; }
         public int ScanNotActiveConsumerInterval { get; set; }
         public int ConsumerExpiredTimeout { get; set; }
         public int QueueIndexMaxCacheSize { get; set; }
+        public int TopicMaxQueueCount { get; set; }
 
         public BrokerSetting()
         {
@@ -27,11 +27,11 @@ namespace EQueue.Broker
             RemoveConsumedMessageInterval = 1000 * 5;
             RemoveExceedMaxCacheQueueIndexInterval = 1000 * 5;
             CheckBlockingPullRequestMilliseconds = 1000;
-            NotifyMessageArrivedThreadMaxCount = 64;
-            DefaultTopicQueueCount = 4;
+            NotifyMessageArrivedThreadMaxCount = 32;
             ScanNotActiveConsumerInterval = 1000 * 5;
             ConsumerExpiredTimeout = 1000 * 60;
             QueueIndexMaxCacheSize = 500 * 10000;
+            TopicMaxQueueCount = 1024;
         }
     }
 }

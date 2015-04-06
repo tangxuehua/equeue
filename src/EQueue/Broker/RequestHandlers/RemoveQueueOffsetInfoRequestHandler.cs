@@ -19,7 +19,7 @@ namespace EQueue.Broker.Processors
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var request = _binarySerializer.Deserialize<RemoveQueueOffsetInfoRequest>(remotingRequest.Body);
-            _offsetManager.RemoveQueueOffset(request.ConsumerGroup, request.Topic, request.QueueId);
+            _offsetManager.DeleteQueueOffset(request.ConsumerGroup, request.Topic, request.QueueId);
             return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, new byte[1] { 1 });
         }
     }

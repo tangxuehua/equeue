@@ -8,19 +8,19 @@ namespace EQueue.Broker.Processors
 {
     public class GetMessageDetailRequestHandler : IRequestHandler
     {
-        private IMessageService _messageService;
-        private IBinarySerializer _binarySerializer;
+        private readonly IMessageStore _messageStore;
+        private readonly IBinarySerializer _binarySerializer;
 
         public GetMessageDetailRequestHandler()
         {
-            _messageService = ObjectContainer.Resolve<IMessageService>();
+            _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var request = _binarySerializer.Deserialize<GetMessageDetailRequest>(remotingRequest.Body);
-            var message = _messageService.GetMessageDetail(request.MessageOffset, request.MessageId);
+            var message = _messageStore.FindMessage(request.MessageOffset, request.MessageId);
             var messages = new List<QueueMessage>();
             if (message != null)
             {

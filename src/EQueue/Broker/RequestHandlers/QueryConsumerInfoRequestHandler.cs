@@ -10,17 +10,17 @@ namespace EQueue.Broker.Processors
 {
     public class QueryConsumerInfoRequestHandler : IRequestHandler
     {
-        private BrokerController _brokerController;
         private IBinarySerializer _binarySerializer;
         private IOffsetManager _offsetManager;
-        private IMessageService _messageService;
+        private ConsumerManager _consumerManager;
+        private IQueueService _queueService;
 
-        public QueryConsumerInfoRequestHandler(BrokerController brokerController)
+        public QueryConsumerInfoRequestHandler()
         {
-            _brokerController = brokerController;
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
-            _messageService = ObjectContainer.Resolve<IMessageService>();
+            _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
+            _queueService = ObjectContainer.Resolve<IQueueService>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
@@ -30,7 +30,7 @@ namespace EQueue.Broker.Processors
 
             if (!string.IsNullOrEmpty(request.GroupName))
             {
-                var consumerGroups = _brokerController.ConsumerManager.QueryConsumerGroup(request.GroupName);
+                var consumerGroups = _consumerManager.QueryConsumerGroup(request.GroupName);
                 foreach (var consumerGroup in consumerGroups)
                 {
                     foreach (var topicConsumeInfo in GetConsumerInfoForGroup(consumerGroup, request.Topic))
@@ -41,7 +41,7 @@ namespace EQueue.Broker.Processors
             }
             else
             {
-                var consumerGroups = _brokerController.ConsumerManager.GetAllConsumerGroups();
+                var consumerGroups = _consumerManager.GetAllConsumerGroups();
                 foreach (var consumerGroup in consumerGroups)
                 {
                     foreach (var topicConsumeInfo in GetConsumerInfoForGroup(consumerGroup, request.Topic))
@@ -108,7 +108,7 @@ namespace EQueue.Broker.Processors
         }
         private ConsumerInfo BuildConsumerInfo(string group, string consumerId, string topic, int queueId)
         {
-            var queueCurrentOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
+            var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
             var consumerInfo = new ConsumerInfo();
             consumerInfo.ConsumerGroup = group;
             consumerInfo.ConsumerId = consumerId;

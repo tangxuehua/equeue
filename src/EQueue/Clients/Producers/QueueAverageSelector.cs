@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using EQueue.Protocols;
 
@@ -13,7 +12,7 @@ namespace EQueue.Clients.Producers
         {
             if (availableQueueIds.Count == 0)
             {
-                throw new Exception(string.Format("No available queue for topic [{0}].", message.Topic));
+                return -1;
             }
             return availableQueueIds[(int)(Interlocked.Increment(ref _index) % availableQueueIds.Count)];
         }

@@ -1,8 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
-using ECommon.Extensions;
-using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
@@ -14,19 +12,6 @@ namespace EQueue.Broker
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
         public long CurrentOffset { get { return _currentOffset; } }
-        public long GetMessageCount()
-        {
-            return _queueItemDict.Count;
-        }
-        public long GetMessageRealCount()
-        {
-            var minOffset = GetMinQueueOffset();
-            if (minOffset == null)
-            {
-                return 0L;
-            }
-            return _currentOffset - minOffset.Value + 1;
-        }
         public QueueStatus Status { get; private set; }
 
         public Queue(string topic, int queueId)
@@ -36,6 +21,19 @@ namespace EQueue.Broker
             Status = QueueStatus.Normal;
         }
 
+        public long GetMessageCount()
+        {
+            return _queueItemDict.Count;
+        }
+        public long GetMessageRealCount()
+        {
+            var minOffset = GetMinQueueOffset();
+            if (minOffset == -1L)
+            {
+                return 0L;
+            }
+            return _currentOffset - minOffset + 1;
+        }
         public void Enable()
         {
             Status = QueueStatus.Normal;
@@ -63,16 +61,16 @@ namespace EQueue.Broker
         {
             _queueItemDict[queueOffset] = messageOffset;
         }
-        public long? GetMinQueueOffset()
+        public long GetMinQueueOffset()
         {
-            long? minOffset = null;
+            long minOffset = -1;
             foreach (var key in _queueItemDict.Keys)
             {
-                if (minOffset == null)
+                if (minOffset == -1)
                 {
                     minOffset = key;
                 }
-                else if (key < minOffset.Value)
+                else if (key < minOffset)
                 {
                     minOffset = key;
                 }

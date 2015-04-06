@@ -16,32 +16,18 @@ namespace EQueue.Broker.LongPolling
         private BlockingCollection<NotifyItem> _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
         private readonly ConcurrentDictionary<string, PullRequest> _queueRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly IScheduleService _scheduleService;
-        private readonly IMessageService _messageService;
-        private readonly BrokerController _brokerController;
+        private readonly IQueueService _queueService;
         private readonly ILogger _logger;
-        private readonly TaskFactory _taskFactory;
+        private TaskFactory _taskFactory;
         private Worker _notifyMessageArrivedWorker;
         private int _checkBlockingPullRequestTaskId;
 
-        public SuspendedPullRequestManager(BrokerController brokerController)
+        public SuspendedPullRequestManager()
         {
-            _brokerController = brokerController;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _messageService = ObjectContainer.Resolve<IMessageService>();
+            _queueService = ObjectContainer.Resolve<IQueueService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(brokerController.Setting.NotifyMessageArrivedThreadMaxCount));
-
-            if (_brokerController.Setting.NotifyWhenMessageArrived)
-            {
-                _notifyMessageArrivedWorker = new Worker("SuspendedPullRequestManager.NotifyMessageArrived", () =>
-                {
-                    var notifyItem = _notifyQueue.Take();
-                    if (notifyItem == null) return;
-                    NotifyMessageArrived(notifyItem.Topic, notifyItem.QueueId, notifyItem.QueueOffset);
-                });
-            }
         }
-
         public void SuspendPullRequest(PullRequest pullRequest)
         {
             var pullMessageRequest = pullRequest.PullMessageRequest;
@@ -86,7 +72,7 @@ namespace EQueue.Broker.LongPolling
         }
         public void NotifyNewMessage(string topic, int queueId, long queueOffset)
         {
-            if (_brokerController.Setting.NotifyWhenMessageArrived)
+            if (BrokerController.Instance.Setting.NotifyWhenMessageArrived)
             {
                 _notifyQueue.Add(new NotifyItem { Topic = topic, QueueId = queueId, QueueOffset = queueOffset });
             }
@@ -94,7 +80,21 @@ namespace EQueue.Broker.LongPolling
 
         public void Start()
         {
-            Clear();
+            _queueRequestDict.Clear();
+            StopCheckBlockingPullRequestTask();
+            StopNotifyMessageArrivedWorker();
+
+            _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
+            _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(BrokerController.Instance.Setting.NotifyMessageArrivedThreadMaxCount));
+            if (BrokerController.Instance.Setting.NotifyWhenMessageArrived)
+            {
+                _notifyMessageArrivedWorker = new Worker("SuspendedPullRequestManager.NotifyMessageArrived", () =>
+                {
+                    var notifyItem = _notifyQueue.Take();
+                    if (notifyItem == null) return;
+                    NotifyMessageArrived(notifyItem.Topic, notifyItem.QueueId, notifyItem.QueueOffset);
+                });
+            }
             StartCheckBlockingPullRequestTask();
             StartNotifyMessageArrivedWorker();
         }
@@ -110,7 +110,7 @@ namespace EQueue.Broker.LongPolling
             {
                 if (_checkBlockingPullRequestTaskId == 0)
                 {
-                    _checkBlockingPullRequestTaskId = _scheduleService.ScheduleTask("SuspendedPullRequestManager.CheckBlockingPullRequest", CheckBlockingPullRequest, _brokerController.Setting.CheckBlockingPullRequestMilliseconds, _brokerController.Setting.CheckBlockingPullRequestMilliseconds);
+                    _checkBlockingPullRequestTaskId = _scheduleService.ScheduleTask("SuspendedPullRequestManager.CheckBlockingPullRequest", CheckBlockingPullRequest, BrokerController.Instance.Setting.CheckBlockingPullRequestMilliseconds, BrokerController.Instance.Setting.CheckBlockingPullRequestMilliseconds);
                 }
             }
         }
@@ -137,7 +137,7 @@ namespace EQueue.Broker.LongPolling
             if (_notifyMessageArrivedWorker != null)
             {
                 _notifyMessageArrivedWorker.Stop();
-                if (_notifyQueue.Count == 0)
+                if (_notifyQueue != null && _notifyQueue.Count == 0)
                 {
                     _notifyQueue.Add(null);
                 }
@@ -150,13 +150,13 @@ namespace EQueue.Broker.LongPolling
                 var items = entry.Key.Split(new string[] { Separator }, StringSplitOptions.None);
                 var topic = items[0];
                 var queueId = int.Parse(items[1]);
-                var queueOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
+                var queueOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
                 NotifyMessageArrived(topic, queueId, queueOffset);
             }
         }
         private void CheckNewMessageExist(string key, string topic, int queueId, long queueOffset)
         {
-            var currentQueueOffset = _messageService.GetQueueCurrentOffset(topic, queueId);
+            var currentQueueOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
             if (currentQueueOffset >= queueOffset)
             {
                 PullRequest currentRequest;
@@ -241,11 +241,6 @@ namespace EQueue.Broker.LongPolling
             builder.Append(Separator);
             builder.Append(group);
             return builder.ToString();
-        }
-        private void Clear()
-        {
-            _queueRequestDict.Clear();
-            _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
         }
 
         class NotifyItem

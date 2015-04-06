@@ -9,13 +9,13 @@ namespace EQueue.Broker.Processors
 {
     public class ConsumerHeartbeatRequestHandler : IRequestHandler
     {
-        private BrokerController _brokerController;
+        private ConsumerManager _consumerManager;
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
 
         public ConsumerHeartbeatRequestHandler(BrokerController brokerController)
         {
-            _brokerController = brokerController;
+            _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
@@ -23,9 +23,7 @@ namespace EQueue.Broker.Processors
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var consumerData = _binarySerializer.Deserialize<ConsumerData>(remotingRequest.Body);
-            _brokerController.ConsumerManager.RegisterConsumer(
-                consumerData.GroupName,
-                new ClientChannel(consumerData.ConsumerId, context.Channel), consumerData.SubscriptionTopics, consumerData.ConsumingQueues);
+            _consumerManager.RegisterConsumer(consumerData.GroupName, new ClientChannel(consumerData.ConsumerId, context.Channel), consumerData.SubscriptionTopics, consumerData.ConsumingQueues);
             return null;
         }
     }

@@ -39,14 +39,11 @@ namespace EQueue.Broker
             _deleteOldVersionQueueOffsetSQLFormat = "delete from [" + _setting.QueueOffsetTable + "] where Version = {0}";
         }
 
-        public void Recover()
+        public void Start()
         {
             _logger.Info("Start to recover queue offset from db.");
             Clear();
             RecoverQueueOffset();
-        }
-        public void Start()
-        {
             _persistQueueOffsetTaskId = _scheduleService.ScheduleTask("SqlServerOffsetManager.TryPersistQueueOffset", TryPersistQueueOffset, _setting.PersistQueueOffsetInterval, _setting.PersistQueueOffsetInterval);
         }
         public void Shutdown()
@@ -56,28 +53,7 @@ namespace EQueue.Broker
 
         public int GetConsumerGroupCount()
         {
-            return _groupQueueOffsetDict.Keys.Count;
-        }
-        public void DeleteQueue(string topic, int queueId)
-        {
-            var key = string.Format("{0}-{1}", topic, queueId);
-            foreach (var groupEntry in _groupQueueOffsetDict)
-            {
-                long offset;
-                if (groupEntry.Value.TryRemove(key, out offset))
-                {
-                    _logger.DebugFormat("Deleted queue offset, topic:{0}, queueId:{1}, consumer group:{2}, consumedOffset:{3}", topic, queueId, groupEntry.Key, offset);
-                }
-            }
-            Interlocked.Increment(ref _lastUpdateVersion);
-            TryPersistQueueOffset();
-        }
-        public void UpdateQueueOffset(string topic, int queueId, long offset, string group)
-        {
-            if (UpdateQueueOffsetInternal(topic, queueId, offset, group))
-            {
-                Interlocked.Increment(ref _lastUpdateVersion);
-            }
+            return _groupQueueOffsetDict.Count;
         }
         public long GetQueueOffset(string topic, int queueId, string group)
         {
@@ -115,7 +91,28 @@ namespace EQueue.Broker
 
             return minOffset;
         }
-        public void RemoveQueueOffset(string consumerGroup, string topic, int queueId)
+        public void UpdateQueueOffset(string topic, int queueId, long offset, string group)
+        {
+            if (UpdateQueueOffsetInternal(topic, queueId, offset, group))
+            {
+                Interlocked.Increment(ref _lastUpdateVersion);
+            }
+        }
+        public void DeleteQueueOffset(string topic, int queueId)
+        {
+            var key = string.Format("{0}-{1}", topic, queueId);
+            foreach (var groupEntry in _groupQueueOffsetDict)
+            {
+                long offset;
+                if (groupEntry.Value.TryRemove(key, out offset))
+                {
+                    _logger.DebugFormat("Deleted queue offset, topic:{0}, queueId:{1}, consumer group:{2}, consumedOffset:{3}", topic, queueId, groupEntry.Key, offset);
+                }
+            }
+            Interlocked.Increment(ref _lastUpdateVersion);
+            TryPersistQueueOffset();
+        }
+        public void DeleteQueueOffset(string consumerGroup, string topic, int queueId)
         {
             ConcurrentDictionary<string, long> queueOffsetDict;
             if (_groupQueueOffsetDict.TryGetValue(consumerGroup, out queueOffsetDict))
@@ -124,9 +121,11 @@ namespace EQueue.Broker
                 long offset;
                 if (queueOffsetDict.TryRemove(key, out offset))
                 {
-                    _logger.DebugFormat("Remove queue offset success, topic:{0}, queueId:{1}, consumer group:{2}", topic, queueId, consumerGroup);
+                    _logger.DebugFormat("Deleted queue offset, topic:{0}, queueId:{1}, consumer group:{2}, consumedOffset:{3}", topic, queueId, consumerGroup, offset);
                 }
             }
+            Interlocked.Increment(ref _lastUpdateVersion);
+            TryPersistQueueOffset();
         }
         public IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic)
         {

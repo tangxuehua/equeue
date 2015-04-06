@@ -30,6 +30,11 @@ namespace QuickStart.ProducerClient
             var message = new byte[messageSize];
             var sendCallback = new Action<Task<SendResult>>(sendTask =>
             {
+                if (sendTask.Exception != null)
+                {
+                    _logger.ErrorFormat("Sent message failed, errorMessage: {0}", sendTask.Exception.GetBaseException().Message);
+                    return;
+                }
                 if (sendTask.Result.SendStatus == SendStatus.Success)
                 {
                     var finishedCount = Interlocked.Increment(ref finished);

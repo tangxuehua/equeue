@@ -35,6 +35,7 @@ namespace EQueue.Broker
             get { return false; }
         }
 
+        public InMemoryMessageStore() : this(new InMemoryMessageStoreSetting()) { }
         public InMemoryMessageStore(InMemoryMessageStoreSetting setting)
         {
             _setting = setting;
@@ -85,7 +86,7 @@ namespace EQueue.Broker
             });
             return _messageDict.Values.SingleOrDefault(predicate);
         }
-        public void DeleteQueue(string topic, int queueId)
+        public void DeleteQueueMessage(string topic, int queueId)
         {
             var key = string.Format("{0}-{1}", topic, queueId);
             var messages = _messageDict.Values.Where(x => x.Topic == topic && x.QueueId == queueId);

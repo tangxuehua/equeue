@@ -27,7 +27,7 @@ namespace EQueue.Broker
         {
             return _groupQueueOffsetDict.Keys.Count;
         }
-        public void DeleteQueue(string topic, int queueId)
+        public void DeleteQueueOffset(string topic, int queueId)
         {
             var key = string.Format("{0}-{1}", topic, queueId);
             foreach (var groupEntry in _groupQueueOffsetDict)
@@ -81,7 +81,7 @@ namespace EQueue.Broker
 
             return minOffset;
         }
-        public void RemoveQueueOffset(string consumerGroup, string topic, int queueId)
+        public void DeleteQueueOffset(string consumerGroup, string topic, int queueId)
         {
             ConcurrentDictionary<string, long> queueOffsetDict;
             if (_groupQueueOffsetDict.TryGetValue(consumerGroup, out queueOffsetDict))

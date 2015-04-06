@@ -26,12 +26,9 @@ namespace EQueue.Broker
         private readonly SqlServerMessageStoreSetting _setting;
         private long _currentMessageOffset = -1;
         private long _persistedMessageOffset = -1;
-        private int _persistMessageTaskId;
-        private int _removeExceedMaxCacheMessageFromMemoryTaskId;
-        private int _removeConsumedMessageFromMemoryTaskId;
-        private int _deleteMessageTaskId;
         private int _isBatchPersistingMessages;
         private int _isRemovingConsumedMessages;
+        private readonly IList<int> _taskIds;
 
         private readonly string _deleteMessageSQLFormat;
         private readonly string _selectAllMessageSQL;
@@ -64,6 +61,7 @@ namespace EQueue.Broker
             _selectAllMessageSQL = "select * from [" + _setting.MessageTable + "] order by MessageOffset asc";
             _batchLoadMessageSQLFormat = "select * from [" + _setting.MessageTable + "] where MessageOffset >= {0} and MessageOffset < {1}";
             _batchLoadQueueIndexSQLFormat = "select QueueOffset,MessageOffset from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset >= {2} and QueueOffset < {3}";
+            _taskIds = new List<int>();
         }
 
         public void Recover(Action<long, string, int, long> messageRecoveredCallback)
@@ -74,17 +72,17 @@ namespace EQueue.Broker
         }
         public void Start()
         {
-            _persistMessageTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.TryPersistMessages", TryPersistMessages, _setting.PersistMessageInterval, _setting.PersistMessageInterval);
-            _removeExceedMaxCacheMessageFromMemoryTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.RemoveExceedMaxCacheMessageFromMemory", RemoveExceedMaxCacheMessageFromMemory, _setting.RemoveExceedMaxCacheMessageFromMemoryInterval, _setting.RemoveExceedMaxCacheMessageFromMemoryInterval);
-            _removeConsumedMessageFromMemoryTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.RemoveConsumedMessageFromMemory", RemoveConsumedMessageFromMemory, _setting.RemoveConsumedMessageFromMemoryInterval, _setting.RemoveConsumedMessageFromMemoryInterval);
-            _deleteMessageTaskId = _scheduleService.ScheduleTask("SqlServerMessageStore.DeleteMessages", DeleteMessages, _setting.DeleteMessageInterval, _setting.DeleteMessageInterval);
+            _taskIds.Add(_scheduleService.ScheduleTask("SqlServerMessageStore.TryPersistMessages", TryPersistMessages, _setting.PersistMessageInterval, _setting.PersistMessageInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask("SqlServerMessageStore.RemoveExceedMaxCacheMessageFromMemory", RemoveExceedMaxCacheMessageFromMemory, _setting.RemoveExceedMaxCacheMessageFromMemoryInterval, _setting.RemoveExceedMaxCacheMessageFromMemoryInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask("SqlServerMessageStore.RemoveConsumedMessageFromMemory", RemoveConsumedMessageFromMemory, _setting.RemoveConsumedMessageFromMemoryInterval, _setting.RemoveConsumedMessageFromMemoryInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask("SqlServerMessageStore.DeleteMessages", DeleteMessages, _setting.DeleteMessageInterval, _setting.DeleteMessageInterval));
         }
         public void Shutdown()
         {
-            _scheduleService.ShutdownTask(_persistMessageTaskId);
-            _scheduleService.ShutdownTask(_removeExceedMaxCacheMessageFromMemoryTaskId);
-            _scheduleService.ShutdownTask(_removeConsumedMessageFromMemoryTaskId);
-            _scheduleService.ShutdownTask(_deleteMessageTaskId);
+            foreach (var taskId in _taskIds)
+            {
+                _scheduleService.ShutdownTask(taskId);
+            }
         }
         public QueueMessage StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
         {
@@ -144,7 +142,7 @@ namespace EQueue.Broker
             var key = string.Format("{0}-{1}", topic, queueId);
             _queueConsumedOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
         }
-        public void DeleteQueue(string topic, int queueId)
+        public void DeleteQueueMessage(string topic, int queueId)
         {
             var key = string.Format("{0}-{1}", topic, queueId);
             var messages = _messageDict.Values.Where(x => x.Topic == topic && x.QueueId == queueId);

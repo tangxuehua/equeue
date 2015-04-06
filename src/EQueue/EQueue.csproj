@@ -54,7 +54,13 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Broker\SqlServerQueueStoreSetting.cs" />
+    <Compile Include="Broker\SqlServerQueueStore.cs" />
+    <Compile Include="Broker\InMemoryQueueStore.cs" />
+    <Compile Include="Broker\IQueueStore.cs" />
+    <Compile Include="Broker\IQueueService.cs" />
     <Compile Include="Broker\InMemoryMessageStoreSetting.cs" />
+    <Compile Include="Broker\QueueService.cs" />
     <Compile Include="Broker\RequestHandlers\DisableQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\EnableQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetMessageDetailRequestHandler.cs" />

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq;
 using ECommon.Autofac;
+using ECommon.Components;
 using ECommon.Configurations;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
@@ -13,13 +15,22 @@ namespace QuickStart.BrokerServer
         static void Main(string[] args)
         {
             InitializeEQueue();
-            new BrokerController().Start();
+            BrokerController.Create().Start();
+            var queueService = ObjectContainer.Resolve<IQueueService>();
+            if (!queueService.GetAllTopics().Contains("SampleTopic"))
+            {
+                queueService.CreateTopic("SampleTopic", 4);
+            }
             Console.ReadLine();
         }
 
         static void InitializeEQueue()
         {
             var connectionString = @"Data Source=(localdb)\Projects;Integrated Security=true;Initial Catalog=EQueue;Connect Timeout=30;Min Pool Size=10;Max Pool Size=100";
+            var queueStoreSetting = new SqlServerQueueStoreSetting
+            {
+                ConnectionString = connectionString
+            };
             var messageStoreSetting = new SqlServerMessageStoreSetting
             {
                 ConnectionString = connectionString,
@@ -38,6 +49,7 @@ namespace QuickStart.BrokerServer
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterEQueueComponents()
+                .UseSqlServerQueueStore(queueStoreSetting)
                 .UseSqlServerMessageStore(messageStoreSetting)
                 .UseSqlServerOffsetManager(offsetManagerSetting);
         }

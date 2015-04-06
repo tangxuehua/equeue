@@ -5,27 +5,28 @@ using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Serializing;
+using EQueue.Broker.Client;
 using EQueue.Protocols;
 
 namespace EQueue.Broker.Processors
 {
     public class QueryConsumerRequestHandler : IRequestHandler
     {
-        private BrokerController _brokerController;
+        private ConsumerManager _consumerManager;
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
 
-        public QueryConsumerRequestHandler(BrokerController brokerController)
+        public QueryConsumerRequestHandler()
         {
-            _brokerController = brokerController;
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
+            _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var request = _binarySerializer.Deserialize<QueryConsumerRequest>(remotingRequest.Body);
-            var consumerGroup = _brokerController.ConsumerManager.GetConsumerGroup(request.GroupName);
+            var consumerGroup = _consumerManager.GetConsumerGroup(request.GroupName);
             var consumerIdList = new List<string>();
             if (consumerGroup != null)
             {
