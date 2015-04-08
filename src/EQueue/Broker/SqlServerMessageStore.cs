@@ -3,12 +3,16 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using ECommon.Components;
+using ECommon.Dapper;
 using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
+using ECommon.Serializing;
 using ECommon.Utilities;
 using EQueue.Protocols;
 
@@ -16,13 +20,17 @@ namespace EQueue.Broker
 {
     public class SqlServerMessageStore : IMessageStore
     {
+        private const string MessageFileName = "Messages.txt";
         private readonly byte[] EmptyBody = new byte[0];
+        private readonly object _syncObj = new object();
         private readonly ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
         private readonly ConcurrentDictionary<string, long> _queueConsumedOffsetDict = new ConcurrentDictionary<string, long>();
         private readonly ConcurrentDictionary<string, long> _queueMaxPersistedOffsetDict = new ConcurrentDictionary<string, long>();
         private readonly DataTable _messageDataTable;
+        private readonly IJsonSerializer _jsonSerializer;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
+        private readonly ILogger _messageLogger;
         private readonly SqlServerMessageStoreSetting _setting;
         private long _currentMessageOffset = -1;
         private long _persistedMessageOffset = -1;
@@ -54,8 +62,10 @@ namespace EQueue.Broker
         public SqlServerMessageStore(SqlServerMessageStoreSetting setting)
         {
             _setting = setting;
+            _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+            _messageLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("MessageLogger");
             _messageDataTable = BuildMessageDataTable();
             _deleteMessageSQLFormat = "delete from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset < {2}";
             _selectAllMessageSQL = "select * from [" + _setting.MessageTable + "] order by MessageOffset asc";
@@ -68,7 +78,8 @@ namespace EQueue.Broker
         {
             _logger.Info("Start to recover messages from db.");
             Clear();
-            RecoverAllMessages(messageRecoveredCallback);
+            RecoverAllMessagesFromDB(messageRecoveredCallback);
+            RecoverAllMessagesFromMessageLogs(messageRecoveredCallback);
         }
         public void Start()
         {
@@ -86,11 +97,15 @@ namespace EQueue.Broker
         }
         public QueueMessage StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
         {
-            var messageId = ObjectId.GenerateNewStringId();
-            var nextOffset = GetNextOffset();
-            var queueMessage = new QueueMessage(messageId, message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, message.CreatedTime, DateTime.Now, DateTime.Now, routingKey);
-            _messageDict[nextOffset] = queueMessage;
-            return queueMessage;
+            lock (_syncObj)
+            {
+                var messageId = ObjectId.GenerateNewStringId();
+                var nextOffset = GetNextOffset();
+                var queueMessage = new QueueMessage(messageId, message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, message.CreatedTime, DateTime.Now, DateTime.Now, routingKey);
+                _messageDict[nextOffset] = queueMessage;
+                WriteMessageLog(queueMessage);
+                return queueMessage;
+            }
         }
         public QueueMessage GetMessage(long offset)
         {
@@ -325,35 +340,186 @@ namespace EQueue.Broker
                 }
             }
         }
-        private void RecoverAllMessages(Action<long, string, int, long> messageRecoveredCallback)
+        private void RecoverAllMessagesFromDB(Action<long, string, int, long> messageRecoveredCallback)
         {
             using (var connection = new SqlConnection(_setting.ConnectionString))
             {
                 connection.Open();
                 using (var command = new SqlCommand(_selectAllMessageSQL, connection))
                 {
-                    var maxMessageOffset = -1L;
-                    var count = 0;
+                    var totalRecoveredMessageCount = 0L;
                     var reader = command.ExecuteReader();
                     while (reader.Read())
                     {
                         var queueMessage = PopulateMessageFromReader(reader, true);
-                        if (count < _setting.MessageMaxCacheSize)
-                        {
-                            _messageDict[queueMessage.MessageOffset] = queueMessage;
-                        }
+                        RecoverMessageToMemory(queueMessage);
                         messageRecoveredCallback(queueMessage.MessageOffset, queueMessage.Topic, queueMessage.QueueId, queueMessage.QueueOffset);
-                        _queueMaxPersistedOffsetDict[string.Format("{0}-{1}", queueMessage.Topic, queueMessage.QueueId)] = queueMessage.QueueOffset;
-                        maxMessageOffset = queueMessage.MessageOffset;
-                        count++;
+                        totalRecoveredMessageCount++;
                     }
-                    if (maxMessageOffset >= 0)
-                    {
-                        _currentMessageOffset = maxMessageOffset;
-                        _persistedMessageOffset = maxMessageOffset;
-                    }
-                    _logger.InfoFormat("{0} messages recovered, current message offset:{1}", count, _currentMessageOffset);
+                    _logger.InfoFormat("{0} messages recovered, current messageOffset:{1}", totalRecoveredMessageCount, _currentMessageOffset);
                 }
+            }
+        }
+        private void RecoverAllMessagesFromMessageLogs(Action<long, string, int, long> messageRecoveredCallback)
+        {
+            var beginMessageOffset = _currentMessageOffset + 1;
+            var messageFiles = GetRecoverMessageFiles(beginMessageOffset);
+            if (messageFiles == null || messageFiles.IsEmpty())
+            {
+                _logger.Info("No messages need to recover from message log file.");
+                return;
+            }
+
+            var totalRecoveredMessageCount = 0L;
+            foreach (var messageFile in messageFiles)
+            {
+                var queueMessages = messageFile.GetMessages(beginMessageOffset);
+                foreach (var queueMessage in queueMessages)
+                {
+                    PersistMessage(queueMessage);
+                    RecoverMessageToMemory(queueMessage);
+                    messageRecoveredCallback(queueMessage.MessageOffset, queueMessage.Topic, queueMessage.QueueId, queueMessage.QueueOffset);
+                }
+                _logger.InfoFormat("Recovered {0} messages from log file '{1}', current messageOffset: {2}", queueMessages.Count(), messageFile.FileName, _currentMessageOffset);
+                totalRecoveredMessageCount += queueMessages.Count();
+            }
+            _logger.InfoFormat("Total recovered {0} messages from log file, current messageOffset: {1}", totalRecoveredMessageCount, _currentMessageOffset);
+        }
+        private void WriteMessageLog(QueueMessage message)
+        {
+            var messageData = new MessageData
+            {
+                MessageId = message.MessageId,
+                MessageOffset = message.MessageOffset,
+                Topic = message.Topic,
+                QueueId = message.QueueId,
+                QueueOffset = message.QueueOffset,
+                RoutingKey = message.RoutingKey,
+                Code = message.Code,
+                Body = ObjectId.ToHexString(message.Body),
+                Created = message.CreatedTime,
+                Arrived = message.ArrivedTime
+            };
+            _messageLogger.Info(_jsonSerializer.Serialize(messageData));
+        }
+        private IEnumerable<MessageFile> GetRecoverMessageFiles(long beginMessageOffset)
+        {
+            if (beginMessageOffset == 0L)
+            {
+                _logger.Info("The database does not has any messages, try to recover all the messages from all the local message log files.");
+            }
+            var stack = new Stack<MessageFile>();
+            var messageFiles = new List<MessageFile>();
+            var fileName = Path.Combine(_setting.MessageLogFilePath, MessageFileName);
+            if (!new FileInfo(fileName).Exists)
+            {
+                _logger.InfoFormat("Message log file not exist, fileName: {0}", fileName);
+                return messageFiles;
+            }
+            var index = 0;
+            var message = GetFirstLineMessage(fileName);
+            var currentFileName = fileName;
+            while (message != null)
+            {
+                stack.Push(new MessageFile(_logger, _jsonSerializer, currentFileName));
+                if (message.MessageOffset <= beginMessageOffset)
+                {
+                    break;
+                }
+                index++;
+                currentFileName = fileName + "." + index;
+                if (!new FileInfo(currentFileName).Exists)
+                {
+                    if (beginMessageOffset > 0L)
+                    {
+                        _logger.ErrorFormat("Message log file not exist, messages offset from [{0}] to [{1}] will not be recovered. fileName: {2}", beginMessageOffset, message.MessageOffset - 1, currentFileName);
+                    }
+                    break;
+                }
+                message = GetFirstLineMessage(currentFileName);
+            }
+
+            while (stack.IsNotEmpty())
+            {
+                messageFiles.Add(stack.Pop());
+            }
+            return messageFiles;
+        }
+        private QueueMessage GetFirstLineMessage(string fileName)
+        {
+            using (var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                using (var reader = new StreamReader(fs, Encoding.UTF8))
+                {
+                    var line = reader.ReadLine();
+                    while (line != null && string.IsNullOrWhiteSpace(line))
+                    {
+                        line = reader.ReadLine();
+                    }
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        return ParseMessage(fileName, line);
+                    }
+                }
+            }
+            return null;
+        }
+        private QueueMessage ParseMessage(string fileName, string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return null;
+            }
+            var messageData = _jsonSerializer.Deserialize<MessageData>(line);
+            return new QueueMessage(
+                messageData.MessageId,
+                messageData.Topic,
+                messageData.Code,
+                ObjectId.ParseHexString(messageData.Body),
+                messageData.MessageOffset,
+                messageData.QueueId,
+                messageData.QueueOffset,
+                messageData.Created,
+                messageData.Arrived,
+                messageData.Arrived,
+                messageData.RoutingKey);
+        }
+        private void RecoverMessageToMemory(QueueMessage queueMessage)
+        {
+            if (_messageDict.Count < _setting.MessageMaxCacheSize)
+            {
+                _messageDict[queueMessage.MessageOffset] = queueMessage;
+            }
+            var key = string.Format("{0}-{1}", queueMessage.Topic, queueMessage.QueueId);
+            long queueOffset;
+            if (!_queueMaxPersistedOffsetDict.TryGetValue(key, out queueOffset) || queueOffset < queueMessage.QueueOffset)
+            {
+                _queueMaxPersistedOffsetDict[key] = queueMessage.QueueOffset;
+            }
+            if (_currentMessageOffset < queueMessage.MessageOffset)
+            {
+                _currentMessageOffset = queueMessage.MessageOffset;
+                _persistedMessageOffset = queueMessage.MessageOffset;
+            }
+        }
+        private void PersistMessage(QueueMessage message)
+        {
+            using (var connection = new SqlConnection(_setting.ConnectionString))
+            {
+                connection.Insert(new
+                {
+                    MessageId = message.MessageId,
+                    MessageOffset = message.MessageOffset,
+                    Topic = message.Topic,
+                    QueueId = message.QueueId,
+                    QueueOffset = message.QueueOffset,
+                    Code = message.Code,
+                    Body = message.Body,
+                    RoutingKey = message.RoutingKey,
+                    CreatedTime = message.CreatedTime,
+                    ArrivedTime = message.ArrivedTime,
+                    StoredTime = DateTime.Now
+                }, _setting.MessageTable);
             }
         }
         private void BatchLoadMessage(long startOffset, int batchSize)
@@ -580,6 +746,83 @@ namespace EQueue.Broker
                 return true;
             }
             return DateTime.Now.Hour == _setting.DeleteMessageHourOfDay;
+        }
+
+        public class MessageFile
+        {
+            private readonly FileInfo _file;
+            private readonly ILogger _logger;
+            private readonly IJsonSerializer _jsonSerializer;
+
+            public string FileName
+            {
+                get { return _file.Name; }
+            }
+
+            public MessageFile(ILogger logger, IJsonSerializer jsonSerializer, string fileName)
+            {
+                _file = new FileInfo(fileName);
+                if (!_file.Exists)
+                {
+                    throw new Exception(string.Format("Message log file '{0}' not exist.", fileName));
+                }
+                _logger = logger;
+                _jsonSerializer = jsonSerializer;
+            }
+
+            public IEnumerable<QueueMessage> GetMessages(long minMessageOffset)
+            {
+                using (var fs = new FileStream(_file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    using (var reader = new StreamReader(fs, Encoding.UTF8))
+                    {
+                        var messages = new List<QueueMessage>();
+                        string line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            var message = ParseMessage(line);
+                            if (message != null && message.MessageOffset >= minMessageOffset)
+                            {
+                                messages.Add(message);
+                            }
+                        }
+                        return messages;
+                    }
+                }
+            }
+            private QueueMessage ParseMessage(string line)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    return null;
+                }
+                var messageData = _jsonSerializer.Deserialize<MessageData>(line);
+                return new QueueMessage(
+                    messageData.MessageId,
+                    messageData.Topic,
+                    messageData.Code,
+                    ObjectId.ParseHexString(messageData.Body),
+                    messageData.MessageOffset,
+                    messageData.QueueId,
+                    messageData.QueueOffset,
+                    messageData.Created,
+                    messageData.Arrived,
+                    messageData.Arrived,
+                    messageData.RoutingKey);
+            }
+        }
+        class MessageData
+        {
+            public string MessageId { get; set; }
+            public long MessageOffset { get; set; }
+            public string Topic { get; set; }
+            public int QueueId { get; set; }
+            public long QueueOffset { get; set; }
+            public string RoutingKey { get; set; }
+            public int Code { get; set; }
+            public string Body { get; set; }
+            public DateTime Created { get; set; }
+            public DateTime Arrived { get; set; }
         }
     }
 }

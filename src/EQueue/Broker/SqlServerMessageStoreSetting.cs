@@ -15,6 +15,7 @@
         public int BatchLoadMessageSize { get; set; }
         public int BatchLoadQueueIndexSize { get; set; }
         public long MessageMaxCacheSize { get; set; }
+        public string MessageLogFilePath { get; set; }
 
         public SqlServerMessageStoreSetting()
         {
@@ -30,6 +31,7 @@
             BatchLoadMessageSize = 5000;
             BatchLoadQueueIndexSize = 5000;
             MessageMaxCacheSize = 100 * 10000;
+            MessageLogFilePath = "/home/admin/logs/equeue";
         }
     }
 }
