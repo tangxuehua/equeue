@@ -76,7 +76,6 @@ namespace EQueue.Broker
 
         public void Recover(Action<long, string, int, long> messageRecoveredCallback)
         {
-            _logger.Info("Start to recover messages from db.");
             Clear();
             RecoverAllMessagesFromDB(messageRecoveredCallback);
             RecoverAllMessagesFromMessageLogs(messageRecoveredCallback);
@@ -342,6 +341,7 @@ namespace EQueue.Broker
         }
         private void RecoverAllMessagesFromDB(Action<long, string, int, long> messageRecoveredCallback)
         {
+            _logger.Info("Start to recover messages from db.");
             using (var connection = new SqlConnection(_setting.ConnectionString))
             {
                 connection.Open();
@@ -362,6 +362,7 @@ namespace EQueue.Broker
         }
         private void RecoverAllMessagesFromMessageLogs(Action<long, string, int, long> messageRecoveredCallback)
         {
+            _logger.Info("Start to recover messages from message log file.");
             var beginMessageOffset = _currentMessageOffset + 1;
             var messageFiles = GetRecoverMessageFiles(beginMessageOffset);
             if (messageFiles == null || messageFiles.IsEmpty())
@@ -380,10 +381,10 @@ namespace EQueue.Broker
                     RecoverMessageToMemory(queueMessage);
                     messageRecoveredCallback(queueMessage.MessageOffset, queueMessage.Topic, queueMessage.QueueId, queueMessage.QueueOffset);
                 }
-                _logger.InfoFormat("Recovered {0} messages from log file '{1}', current messageOffset: {2}", queueMessages.Count(), messageFile.FileName, _currentMessageOffset);
+                _logger.InfoFormat("Recovered {0} messages from message log file '{1}' to db, current messageOffset: {2}", queueMessages.Count(), messageFile.FileName, _currentMessageOffset);
                 totalRecoveredMessageCount += queueMessages.Count();
             }
-            _logger.InfoFormat("Total recovered {0} messages from log file, current messageOffset: {1}", totalRecoveredMessageCount, _currentMessageOffset);
+            _logger.InfoFormat("Total recovered {0} messages from message log file to db, current messageOffset: {1}", totalRecoveredMessageCount, _currentMessageOffset);
         }
         private void WriteMessageLog(QueueMessage message)
         {

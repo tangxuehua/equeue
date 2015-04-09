@@ -121,21 +121,18 @@ namespace EQueue.Broker
                 {
                     throw new ArgumentException(string.Format("Initial queue count cannot bigger than {0}.", BrokerController.Instance.Setting.TopicMaxQueueCount));
                 }
-                if (_queueDict.Values.Any(x => x.Topic == topic))
-                {
-                    throw new ArgumentException("Topic '{0}' already exist.");
-                }
-
                 var queues = new List<Queue>();
                 for (var index = 0; index < initialQueueCount; index++)
                 {
                     queues.Add(new Queue(topic, index));
                 }
-                _queueStore.CreateQueues(queues);
                 foreach (var queue in queues)
                 {
-                    var key = CreateQueueKey(queue.Topic, queue.QueueId);
-                    _queueDict.TryAdd(key, queue);
+                    if (!IsQueueExist(queue.Topic, queue.QueueId))
+                    {
+                        _queueStore.CreateQueue(queue);
+                    }
+                    _queueDict.TryAdd(CreateQueueKey(queue.Topic, queue.QueueId), queue);
                 }
             }
         }
@@ -159,7 +156,7 @@ namespace EQueue.Broker
             }
             var queueId = queues.Count() == 0 ? 0 : queues.Max(x => x.QueueId) + 1;
             var queue = new Queue(topic, queueId);
-            _queueStore.CreateQueues(new Queue[] { queue });
+            _queueStore.CreateQueue(queue);
             var key = CreateQueueKey(queue.Topic, queue.QueueId);
             _queueDict.TryAdd(key, queue);
         }
@@ -226,6 +223,20 @@ namespace EQueue.Broker
         public IEnumerable<Queue> QueryQueues(string topic)
         {
             return _queueDict.Values.Where(x => x.Topic.Contains(topic));
+        }
+        public IEnumerable<Queue> GetOrCreateQueues(string topic, QueueStatus? status = null)
+        {
+            var queues = _queueDict.Values.Where(x => x.Topic == topic);
+            if (queues.IsEmpty() && BrokerController.Instance.Setting.AutoCreateTopic)
+            {
+                CreateTopic(topic, BrokerController.Instance.Setting.TopicDefaultQueueCount);
+                queues = _queueDict.Values.Where(x => x.Topic == topic);
+            }
+            if (status != null)
+            {
+                return queues.Where(x => x.Status == status.Value);
+            }
+            return queues;
         }
         public IEnumerable<Queue> FindQueues(string topic, QueueStatus? status = null)
         {

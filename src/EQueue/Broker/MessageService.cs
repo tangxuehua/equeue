@@ -35,7 +35,7 @@ namespace EQueue.Broker
             var queue = _queueService.GetQueue(message.Topic, queueId);
             if (queue == null)
             {
-                throw new Exception(string.Format("No available queue for topic: {0}, queueId: {1}", message.Topic, queueId));
+                throw new Exception(string.Format("Queue not exist, topic: {0}, queueId: {1}", message.Topic, queueId));
             }
             var queueOffset = queue.IncrementCurrentOffset();
             var queueMessage = _messageStore.StoreMessage(queueId, queueOffset, message, routingKey);

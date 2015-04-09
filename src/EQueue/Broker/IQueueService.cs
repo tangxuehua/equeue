@@ -22,5 +22,6 @@ namespace EQueue.Broker
         void CreateTopic(string topic, int initialQueueCount);
         IEnumerable<Queue> QueryQueues(string topic);
         IEnumerable<Queue> FindQueues(string topic, QueueStatus? status = null);
+        IEnumerable<Queue> GetOrCreateQueues(string topic, QueueStatus? status = null);
     }
 }

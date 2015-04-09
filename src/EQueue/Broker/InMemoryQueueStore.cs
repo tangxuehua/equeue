@@ -12,13 +12,9 @@ namespace EQueue.Broker
         {
             return _queueDict.Values;
         }
-        public void CreateQueues(IEnumerable<Queue> queues)
+        public bool IsQueueExist(string topic, int queueId)
         {
-            foreach (var queue in queues)
-            {
-                var key = CreateQueueKey(queue.Topic, queue.QueueId);
-                _queueDict.TryAdd(key, queue);
-            }
+            return _queueDict.ContainsKey(CreateQueueKey(topic, queueId));
         }
         public Queue GetQueue(string topic, int queueId)
         {
@@ -29,6 +25,10 @@ namespace EQueue.Broker
                 return queue;
             }
             return null;
+        }
+        public void CreateQueue(Queue queue)
+        {
+            _queueDict.TryAdd(CreateQueueKey(queue.Topic, queue.QueueId), queue);
         }
         public void DeleteQueue(Queue queue)
         {

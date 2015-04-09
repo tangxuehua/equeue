@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
 using ECommon.Autofac;
-using ECommon.Components;
 using ECommon.Configurations;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
@@ -16,11 +14,6 @@ namespace QuickStart.BrokerServer
         {
             InitializeEQueue();
             BrokerController.Create().Start();
-            var queueService = ObjectContainer.Resolve<IQueueService>();
-            if (!queueService.GetAllTopics().Contains("SampleTopic"))
-            {
-                queueService.CreateTopic("SampleTopic", 4);
-            }
             Console.ReadLine();
         }
 

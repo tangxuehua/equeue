@@ -49,42 +49,15 @@ namespace EQueue.Broker
                 return queues;
             }
         }
-        public void CreateQueues(IEnumerable<Queue> queues)
+        public bool IsQueueExist(string topic, int queueId)
         {
             using (var connection = GetConnection())
             {
-                connection.Open();
-                var transaction = connection.BeginTransaction();
-                try
+                return connection.GetCount(new
                 {
-                    var current = DateTime.Now;
-                    foreach (var queue in queues)
-                    {
-                        connection.Insert(new
-                        {
-                            Topic = queue.Topic,
-                            QueueId = queue.QueueId,
-                            Status = queue.Status,
-                            CreatedTime = current,
-                            UpdatedTime = current
-                        }, _setting.QueueTable, transaction);
-                    }
-                    transaction.Commit();
-                    _logger.InfoFormat("Inserted {0} queues successfully.", queues.Count());
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error("Insert queues failed.", ex);
-                    try
-                    {
-                        transaction.Rollback();
-                    }
-                    catch (Exception ex2)
-                    {
-                        _logger.Error("Rollback transaction failed.", ex2);
-                    }
-                    throw;
-                }
+                    Topic = topic,
+                    QueueId = queueId
+                }, _setting.QueueTable) > 0;
             }
         }
         public Queue GetQueue(string topic, int queueId)
@@ -111,6 +84,22 @@ namespace EQueue.Broker
                     return queue;
                 }
                 return null;
+            }
+        }
+        public void CreateQueue(Queue queue)
+        {
+            using (var connection = GetConnection())
+            {
+                var current = DateTime.Now;
+                connection.Insert(new
+                {
+                    Topic = queue.Topic,
+                    QueueId = queue.QueueId,
+                    Status = queue.Status,
+                    CreatedTime = current,
+                    UpdatedTime = current
+                }, _setting.QueueTable);
+                _logger.InfoFormat("Create queue success, topic={0}, queueId={1}", queue.Topic, queue.QueueId);
             }
         }
         public void DeleteQueue(Queue queue)

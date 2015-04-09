@@ -16,6 +16,8 @@ namespace EQueue.Broker
         public int ScanNotActiveConsumerInterval { get; set; }
         public int ConsumerExpiredTimeout { get; set; }
         public int QueueIndexMaxCacheSize { get; set; }
+        public bool AutoCreateTopic { get; set; }
+        public int TopicDefaultQueueCount { get; set; }
         public int TopicMaxQueueCount { get; set; }
 
         public BrokerSetting()
@@ -31,6 +33,8 @@ namespace EQueue.Broker
             ScanNotActiveConsumerInterval = 1000 * 5;
             ConsumerExpiredTimeout = 1000 * 60;
             QueueIndexMaxCacheSize = 500 * 10000;
+            AutoCreateTopic = true;
+            TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 1024;
         }
     }
