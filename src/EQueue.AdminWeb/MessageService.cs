@@ -38,6 +38,16 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("QueryBrokerStatisticInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
+        public void CreateTopic(string topic, int initialQueueCount)
+        {
+            var requestData = _binarySerializer.Serialize(new CreateTopicRequest(topic, initialQueueCount));
+            var remotingRequest = new RemotingRequest((int)RequestCode.CreateTopic, requestData);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code != (int)ResponseCode.Success)
+            {
+                throw new Exception(string.Format("CreateTopic failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+            }
+        }
         public IEnumerable<TopicQueueInfo> GetTopicQueueInfo(string topic)
         {
             var requestData = _binarySerializer.Serialize(new QueryTopicQueueInfoRequest(topic));

@@ -30,6 +30,11 @@ namespace EQueue.AdminWeb.Controllers
                 MinMessageOffset = result.MinMessageOffset
             });
         }
+        public ActionResult CreateTopic(string topic, int initialQueueCount)
+        {
+            _messageService.CreateTopic(topic, initialQueueCount);
+            return RedirectToAction("TopicInfo");
+        }
         public ActionResult TopicInfo(string topic)
         {
             var topicQueueInfos = _messageService.GetTopicQueueInfo(topic);

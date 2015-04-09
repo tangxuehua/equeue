@@ -54,6 +54,7 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Broker\RequestHandlers\CreateTopicRequestHandler.cs" />
     <Compile Include="Broker\SqlServerQueueStoreSetting.cs" />
     <Compile Include="Broker\SqlServerQueueStore.cs" />
     <Compile Include="Broker\InMemoryQueueStore.cs" />
@@ -116,6 +117,7 @@
     <Compile Include="Clients\Producers\QueueAverageSelector.cs" />
     <Compile Include="Clients\Producers\QueueHashSelector.cs" />
     <Compile Include="Configurations\ConfigurationExtensions.cs" />
+    <Compile Include="Protocols\CreateTopicRequest.cs" />
     <Compile Include="Protocols\GetMessageDetailRequest.cs" />
     <Compile Include="Protocols\QueryMessageResponse.cs" />
     <Compile Include="Protocols\QueryMessageRequest.cs" />

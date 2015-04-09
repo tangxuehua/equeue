@@ -60,4 +60,16 @@
             </div>
         </div>
     </form>
+    @using (Html.BeginForm("CreateTopic", "Home", new { }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
+    {
+        <div class="form-group">
+            <label class="sr-only" for="topic"></label>
+            <input id="topic" name="topic" type="text" class="form-control" placeholder="Topic" />
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="initialQueueCount"></label>
+            <input id="initialQueueCount" name="initialQueueCount" type="text" class="form-control" placeholder="InitialQueueCount" />
+        </div>
+        <button type="submit" class="btn btn-default">创建主题</button>
+    }
 </div>

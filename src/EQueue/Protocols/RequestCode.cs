@@ -22,5 +22,6 @@
         RemoveQueueOffsetInfo = 1008,
         QueryMessage = 1009,
         GetMessageDetail = 1010,
+        CreateTopic = 1011,
     }
 }

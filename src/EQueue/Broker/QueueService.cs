@@ -113,27 +113,30 @@ namespace EQueue.Broker
         }
         public void CreateTopic(string topic, int initialQueueCount)
         {
-            Ensure.NotNullOrEmpty(topic, "topic");
-            Ensure.Positive(initialQueueCount, "initialQueueCount");
-            if (initialQueueCount > BrokerController.Instance.Setting.TopicMaxQueueCount)
+            lock (this)
             {
-                throw new ArgumentException(string.Format("Initial queue count cannot bigger than {0}.", BrokerController.Instance.Setting.TopicMaxQueueCount));
-            }
-            if (_queueDict.Values.Any(x => x.Topic == topic))
-            {
-                throw new ArgumentException("Topic '{0}' already exist.");
-            }
+                Ensure.NotNullOrEmpty(topic, "topic");
+                Ensure.Positive(initialQueueCount, "initialQueueCount");
+                if (initialQueueCount > BrokerController.Instance.Setting.TopicMaxQueueCount)
+                {
+                    throw new ArgumentException(string.Format("Initial queue count cannot bigger than {0}.", BrokerController.Instance.Setting.TopicMaxQueueCount));
+                }
+                if (_queueDict.Values.Any(x => x.Topic == topic))
+                {
+                    throw new ArgumentException("Topic '{0}' already exist.");
+                }
 
-            var queues = new List<Queue>();
-            for (var index = 0; index < initialQueueCount; index++)
-            {
-                queues.Add(new Queue(topic, index));
-            }
-            _queueStore.CreateQueues(queues);
-            foreach (var queue in queues)
-            {
-                var key = CreateQueueKey(queue.Topic, queue.QueueId);
-                _queueDict.TryAdd(key, queue);
+                var queues = new List<Queue>();
+                for (var index = 0; index < initialQueueCount; index++)
+                {
+                    queues.Add(new Queue(topic, index));
+                }
+                _queueStore.CreateQueues(queues);
+                foreach (var queue in queues)
+                {
+                    var key = CreateQueueKey(queue.Topic, queue.QueueId);
+                    _queueDict.TryAdd(key, queue);
+                }
             }
         }
         public Queue GetQueue(string topic, int queueId)
