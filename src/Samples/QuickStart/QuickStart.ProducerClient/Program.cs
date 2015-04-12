@@ -56,6 +56,10 @@ namespace QuickStart.ProducerClient
             for (var index = 1; index <= messageCount; index++)
             {
                 producer.SendAsync(new Message("SampleTopic", 100, message), Interlocked.Increment(ref messageIndex)).ContinueWith(sendCallback);
+                if (index % 1000 == 0)
+                {
+                    Thread.Sleep(10);
+                }
             }
 
             Console.ReadLine();

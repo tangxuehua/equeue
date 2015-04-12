@@ -52,12 +52,25 @@ namespace EQueue.Broker
         {
             _scheduleService.ShutdownTask(_removeMessageFromMemoryTaskId);
         }
-        public QueueMessage StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
+        public long GetNextMessageOffset()
         {
-            var messageId = ObjectId.GenerateNewStringId();
-            var nextOffset = GetNextOffset();
-            var queueMessage = new QueueMessage(messageId, message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, message.CreatedTime, DateTime.Now, DateTime.Now, routingKey);
-            _messageDict[nextOffset] = queueMessage;
+            return Interlocked.Increment(ref _currentOffset);
+        }
+        public QueueMessage StoreMessage(int queueId, long messageOffset, long queueOffset, Message message, string routingKey)
+        {
+            var queueMessage = new QueueMessage(
+                ObjectId.GenerateNewStringId(),
+                message.Topic,
+                message.Code,
+                message.Body,
+                messageOffset,
+                queueId,
+                queueOffset,
+                message.CreatedTime,
+                DateTime.Now,
+                DateTime.Now,
+                routingKey);
+            _messageDict[messageOffset] = queueMessage;
             return queueMessage;
         }
         public QueueMessage GetMessage(long offset)
@@ -143,10 +156,6 @@ namespace EQueue.Broker
                     _messageDict.Remove(queueMessage.MessageOffset);
                 }
             }
-        }
-        private long GetNextOffset()
-        {
-            return Interlocked.Increment(ref _currentOffset);
         }
     }
 }

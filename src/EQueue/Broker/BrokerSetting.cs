@@ -9,7 +9,7 @@ namespace EQueue.Broker
         public IPEndPoint ConsumerIPEndPoint { get; set; }
         public IPEndPoint AdminIPEndPoint { get; set; }
         public bool NotifyWhenMessageArrived { get; set; }
-        public int RemoveConsumedMessageInterval { get; set; }
+        public int RemoveConsumedQueueIndexInterval { get; set; }
         public int RemoveExceedMaxCacheQueueIndexInterval { get; set; }
         public int CheckBlockingPullRequestMilliseconds { get; set; }
         public int NotifyMessageArrivedThreadMaxCount { get; set; }
@@ -26,7 +26,7 @@ namespace EQueue.Broker
             ConsumerIPEndPoint = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
             AdminIPEndPoint = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
             NotifyWhenMessageArrived = true;
-            RemoveConsumedMessageInterval = 1000 * 5;
+            RemoveConsumedQueueIndexInterval = 1000 * 5;
             RemoveExceedMaxCacheQueueIndexInterval = 1000 * 5;
             CheckBlockingPullRequestMilliseconds = 1000;
             NotifyMessageArrivedThreadMaxCount = 32;

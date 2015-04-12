@@ -20,7 +20,7 @@ namespace EQueue.Clients.Consumers
 
         public bool TryUpdatePreviousConsumedMinQueueOffset(long offset)
         {
-            if (offset > PreviousConsumedMinQueueOffset)
+            if (offset != PreviousConsumedMinQueueOffset)
             {
                 PreviousConsumedMinQueueOffset = offset;
                 return true;

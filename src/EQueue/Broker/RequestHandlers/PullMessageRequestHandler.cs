@@ -74,14 +74,16 @@ namespace EQueue.Broker.Processors
                 return null;
             }
 
-            //获取队列的第一个消息以及最后一个消息的offset
             var queueMinOffset = _queueService.GetQueueMinOffset(topic, queueId);
             var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
 
-            //如果pullOffset比队列的第一个消息的offset还要小或者比队列的最后一个消息的offset+1还要大，则将pullOffset重置为第一个消息的offset
-            if (pullOffset < queueMinOffset || pullOffset > queueCurrentOffset + 1)
+            if (pullOffset < queueMinOffset)
             {
                 return BuildNextOffsetResetResponse(remotingRequest.Sequence, queueMinOffset);
+            }
+            else if (pullOffset > queueCurrentOffset + 1)
+            {
+                return BuildNextOffsetResetResponse(remotingRequest.Sequence, queueCurrentOffset + 1);
             }
             else
             {
@@ -109,14 +111,16 @@ namespace EQueue.Broker.Processors
                 return;
             }
 
-            //获取队列的第一个消息以及最后一个消息的offset
             var queueMinOffset = _queueService.GetQueueMinOffset(topic, queueId);
             var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
 
-            //如果pullOffset比队列的第一个消息的offset还要小或者比队列的最后一个消息的offset+1还要大，则将pullOffset重置为第一个消息的offset
-            if (pullOffset < queueMinOffset || pullOffset > queueCurrentOffset + 1)
+            if (pullOffset < queueMinOffset)
             {
                 SendRemotingResponse(pullRequest, BuildNextOffsetResetResponse(pullRequest.RemotingRequestSequence, queueMinOffset));
+            }
+            else if (pullOffset > queueCurrentOffset + 1)
+            {
+                SendRemotingResponse(pullRequest, BuildNextOffsetResetResponse(pullRequest.RemotingRequestSequence, queueCurrentOffset + 1));
             }
             else
             {
@@ -125,10 +129,11 @@ namespace EQueue.Broker.Processors
         }
         private void ExecuteReplacedPullRequest(PullRequest pullRequest)
         {
-            if (IsPullRequestValid(pullRequest))
+            if (!IsPullRequestValid(pullRequest))
             {
-                SendRemotingResponse(pullRequest, BuildIgnoredResponse(pullRequest.RemotingRequestSequence));
+                return;
             }
+            SendRemotingResponse(pullRequest, BuildIgnoredResponse(pullRequest.RemotingRequestSequence));
         }
         private bool IsPullRequestValid(PullRequest pullRequest)
         {
@@ -160,7 +165,8 @@ namespace EQueue.Broker.Processors
             var lastConsumedQueueOffset = _offsetManager.GetQueueOffset(topic, queueId, consumerGroup);
             if (lastConsumedQueueOffset >= 0)
             {
-                return lastConsumedQueueOffset + 1;
+                var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
+                return queueCurrentOffset < lastConsumedQueueOffset ? queueCurrentOffset + 1 : lastConsumedQueueOffset + 1;
             }
 
             if (consumerFromWhere == ConsumeFromWhere.FirstOffset)

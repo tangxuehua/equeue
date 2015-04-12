@@ -13,7 +13,8 @@ namespace EQueue.Broker
         void Start();
         void Shutdown();
         void DeleteQueueMessage(string topic, int queueId);
-        QueueMessage StoreMessage(int queueId, long queueOffset, Message message, string routingKey);
+        long GetNextMessageOffset();
+        QueueMessage StoreMessage(int queueId, long messageOffset, long queueOffset, Message message, string routingKey);
         QueueMessage GetMessage(long offset);
         QueueMessage FindMessage(long? offset, string messageId);
         void UpdateConsumedQueueOffset(string topic, int queueId, long queueOffset);

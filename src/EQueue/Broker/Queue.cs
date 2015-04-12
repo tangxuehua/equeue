@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using ECommon.Extensions;
 
 namespace EQueue.Broker
 {
@@ -86,14 +87,18 @@ namespace EQueue.Broker
             }
             return -1;
         }
-        public long RemoveConsumedQueueIndex(long maxConsumedQueueOffset)
+        public void RemoveQueueOffset(long queueOffset)
+        {
+            _queueItemDict.Remove(queueOffset);
+        }
+        public long RemoveAllPreviousQueueIndex(long maxAllowToRemoveQueueOffset)
         {
             var totalRemovedCount = 0L;
-            var allRemoveQueueOffsets = _queueItemDict.Keys.Where(key => key <= maxConsumedQueueOffset);
-            foreach (var consumedQueueOffset in allRemoveQueueOffsets)
+            var allPreviousQueueOffsets = _queueItemDict.Keys.Where(key => key <= maxAllowToRemoveQueueOffset);
+            foreach (var queueOffset in allPreviousQueueOffsets)
             {
                 long messageOffset;
-                if (_queueItemDict.TryRemove(consumedQueueOffset, out messageOffset))
+                if (_queueItemDict.TryRemove(queueOffset, out messageOffset))
                 {
                     totalRemovedCount++;
                 }

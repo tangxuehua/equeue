@@ -22,7 +22,6 @@ namespace EQueue.Broker
     {
         private const string MessageFileName = "Messages.txt";
         private readonly byte[] EmptyBody = new byte[0];
-        private readonly object _syncObj = new object();
         private readonly ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
         private readonly ConcurrentDictionary<string, long> _queueConsumedOffsetDict = new ConcurrentDictionary<string, long>();
         private readonly ConcurrentDictionary<string, long> _queueMaxPersistedOffsetDict = new ConcurrentDictionary<string, long>();
@@ -38,7 +37,7 @@ namespace EQueue.Broker
         private int _isRemovingConsumedMessages;
         private readonly IList<int> _taskIds;
 
-        private readonly string _deleteMessageSQLFormat;
+        private readonly string _deleteMessagesByTimeAndMaxQueueOffsetFormat;
         private readonly string _selectAllMessageSQL;
         private readonly string _batchLoadMessageSQLFormat;
         private readonly string _batchLoadQueueIndexSQLFormat;
@@ -67,7 +66,7 @@ namespace EQueue.Broker
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _messageLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("MessageLogger");
             _messageDataTable = BuildMessageDataTable();
-            _deleteMessageSQLFormat = "delete from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset < {2}";
+            _deleteMessagesByTimeAndMaxQueueOffsetFormat = "delete from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset < {2} and StoredTime < '{3}'";
             _selectAllMessageSQL = "select * from [" + _setting.MessageTable + "] order by MessageOffset asc";
             _batchLoadMessageSQLFormat = "select * from [" + _setting.MessageTable + "] where MessageOffset >= {0} and MessageOffset < {1}";
             _batchLoadQueueIndexSQLFormat = "select QueueOffset,MessageOffset from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset >= {2} and QueueOffset < {3}";
@@ -77,8 +76,15 @@ namespace EQueue.Broker
         public void Recover(Action<long, string, int, long> messageRecoveredCallback)
         {
             Clear();
-            RecoverAllMessagesFromDB(messageRecoveredCallback);
-            RecoverAllMessagesFromMessageLogs(messageRecoveredCallback);
+            var totalRecoveredMessageCount = RecoverAllMessagesFromDB(messageRecoveredCallback);
+            if (totalRecoveredMessageCount > 0)
+            {
+                RecoverAllMessagesFromMessageLogs(messageRecoveredCallback);
+            }
+            else
+            {
+                RecoverMaxMessageOffsetFromMessageLogs();
+            }
         }
         public void Start()
         {
@@ -94,17 +100,27 @@ namespace EQueue.Broker
                 _scheduleService.ShutdownTask(taskId);
             }
         }
-        public QueueMessage StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
+        public long GetNextMessageOffset()
         {
-            lock (_syncObj)
-            {
-                var messageId = ObjectId.GenerateNewStringId();
-                var nextOffset = GetNextOffset();
-                var queueMessage = new QueueMessage(messageId, message.Topic, message.Code, message.Body, nextOffset, queueId, queueOffset, message.CreatedTime, DateTime.Now, DateTime.Now, routingKey);
-                _messageDict[nextOffset] = queueMessage;
-                WriteMessageLog(queueMessage);
-                return queueMessage;
-            }
+            return Interlocked.Increment(ref _currentMessageOffset);
+        }
+        public QueueMessage StoreMessage(int queueId, long messageOffset, long queueOffset, Message message, string routingKey)
+        {
+            var queueMessage = new QueueMessage(
+                ObjectId.GenerateNewStringId(),
+                message.Topic,
+                message.Code,
+                message.Body,
+                messageOffset,
+                queueId,
+                queueOffset,
+                message.CreatedTime,
+                DateTime.Now,
+                DateTime.Now,
+                routingKey);
+            _messageDict[messageOffset] = queueMessage;
+            WriteMessageLog(queueMessage);
+            return queueMessage;
         }
         public QueueMessage GetMessage(long offset)
         {
@@ -163,7 +179,7 @@ namespace EQueue.Broker
             messages.ForEach(x => _messageDict.Remove(x.MessageOffset));
             _queueConsumedOffsetDict.Remove(key);
             _queueMaxPersistedOffsetDict.Remove(key);
-            DeleteMessages(topic, queueId, long.MaxValue);
+            DeleteMessagesByTimeAndMaxQueueOffset(topic, queueId, long.MaxValue, DateTime.MaxValue);
         }
         public IDictionary<long, long> BatchLoadQueueIndex(string topic, int queueId, long startQueueOffset)
         {
@@ -262,9 +278,6 @@ namespace EQueue.Broker
             var exceedCount = currentTotalCount - _setting.MessageMaxCacheSize;
             if (exceedCount > 0)
             {
-                //First we should remove all the consumed messages from memory.
-                RemoveConsumedMessageFromMemory();
-
                 var currentMessageOffset = _currentMessageOffset;
                 var currentPersistedMessageOffet = _persistedMessageOffset;
                 currentTotalCount = _messageDict.Count;
@@ -339,15 +352,15 @@ namespace EQueue.Broker
                 }
             }
         }
-        private void RecoverAllMessagesFromDB(Action<long, string, int, long> messageRecoveredCallback)
+        private long RecoverAllMessagesFromDB(Action<long, string, int, long> messageRecoveredCallback)
         {
             _logger.Info("Start to recover messages from db.");
+            var totalRecoveredMessageCount = 0L;
             using (var connection = new SqlConnection(_setting.ConnectionString))
             {
                 connection.Open();
                 using (var command = new SqlCommand(_selectAllMessageSQL, connection))
                 {
-                    var totalRecoveredMessageCount = 0L;
                     var reader = command.ExecuteReader();
                     while (reader.Read())
                     {
@@ -359,6 +372,7 @@ namespace EQueue.Broker
                     _logger.InfoFormat("{0} messages recovered, current messageOffset:{1}", totalRecoveredMessageCount, _currentMessageOffset);
                 }
             }
+            return totalRecoveredMessageCount;
         }
         private void RecoverAllMessagesFromMessageLogs(Action<long, string, int, long> messageRecoveredCallback)
         {
@@ -385,6 +399,28 @@ namespace EQueue.Broker
                 totalRecoveredMessageCount += queueMessages.Count();
             }
             _logger.InfoFormat("Total recovered {0} messages from message log file to db, current messageOffset: {1}", totalRecoveredMessageCount, _currentMessageOffset);
+        }
+        private void RecoverMaxMessageOffsetFromMessageLogs()
+        {
+            _logger.Info("No messages recovered from db, try to recover the max message offset from message log file.");
+
+            var fileName = Path.Combine(_setting.MessageLogFilePath, MessageFileName);
+            if (!new FileInfo(fileName).Exists)
+            {
+                _logger.InfoFormat("Message log file not exist, fileName: {0}", fileName);
+                return;
+            }
+
+            var message = GetLastLineMessage(fileName);
+            if (message != null)
+            {
+                _currentMessageOffset = message.MessageOffset;
+                _persistedMessageOffset = message.MessageOffset;
+                _logger.InfoFormat("Recovered maxMessageOffset: {0}", _currentMessageOffset);
+                return;
+            }
+
+            _logger.Info("No message found in the message file.");
         }
         private void WriteMessageLog(QueueMessage message)
         {
@@ -460,6 +496,30 @@ namespace EQueue.Broker
                     if (!string.IsNullOrWhiteSpace(line))
                     {
                         return ParseMessage(fileName, line);
+                    }
+                }
+            }
+            return null;
+        }
+        private QueueMessage GetLastLineMessage(string fileName)
+        {
+            using (var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                using (var reader = new StreamReader(fs, Encoding.UTF8))
+                {
+                    var line = reader.ReadLine();
+                    var lastLine = line;
+                    while (line != null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            lastLine = line;
+                        }
+                        line = reader.ReadLine();
+                    }
+                    if (!string.IsNullOrWhiteSpace(lastLine))
+                    {
+                        return ParseMessage(fileName, lastLine);
                     }
                 }
             }
@@ -699,54 +759,57 @@ namespace EQueue.Broker
         }
         private void DeleteMessages()
         {
-            if (!IsTimeToDelete())
-            {
-                return;
-            }
+            var maxStoredTime = DateTime.Now.Subtract(TimeSpan.FromHours(_setting.MessageStoreMaxHours));
 
-            foreach (var entry in _queueConsumedOffsetDict)
+            if (_setting.IgnoreUnConsumedMessage)
             {
-                if (entry.Value <= 0) continue;
-
-                long maxPersistedOffset;
-                if (!_queueMaxPersistedOffsetDict.TryGetValue(entry.Key, out maxPersistedOffset))
+                foreach (var entry in _queueMaxPersistedOffsetDict)
                 {
-                    _logger.ErrorFormat("Failed to delete message of queue as the max persisted offset of the queue not exist. queueKey:{0}, allowToDeleteOffset:{1}", entry.Key, entry.Value);
-                    return;
+                    var items = entry.Key.Split(new string[] { "-" }, StringSplitOptions.None);
+                    var topic = items[0];
+                    var queueId = int.Parse(items[1]);
+                    var maxAllowToDeleteQueueOffset = entry.Value;
+                    DeleteMessagesByTimeAndMaxQueueOffset(topic, queueId, maxAllowToDeleteQueueOffset, maxStoredTime);
                 }
-                var items = entry.Key.Split(new string[] { "-" }, StringSplitOptions.None);
-                var topic = items[0];
-                var queueId = int.Parse(items[1]);
-                var maxAllowToDeleteQueueOffset = entry.Value < maxPersistedOffset ? entry.Value : maxPersistedOffset;
-                DeleteMessages(topic, queueId, maxAllowToDeleteQueueOffset);
+            }
+            else
+            {
+                foreach (var entry in _queueConsumedOffsetDict)
+                {
+                    if (entry.Value <= 0) continue;
+                    long maxPersistedOffset;
+                    if (!_queueMaxPersistedOffsetDict.TryGetValue(entry.Key, out maxPersistedOffset))
+                    {
+                        _logger.ErrorFormat("Failed to delete message of queue as the max persisted offset of the queue not exist. queueKey:{0}, allowToDeleteOffset:{1}", entry.Key, entry.Value);
+                        return;
+                    }
+                    var items = entry.Key.Split(new string[] { "-" }, StringSplitOptions.None);
+                    var topic = items[0];
+                    var queueId = int.Parse(items[1]);
+                    var maxAllowToDeleteQueueOffset = entry.Value < maxPersistedOffset ? entry.Value : maxPersistedOffset;
+                    DeleteMessagesByTimeAndMaxQueueOffset(topic, queueId, maxAllowToDeleteQueueOffset, maxStoredTime);
+                }
             }
         }
-        private void DeleteMessages(string topic, int queueId, long maxAllowToDeleteQueueOffset)
+        private void DeleteMessagesByTimeAndMaxQueueOffset(string topic, int queueId, long maxAllowToDeleteQueueOffset, DateTime maxStoredTime)
         {
             using (var connection = new SqlConnection(_setting.ConnectionString))
             {
                 connection.Open();
-                using (var command = new SqlCommand(string.Format(_deleteMessageSQLFormat, topic, queueId, maxAllowToDeleteQueueOffset), connection))
+                using (var command = new SqlCommand(string.Format(_deleteMessagesByTimeAndMaxQueueOffsetFormat, topic, queueId, maxAllowToDeleteQueueOffset, maxStoredTime), connection))
                 {
                     var deletedMessageCount = command.ExecuteNonQuery();
                     if (deletedMessageCount > 0)
                     {
-                        _logger.DebugFormat("Deleted {0} messages, topic={1}, queueId={2}, queueOffset<{3}.", deletedMessageCount, topic, queueId, maxAllowToDeleteQueueOffset);
+                        _logger.DebugFormat("Deleted {0} messages, topic = {1}, queueId = {2}, queueOffset < {3}, storedTime < {4}.", deletedMessageCount, topic, queueId, maxAllowToDeleteQueueOffset, maxStoredTime);
                     }
                 }
             }
-        }
-        private long GetNextOffset()
-        {
-            return Interlocked.Increment(ref _currentMessageOffset);
-        }
-        private bool IsTimeToDelete()
-        {
-            if (_setting.DeleteMessageHourOfDay == -1)
+            var allowToDeleteMessages = _messageDict.Values.Where(x => x.Topic == topic && x.QueueId == queueId && x.QueueOffset < maxAllowToDeleteQueueOffset && x.StoredTime < maxStoredTime);
+            foreach (var message in allowToDeleteMessages)
             {
-                return true;
+                _messageDict.Remove(message.MessageOffset);
             }
-            return DateTime.Now.Hour == _setting.DeleteMessageHourOfDay;
         }
 
         public class MessageFile

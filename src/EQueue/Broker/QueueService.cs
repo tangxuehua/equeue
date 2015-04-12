@@ -51,7 +51,7 @@ namespace EQueue.Broker
                 var key = CreateQueueKey(queue.Topic, queue.QueueId);
                 _queueDict.TryAdd(key, queue);
             }
-            _taskIds.Add(_scheduleService.ScheduleTask("QueueService.RemoveConsumedQueueIndex", RemoveConsumedQueueIndex, BrokerController.Instance.Setting.RemoveConsumedMessageInterval, BrokerController.Instance.Setting.RemoveConsumedMessageInterval));
+            _taskIds.Add(_scheduleService.ScheduleTask("QueueService.RemoveConsumedQueueIndex", RemoveConsumedQueueIndex, BrokerController.Instance.Setting.RemoveConsumedQueueIndexInterval, BrokerController.Instance.Setting.RemoveConsumedQueueIndexInterval));
             _taskIds.Add(_scheduleService.ScheduleTask("QueueService.RemoveExceedMaxCacheQueueIndex", RemoveExceedMaxCacheQueueIndex, BrokerController.Instance.Setting.RemoveExceedMaxCacheQueueIndexInterval, BrokerController.Instance.Setting.RemoveExceedMaxCacheQueueIndexInterval));
         }
         public void Shutdown()
@@ -265,7 +265,7 @@ namespace EQueue.Broker
                         {
                             consumedQueueOffset = queue.CurrentOffset;
                         }
-                        queue.RemoveConsumedQueueIndex(consumedQueueOffset);
+                        queue.RemoveAllPreviousQueueIndex(consumedQueueOffset);
                         _messageStore.UpdateConsumedQueueOffset(queue.Topic, queue.QueueId, consumedQueueOffset);
                     }
                 }

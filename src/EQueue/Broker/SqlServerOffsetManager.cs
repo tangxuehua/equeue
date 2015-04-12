@@ -95,6 +95,7 @@ namespace EQueue.Broker
         {
             if (UpdateQueueOffsetInternal(topic, queueId, offset, group))
             {
+                _logger.DebugFormat("ConsumeOffset updated, consumerGroup: {0}, topic: {1}, queueId: {2}, offset: {3}", group, topic, queueId, offset);
                 Interlocked.Increment(ref _lastUpdateVersion);
             }
         }
@@ -166,17 +167,13 @@ namespace EQueue.Broker
                 return new ConcurrentDictionary<string, long>();
             });
             var key = string.Format("{0}-{1}", topic, queueId);
-            queueOffsetDict.AddOrUpdate(key, offset, (currentKey, oldOffset) =>
+            queueOffsetDict.AddOrUpdate(key, offset, (k, oldOffset) =>
             {
-                if (offset > oldOffset)
+                if (offset != oldOffset)
                 {
-                    if (!changed)
-                    {
-                        changed = true;
-                    }
-                    return offset;
+                    changed = true;
                 }
-                return oldOffset;
+                return offset;
             });
             return changed;
         }

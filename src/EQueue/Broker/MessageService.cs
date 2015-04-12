@@ -11,6 +11,7 @@ namespace EQueue.Broker
         private readonly IQueueService _queueService;
         private readonly IMessageStore _messageStore;
         private readonly ILogger _logger;
+        private readonly object _syncObj = new object();
         private long _totalRecoveredQueueIndex;
 
         public MessageService(IQueueService queueService, IMessageStore messageStore, IOffsetManager offsetManager)
@@ -37,70 +38,61 @@ namespace EQueue.Broker
             {
                 throw new Exception(string.Format("Queue not exist, topic: {0}, queueId: {1}", message.Topic, queueId));
             }
-            var queueOffset = queue.IncrementCurrentOffset();
-            var queueMessage = _messageStore.StoreMessage(queueId, queueOffset, message, routingKey);
-            queue.SetQueueIndex(queueMessage.QueueOffset, queueMessage.MessageOffset);
-            return new MessageStoreResult(queueMessage.MessageId, queueMessage.MessageOffset, queueMessage.QueueId, queueMessage.QueueOffset);
+            lock (_syncObj)
+            {
+                var messageOffset = _messageStore.GetNextMessageOffset();
+                var queueOffset = queue.IncrementCurrentOffset();
+                var queueMessage = _messageStore.StoreMessage(queueId, messageOffset, queueOffset, message, routingKey);
+                queue.SetQueueIndex(queueMessage.QueueOffset, queueMessage.MessageOffset);
+                return new MessageStoreResult(queueMessage.MessageId, queueMessage.MessageOffset, queueMessage.QueueId, queueMessage.QueueOffset);
+            }
         }
         public IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
         {
             var queue = _queueService.GetQueue(topic, queueId);
-            if (queue != null)
+            if (queue == null)
             {
-                var messages = new List<QueueMessage>();
-                var maxQueueOffset = queueOffset + batchSize > queue.CurrentOffset ? queue.CurrentOffset + 1 : queueOffset + batchSize;
-                for (var currentQueueOffset = queueOffset; currentQueueOffset < maxQueueOffset; currentQueueOffset++)
+                return new QueueMessage[0];
+            }
+
+            var messages = new List<QueueMessage>();
+            var currentQueueOffset = queueOffset;
+            while (currentQueueOffset <= queue.CurrentOffset && messages.Count < batchSize)
+            {
+                var messageOffset = queue.GetMessageOffset(currentQueueOffset);
+                if (messageOffset < 0)
                 {
-                    var messageOffset = queue.GetMessageOffset(currentQueueOffset);
-                    if (messageOffset >= 0)
+                    BatchLoadQueueIndexToMemory(queue, currentQueueOffset);
+                    messageOffset = queue.GetMessageOffset(currentQueueOffset);
+                }
+                if (messageOffset >= 0)
+                {
+                    var message = _messageStore.GetMessage(messageOffset);
+                    if (message != null)
                     {
-                        var message = _messageStore.GetMessage(messageOffset);
-                        if (message != null)
-                        {
-                            messages.Add(message);
-                        }
-                        else
-                        {
-                            _logger.ErrorFormat("Cannot find the message by messageOffset, please check if the message exist. topic:{0}, queueId:{1}, queueOffset:{2}, messageOffset:{3}", topic, queueId, currentQueueOffset, messageOffset);
-                        }
+                        messages.Add(message);
                     }
                     else
                     {
-                        if (currentQueueOffset < queue.CurrentOffset && _messageStore.SupportBatchLoadQueueIndex)
-                        {
-                            //Batch load queue index from message store.
-                            var indexDict = _messageStore.BatchLoadQueueIndex(topic, queueId, currentQueueOffset);
-                            foreach (var entry in indexDict)
-                            {
-                                queue.SetQueueIndex(entry.Key, entry.Value);
-                            }
-
-                            //Get message offset again from queue.
-                            messageOffset = queue.GetMessageOffset(currentQueueOffset);
-                            if (messageOffset >= 0)
-                            {
-                                var message = _messageStore.GetMessage(messageOffset);
-                                if (message != null)
-                                {
-                                    messages.Add(message);
-                                }
-                                else
-                                {
-                                    _logger.ErrorFormat("Cannot find the message by messageOffset after batch loading queue index, please check if the message exist. topic:{0}, queueId:{1}, queueOffset:{2}, messageOffset:{3}", topic, queueId, currentQueueOffset, messageOffset);
-                                }
-                            }
-                            else
-                            {
-                                _logger.ErrorFormat("Cannot find the messageOffset by queueOffset, please check if the message exist. topic:{0}, queueId:{1}, queueOffset:{2}", topic, queueId, currentQueueOffset);
-                            }
-                        }
+                        queue.RemoveQueueOffset(currentQueueOffset);
                     }
                 }
-                return messages;
+                currentQueueOffset++;
             }
-            return new QueueMessage[0];
+            return messages;
         }
 
+        private void BatchLoadQueueIndexToMemory(Queue queue, long startQueueOffset)
+        {
+            if (_messageStore.SupportBatchLoadQueueIndex)
+            {
+                var indexDict = _messageStore.BatchLoadQueueIndex(queue.Topic, queue.QueueId, startQueueOffset);
+                foreach (var entry in indexDict)
+                {
+                    queue.SetQueueIndex(entry.Key, entry.Value);
+                }
+            }
+        }
         private void ProcessRecoveredMessage(long messageOffset, string topic, int queueId, long queueOffset)
         {
             var queue = _queueService.GetQueue(topic, queueId);

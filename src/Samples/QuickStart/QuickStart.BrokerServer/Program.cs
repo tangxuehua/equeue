@@ -27,8 +27,9 @@ namespace QuickStart.BrokerServer
             var messageStoreSetting = new SqlServerMessageStoreSetting
             {
                 ConnectionString = connectionString,
-                DeleteMessageHourOfDay = -1,
-                DeleteMessageInterval = 1000 * 30
+                MessageStoreMaxHours = 1,
+                IgnoreUnConsumedMessage = true,
+                DeleteMessageInterval = 5000
             };
             var offsetManagerSetting = new SqlServerOffsetManagerSetting
             {
