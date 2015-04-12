@@ -32,7 +32,7 @@ namespace EQueue.Broker.Processors
             _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            _emptyResponseData = _binarySerializer.Serialize(new PullMessageResponse(new QueueMessage[0]));
+            _emptyResponseData = _binarySerializer.Serialize(new PullMessageResponse(new QueueMessage[0], -1));
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
