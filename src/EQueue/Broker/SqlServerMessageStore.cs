@@ -20,7 +20,7 @@ namespace EQueue.Broker
 {
     public class SqlServerMessageStore : IMessageStore
     {
-        private const string MessageFileName = "Messages.txt";
+        private const string MessageFileName = "message.log";
         private readonly byte[] EmptyBody = new byte[0];
         private readonly ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
         private readonly ConcurrentDictionary<string, long> _queueConsumedOffsetDict = new ConcurrentDictionary<string, long>();
@@ -164,7 +164,7 @@ namespace EQueue.Broker
                     var reader = command.ExecuteReader();
                     if (reader.Read())
                     {
-                        return PopulateMessageFromReader(reader);
+                        return PopulateMessageFromReader(reader, true);
                     }
                 }
             }
@@ -651,7 +651,7 @@ namespace EQueue.Broker
                     var reader = command.ExecuteReader();
                     while (reader.Read())
                     {
-                        var queueMessage = PopulateMessageFromReader(reader);
+                        var queueMessage = PopulateMessageFromReader(reader, true);
                         _messageDict[queueMessage.MessageOffset] = queueMessage;
                     }
                 }
