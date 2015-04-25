@@ -21,7 +21,7 @@ namespace EQueue.Broker.Processors
         private IOffsetManager _offsetManager;
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
-        private byte[] _emptyResponseData;
+        private readonly byte[] EmptyResponseData;
 
         public PullMessageRequestHandler()
         {
@@ -32,7 +32,7 @@ namespace EQueue.Broker.Processors
             _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            _emptyResponseData = _binarySerializer.Serialize(new PullMessageResponse(new QueueMessage[0], -1));
+            EmptyResponseData = new byte[0];
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
@@ -142,19 +142,19 @@ namespace EQueue.Broker.Processors
         }
         private RemotingResponse BuildNoNewMessageResponse(long requestSequence)
         {
-            return new RemotingResponse((int)PullStatus.NoNewMessage, requestSequence, _emptyResponseData);
+            return new RemotingResponse((int)PullStatus.NoNewMessage, requestSequence, EmptyResponseData);
         }
         private RemotingResponse BuildIgnoredResponse(long requestSequence)
         {
-            return new RemotingResponse((int)PullStatus.Ignored, requestSequence, _emptyResponseData);
+            return new RemotingResponse((int)PullStatus.Ignored, requestSequence, EmptyResponseData);
         }
         private RemotingResponse BuildNextOffsetResetResponse(long requestSequence, long nextOffset)
         {
-            return new RemotingResponse((int)PullStatus.NextOffsetReset, requestSequence, _binarySerializer.Serialize(new PullMessageResponse(new QueueMessage[0], nextOffset)));
+            return new RemotingResponse((int)PullStatus.NextOffsetReset, requestSequence, BitConverter.GetBytes(nextOffset));
         }
         private RemotingResponse BuildFoundResponse(long requestSequence, IEnumerable<QueueMessage> messages)
         {
-            return new RemotingResponse((int)PullStatus.Found, requestSequence, _binarySerializer.Serialize(new PullMessageResponse(messages)));
+            return new RemotingResponse((int)PullStatus.Found, requestSequence, _binarySerializer.Serialize(messages));
         }
         private void SendRemotingResponse(PullRequest pullRequest, RemotingResponse remotingResponse)
         {

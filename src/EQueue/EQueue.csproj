@@ -148,7 +148,6 @@
     <Compile Include="Protocols\PullMessageRequest.cs" />
     <Compile Include="Protocols\SendMessageRequest.cs" />
     <Compile Include="Protocols\ResponseCode.cs" />
-    <Compile Include="Protocols\PullMessageResponse.cs" />
     <Compile Include="Protocols\SendMessageResponse.cs" />
     <Compile Include="Protocols\QueryConsumerRequest.cs" />
     <Compile Include="Protocols\UpdateQueueOffsetRequest.cs" />
