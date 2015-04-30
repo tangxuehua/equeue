@@ -38,7 +38,9 @@ namespace EQueue.Broker
         private readonly IList<int> _taskIds;
 
         private readonly string _deleteMessagesByTimeAndMaxQueueOffsetFormat;
+        private readonly string _selectMaxMessageOffsetSQL;
         private readonly string _selectAllMessageSQL;
+        private readonly string _getMessageOffsetByQueueOffset;
         private readonly string _batchLoadMessageSQLFormat;
         private readonly string _batchLoadQueueIndexSQLFormat;
 
@@ -67,16 +69,18 @@ namespace EQueue.Broker
             _messageLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("MessageLogger");
             _messageDataTable = BuildMessageDataTable();
             _deleteMessagesByTimeAndMaxQueueOffsetFormat = "delete from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset < {2} and StoredTime < '{3}'";
-            _selectAllMessageSQL = "select * from [" + _setting.MessageTable + "] order by MessageOffset asc";
+            _selectMaxMessageOffsetSQL = "select max(MessageOffset) from [" + _setting.MessageTable + "]";
+            _selectAllMessageSQL = "select * from [" + _setting.MessageTable + "] where MessageOffset > {0} order by MessageOffset asc";
             _batchLoadMessageSQLFormat = "select * from [" + _setting.MessageTable + "] where MessageOffset >= {0} and MessageOffset < {1}";
             _batchLoadQueueIndexSQLFormat = "select QueueOffset,MessageOffset from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset >= {2} and QueueOffset < {3}";
+            _getMessageOffsetByQueueOffset = "select MessageOffset from [" + _setting.MessageTable + "] where Topic = '{0}' and QueueId = {1} and QueueOffset = {2}";
             _taskIds = new List<int>();
         }
 
-        public void Recover(Action<long, string, int, long> messageRecoveredCallback)
+        public void Recover(IEnumerable<QueueConsumedOffset> queueConsumedOffsets, Action<long, string, int, long> messageRecoveredCallback)
         {
             Clear();
-            var totalRecoveredMessageCount = RecoverAllMessagesFromDB(messageRecoveredCallback);
+            var totalRecoveredMessageCount = RecoverAllMessagesFromDB(queueConsumedOffsets, messageRecoveredCallback);
             if (totalRecoveredMessageCount > 0)
             {
                 RecoverAllMessagesFromMessageLogs(messageRecoveredCallback);
@@ -272,6 +276,35 @@ namespace EQueue.Broker
             _currentMessageOffset = -1;
             _persistedMessageOffset = -1;
         }
+        private long GetMinConsumedMessageOffset(IEnumerable<QueueConsumedOffset> queueConsumedOffsets)
+        {
+            var messageOffsetList = new List<long>();
+            foreach (var queueConsumedOffset in queueConsumedOffsets)
+            {
+                messageOffsetList.Add(GetMessageOffsetByQueueOffset(queueConsumedOffset.Topic, queueConsumedOffset.QueueId, queueConsumedOffset.ConsumedOffset));
+            }
+            if (messageOffsetList.IsNotEmpty())
+            {
+                return messageOffsetList.Min();
+            }
+            return -1L;
+        }
+        private long GetMessageOffsetByQueueOffset(string topic, int queueId, long queueOffset)
+        {
+            using (var connection = new SqlConnection(_setting.ConnectionString))
+            {
+                connection.Open();
+                using (var command = new SqlCommand(string.Format(_getMessageOffsetByQueueOffset, topic, queueId, queueOffset), connection))
+                {
+                    var reader = command.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        return (long)reader["MessageOffset"];
+                    }
+                    return -1L;
+                }
+            }
+        }
         private void RemoveExceedMaxCacheMessageFromMemory()
         {
             var currentTotalCount = _messageDict.Count;
@@ -352,14 +385,39 @@ namespace EQueue.Broker
                 }
             }
         }
-        private long RecoverAllMessagesFromDB(Action<long, string, int, long> messageRecoveredCallback)
+        private long GetMaxMessageOffset()
+        {
+            using (var connection = new SqlConnection(_setting.ConnectionString))
+            {
+                connection.Open();
+                using (var command = new SqlCommand(_selectMaxMessageOffsetSQL, connection))
+                {
+                    var result = command.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        return (long)result;
+                    }
+                    return -1L;
+                }
+            }
+        }
+        private long RecoverAllMessagesFromDB(IEnumerable<QueueConsumedOffset> queueConsumedOffsets, Action<long, string, int, long> messageRecoveredCallback)
         {
             _logger.Info("Start to recover messages from db.");
+            var maxMessageOffset = GetMaxMessageOffset();
+            var minConsumedMessageOffset = GetMinConsumedMessageOffset(queueConsumedOffsets);
+            var startRecoveryMessageOffset = Math.Min(maxMessageOffset - 1, minConsumedMessageOffset - 1);
+            if (startRecoveryMessageOffset < -1)
+            {
+                startRecoveryMessageOffset = -1;
+            }
+            _logger.InfoFormat("maxMessageOffset: {0}, minConsumedMessageOffset: {1}, startRecoveryMessageOffset: {2}", maxMessageOffset, minConsumedMessageOffset, startRecoveryMessageOffset);
+
             var totalRecoveredMessageCount = 0L;
             using (var connection = new SqlConnection(_setting.ConnectionString))
             {
                 connection.Open();
-                using (var command = new SqlCommand(_selectAllMessageSQL, connection))
+                using (var command = new SqlCommand(string.Format(_selectAllMessageSQL, startRecoveryMessageOffset), connection))
                 {
                     var reader = command.ExecuteReader();
                     while (reader.Read())

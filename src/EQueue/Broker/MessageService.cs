@@ -10,6 +10,7 @@ namespace EQueue.Broker
     {
         private readonly IQueueService _queueService;
         private readonly IMessageStore _messageStore;
+        private readonly IOffsetManager _offsetManager;
         private readonly ILogger _logger;
         private readonly object _syncObj = new object();
         private long _totalRecoveredQueueIndex;
@@ -18,13 +19,14 @@ namespace EQueue.Broker
         {
             _queueService = queueService;
             _messageStore = messageStore;
+            _offsetManager = offsetManager;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         public void Start()
         {
             _totalRecoveredQueueIndex = 0;
-            _messageStore.Recover(ProcessRecoveredMessage);
+            _messageStore.Recover(_offsetManager.GetQueueConsumedOffsets(), ProcessRecoveredMessage);
             _messageStore.Start();
         }
         public void Shutdown()

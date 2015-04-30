@@ -94,6 +94,10 @@ namespace EQueue.Broker
                 }
             }
         }
+        public IEnumerable<QueueConsumedOffset> GetQueueConsumedOffsets()
+        {
+            return new QueueConsumedOffset[0];
+        }
         public IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic)
         {
             var entryList = _groupQueueOffsetDict.Where(x => string.IsNullOrEmpty(groupName) || x.Key.Contains(groupName));

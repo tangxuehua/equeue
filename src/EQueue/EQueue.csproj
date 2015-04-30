@@ -132,6 +132,7 @@
     <Compile Include="Protocols\QueryConsumerInfoRequest.cs" />
     <Compile Include="Protocols\ConsumerInfo.cs" />
     <Compile Include="Protocols\BrokerStatisticInfo.cs" />
+    <Compile Include="Protocols\QueueConsumedOffset.cs" />
     <Compile Include="Protocols\TopicQueueInfo.cs" />
     <Compile Include="Protocols\QueueMessage.cs" />
     <Compile Include="Protocols\ConsumerData.cs" />

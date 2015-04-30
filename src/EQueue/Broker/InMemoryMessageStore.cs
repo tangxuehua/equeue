@@ -43,7 +43,7 @@ namespace EQueue.Broker
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
-        public void Recover(Action<long, string, int, long> messageRecoveredCallback) { }
+        public void Recover(IEnumerable<QueueConsumedOffset> queueConsumedOffsets, Action<long, string, int, long> messageRecoveredCallback) { }
         public void Start()
         {
             _removeMessageFromMemoryTaskId = _scheduleService.ScheduleTask("InMemoryMessageStore.RemoveConsumedMessagesFromMemory", RemoveConsumedMessagesFromMemory, _setting.RemoveMessageFromMemoryInterval, _setting.RemoveMessageFromMemoryInterval);

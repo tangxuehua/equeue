@@ -13,6 +13,7 @@ namespace EQueue.Broker
         void UpdateQueueOffset(string topic, int queueId, long offset, string group);
         void DeleteQueueOffset(string topic, int queueId);
         void DeleteQueueOffset(string consumerGroup, string topic, int queueId);
+        IEnumerable<QueueConsumedOffset> GetQueueConsumedOffsets();
         IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic);
     }
 }

@@ -61,8 +61,8 @@ namespace EQueue.Broker
         public BrokerController Start()
         {
             _queueService.Start();
-            _messageService.Start();
             _offsetManager.Start();
+            _messageService.Start();
             _consumerManager.Start();
             _suspendedPullRequestManager.Start();
             _consumerSocketRemotingServer.Start();

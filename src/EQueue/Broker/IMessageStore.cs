@@ -9,7 +9,7 @@ namespace EQueue.Broker
         long CurrentMessageOffset { get; }
         long PersistedMessageOffset { get; }
         bool SupportBatchLoadQueueIndex { get; }
-        void Recover(Action<long, string, int, long> messageRecoveredCallback);
+        void Recover(IEnumerable<QueueConsumedOffset> queueConsumedOffsets, Action<long, string, int, long> messageRecoveredCallback);
         void Start();
         void Shutdown();
         void DeleteQueueMessage(string topic, int queueId);
