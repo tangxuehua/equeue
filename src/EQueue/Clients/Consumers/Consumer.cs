@@ -168,7 +168,7 @@ namespace EQueue.Clients.Consumers
                     Task.Factory.StartDelayedTask(Setting.PullTimeDelayMillsWhenFlowControl, () => SchedulePullRequest(pullRequest));
                     if ((_flowControlTimes++ % 100) == 0)
                     {
-                        _logger.DebugFormat("Detect that the message process queue has too many messages, so do flow control. pullRequest={0}, queueMessageCount={1}, flowControlTimes={2}", pullRequest, messageCount, _flowControlTimes);
+                        _logger.WarnFormat("Detect that the message process queue has too many messages, so do flow control. pullRequest={0}, queueMessageCount={1}, flowControlTimes={2}", pullRequest, messageCount, _flowControlTimes);
                     }
                     return;
                 }
@@ -188,9 +188,6 @@ namespace EQueue.Clients.Consumers
                 pullRequest.PullStartTime = DateTime.Now;
                 _remotingClient.InvokeAsync(remotingRequest, Setting.PullRequestTimeoutMilliseconds).ContinueWith(pullTask =>
                 {
-                    if (_stoped) return;
-                    if (pullRequest.ProcessQueue.IsDropped) return;
-
                     try
                     {
                         if (_stoped) return;
@@ -198,49 +195,12 @@ namespace EQueue.Clients.Consumers
 
                         if (pullTask.Exception != null)
                         {
+                            _logger.Error(string.Format("Pull message failed, pullRequest:{0}", pullRequest), pullTask.Exception);
                             SchedulePullRequest(pullRequest);
                             return;
                         }
 
-                        var remotingResponse = pullTask.Result;
-                        if (remotingResponse.Code == -1)
-                        {
-                            _logger.ErrorFormat("Pull message failed, pullRequest:{0}, errorMsg:{1}", pullRequest, Encoding.UTF8.GetString(remotingResponse.Body));
-                            SchedulePullRequest(pullRequest);
-                            return;
-                        }
-
-                        if (remotingResponse.Code == (int)PullStatus.Found)
-                        {
-                            var messages = _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.Body);
-                            if (messages.Count() > 0)
-                            {
-                                pullRequest.ProcessQueue.AddMessages(messages);
-                                foreach (var message in messages)
-                                {
-                                    _consumingMessageQueue.Add(new ConsumingMessage(message, pullRequest.ProcessQueue));
-                                }
-                                pullRequest.NextConsumeOffset = messages.Last().QueueOffset + 1;
-                            }
-                        }
-                        else if (remotingResponse.Code == (int)PullStatus.NextOffsetReset)
-                        {
-                            var newOffset = BitConverter.ToInt64(remotingResponse.Body, 0);
-                            var oldOffset = pullRequest.NextConsumeOffset;
-                            pullRequest.NextConsumeOffset = newOffset;
-                            _logger.InfoFormat("Reset queue next consume offset. topic:{0}, queueId:{1}, old offset:{2}, new offset:{3}", pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, oldOffset, newOffset);
-                        }
-                        else if (remotingResponse.Code == (int)PullStatus.NoNewMessage)
-                        {
-                            _logger.DebugFormat("No new message found, pullRequest:{0}", pullRequest);
-                        }
-                        else if (remotingResponse.Code == (int)PullStatus.Ignored)
-                        {
-                            _logger.InfoFormat("Pull request was ignored, pullRequest:{0}", pullRequest);
-                            return;
-                        }
-
-                        SchedulePullRequest(pullRequest);
+                        ProcessPullResponse(pullRequest, pullTask.Result);
                     }
                     catch (Exception ex)
                     {
@@ -248,7 +208,16 @@ namespace EQueue.Clients.Consumers
                         if (pullRequest.ProcessQueue.IsDropped) return;
                         if (_isBrokerServerConnected)
                         {
-                            _logger.Error(string.Format("Process pull result has exception, pullRequest:{0}, remotingResponseBodyLength:{1}", pullRequest, pullTask.Result.Body.Length), ex);
+                            string remotingResponseBodyLength;
+                            if (pullTask.Result != null)
+                            {
+                                remotingResponseBodyLength = pullTask.Result.Body.Length.ToString();
+                            }
+                            else
+                            {
+                                remotingResponseBodyLength = "pull message result is null.";
+                            }
+                            _logger.Error(string.Format("Process pull result has exception, pullRequest:{0}, remotingResponseBodyLength:{1}", pullRequest, remotingResponseBodyLength), ex);
                         }
                         SchedulePullRequest(pullRequest);
                     }
@@ -265,6 +234,55 @@ namespace EQueue.Clients.Consumers
                 }
                 SchedulePullRequest(pullRequest);
             }
+        }
+        private void ProcessPullResponse(PullRequest pullRequest, RemotingResponse remotingResponse)
+        {
+            if (remotingResponse == null)
+            {
+                _logger.ErrorFormat("Pull message response is null, pullRequest:{0}", pullRequest);
+                SchedulePullRequest(pullRequest);
+                return;
+            }
+
+            if (remotingResponse.Code == -1)
+            {
+                _logger.ErrorFormat("Pull message failed, pullRequest:{0}, errorMsg:{1}", pullRequest, Encoding.UTF8.GetString(remotingResponse.Body));
+                SchedulePullRequest(pullRequest);
+                return;
+            }
+
+            if (remotingResponse.Code == (int)PullStatus.Found)
+            {
+                var messages = _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.Body);
+                if (messages.Count() > 0)
+                {
+                    pullRequest.ProcessQueue.AddMessages(messages);
+                    foreach (var message in messages)
+                    {
+                        _consumingMessageQueue.Add(new ConsumingMessage(message, pullRequest.ProcessQueue));
+                    }
+                    pullRequest.NextConsumeOffset = messages.Last().QueueOffset + 1;
+                }
+            }
+            else if (remotingResponse.Code == (int)PullStatus.NextOffsetReset)
+            {
+                var newOffset = BitConverter.ToInt64(remotingResponse.Body, 0);
+                var oldOffset = pullRequest.NextConsumeOffset;
+                pullRequest.NextConsumeOffset = newOffset;
+                _logger.InfoFormat("Reset queue next consume offset. topic:{0}, queueId:{1}, old offset:{2}, new offset:{3}", pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, oldOffset, newOffset);
+            }
+            else if (remotingResponse.Code == (int)PullStatus.NoNewMessage)
+            {
+                _logger.DebugFormat("No new message found, pullRequest:{0}", pullRequest);
+            }
+            else if (remotingResponse.Code == (int)PullStatus.Ignored)
+            {
+                _logger.InfoFormat("Pull request was ignored, pullRequest:{0}", pullRequest);
+                return;
+            }
+
+            //Schedule the next pull request.
+            SchedulePullRequest(pullRequest);
         }
         private void SchedulePullRequest(PullRequest pullRequest)
         {
@@ -463,15 +481,15 @@ namespace EQueue.Clients.Consumers
         {
             try
             {
-                var consumedMinQueueOffset = pullRequest.ProcessQueue.GetConsumedMinQueueOffset();
-                if (consumedMinQueueOffset >= 0)
+                var consumedQueueOffset = pullRequest.ProcessQueue.GetConsumedQueueOffset();
+                if (consumedQueueOffset >= 0)
                 {
-                    if (!pullRequest.ProcessQueue.TryUpdatePreviousConsumedMinQueueOffset(consumedMinQueueOffset))
+                    if (!pullRequest.ProcessQueue.TryUpdatePreviousConsumedQueueOffset(consumedQueueOffset))
                     {
                         return;
                     }
 
-                    var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, consumedMinQueueOffset);
+                    var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, consumedQueueOffset);
                     var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
                     _remotingClient.InvokeOneway(remotingRequest);
                     _logger.DebugFormat("Sent queue consume offset to broker. group:{0}, consumerId:{1}, topic:{2}, queueId:{3}, offset:{4}",
@@ -479,7 +497,7 @@ namespace EQueue.Clients.Consumers
                         Id,
                         pullRequest.MessageQueue.Topic,
                         pullRequest.MessageQueue.QueueId,
-                        consumedMinQueueOffset);
+                        consumedQueueOffset);
                 }
             }
             catch (Exception ex)

@@ -1,5 +1,5 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using ECommon.Extensions;
 using EQueue.Protocols;
 
@@ -7,58 +7,58 @@ namespace EQueue.Clients.Consumers
 {
     public class ProcessQueue
     {
-        private ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
-        private long _queueMaxOffset = -1L;
+        private SortedDictionary<long, QueueMessage> _messageDict = new SortedDictionary<long, QueueMessage>();
+        private long _consumedQueueOffset = -1L;
+        private long _previousConsumedQueueOffset = -1L;
 
         public bool IsDropped { get; set; }
-        public long PreviousConsumedMinQueueOffset { get; private set; }
 
-        public ProcessQueue()
+        public bool TryUpdatePreviousConsumedQueueOffset(long current)
         {
-            PreviousConsumedMinQueueOffset = -1L;
-        }
-
-        public bool TryUpdatePreviousConsumedMinQueueOffset(long offset)
-        {
-            if (offset != PreviousConsumedMinQueueOffset)
+            if (current != _previousConsumedQueueOffset)
             {
-                PreviousConsumedMinQueueOffset = offset;
+                _previousConsumedQueueOffset = current;
                 return true;
             }
             return false;
         }
         public void AddMessages(IEnumerable<QueueMessage> messages)
         {
-            foreach (var message in messages)
+            lock (this)
             {
-                if (_messageDict.TryAdd(message.QueueOffset, message))
+                foreach (var message in messages)
                 {
-                    if (message.QueueOffset > _queueMaxOffset)
-                    {
-                        _queueMaxOffset = message.QueueOffset;
-                    }
+                    _messageDict[message.QueueOffset] = message;
                 }
             }
         }
         public void RemoveMessage(QueueMessage message)
         {
-            _messageDict.Remove(message.QueueOffset);
+            lock (this)
+            {
+                if (_messageDict.Remove(message.QueueOffset))
+                {
+                    if (_messageDict.Keys.IsNotEmpty())
+                    {
+                        _consumedQueueOffset = _messageDict.Keys.First() - 1;
+                    }
+                    else
+                    {
+                        _consumedQueueOffset = message.QueueOffset;
+                    }
+                }
+            }
         }
         public int GetMessageCount()
         {
-            return _messageDict.Count;
-        }
-        public long GetConsumedMinQueueOffset()
-        {
-            var currentMinQueueOffset = _queueMaxOffset + 1;
-            foreach (var offset in _messageDict.Keys)
+            lock (this)
             {
-                if (offset < currentMinQueueOffset)
-                {
-                    currentMinQueueOffset = offset;
-                }
+                return _messageDict.Count;
             }
-            return currentMinQueueOffset - 1;
+        }
+        public long GetConsumedQueueOffset()
+        {
+            return _consumedQueueOffset;
         }
     }
 }

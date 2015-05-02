@@ -62,7 +62,12 @@ namespace EQueue.Clients.Producers
         }
         public SendResult Send(Message message, object routingKey, int timeoutMilliseconds = 30000)
         {
-            return SendAsync(message, routingKey, timeoutMilliseconds).WaitResult<SendResult>(timeoutMilliseconds + 1000);
+            var sendResult = SendAsync(message, routingKey, timeoutMilliseconds).WaitResult<SendResult>(timeoutMilliseconds + 1000);
+            if (sendResult == null)
+            {
+                sendResult = new SendResult(SendStatus.Timeout, string.Format("Send message timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}", message, routingKey, timeoutMilliseconds));
+            }
+            return sendResult;
         }
         public async Task<SendResult> SendAsync(Message message, object routingKey, int timeoutMilliseconds = 30000)
         {
@@ -76,11 +81,11 @@ namespace EQueue.Clients.Producers
                 throw new Exception(string.Format("No available routing queue for topic [{0}].", message.Topic));
             }
             var remotingRequest = BuildSendMessageRequest(message, queueId, currentRoutingKey);
-            var remotingResponse = await _remotingClient.InvokeAsync(remotingRequest, timeoutMilliseconds);
+            var remotingResponse = await _remotingClient.InvokeAsync(remotingRequest, timeoutMilliseconds).ConfigureAwait(false);
 
             if (remotingResponse == null)
             {
-                return new SendResult(SendStatus.Timeout, string.Format("Send message async timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}", message, routingKey, timeoutMilliseconds));
+                return new SendResult(SendStatus.Timeout, string.Format("Send message timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}", message, routingKey, timeoutMilliseconds));
             }
 
             if (remotingResponse.Code == (int)ResponseCode.Success)
