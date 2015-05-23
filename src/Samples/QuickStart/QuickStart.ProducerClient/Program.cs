@@ -27,7 +27,7 @@ namespace QuickStart.ProducerClient
             InitializeEQueue();
 
             var producer = new Producer("Producer1").Start();
-            var messageSize = 100;
+            var messageSize = int.Parse(ConfigurationManager.AppSettings["MessageSize"]);
             var messageCount = int.Parse(ConfigurationManager.AppSettings["MessageCount"]);
             var message = new byte[messageSize];
             var sendCallback = new Action<Task<SendResult>>(sendTask =>
