@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Configuration;
 using System.Diagnostics;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Autofac;
@@ -9,6 +10,7 @@ using ECommon.Configurations;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;
+using ECommon.Utilities;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
 using EQueue.Protocols;
@@ -26,7 +28,9 @@ namespace QuickStart.ProducerClient
         {
             InitializeEQueue();
 
-            var producer = new Producer("Producer1").Start();
+            var brokerIP = ConfigurationManager.AppSettings["BrokerIP"];
+            var brokerEndPoint = string.IsNullOrEmpty(brokerIP) ? new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000) : new IPEndPoint(IPAddress.Parse(brokerIP), 5000);
+            var producer = new Producer("Producer1", new ProducerSetting { BrokerProducerIPEndPoint = brokerEndPoint }).Start();
             var messageSize = int.Parse(ConfigurationManager.AppSettings["MessageSize"]);
             var messageCount = int.Parse(ConfigurationManager.AppSettings["MessageCount"]);
             var message = new byte[messageSize];
