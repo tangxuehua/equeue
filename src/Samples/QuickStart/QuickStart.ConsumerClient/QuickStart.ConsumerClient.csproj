@@ -41,9 +41,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\packages\Autofac.3.4.0\lib\net40\Autofac.dll</HintPath>
     </Reference>
-    <Reference Include="ECommon, Version=1.4.6.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ECommon, Version=1.4.7.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\ECommon.1.4.6\lib\net45\ECommon.dll</HintPath>
+      <HintPath>..\..\..\packages\ECommon.1.4.7\lib\net45\ECommon.dll</HintPath>
     </Reference>
     <Reference Include="ECommon.Autofac, Version=1.4.2.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
