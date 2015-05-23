@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using ECommon.Logging;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
 using EQueue.Protocols;
+using ECommonConfiguration = ECommon.Configurations.Configuration;
 
 namespace QuickStart.ProducerClient
 {
@@ -26,7 +28,7 @@ namespace QuickStart.ProducerClient
 
             var producer = new Producer("Producer1").Start();
             var messageSize = 100;
-            var messageCount = 100000;
+            var messageCount = int.Parse(ConfigurationManager.AppSettings["MessageCount"]);
             var message = new byte[messageSize];
             var sendCallback = new Action<Task<SendResult>>(sendTask =>
             {
@@ -64,7 +66,7 @@ namespace QuickStart.ProducerClient
         static ILogger _logger;
         static void InitializeEQueue()
         {
-            Configuration
+            ECommonConfiguration
                 .Create()
                 .UseAutofac()
                 .RegisterCommonComponents()
