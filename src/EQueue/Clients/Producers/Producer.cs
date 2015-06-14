@@ -81,21 +81,28 @@ namespace EQueue.Clients.Producers
                 throw new Exception(string.Format("No available routing queue for topic [{0}].", message.Topic));
             }
             var remotingRequest = BuildSendMessageRequest(message, queueId, currentRoutingKey);
-            var remotingResponse = await _remotingClient.InvokeAsync(remotingRequest, timeoutMilliseconds).ConfigureAwait(false);
+            try
+            {
+                var remotingResponse = await _remotingClient.InvokeAsync(remotingRequest, timeoutMilliseconds).ConfigureAwait(false);
 
-            if (remotingResponse == null)
-            {
-                return new SendResult(SendStatus.Timeout, string.Format("Send message timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}", message, routingKey, timeoutMilliseconds));
-            }
+                if (remotingResponse == null)
+                {
+                    return new SendResult(SendStatus.Timeout, string.Format("Send message timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}", message, routingKey, timeoutMilliseconds));
+                }
 
-            if (remotingResponse.Code == (int)ResponseCode.Success)
-            {
-                var response = Encoding.UTF8.GetString(remotingResponse.Body).Split(':');
-                return new SendResult(SendStatus.Success, response[2], long.Parse(response[0]), new MessageQueue(message.Topic, queueId), long.Parse(response[1]));
+                if (remotingResponse.Code == (int)ResponseCode.Success)
+                {
+                    var response = Encoding.UTF8.GetString(remotingResponse.Body).Split(':');
+                    return new SendResult(SendStatus.Success, response[2], long.Parse(response[0]), new MessageQueue(message.Topic, queueId), long.Parse(response[1]));
+                }
+                else
+                {
+                    return new SendResult(SendStatus.Failed, Encoding.UTF8.GetString(remotingResponse.Body));
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return new SendResult(SendStatus.Failed, Encoding.UTF8.GetString(remotingResponse.Body));
+                return new SendResult(SendStatus.Failed, ex.Message);
             }
         }
 
