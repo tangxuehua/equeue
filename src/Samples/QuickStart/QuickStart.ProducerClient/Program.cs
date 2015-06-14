@@ -48,14 +48,14 @@ namespace QuickStart.ProducerClient
                     {
                         watch = Stopwatch.StartNew();
                     }
-                    if (finishedCount % 1000 == 0)
+                    if (finishedCount % 10000 == 0)
                     {
                         _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
                     }
                 }
                 else
                 {
-                    _logger.Error("Sent message timeout.");
+                    _logger.ErrorFormat("Sent message failed, errorMessage: {0}", sendTask.Result.ErrorMessage);
                 }
             });
 
