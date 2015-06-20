@@ -38,7 +38,7 @@ namespace EQueue.Clients.Consumers
             RetryMessageInterval = 3000;
             PullMessageBatchSize = 32;
             MessageHandleMode = MessageHandleMode.Parallel;
-            ConsumeFromWhere = ConsumeFromWhere.FirstOffset;
+            ConsumeFromWhere = ConsumeFromWhere.LastOffset;
         }
     }
 }

@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Autofac;
 using ECommon.Components;
-using ECommon.Configurations;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;
@@ -48,7 +47,7 @@ namespace QuickStart.ProducerClient
                     {
                         watch = Stopwatch.StartNew();
                     }
-                    if (finishedCount % 1000 == 0)
+                    if (finishedCount % 10000 == 0)
                     {
                         _logger.InfoFormat("Sent {0} messages, time spent:{1}", finishedCount, watch.ElapsedMilliseconds);
                     }
