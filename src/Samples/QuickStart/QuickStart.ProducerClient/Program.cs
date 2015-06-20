@@ -54,7 +54,7 @@ namespace QuickStart.ProducerClient
                 }
                 else
                 {
-                    _logger.Error("Sent message timeout.");
+                    _logger.ErrorFormat("Sent message failed, errorMessage: {0}", sendTask.Result.ErrorMessage);
                 }
             });
 
