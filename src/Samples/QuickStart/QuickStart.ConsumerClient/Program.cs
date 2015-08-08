@@ -7,6 +7,7 @@ using ECommon.Configurations;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;
+using ECommon.Utilities;
 using EQueue.Clients.Consumers;
 using EQueue.Configurations;
 using EQueue.Protocols;
@@ -27,7 +28,7 @@ namespace QuickStart.ConsumerClient
                 RebalanceInterval = 1000,
                 ConsumeFromWhere = ConsumeFromWhere.FirstOffset
             };
-            var consumer = new Consumer("Consumer1", "Group1", consumerSetting).Subscribe("SampleTopic").SetMessageHandler(messageHandler).Start();
+            var consumer = new Consumer("SampleConsumer@" + ObjectId.GenerateNewStringId(), "SampleGroup", consumerSetting).Subscribe("SampleTopic").SetMessageHandler(messageHandler).Start();
             Console.ReadLine();
         }
 
@@ -48,17 +49,25 @@ namespace QuickStart.ConsumerClient
         {
             private int _handledCount;
             private Stopwatch _watch;
+            private int _previousHandledCount;
+            private long _previousElapsedMilliseconds;
 
             public void Handle(QueueMessage message, IMessageContext context)
             {
-                var count = Interlocked.Increment(ref _handledCount);
-                if (count == 1)
+                var currentCount = Interlocked.Increment(ref _handledCount);
+                if (currentCount == 1)
                 {
                     _watch = Stopwatch.StartNew();
                 }
-                else if (count % 10000 == 0)
+                if (currentCount % 10000 == 0)
                 {
-                    _logger.InfoFormat("Total handled {0} messages, time spent:{1}", count, _watch.ElapsedMilliseconds);
+                    var currentElapsedMilliseconds = _watch.ElapsedMilliseconds;
+                    _logger.InfoFormat("Total handled {0} messages, throughput: {1}, latency: {2}ms",
+                        currentCount,
+                        (currentCount - _previousHandledCount) * 1000 / (currentElapsedMilliseconds - _previousElapsedMilliseconds),
+                        (DateTime.Now - message.CreatedTime).TotalMilliseconds);
+                    _previousHandledCount = currentCount;
+                    _previousElapsedMilliseconds = currentElapsedMilliseconds;
                 }
 
                 context.OnMessageHandled(message);
