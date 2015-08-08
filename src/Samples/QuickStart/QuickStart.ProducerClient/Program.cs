@@ -85,10 +85,11 @@ namespace QuickStart.ProducerClient
                                 if (currentFinishedCount % 10000 == 0)
                                 {
                                     var currentElapsedMilliseconds = watch.ElapsedMilliseconds;
-                                    _logger.InfoFormat("Sent {0} messages, time elapsed: {1}ms, throughput: {2}",
+                                    _logger.InfoFormat("Sent {0} messages, time elapsed: {1}ms, current throughput: {2}, average throughput: {3}",
                                         currentFinishedCount,
                                         currentElapsedMilliseconds,
-                                        (currentFinishedCount - previousFinishedCount) * 1000 / (currentElapsedMilliseconds - previousElapsedMilliseconds));
+                                        (currentFinishedCount - previousFinishedCount) * 1000 / (currentElapsedMilliseconds - previousElapsedMilliseconds),
+                                        currentFinishedCount * 1000 / currentElapsedMilliseconds);
                                     Interlocked.Exchange(ref previousFinishedCount, currentFinishedCount);
                                     Interlocked.Exchange(ref previousElapsedMilliseconds, currentElapsedMilliseconds);
                                 }
