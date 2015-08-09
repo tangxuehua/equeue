@@ -47,6 +47,7 @@ namespace QuickStart.ProducerClient
             var messageSize = int.Parse(ConfigurationManager.AppSettings["MessageSize"]);
             var connectionCount = int.Parse(ConfigurationManager.AppSettings["ConnectionCount"]);
             var flowControlCount = int.Parse(ConfigurationManager.AppSettings["FlowControlCount"]);
+            var maxMessageCount = int.Parse(ConfigurationManager.AppSettings["MaxMessageCount"]);
             var payload = new byte[messageSize];
             var message = new Message("SampleTopic", 100, payload);
             var messageIndex = 0L;
@@ -54,6 +55,7 @@ namespace QuickStart.ProducerClient
             var finishedCount = 0L;
             var previousFinishedCount = 0L;
             var previousElapsedMilliseconds = 0L;
+            var flowControlledCount = 0;
             var watch = Stopwatch.StartNew();
 
             for (var i = 0; i < connectionCount; i++)
@@ -67,12 +69,15 @@ namespace QuickStart.ProducerClient
                         var waitingCount = sendingCount - finishedCount;
                         if (waitingCount > flowControlCount)
                         {
-                            var waitMilliseconds = (waitingCount / flowControlCount) * 1000;
-                            _logger.InfoFormat("Start to flow control, pending messages: {1}, wait time: {2}ms", producer.Id, waitingCount, waitMilliseconds);
-                            Thread.Sleep((int)waitMilliseconds);
+                            Thread.Sleep(1);
+                            var current = Interlocked.Increment(ref flowControlledCount);
+                            if (current % 1000 == 0)
+                            {
+                                _logger.InfoFormat("Start to flow control, pending messages: {0}, flow count: {1}", waitingCount, current);
+                            }
                             continue;
                         }
-                        producer.SendAsync(message, Interlocked.Increment(ref messageIndex)).ContinueWith(sendTask =>
+                        producer.SendAsync(message, Interlocked.Increment(ref messageIndex), 300000).ContinueWith(sendTask =>
                         {
                             if (sendTask.Exception != null)
                             {
@@ -99,7 +104,11 @@ namespace QuickStart.ProducerClient
                                 _logger.ErrorFormat("Sent message failed, errorMessage: {0}", sendTask.Result.ErrorMessage);
                             }
                         });
-                        Interlocked.Increment(ref sendingCount);
+                        var count = Interlocked.Increment(ref sendingCount);
+                        if (count >= maxMessageCount)
+                        {
+                            break;
+                        }
                     }
                 });
             }
