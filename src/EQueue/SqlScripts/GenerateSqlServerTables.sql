@@ -15,6 +15,7 @@ GO
 CREATE TABLE [dbo].[Message](
     [MessageOffset] [bigint] NOT NULL,
     [MessageId] [varchar](32) NOT NULL,
+    [MessageKey] [varchar](32) NOT NULL,
     [Topic] [varchar](128) NOT NULL,
     [QueueId] [int] NOT NULL,
     [QueueOffset] [bigint] NOT NULL,

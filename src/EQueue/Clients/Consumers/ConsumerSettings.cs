@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using ECommon.Socketing;
 using ECommon.Utilities;
 using EQueue.Protocols;
 
@@ -6,7 +7,8 @@ namespace EQueue.Clients.Consumers
 {
     public class ConsumerSetting
     {
-        public IPEndPoint BrokerConsumerIPEndPoint { get; set; }
+        public IPEndPoint BrokerAddress { get; set; }
+        public IPEndPoint LocalAddress { get; set; }
         public int ConsumeThreadMaxCount { get; set; }
         public int DefaultTimeoutMilliseconds { get; set; }
         public int RebalanceInterval { get; set; }
@@ -24,7 +26,7 @@ namespace EQueue.Clients.Consumers
 
         public ConsumerSetting()
         {
-            BrokerConsumerIPEndPoint = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
+            BrokerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
             ConsumeThreadMaxCount = 64;
             DefaultTimeoutMilliseconds = 60 * 1000;
             RebalanceInterval = 1000 * 5;

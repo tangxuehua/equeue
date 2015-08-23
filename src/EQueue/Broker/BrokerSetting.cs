@@ -1,13 +1,15 @@
 ﻿using System.Net;
+using ECommon.Remoting;
+using ECommon.Socketing;
 using ECommon.Utilities;
 
 namespace EQueue.Broker
 {
     public class BrokerSetting
     {
-        public IPEndPoint ProducerIPEndPoint { get; set; }
-        public IPEndPoint ConsumerIPEndPoint { get; set; }
-        public IPEndPoint AdminIPEndPoint { get; set; }
+        public IPEndPoint ProducerAddress { get; set; }
+        public IPEndPoint ConsumerAddress { get; set; }
+        public IPEndPoint AdminAddress { get; set; }
         public bool NotifyWhenMessageArrived { get; set; }
         public int RemoveConsumedQueueIndexInterval { get; set; }
         public int RemoveExceedMaxCacheQueueIndexInterval { get; set; }
@@ -22,9 +24,10 @@ namespace EQueue.Broker
 
         public BrokerSetting()
         {
-            ProducerIPEndPoint = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
-            ConsumerIPEndPoint = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
-            AdminIPEndPoint = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
+            ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
+            ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
+            AdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
+
             NotifyWhenMessageArrived = true;
             RemoveConsumedQueueIndexInterval = 1000 * 5;
             RemoveExceedMaxCacheQueueIndexInterval = 1000 * 5;

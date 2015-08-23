@@ -7,7 +7,6 @@ using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Utilities;
-using EQueue.Broker.Client;
 
 namespace EQueue.Broker
 {
@@ -19,13 +18,11 @@ namespace EQueue.Broker
         private readonly IOffsetManager _offsetManager;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
-        private readonly IList<int> _taskIds;
         private int _isRemovingConsumedQueueIndex;
         private int _isRemovingExceedMaxCacheQueueIndex;
 
         public QueueService(IQueueStore queueStore, IMessageStore messageStore, IOffsetManager offsetManager, IScheduleService scheduleService, ILoggerFactory loggerFactory)
         {
-            _taskIds = new List<int>();
             _queueDict = new ConcurrentDictionary<string, Queue>();
             _queueStore = queueStore;
             _messageStore = messageStore;
@@ -38,10 +35,8 @@ namespace EQueue.Broker
         {
             //先清理状态
             _queueDict.Clear();
-            foreach (var taskId in _taskIds)
-            {
-                _scheduleService.ShutdownTask(taskId);
-            }
+            _scheduleService.StopTask("QueueService.RemoveConsumedQueueIndex");
+            _scheduleService.StopTask("QueueService.RemoveExceedMaxCacheQueueIndex");
 
             //再重新加载状态
             var queues = _queueStore.LoadAllQueues();
@@ -51,15 +46,15 @@ namespace EQueue.Broker
                 var key = CreateQueueKey(queue.Topic, queue.QueueId);
                 _queueDict.TryAdd(key, queue);
             }
-            _taskIds.Add(_scheduleService.ScheduleTask("QueueService.RemoveConsumedQueueIndex", RemoveConsumedQueueIndex, BrokerController.Instance.Setting.RemoveConsumedQueueIndexInterval, BrokerController.Instance.Setting.RemoveConsumedQueueIndexInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask("QueueService.RemoveExceedMaxCacheQueueIndex", RemoveExceedMaxCacheQueueIndex, BrokerController.Instance.Setting.RemoveExceedMaxCacheQueueIndexInterval, BrokerController.Instance.Setting.RemoveExceedMaxCacheQueueIndexInterval));
+
+            _scheduleService.StartTask("QueueService.RemoveConsumedQueueIndex", RemoveConsumedQueueIndex, BrokerController.Instance.Setting.RemoveConsumedQueueIndexInterval, BrokerController.Instance.Setting.RemoveConsumedQueueIndexInterval);
+            _scheduleService.StartTask("QueueService.RemoveExceedMaxCacheQueueIndex", RemoveExceedMaxCacheQueueIndex, BrokerController.Instance.Setting.RemoveExceedMaxCacheQueueIndexInterval, BrokerController.Instance.Setting.RemoveExceedMaxCacheQueueIndexInterval);
         }
         public void Shutdown()
         {
-            foreach (var taskId in _taskIds)
-            {
-                _scheduleService.ShutdownTask(taskId);
-            }
+            _queueDict.Clear();
+            _scheduleService.StopTask("QueueService.RemoveConsumedQueueIndex");
+            _scheduleService.StopTask("QueueService.RemoveExceedMaxCacheQueueIndex");
         }
         public IEnumerable<string> GetAllTopics()
         {

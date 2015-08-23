@@ -1,6 +1,6 @@
 ﻿namespace EQueue.Protocols
 {
-    public enum PullStatus
+    public enum PullStatus : short
     {
         Found = 1,
         NoNewMessage = 2,

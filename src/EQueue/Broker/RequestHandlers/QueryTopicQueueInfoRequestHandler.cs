@@ -4,6 +4,7 @@ using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker.Processors
 {
@@ -43,8 +44,7 @@ namespace EQueue.Broker.Processors
                 }
             }
 
-            var data = _binarySerializer.Serialize(topicQueueInfoList);
-            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, data);
+            return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(topicQueueInfoList));
         }
     }
 }

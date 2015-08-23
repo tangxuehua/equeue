@@ -20,7 +20,6 @@ namespace EQueue.Broker
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
         private long _currentOffset = -1;
-        private int _removeMessageFromMemoryTaskId;
 
         public long CurrentMessageOffset
         {
@@ -46,11 +45,11 @@ namespace EQueue.Broker
         public void Recover(IEnumerable<QueueConsumedOffset> queueConsumedOffsets, Action<long, string, int, long> messageRecoveredCallback) { }
         public void Start()
         {
-            _removeMessageFromMemoryTaskId = _scheduleService.ScheduleTask("InMemoryMessageStore.RemoveConsumedMessagesFromMemory", RemoveConsumedMessagesFromMemory, _setting.RemoveMessageFromMemoryInterval, _setting.RemoveMessageFromMemoryInterval);
+            _scheduleService.StartTask("InMemoryMessageStore.RemoveConsumedMessagesFromMemory", RemoveConsumedMessagesFromMemory, _setting.RemoveMessageFromMemoryInterval, _setting.RemoveMessageFromMemoryInterval);
         }
         public void Shutdown()
         {
-            _scheduleService.ShutdownTask(_removeMessageFromMemoryTaskId);
+            _scheduleService.StopTask("InMemoryMessageStore.RemoveConsumedMessagesFromMemory");
         }
         public long GetNextMessageOffset()
         {
@@ -62,6 +61,7 @@ namespace EQueue.Broker
                 ObjectId.GenerateNewStringId(),
                 message.Topic,
                 message.Code,
+                message.Key,
                 message.Body,
                 messageOffset,
                 queueId,

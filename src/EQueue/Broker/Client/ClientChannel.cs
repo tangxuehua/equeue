@@ -1,16 +1,17 @@
 ﻿using System;
 using ECommon.Remoting;
+using ECommon.Socketing;
 
 namespace EQueue.Broker.Client
 {
     public class ClientChannel
     {
         public string ClientId { get; private set; }
-        public ISocketChannel Channel { get; private set; }
+        public ITcpConnection Channel { get; private set; }
         public DateTime LastUpdateTime { get; set; }
         public DateTime? ClosedTime { get; private set; }
 
-        public ClientChannel(string clientId, ISocketChannel channel)
+        public ClientChannel(string clientId, ITcpConnection channel)
         {
             ClientId = clientId;
             Channel = channel;
@@ -28,7 +29,7 @@ namespace EQueue.Broker.Client
 
         public override string ToString()
         {
-            return string.Format("[ClientId:{0}, Channel:{1}, LastUpdateTime:{2}, ClosedTime:{3}]", ClientId, Channel, LastUpdateTime, ClosedTime);
+            return string.Format("[ClientId:{0}, RemoteEndPoint:{1}, LastUpdateTime:{2}, ClosedTime:{3}]", ClientId, Channel.RemotingEndPoint, LastUpdateTime, ClosedTime);
         }
     }
 }

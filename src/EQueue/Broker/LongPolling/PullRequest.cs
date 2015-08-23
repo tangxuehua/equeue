@@ -8,7 +8,7 @@ namespace EQueue.Broker.LongPolling
     public class PullRequest
     {
         public string Id { get; private set; }
-        public long RemotingRequestSequence { get; private set; }
+        public RemotingRequest RemotingRequest { get; private set; }
         public PullMessageRequest PullMessageRequest { get; private set; }
         public IRequestHandlerContext RequestHandlerContext { get; private set; }
         public DateTime SuspendStartTime { get; private set; }
@@ -18,7 +18,7 @@ namespace EQueue.Broker.LongPolling
         public Action<PullRequest> ReplacedAction { get; private set; }
 
         public PullRequest(
-            long remotingRequestSequence,
+            RemotingRequest remotingRequest,
             PullMessageRequest pullMessageRequest,
             IRequestHandlerContext requestHandlerContext,
             DateTime suspendStartTime,
@@ -28,7 +28,7 @@ namespace EQueue.Broker.LongPolling
             Action<PullRequest> replacedAction)
         {
             Id = ObjectId.GenerateNewStringId();
-            RemotingRequestSequence = remotingRequestSequence;
+            RemotingRequest = remotingRequest;
             PullMessageRequest = pullMessageRequest;
             RequestHandlerContext = requestHandlerContext;
             SuspendStartTime = suspendStartTime;

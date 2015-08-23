@@ -5,6 +5,7 @@ using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Broker.Client;
 using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker.Processors
 {
@@ -51,8 +52,7 @@ namespace EQueue.Broker.Processors
                 }
             }
 
-            var data = _binarySerializer.Serialize(consumerInfoList);
-            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, data);
+            return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(consumerInfoList));
         }
 
         private IEnumerable<ConsumerInfo> GetConsumerInfoForGroup(ConsumerGroup consumerGroup, string currentTopic)

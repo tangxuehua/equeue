@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using ECommon.Components;
@@ -16,7 +17,7 @@ using EQueue.Utils;
 
 namespace EQueue.Clients.Producers
 {
-    public class Producer : ISocketClientEventListener
+    public class Producer
     {
         private readonly object _lockObject;
         private readonly ConcurrentDictionary<string, IList<int>> _topicQueueIdsDict;
@@ -24,7 +25,6 @@ namespace EQueue.Clients.Producers
         private readonly SocketRemotingClient _remotingClient;
         private readonly IQueueSelector _queueSelector;
         private readonly ILogger _logger;
-        private readonly List<int> _taskIds;
 
         public string Id { get; private set; }
         public ProducerSetting Setting { get; private set; }
@@ -40,14 +40,20 @@ namespace EQueue.Clients.Producers
             Setting = setting ?? new ProducerSetting();
 
             _lockObject = new object();
-            _taskIds = new List<int>();
             _topicQueueIdsDict = new ConcurrentDictionary<string, IList<int>>();
-            _remotingClient = new SocketRemotingClient(Setting.BrokerProducerIPEndPoint, null, this);
+            _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.LocalAddress);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+
+            _remotingClient.RegisterConnectionEventListener(new ConnectionEventListener(this));
         }
 
+        public Producer RegisterResponseHandler(IResponseHandler responseHandler)
+        {
+            _remotingClient.RegisterResponseHandler((int)RequestCode.SendMessage, responseHandler);
+            return this;
+        }
         public Producer Start()
         {
             _remotingClient.Start();
@@ -60,27 +66,25 @@ namespace EQueue.Clients.Producers
             _logger.InfoFormat("Shutdown, producerId:{0}", Id);
             return this;
         }
-        public SendResult Send(Message message, object routingKey, int timeoutMilliseconds = 30000)
+        public SendResult Send(Message message, string routingKey, int timeoutMilliseconds = 30000)
         {
             var sendResult = SendAsync(message, routingKey, timeoutMilliseconds).WaitResult<SendResult>(timeoutMilliseconds + 1000);
             if (sendResult == null)
             {
-                sendResult = new SendResult(SendStatus.Timeout, string.Format("Send message timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}", message, routingKey, timeoutMilliseconds));
+                sendResult = new SendResult(SendStatus.Timeout, null, string.Format("Send message timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}", message, routingKey, timeoutMilliseconds));
             }
             return sendResult;
         }
-        public async Task<SendResult> SendAsync(Message message, object routingKey, int timeoutMilliseconds = 30000)
+        public async Task<SendResult> SendAsync(Message message, string routingKey, int timeoutMilliseconds = 30000)
         {
             Ensure.NotNull(message, "message");
 
-            var currentRoutingKey = GetStringRoutingKey(routingKey);
-            var queueIds = GetTopicQueueIds(message.Topic);
-            var queueId = _queueSelector.SelectQueueId(queueIds, message, currentRoutingKey);
+            var queueId = GetAvailableQueueId(message, routingKey);
             if (queueId < 0)
             {
                 throw new Exception(string.Format("No available routing queue for topic [{0}].", message.Topic));
             }
-            var remotingRequest = BuildSendMessageRequest(message, queueId, currentRoutingKey);
+            var remotingRequest = BuildSendMessageRequest(message, queueId, routingKey);
 
             try
             {
@@ -88,32 +92,60 @@ namespace EQueue.Clients.Producers
 
                 if (remotingResponse == null)
                 {
-                    return new SendResult(SendStatus.Timeout, string.Format("Send message timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}", message, routingKey, timeoutMilliseconds));
+                    return new SendResult(SendStatus.Timeout, null, string.Format("Send message timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}", message, routingKey, timeoutMilliseconds));
                 }
 
-                if (remotingResponse.Code == (int)ResponseCode.Success)
-                {
-                    var response = Encoding.UTF8.GetString(remotingResponse.Body).Split(':');
-                    return new SendResult(SendStatus.Success, response[2], long.Parse(response[0]), new MessageQueue(message.Topic, queueId), long.Parse(response[1]));
-                }
-                else
-                {
-                    return new SendResult(SendStatus.Failed, Encoding.UTF8.GetString(remotingResponse.Body));
-                }
+                return ParseSendResult(remotingResponse);
             }
             catch (Exception ex)
             {
-                return new SendResult(SendStatus.Failed, ex.Message);
+                return new SendResult(SendStatus.Failed, null, ex.Message);
+            }
+        }
+        public void SendWithCallback(Message message, string routingKey)
+        {
+            Ensure.NotNull(message, "message");
+
+            var queueId = GetAvailableQueueId(message, routingKey);
+            if (queueId < 0)
+            {
+                throw new Exception(string.Format("No available routing queue for topic [{0}].", message.Topic));
+            }
+            var remotingRequest = BuildSendMessageRequest(message, queueId, routingKey);
+
+            _remotingClient.InvokeWithCallback(remotingRequest);
+        }
+        public void SendOneway(Message message, string routingKey)
+        {
+            Ensure.NotNull(message, "message");
+
+            var queueId = GetAvailableQueueId(message, routingKey);
+            if (queueId < 0)
+            {
+                throw new Exception(string.Format("No available routing queue for topic [{0}].", message.Topic));
+            }
+            var remotingRequest = BuildSendMessageRequest(message, queueId, routingKey);
+
+            _remotingClient.InvokeOneway(remotingRequest);
+        }
+
+        public static SendResult ParseSendResult(RemotingResponse remotingResponse)
+        {
+            if (remotingResponse.Code == ResponseCode.Success)
+            {
+                var messageResult = MessageUtils.DecodeMessageSendResponse(remotingResponse.Body);
+                return new SendResult(SendStatus.Success, messageResult, null);
+            }
+            else if (remotingResponse.Code == 0)
+            {
+                return new SendResult(SendStatus.Timeout, null, Encoding.UTF8.GetString(remotingResponse.Body));
+            }
+            else
+            {
+                return new SendResult(SendStatus.Failed, null, Encoding.UTF8.GetString(remotingResponse.Body));
             }
         }
 
-        private string GetStringRoutingKey(object routingKey)
-        {
-            Ensure.NotNull(routingKey, "routingKey");
-            var ret = routingKey.ToString();
-            Ensure.NotNullOrEmpty(ret, "routingKey");
-            return ret;
-        }
         private IList<int> GetTopicQueueIds(string topic)
         {
             IList<int> queueIds;
@@ -125,6 +157,11 @@ namespace EQueue.Clients.Producers
             }
 
             return queueIds;
+        }
+        private int GetAvailableQueueId(Message message, string routingKey)
+        {
+            var queueIds = GetTopicQueueIds(message.Topic);
+            return _queueSelector.SelectQueueId(queueIds, message, routingKey);
         }
         private void RefreshTopicQueueCount()
         {
@@ -166,53 +203,20 @@ namespace EQueue.Clients.Producers
                 throw new Exception(string.Format("GetTopicQueueIds has exception, producerId:{0}, topic:{1}, remoting response code:{2}", Id, topic, remotingResponse.Code));
             }
         }
-        private RemotingRequest BuildSendMessageRequest(Message message, int queueId, object routingKey)
+        private RemotingRequest BuildSendMessageRequest(Message message, int queueId, string routingKey)
         {
-            var request = new SendMessageRequest { Message = message, QueueId = queueId, RoutingKey = routingKey.ToString() };
+            var request = new SendMessageRequest { Message = message, QueueId = queueId, RoutingKey = routingKey };
             var data = MessageUtils.EncodeSendMessageRequest(request);
             return new RemotingRequest((int)RequestCode.SendMessage, data);
         }
-        private void HandleRemotingClientConnectionChanged(bool isConnected)
-        {
-            if (isConnected)
-            {
-                StartBackgroundJobs();
-            }
-            else
-            {
-                StopBackgroundJobs();
-            }
-        }
         private void StartBackgroundJobs()
         {
-            lock (_lockObject)
-            {
-                StopBackgroundJobsInternal();
-                StartBackgroundJobsInternal();
-            }
+            _topicQueueIdsDict.Clear();
+            _scheduleService.StartTask("Producer.RefreshTopicQueueCount", RefreshTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval);
         }
         private void StopBackgroundJobs()
         {
-            lock (_lockObject)
-            {
-                StopBackgroundJobsInternal();
-            }
-        }
-        private void StartBackgroundJobsInternal()
-        {
-            _taskIds.Add(_scheduleService.ScheduleTask("Producer.RefreshTopicQueueCount", RefreshTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
-        }
-        private void StopBackgroundJobsInternal()
-        {
-            foreach (var taskId in _taskIds)
-            {
-                _scheduleService.ShutdownTask(taskId);
-            }
-            Clear();
-        }
-        private void Clear()
-        {
-            _taskIds.Clear();
+            _scheduleService.StopTask("Producer.RefreshTopicQueueCount");
             _topicQueueIdsDict.Clear();
         }
         private bool IsIntCollectionChanged(IList<int> first, IList<int> second)
@@ -231,16 +235,25 @@ namespace EQueue.Clients.Producers
             return false;
         }
 
-        void ISocketClientEventListener.OnConnectionClosed(ECommon.TcpTransport.ITcpConnectionInfo connectionInfo, System.Net.Sockets.SocketError socketError)
+        class ConnectionEventListener : IConnectionEventListener
         {
-            StopBackgroundJobs();
-        }
-        void ISocketClientEventListener.OnConnectionEstablished(ECommon.TcpTransport.ITcpConnectionInfo connectionInfo)
-        {
-            StartBackgroundJobs();
-        }
-        void ISocketClientEventListener.OnConnectionFailed(ECommon.TcpTransport.ITcpConnectionInfo connectionInfo, System.Net.Sockets.SocketError socketError)
-        {
+            private readonly Producer _producer;
+
+            public ConnectionEventListener(Producer producer)
+            {
+                _producer = producer;
+            }
+
+            public void OnConnectionAccepted(ITcpConnection connection) { }
+            public void OnConnectionFailed(SocketError socketError) { }
+            public void OnConnectionClosed(ITcpConnection connection, System.Net.Sockets.SocketError socketError)
+            {
+                _producer.StopBackgroundJobs();
+            }
+            public void OnConnectionEstablished(ITcpConnection connection)
+            {
+                _producer.StartBackgroundJobs();
+            }
         }
     }
 }

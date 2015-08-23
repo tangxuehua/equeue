@@ -153,6 +153,7 @@
     <Compile Include="Protocols\QueryConsumerRequest.cs" />
     <Compile Include="Protocols\UpdateQueueOffsetRequest.cs" />
     <Compile Include="Utils\MessageUtils.cs" />
+    <Compile Include="Utils\RemotingResponseFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

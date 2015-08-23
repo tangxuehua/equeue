@@ -12,30 +12,22 @@ namespace EQueue.Broker.Client
         private readonly ConcurrentDictionary<string, ConsumerGroup> _consumerGroupDict = new ConcurrentDictionary<string, ConsumerGroup>();
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
-        private readonly IList<int> _taskIds;
 
         public ConsumerManager()
         {
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            _taskIds = new List<int>();
         }
 
         public void Start()
         {
             _consumerGroupDict.Clear();
-            foreach (var taskId in _taskIds)
-            {
-                _scheduleService.ShutdownTask(taskId);
-            }
-            _taskIds.Add(_scheduleService.ScheduleTask("ConsumerManager.ScanNotActiveConsumer", ScanNotActiveConsumer, BrokerController.Instance.Setting.ScanNotActiveConsumerInterval, BrokerController.Instance.Setting.ScanNotActiveConsumerInterval));
+            _scheduleService.StartTask("ConsumerManager.ScanNotActiveConsumer", ScanNotActiveConsumer, BrokerController.Instance.Setting.ScanNotActiveConsumerInterval, BrokerController.Instance.Setting.ScanNotActiveConsumerInterval);
         }
         public void Shutdown()
         {
-            foreach (var taskId in _taskIds)
-            {
-                _scheduleService.ShutdownTask(taskId);
-            }
+            _consumerGroupDict.Clear();
+            _scheduleService.StopTask("ConsumerManager.ScanNotActiveConsumer");
         }
         public void RegisterConsumer(string groupName, ClientChannel clientChannel, IEnumerable<string> subscriptionTopics, IEnumerable<string> consumingQueues)
         {

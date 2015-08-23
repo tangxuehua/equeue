@@ -3,6 +3,7 @@ using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker.Processors
 {
@@ -22,7 +23,7 @@ namespace EQueue.Broker.Processors
             var request = _binarySerializer.Deserialize<QueryMessageRequest>(remotingRequest.Body);
             var total = 0;
             var messages = _messageStore.QueryMessages(request.Topic, request.QueueId, request.Code, request.RoutingKey, request.PageIndex, request.PageSize, out total).ToList();
-            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, _binarySerializer.Serialize(new QueryMessageResponse(total, messages)));
+            return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(new QueryMessageResponse(total, messages)));
         }
     }
 }

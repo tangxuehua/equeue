@@ -9,6 +9,7 @@ using ECommon.Serializing;
 using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker.Processors
 {
@@ -46,7 +47,7 @@ namespace EQueue.Broker.Processors
             if (pullOffset < 0)
             {
                 var nextConsumeOffset = GetNextConsumeOffset(topic, queueId, request.ConsumerGroup, request.ConsumeFromWhere);
-                return BuildNextOffsetResetResponse(remotingRequest.Sequence, nextConsumeOffset);
+                return BuildNextOffsetResetResponse(remotingRequest, nextConsumeOffset);
             }
 
             //尝试拉取消息
@@ -55,14 +56,14 @@ namespace EQueue.Broker.Processors
             //如果消息存在，则返回消息
             if (messages.Count() > 0)
             {
-                return BuildFoundResponse(remotingRequest.Sequence, messages);
+                return BuildFoundResponse(remotingRequest, messages);
             }
 
             //消息不存在，如果挂起时间大于0，则挂起请求
             if (request.SuspendPullRequestMilliseconds > 0)
             {
                 var pullRequest = new PullRequest(
-                    remotingRequest.Sequence,
+                    remotingRequest,
                     request,
                     context,
                     DateTime.Now,
@@ -79,15 +80,15 @@ namespace EQueue.Broker.Processors
 
             if (pullOffset < queueMinOffset)
             {
-                return BuildNextOffsetResetResponse(remotingRequest.Sequence, queueMinOffset);
+                return BuildNextOffsetResetResponse(remotingRequest, queueMinOffset);
             }
             else if (pullOffset > queueCurrentOffset + 1)
             {
-                return BuildNextOffsetResetResponse(remotingRequest.Sequence, queueCurrentOffset + 1);
+                return BuildNextOffsetResetResponse(remotingRequest, queueCurrentOffset + 1);
             }
             else
             {
-                return BuildNoNewMessageResponse(remotingRequest.Sequence);
+                return BuildNoNewMessageResponse(remotingRequest);
             }
         }
 
@@ -107,7 +108,7 @@ namespace EQueue.Broker.Processors
 
             if (messages.Count() > 0)
             {
-                SendRemotingResponse(pullRequest, BuildFoundResponse(pullRequest.RemotingRequestSequence, messages));
+                SendRemotingResponse(pullRequest, BuildFoundResponse(pullRequest.RemotingRequest, messages));
                 return;
             }
 
@@ -116,15 +117,15 @@ namespace EQueue.Broker.Processors
 
             if (pullOffset < queueMinOffset)
             {
-                SendRemotingResponse(pullRequest, BuildNextOffsetResetResponse(pullRequest.RemotingRequestSequence, queueMinOffset));
+                SendRemotingResponse(pullRequest, BuildNextOffsetResetResponse(pullRequest.RemotingRequest, queueMinOffset));
             }
             else if (pullOffset > queueCurrentOffset + 1)
             {
-                SendRemotingResponse(pullRequest, BuildNextOffsetResetResponse(pullRequest.RemotingRequestSequence, queueCurrentOffset + 1));
+                SendRemotingResponse(pullRequest, BuildNextOffsetResetResponse(pullRequest.RemotingRequest, queueCurrentOffset + 1));
             }
             else
             {
-                SendRemotingResponse(pullRequest, BuildNoNewMessageResponse(pullRequest.RemotingRequestSequence));
+                SendRemotingResponse(pullRequest, BuildNoNewMessageResponse(pullRequest.RemotingRequest));
             }
         }
         private void ExecuteReplacedPullRequest(PullRequest pullRequest)
@@ -133,28 +134,28 @@ namespace EQueue.Broker.Processors
             {
                 return;
             }
-            SendRemotingResponse(pullRequest, BuildIgnoredResponse(pullRequest.RemotingRequestSequence));
+            SendRemotingResponse(pullRequest, BuildIgnoredResponse(pullRequest.RemotingRequest));
         }
         private bool IsPullRequestValid(PullRequest pullRequest)
         {
             var consumerGroup = _consumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
-            return consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Channel.RemoteEndPoint.ToString());
+            return consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Connection.RemotingEndPoint.ToString());
         }
-        private RemotingResponse BuildNoNewMessageResponse(long requestSequence)
+        private RemotingResponse BuildNoNewMessageResponse(RemotingRequest remotingRequest)
         {
-            return new RemotingResponse((int)PullStatus.NoNewMessage, requestSequence, EmptyResponseData);
+            return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.NoNewMessage);
         }
-        private RemotingResponse BuildIgnoredResponse(long requestSequence)
+        private RemotingResponse BuildIgnoredResponse(RemotingRequest remotingRequest)
         {
-            return new RemotingResponse((int)PullStatus.Ignored, requestSequence, EmptyResponseData);
+            return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.Ignored);
         }
-        private RemotingResponse BuildNextOffsetResetResponse(long requestSequence, long nextOffset)
+        private RemotingResponse BuildNextOffsetResetResponse(RemotingRequest remotingRequest, long nextOffset)
         {
-            return new RemotingResponse((int)PullStatus.NextOffsetReset, requestSequence, BitConverter.GetBytes(nextOffset));
+            return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.NextOffsetReset, BitConverter.GetBytes(nextOffset));
         }
-        private RemotingResponse BuildFoundResponse(long requestSequence, IEnumerable<QueueMessage> messages)
+        private RemotingResponse BuildFoundResponse(RemotingRequest remotingRequest, IEnumerable<QueueMessage> messages)
         {
-            return new RemotingResponse((int)PullStatus.Found, requestSequence, _binarySerializer.Serialize(messages));
+            return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.Found, _binarySerializer.Serialize(messages));
         }
         private void SendRemotingResponse(PullRequest pullRequest, RemotingResponse remotingResponse)
         {

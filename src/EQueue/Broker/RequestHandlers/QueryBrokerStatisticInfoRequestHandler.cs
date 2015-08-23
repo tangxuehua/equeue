@@ -1,7 +1,7 @@
 ﻿using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
-using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker.Processors
 {
@@ -17,7 +17,7 @@ namespace EQueue.Broker.Processors
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var statisticInfo = BrokerController.Instance.GetBrokerStatisticInfo();
-            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, _binarySerializer.Serialize(statisticInfo));
+            return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(statisticInfo));
         }
     }
 }

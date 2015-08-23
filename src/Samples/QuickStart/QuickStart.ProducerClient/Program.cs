@@ -9,6 +9,7 @@ using ECommon.Components;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;
+using ECommon.Socketing;
 using ECommon.Utilities;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
@@ -20,6 +21,7 @@ namespace QuickStart.ProducerClient
     class Program
     {
         static ILogger _logger;
+        static ILogger _fileLogger;
 
         static void Main(string[] args)
         {
@@ -39,6 +41,7 @@ namespace QuickStart.ProducerClient
                 .RegisterEQueueComponents()
                 .SetDefault<IQueueSelector, QueueAverageSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create("Program");
+            _fileLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("FileLogger");
         }
         static void SendMessage()
         {
@@ -49,7 +52,7 @@ namespace QuickStart.ProducerClient
             var flowControlCount = int.Parse(ConfigurationManager.AppSettings["FlowControlCount"]);
             var maxMessageCount = int.Parse(ConfigurationManager.AppSettings["MaxMessageCount"]);
             var payload = new byte[messageSize];
-            var message = new Message("SampleTopic", 100, payload);
+            var message = new Message("SampleTopic", 100, ObjectId.GenerateNewStringId(), payload);
             var messageIndex = 0L;
             var sendingCount = 0L;
             var finishedCount = 0L;
@@ -57,53 +60,74 @@ namespace QuickStart.ProducerClient
             var previousElapsedMilliseconds = 0L;
             var flowControlledCount = 0;
             var watch = Stopwatch.StartNew();
+            var sendOneway = bool.Parse(ConfigurationManager.AppSettings["SendOneway"]);
 
             for (var i = 0; i < connectionCount; i++)
             {
                 Task.Factory.StartNew(() =>
                 {
-                    var producer = new Producer("Producer@" + ObjectId.GenerateNewStringId(), new ProducerSetting { BrokerProducerIPEndPoint = brokerEndPoint }).Start();
+                    var producer = new Producer("Producer@" + ObjectId.GenerateNewStringId(), new ProducerSetting { BrokerAddress = brokerEndPoint }).Start();
 
                     while (true)
                     {
-                        var waitingCount = sendingCount - finishedCount;
-                        if (waitingCount > flowControlCount)
+                        if (sendOneway)
                         {
-                            Thread.Sleep(1);
-                            var current = Interlocked.Increment(ref flowControlledCount);
-                            if (current % 1000 == 0)
+                            producer.SendOneway(message, Interlocked.Increment(ref messageIndex).ToString());
+                            var currentCount = Interlocked.Increment(ref finishedCount);
+                            if (currentCount % 10000 == 0)
                             {
-                                _logger.InfoFormat("Start to flow control, pending messages: {0}, flow count: {1}", waitingCount, current);
+                                var currentElapsedMilliseconds = watch.ElapsedMilliseconds;
+                                _logger.InfoFormat("Sent {0} messages, time elapsed: {1}ms, average throughput: {2}",
+                                    currentCount,
+                                    currentElapsedMilliseconds,
+                                    currentCount * 1000 / currentElapsedMilliseconds);
                             }
-                            continue;
                         }
-                        producer.SendAsync(message, Interlocked.Increment(ref messageIndex), 300000).ContinueWith(sendTask =>
+                        else
                         {
-                            if (sendTask.Exception != null)
+                            var waitingCount = sendingCount - finishedCount;
+                            if (waitingCount > flowControlCount)
                             {
-                                _logger.ErrorFormat("Sent message failed, errorMessage: {0}", sendTask.Exception.GetBaseException().Message);
-                                return;
-                            }
-                            if (sendTask.Result.SendStatus == SendStatus.Success)
-                            {
-                                var currentFinishedCount = Interlocked.Increment(ref finishedCount);
-                                if (currentFinishedCount % 10000 == 0)
+                                Thread.Sleep(1);
+                                var current = Interlocked.Increment(ref flowControlledCount);
+                                if (current % 1000 == 0)
                                 {
-                                    var currentElapsedMilliseconds = watch.ElapsedMilliseconds;
-                                    _logger.InfoFormat("Sent {0} messages, time elapsed: {1}ms, current throughput: {2}, average throughput: {3}",
-                                        currentFinishedCount,
-                                        currentElapsedMilliseconds,
-                                        (currentFinishedCount - previousFinishedCount) * 1000 / (currentElapsedMilliseconds - previousElapsedMilliseconds),
-                                        currentFinishedCount * 1000 / currentElapsedMilliseconds);
-                                    Interlocked.Exchange(ref previousFinishedCount, currentFinishedCount);
-                                    Interlocked.Exchange(ref previousElapsedMilliseconds, currentElapsedMilliseconds);
+                                    _logger.InfoFormat("Start to flow control, pending messages: {0}, flow count: {1}", waitingCount, current);
                                 }
+                                continue;
                             }
-                            else
+
+                            producer.SendAsync(message, Interlocked.Increment(ref messageIndex).ToString(), 300000).ContinueWith(sendTask =>
                             {
-                                _logger.ErrorFormat("Sent message failed, errorMessage: {0}", sendTask.Result.ErrorMessage);
-                            }
-                        });
+                                if (sendTask.Exception != null)
+                                {
+                                    _logger.ErrorFormat("Sent message failed, errorMessage: {0}", sendTask.Exception.GetBaseException().Message);
+                                    return;
+                                }
+                                if (sendTask.Result.SendStatus == SendStatus.Success)
+                                {
+                                    var currentFinishedCount = Interlocked.Increment(ref finishedCount);
+                                    if (currentFinishedCount % 10000 == 0)
+                                    {
+                                        var currentElapsedMilliseconds = watch.ElapsedMilliseconds;
+                                        _fileLogger.InfoFormat("{0},{1}",
+                                            (currentFinishedCount - previousFinishedCount) * 1000 / (currentElapsedMilliseconds - previousElapsedMilliseconds),
+                                            (currentElapsedMilliseconds - previousElapsedMilliseconds) * 100 / (currentFinishedCount - previousFinishedCount));
+                                        _logger.InfoFormat("Sent {0} messages, time elapsed: {1}ms, current throughput: {2}, average throughput: {3}",
+                                            currentFinishedCount,
+                                            currentElapsedMilliseconds,
+                                            (currentFinishedCount - previousFinishedCount) * 1000 / (currentElapsedMilliseconds - previousElapsedMilliseconds),
+                                            currentFinishedCount * 1000 / currentElapsedMilliseconds);
+                                        Interlocked.Exchange(ref previousFinishedCount, currentFinishedCount);
+                                        Interlocked.Exchange(ref previousElapsedMilliseconds, currentElapsedMilliseconds);
+                                    }
+                                }
+                                else
+                                {
+                                    _logger.ErrorFormat("Sent message failed, errorMessage: {0}", sendTask.Result.ErrorMessage);
+                                }
+                            });
+                        }
                         var count = Interlocked.Increment(ref sendingCount);
                         if (count >= maxMessageCount)
                         {

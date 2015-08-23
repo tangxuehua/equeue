@@ -5,22 +5,19 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
-using ECommon.Remoting.Exceptions;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
-using ECommon.TcpTransport;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {
-    public class Consumer : ISocketClientEventListener
+    public class Consumer
     {
         #region Private Members
 
@@ -41,11 +38,9 @@ namespace EQueue.Clients.Consumers
         private readonly Worker _executePullRequestWorker;
         private readonly Worker _handleMessageWorker;
         private readonly ILogger _logger;
-        private readonly AutoResetEvent _waitSocketConnectHandle;
         private IMessageHandler _messageHandler;
         private long _flowControlTimes;
         private bool _stoped;
-        private bool _isBrokerServerConnected;
 
         #endregion
 
@@ -87,15 +82,16 @@ namespace EQueue.Clients.Consumers
             _messageRetryQueue = new BlockingCollection<ConsumingMessage>(new ConcurrentQueue<ConsumingMessage>());
             _handlingMessageDict = new ConcurrentDictionary<long, ConsumingMessage>();
             _taskIds = new List<int>();
-            _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Setting.ConsumeThreadMaxCount));
-            _remotingClient = new SocketRemotingClient(Setting.BrokerConsumerIPEndPoint, null, this);
+            _taskFactory = new TaskFactory();
+            _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.LocalAddress);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
             _executePullRequestWorker = new Worker("Consumer.ExecutePullRequest", ExecutePullRequest);
             _handleMessageWorker = new Worker("Consumer.HandleMessage", HandleMessage);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            _waitSocketConnectHandle = new AutoResetEvent(false);
+
+            _remotingClient.RegisterConnectionEventListener(new ConnectionEventListener(this));
         }
 
         #endregion
@@ -115,7 +111,6 @@ namespace EQueue.Clients.Consumers
         {
             _stoped = false;
             _remotingClient.Start();
-            _waitSocketConnectHandle.WaitOne();
             _logger.InfoFormat("Started, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
@@ -206,7 +201,7 @@ namespace EQueue.Clients.Consumers
                     {
                         if (_stoped) return;
                         if (pullRequest.ProcessQueue.IsDropped) return;
-                        if (_isBrokerServerConnected)
+                        if (_remotingClient.IsConnected)
                         {
                             string remotingResponseBodyLength;
                             if (pullTask.Result != null)
@@ -228,7 +223,7 @@ namespace EQueue.Clients.Consumers
                 if (_stoped) return;
                 if (pullRequest.ProcessQueue.IsDropped) return;
 
-                if (_isBrokerServerConnected)
+                if (_remotingClient.IsConnected)
                 {
                     _logger.Error(string.Format("PullMessage has exception, pullRequest:{0}", pullRequest), ex);
                 }
@@ -502,7 +497,7 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                if (_isBrokerServerConnected)
+                if (_remotingClient.IsConnected)
                 {
                     _logger.Error(string.Format("PersistOffset has exception, consumerId:{0}, group:{1}, topic:{2}, queueId:{3}", Id, GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId), ex);
                 }
@@ -519,7 +514,7 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                if (_isBrokerServerConnected)
+                if (_remotingClient.IsConnected)
                 {
                     _logger.Error(string.Format("SendHeartbeat remoting request to broker has exception, consumerId:{0}, group:{1}", Id, GroupName), ex);
                 }
@@ -603,21 +598,23 @@ namespace EQueue.Clients.Consumers
         }
         private void StartBackgroundJobsInternal()
         {
-            _taskIds.Add(_scheduleService.ScheduleTask("Consumer.RefreshTopicQueues", RefreshTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask("Consumer.SendHeartbeat", SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask("Consumer.Rebalance", Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask("Consumer.PersistOffset", PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval));
-            _taskIds.Add(_scheduleService.ScheduleTask("Consumer.RetryMessage", RetryMessage, Setting.RetryMessageInterval, Setting.RetryMessageInterval));
+            _scheduleService.StartTask("Consumer.RefreshTopicQueues", RefreshTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval);
+            _scheduleService.StartTask("Consumer.SendHeartbeat", SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval);
+            _scheduleService.StartTask("Consumer.Rebalance", Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval);
+            _scheduleService.StartTask("Consumer.PersistOffset", PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval);
+            _scheduleService.StartTask("Consumer.RetryMessage", RetryMessage, Setting.RetryMessageInterval, Setting.RetryMessageInterval);
 
             _executePullRequestWorker.Start();
             _handleMessageWorker.Start();
         }
         private void StopBackgroundJobsInternal()
         {
-            foreach (var taskId in _taskIds)
-            {
-                _scheduleService.ShutdownTask(taskId);
-            }
+            _scheduleService.StopTask("Consumer.RefreshTopicQueues");
+            _scheduleService.StopTask("Consumer.SendHeartbeat");
+            _scheduleService.StopTask("Consumer.Rebalance");
+            _scheduleService.StopTask("Consumer.PersistOffset");
+            _scheduleService.StopTask("Consumer.RetryMessage");
+
             foreach (var pullRequest in _pullRequestDict.Values)
             {
                 pullRequest.ProcessQueue.IsDropped = true;
@@ -647,7 +644,7 @@ namespace EQueue.Clients.Consumers
             _pullRequestDict.Clear();
             _topicQueuesDict.Clear();
         }
-        private bool IsIntCollectionChanged(IList<int> first, IList<int> second)
+        private static bool IsIntCollectionChanged(IList<int> first, IList<int> second)
         {
             if (first.Count != second.Count)
             {
@@ -673,19 +670,24 @@ namespace EQueue.Clients.Consumers
 
         #endregion
 
-        void ISocketClientEventListener.OnConnectionClosed(ITcpConnectionInfo connectionInfo, SocketError socketError)
+        class ConnectionEventListener : IConnectionEventListener
         {
-            _isBrokerServerConnected = false;
-            StopBackgroundJobs();
-        }
-        void ISocketClientEventListener.OnConnectionEstablished(ITcpConnectionInfo connectionInfo)
-        {
-            _isBrokerServerConnected = true;
-            _waitSocketConnectHandle.Set();
-            StartBackgroundJobs();
-        }
-        void ISocketClientEventListener.OnConnectionFailed(ITcpConnectionInfo connectionInfo, SocketError socketError)
-        {
+            private readonly Consumer _consumer;
+
+            public ConnectionEventListener(Consumer consumer)
+            {
+                _consumer = consumer;
+            }
+            public void OnConnectionAccepted(ITcpConnection connection) { }
+            public void OnConnectionFailed(SocketError socketError) { }
+            public void OnConnectionClosed(ITcpConnection connection, System.Net.Sockets.SocketError socketError)
+            {
+                _consumer.StopBackgroundJobs();
+            }
+            public void OnConnectionEstablished(ITcpConnection connection)
+            {
+                _consumer.StartBackgroundJobs();
+            }
         }
     }
 }

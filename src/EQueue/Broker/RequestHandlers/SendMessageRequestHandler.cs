@@ -26,8 +26,15 @@ namespace EQueue.Broker.Processors
             var request = MessageUtils.DecodeSendMessageRequest(remotingRequest.Body);
             var storeResult = _messageService.StoreMessage(request.Message, request.QueueId, request.RoutingKey);
             _suspendedPullRequestManager.NotifyNewMessage(request.Message.Topic, storeResult.QueueId, storeResult.QueueOffset);
-            var responseData = Encoding.UTF8.GetBytes(string.Format("{0}:{1}:{2}", storeResult.MessageOffset, storeResult.QueueOffset, storeResult.MessageId));
-            return new RemotingResponse((int)ResponseCode.Success, remotingRequest.Sequence, responseData);
+            var data = MessageUtils.EncodeMessageSendResponse(new SendMessageResponse(
+                request.Message.Key,
+                storeResult.MessageId,
+                storeResult.MessageOffset,
+                request.Message.Code,
+                request.Message.Topic,
+                request.QueueId,
+                storeResult.QueueOffset));
+            return RemotingResponseFactory.CreateResponse(remotingRequest, data);
         }
     }
 }

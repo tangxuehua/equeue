@@ -1,11 +1,11 @@
 ﻿using System.Net;
+using ECommon.Socketing;
 using ECommon.Utilities;
 
 namespace EQueue.AdminWeb
 {
     public class Settings
     {
-        public static IPAddress BrokerAddress = SocketUtils.GetLocalIPV4();
-        public static int BrokerPort = 5002;
+        public static IPEndPoint BrokerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
     }
 }

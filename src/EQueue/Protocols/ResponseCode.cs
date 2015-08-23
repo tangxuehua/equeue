@@ -1,7 +1,7 @@
 ﻿namespace EQueue.Protocols
 {
-    public enum ResponseCode
+    public class ResponseCode
     {
-        Success = 100
+        public const short Success = 100;
     }
 }

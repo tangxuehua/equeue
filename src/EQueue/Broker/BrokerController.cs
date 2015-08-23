@@ -5,7 +5,6 @@ using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Socketing;
-using ECommon.TcpTransport;
 using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.Processors;
@@ -13,7 +12,7 @@ using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
-    public class BrokerController : ISocketServerEventListener
+    public class BrokerController
     {
         private static BrokerController _instance;
         private readonly ILogger _logger;
@@ -42,10 +41,13 @@ namespace EQueue.Broker
             _queueService = ObjectContainer.Resolve<IQueueService>();
             _messageService = ObjectContainer.Resolve<IMessageService>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
-            _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.ProducerIPEndPoint);
-            _consumerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ConsumerRemotingServer", Setting.ConsumerIPEndPoint, this);
-            _adminSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.AdminRemotingServer", Setting.AdminIPEndPoint);
+
+            _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.ProducerAddress);
+            _consumerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ConsumerRemotingServer", Setting.ConsumerAddress);
+            _adminSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.AdminRemotingServer", Setting.AdminAddress);
+
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+            _consumerSocketRemotingServer.RegisterConnectionEventListener(new ConsumerConnectionEventListener(this));
             RegisterRequestHandlers();
         }
 
@@ -68,7 +70,7 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.Start();
             _producerSocketRemotingServer.Start();
             _adminSocketRemotingServer.Start();
-            _logger.InfoFormat("Broker started, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerIPEndPoint, Setting.ConsumerIPEndPoint, Setting.AdminIPEndPoint);
+            _logger.InfoFormat("Broker started, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
             return this;
         }
         public BrokerController Shutdown()
@@ -81,7 +83,7 @@ namespace EQueue.Broker
             _queueService.Shutdown();
             _messageService.Shutdown();
             _offsetManager.Shutdown();
-            _logger.InfoFormat("Broker shutdown, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerIPEndPoint, Setting.ConsumerIPEndPoint, Setting.AdminIPEndPoint);
+            _logger.InfoFormat("Broker shutdown, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
             return this;
         }
         public BrokerStatisticInfo GetBrokerStatisticInfo()
@@ -123,10 +125,22 @@ namespace EQueue.Broker
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetMessageDetail, new GetMessageDetailRequestHandler());
         }
 
-        void ISocketServerEventListener.OnConnectionAccepted(ITcpConnectionInfo connectionInfo) { }
-        void ISocketServerEventListener.OnConnectionClosed(ITcpConnectionInfo connectionInfo, SocketError socketError)
+        class ConsumerConnectionEventListener : IConnectionEventListener
         {
-            _consumerManager.RemoveConsumer(connectionInfo.RemoteEndPoint.ToString());
+            private BrokerController _brokerController;
+
+            public ConsumerConnectionEventListener(BrokerController brokerController)
+            {
+                _brokerController = brokerController;
+            }
+
+            public void OnConnectionAccepted(ITcpConnection connection) { }
+            public void OnConnectionEstablished(ITcpConnection connection) { }
+            public void OnConnectionFailed(SocketError socketError) { }
+            public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
+            {
+                _brokerController._consumerManager.RemoveConsumer(connection.RemotingEndPoint.ToString());
+            }
         }
     }
 }
