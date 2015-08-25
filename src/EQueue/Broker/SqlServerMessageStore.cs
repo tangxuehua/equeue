@@ -20,7 +20,6 @@ namespace EQueue.Broker
 {
     public class SqlServerMessageStore : IMessageStore
     {
-        private const string MessageFileName = "message.log";
         private readonly byte[] EmptyBody = new byte[0];
         private readonly ConcurrentDictionary<long, QueueMessage> _messageDict = new ConcurrentDictionary<long, QueueMessage>();
         private readonly ConcurrentDictionary<string, long> _queueConsumedOffsetDict = new ConcurrentDictionary<string, long>();
@@ -461,7 +460,7 @@ namespace EQueue.Broker
         {
             _logger.Info("No messages recovered from db, try to recover the max message offset from message log file.");
 
-            var fileName = Path.Combine(_setting.MessageLogFilePath, MessageFileName);
+            var fileName = _setting.MessageLogFile;
             if (!new FileInfo(fileName).Exists)
             {
                 _logger.InfoFormat("Message log file not exist, fileName: {0}", fileName);
@@ -505,7 +504,7 @@ namespace EQueue.Broker
             }
             var stack = new Stack<MessageFile>();
             var messageFiles = new List<MessageFile>();
-            var fileName = Path.Combine(_setting.MessageLogFilePath, MessageFileName);
+            var fileName = _setting.MessageLogFile;
             if (!new FileInfo(fileName).Exists)
             {
                 _logger.InfoFormat("Message log file not exist, fileName: {0}", fileName);

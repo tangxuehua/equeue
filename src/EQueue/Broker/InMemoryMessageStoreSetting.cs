@@ -6,7 +6,7 @@
 
         public InMemoryMessageStoreSetting()
         {
-            RemoveMessageFromMemoryInterval = 1000;
+            RemoveMessageFromMemoryInterval = 1000 * 5;
         }
     }
 }

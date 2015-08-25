@@ -1,16 +1,16 @@
 ﻿using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.Threading;
 using ECommon.Autofac;
 using ECommon.Components;
-using ECommon.Configurations;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;
-using ECommon.Utilities;
 using EQueue.Clients.Consumers;
 using EQueue.Configurations;
 using EQueue.Protocols;
+using ECommonConfiguration = ECommon.Configurations.Configuration;
 
 namespace QuickStart.ConsumerClient
 {
@@ -19,8 +19,23 @@ namespace QuickStart.ConsumerClient
         static void Main(string[] args)
         {
             InitializeEQueue();
+            Console.ReadLine();
+        }
 
-            var messageHandler = new MessageHandler();
+        static ILogger _logger;
+        static void InitializeEQueue()
+        {
+            ECommonConfiguration
+                .Create()
+                .UseAutofac()
+                .RegisterCommonComponents()
+                .UseLog4Net()
+                .UseJsonNet()
+                .RegisterUnhandledExceptionHandler()
+                .RegisterEQueueComponents();
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create("Program");
+
+            var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var consumerSetting = new ConsumerSetting
             {
                 HeartbeatBrokerInterval = 1000,
@@ -28,29 +43,20 @@ namespace QuickStart.ConsumerClient
                 RebalanceInterval = 1000,
                 ConsumeFromWhere = ConsumeFromWhere.FirstOffset
             };
-            var consumer = new Consumer("SampleConsumer@" + ObjectId.GenerateNewStringId(), "SampleGroup", consumerSetting).Subscribe("SampleTopic").SetMessageHandler(messageHandler).Start();
-            Console.ReadLine();
-        }
-
-        static ILogger _logger;
-        static void InitializeEQueue()
-        {
-            Configuration
-                .Create()
-                .UseAutofac()
-                .RegisterCommonComponents()
-                .UseLog4Net()
-                .UseJsonNet()
-                .RegisterEQueueComponents();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create("Program");
+            var messageHandler = new MessageHandler();
+            for (var i = 1; i <= clientCount; i++)
+            {
+                new Consumer("Consumer@" + i.ToString(), "SampleGroup", consumerSetting)
+                    .Subscribe("SampleTopic")
+                    .SetMessageHandler(messageHandler)
+                    .Start();
+            }
         }
 
         class MessageHandler : IMessageHandler
         {
             private int _handledCount;
             private Stopwatch _watch;
-            private int _previousHandledCount;
-            private long _previousElapsedMilliseconds;
 
             public void Handle(QueueMessage message, IMessageContext context)
             {
@@ -61,13 +67,7 @@ namespace QuickStart.ConsumerClient
                 }
                 if (currentCount % 10000 == 0)
                 {
-                    var currentElapsedMilliseconds = _watch.ElapsedMilliseconds;
-                    _logger.InfoFormat("Total handled {0} messages, throughput: {1}, latency: {2}ms",
-                        currentCount,
-                        (currentCount - _previousHandledCount) * 1000 / (currentElapsedMilliseconds - _previousElapsedMilliseconds),
-                        (DateTime.Now - message.CreatedTime).TotalMilliseconds);
-                    _previousHandledCount = currentCount;
-                    _previousElapsedMilliseconds = currentElapsedMilliseconds;
+                    _logger.InfoFormat("Total handled {0} messages, timeSpent: {1}ms, throughput: {2}/s", currentCount, _watch.ElapsedMilliseconds, currentCount * 1000 / _watch.ElapsedMilliseconds);
                 }
 
                 context.OnMessageHandled(message);

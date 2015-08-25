@@ -145,7 +145,7 @@ namespace EQueue.Broker
         {
             Ensure.NotNullOrEmpty(topic, "topic");
             var queues = _queueDict.Values.Where(x => x.Topic == topic);
-            if (queues.Count() == BrokerController.Instance.Setting.TopicMaxQueueCount)
+            if (queues.Count() >= BrokerController.Instance.Setting.TopicMaxQueueCount)
             {
                 throw new ArgumentException(string.Format("Queue count cannot bigger than {0}.", BrokerController.Instance.Setting.TopicMaxQueueCount));
             }

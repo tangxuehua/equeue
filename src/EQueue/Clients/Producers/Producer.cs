@@ -19,6 +19,7 @@ namespace EQueue.Clients.Producers
 {
     public class Producer
     {
+        private readonly IList<int> EmptyIntList = new List<int>();
         private readonly object _lockObject;
         private readonly ConcurrentDictionary<string, IList<int>> _topicQueueIdsDict;
         private readonly IScheduleService _scheduleService;
@@ -41,7 +42,7 @@ namespace EQueue.Clients.Producers
 
             _lockObject = new object();
             _topicQueueIdsDict = new ConcurrentDictionary<string, IList<int>>();
-            _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.LocalAddress);
+            _remotingClient = new SocketRemotingClient(Id + ".RemotingClient", Setting.BrokerAddress, Setting.LocalAddress);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
@@ -131,6 +132,8 @@ namespace EQueue.Clients.Producers
 
         public static SendResult ParseSendResult(RemotingResponse remotingResponse)
         {
+            Ensure.NotNull(remotingResponse, "remotingResponse");
+
             if (remotingResponse.Code == ResponseCode.Success)
             {
                 var messageResult = MessageUtils.DecodeMessageSendResponse(remotingResponse.Body);
@@ -146,22 +149,25 @@ namespace EQueue.Clients.Producers
             }
         }
 
+        private int GetAvailableQueueId(Message message, string routingKey)
+        {
+            var queueIds = GetTopicQueueIds(message.Topic);
+            if (queueIds.IsEmpty())
+            {
+                return -1;
+            }
+            return _queueSelector.SelectQueueId(queueIds, message, routingKey);
+        }
         private IList<int> GetTopicQueueIds(string topic)
         {
-            IList<int> queueIds;
-            if (!_topicQueueIdsDict.TryGetValue(topic, out queueIds))
+            var queueIds = _topicQueueIdsDict.GetOrAdd(topic, new List<int>());
+            if (queueIds.IsEmpty())
             {
                 var queueIdsFromServer = GetTopicQueueIdsFromServer(topic).ToList();
                 _topicQueueIdsDict[topic] = queueIdsFromServer;
                 queueIds = queueIdsFromServer;
             }
-
             return queueIds;
-        }
-        private int GetAvailableQueueId(Message message, string routingKey)
-        {
-            var queueIds = GetTopicQueueIds(message.Topic);
-            return _queueSelector.SelectQueueId(queueIds, message, routingKey);
         }
         private void RefreshTopicQueueCount()
         {
@@ -181,7 +187,7 @@ namespace EQueue.Clients.Producers
                 if (IsIntCollectionChanged(topicQueueIdsFromServer, topicQueueIdsOfLocal))
                 {
                     _topicQueueIdsDict[topic] = topicQueueIdsFromServer;
-                    _logger.DebugFormat("Queues of topic changed, producerId:{0}, topic:{1}, old queueIds:{2}, new queueIds:{3}}", Id, topic, string.Join(":", topicQueueIdsOfLocal), string.Join(":", topicQueueIdsFromServer));
+                    _logger.InfoFormat("Queues of topic changed, producerId:{0}, topic:{1}, old queueIds:{2}, new queueIds:{3}}", Id, topic, string.Join(":", topicQueueIdsOfLocal), string.Join(":", topicQueueIdsFromServer));
                 }
             }
             catch (Exception ex)
@@ -191,16 +197,23 @@ namespace EQueue.Clients.Producers
         }
         private IEnumerable<int> GetTopicQueueIdsFromServer(string topic)
         {
-            var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForProducer, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
-            if (remotingResponse.Code == (int)ResponseCode.Success)
+            try
             {
+                var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForProducer, Encoding.UTF8.GetBytes(topic));
+                var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+                if (remotingResponse.Code != ResponseCode.Success)
+                {
+                    _logger.ErrorFormat("Get topic queueIds from broker failed, producerId:{0}, topic:{1}, remoting response code:{2}", Id, topic, remotingResponse.Code);
+                    return EmptyIntList;
+                }
+
                 var queueIds = Encoding.UTF8.GetString(remotingResponse.Body);
                 return queueIds.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x));
             }
-            else
+            catch (Exception ex)
             {
-                throw new Exception(string.Format("GetTopicQueueIds has exception, producerId:{0}, topic:{1}, remoting response code:{2}", Id, topic, remotingResponse.Code));
+                _logger.ErrorFormat("Get topic queueIds from broker has exception, producerId:{0}, topic:{1}, errorMessage:{2}", Id, topic, ex.Message);
+                return EmptyIntList;
             }
         }
         private RemotingRequest BuildSendMessageRequest(Message message, int queueId, string routingKey)
@@ -212,11 +225,11 @@ namespace EQueue.Clients.Producers
         private void StartBackgroundJobs()
         {
             _topicQueueIdsDict.Clear();
-            _scheduleService.StartTask("Producer.RefreshTopicQueueCount", RefreshTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval);
+            _scheduleService.StartTask(string.Format("{0}.RefreshTopicQueueCount", Id), RefreshTopicQueueCount, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval);
         }
         private void StopBackgroundJobs()
         {
-            _scheduleService.StopTask("Producer.RefreshTopicQueueCount");
+            _scheduleService.StopTask(string.Format("{0}.RefreshTopicQueueCount", Id));
             _topicQueueIdsDict.Clear();
         }
         private bool IsIntCollectionChanged(IList<int> first, IList<int> second)

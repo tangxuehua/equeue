@@ -12,7 +12,7 @@ namespace EQueue.Clients.Producers
         public ProducerSetting()
         {
             BrokerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
-            UpdateTopicQueueCountInterval = 1000 * 10;
+            UpdateTopicQueueCountInterval = 1000 * 5;
         }
     }
 }
