@@ -187,7 +187,7 @@ namespace EQueue.Clients.Producers
                 if (IsIntCollectionChanged(topicQueueIdsFromServer, topicQueueIdsOfLocal))
                 {
                     _topicQueueIdsDict[topic] = topicQueueIdsFromServer;
-                    _logger.InfoFormat("Queues of topic changed, producerId:{0}, topic:{1}, old queueIds:{2}, new queueIds:{3}}", Id, topic, string.Join(":", topicQueueIdsOfLocal), string.Join(":", topicQueueIdsFromServer));
+                    _logger.InfoFormat("Queues of topic changed, producerId:{0}, topic:{1}, old queueIds:{2}, new queueIds:{3}", Id, topic, string.Join(":", topicQueueIdsOfLocal), string.Join(":", topicQueueIdsFromServer));
                 }
             }
             catch (Exception ex)
