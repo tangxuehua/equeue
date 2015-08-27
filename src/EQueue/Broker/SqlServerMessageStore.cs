@@ -120,8 +120,10 @@ namespace EQueue.Broker
                 DateTime.Now,
                 DateTime.Now,
                 routingKey);
-            _messageDict[messageOffset] = queueMessage;
-            WriteMessageLog(queueMessage);
+            if (_messageDict.TryAdd(messageOffset, queueMessage))
+            {
+                WriteMessageLog(queueMessage);
+            }
             return queueMessage;
         }
         public QueueMessage GetMessage(long offset)

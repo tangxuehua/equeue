@@ -55,7 +55,7 @@ namespace QuickStart.ConsumerClient
 
         class MessageHandler : IMessageHandler
         {
-            private int _handledCount;
+            private long _handledCount;
             private Stopwatch _watch;
 
             public void Handle(QueueMessage message, IMessageContext context)

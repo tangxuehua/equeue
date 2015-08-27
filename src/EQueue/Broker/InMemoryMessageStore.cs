@@ -70,7 +70,7 @@ namespace EQueue.Broker
                 DateTime.Now,
                 DateTime.Now,
                 routingKey);
-            _messageDict[messageOffset] = queueMessage;
+            _messageDict.TryAdd(messageOffset, queueMessage);
             return queueMessage;
         }
         public QueueMessage GetMessage(long offset)
