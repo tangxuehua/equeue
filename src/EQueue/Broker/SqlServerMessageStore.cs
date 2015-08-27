@@ -631,6 +631,7 @@ namespace EQueue.Broker
                 {
                     MessageId = message.MessageId,
                     MessageOffset = message.MessageOffset,
+                    MessageKey = message.Key,
                     Topic = message.Topic,
                     QueueId = message.QueueId,
                     QueueOffset = message.QueueOffset,
@@ -664,7 +665,7 @@ namespace EQueue.Broker
             var messageId = (string)reader["MessageId"];
             var messageOffset = (long)reader["MessageOffset"];
             var topic = (string)reader["Topic"];
-            var key = (string)reader["Key"];
+            var key = (string)reader["MessageKey"];
             var queueId = (int)reader["QueueId"];
             var queueOffset = (long)reader["QueueOffset"];
             var code = (int)reader["Code"];
@@ -733,6 +734,7 @@ namespace EQueue.Broker
                 var row = _messageDataTable.NewRow();
                 row["MessageId"] = message.MessageId;
                 row["MessageOffset"] = message.MessageOffset;
+                row["MessageKey"] = message.Key;
                 row["Topic"] = message.Topic;
                 row["QueueId"] = message.QueueId;
                 row["QueueOffset"] = message.QueueOffset;
@@ -775,6 +777,7 @@ namespace EQueue.Broker
                     copy.DestinationTableName = _setting.MessageTable;
                     copy.ColumnMappings.Add("MessageId", "MessageId");
                     copy.ColumnMappings.Add("MessageOffset", "MessageOffset");
+                    copy.ColumnMappings.Add("MessageKey", "MessageKey");
                     copy.ColumnMappings.Add("Topic", "Topic");
                     copy.ColumnMappings.Add("QueueId", "QueueId");
                     copy.ColumnMappings.Add("QueueOffset", "QueueOffset");
@@ -807,6 +810,7 @@ namespace EQueue.Broker
             var table = new DataTable();
             table.Columns.Add("MessageId", typeof(string));
             table.Columns.Add("MessageOffset", typeof(long));
+            table.Columns.Add("MessageKey", typeof(string));
             table.Columns.Add("Topic", typeof(string));
             table.Columns.Add("QueueId", typeof(int));
             table.Columns.Add("QueueOffset", typeof(long));

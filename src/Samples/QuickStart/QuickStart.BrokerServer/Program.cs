@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using ECommon.Autofac;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
@@ -19,6 +20,21 @@ namespace QuickStart.BrokerServer
 
         static void InitializeEQueue()
         {
+            var connectionString = ConfigurationManager.AppSettings["connectionString"];
+            var queueStoreSetting = new SqlServerQueueStoreSetting
+            {
+                ConnectionString = connectionString
+            };
+            var messageStoreSetting = new SqlServerMessageStoreSetting
+            {
+                ConnectionString = connectionString,
+                MessageLogFile = "/home/admin/logs/equeue/messages.log"
+            };
+            var offsetManagerSetting = new SqlServerOffsetManagerSetting
+            {
+                ConnectionString = connectionString
+            };
+
             ECommonConfiguration
                 .Create()
                 .UseAutofac()
@@ -26,7 +42,10 @@ namespace QuickStart.BrokerServer
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
-                .RegisterEQueueComponents();
+                .RegisterEQueueComponents()
+                .UseSqlServerQueueStore(queueStoreSetting)
+                .UseSqlServerMessageStore(messageStoreSetting)
+                .UseSqlServerOffsetManager(offsetManagerSetting);
         }
     }
 }
