@@ -20,32 +20,52 @@ namespace QuickStart.BrokerServer
 
         static void InitializeEQueue()
         {
-            var connectionString = ConfigurationManager.AppSettings["connectionString"];
-            var queueStoreSetting = new SqlServerQueueStoreSetting
-            {
-                ConnectionString = connectionString
-            };
-            var messageStoreSetting = new SqlServerMessageStoreSetting
-            {
-                ConnectionString = connectionString,
-                MessageLogFile = "/home/admin/logs/equeue/messages.log"
-            };
-            var offsetManagerSetting = new SqlServerOffsetManagerSetting
-            {
-                ConnectionString = connectionString
-            };
-
-            ECommonConfiguration
+            var configuration = ECommonConfiguration
                 .Create()
                 .UseAutofac()
                 .RegisterCommonComponents()
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
-                .RegisterEQueueComponents()
-                .UseSqlServerQueueStore(queueStoreSetting)
-                .UseSqlServerMessageStore(messageStoreSetting)
-                .UseSqlServerOffsetManager(offsetManagerSetting);
+                .RegisterEQueueComponents();
+
+            var persistMode = ConfigurationManager.AppSettings["persistMode"];
+            var maxCacheMessageSize = int.Parse(ConfigurationManager.AppSettings["maxCacheMessageSize"]);
+
+            if (persistMode == "in-memory")
+            {
+                configuration.UseInMemoryMessageStore(new InMemoryMessageStoreSetting { MessageMaxCacheSize = maxCacheMessageSize });
+            }
+            else if (persistMode == "sql")
+            {
+                var connectionString = ConfigurationManager.AppSettings["connectionString"];
+                var persistMessageInterval = int.Parse(ConfigurationManager.AppSettings["persistMessageInterval"]);
+                var persistMessageMaxCount = int.Parse(ConfigurationManager.AppSettings["persistMessageMaxCount"]);
+                var messageLogFile = ConfigurationManager.AppSettings["messageLogFile"];
+
+                var queueStoreSetting = new SqlServerQueueStoreSetting
+                {
+                    ConnectionString = connectionString
+                };
+                var messageStoreSetting = new SqlServerMessageStoreSetting
+                {
+                    ConnectionString = connectionString,
+                    PersistMessageInterval = persistMessageInterval,
+                    PersistMessageMaxCount = persistMessageMaxCount,
+                    MessageLogFile = messageLogFile,
+                    MessageMaxCacheSize = maxCacheMessageSize
+                };
+                var offsetManagerSetting = new SqlServerOffsetManagerSetting
+                {
+                    ConnectionString = connectionString
+                };
+
+                configuration
+                    .UseSqlServerQueueStore(queueStoreSetting)
+                    .UseSqlServerMessageStore(messageStoreSetting)
+                    .UseSqlServerOffsetManager(offsetManagerSetting);
+            }
+
         }
     }
 }
