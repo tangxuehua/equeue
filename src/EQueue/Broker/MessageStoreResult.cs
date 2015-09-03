@@ -1,20 +1,16 @@
-﻿using System;
+﻿using EQueue.Broker.Storage;
 
 namespace EQueue.Broker
 {
     public class MessageStoreResult
     {
-        public string MessageId { get; private set; }
-        public long MessageOffset { get; private set; }
-        public int QueueId { get; private set; }
-        public long QueueOffset { get; private set; }
+        public MessageLogRecord MessageLogRecord { get; private set; }
+        public long NextLogPosition { get; private set; }
 
-        public MessageStoreResult(string messageId, long messageOffset, int queueId, long queueOffset)
+        public MessageStoreResult(MessageLogRecord messageLogRecord, long nextLogPosition)
         {
-            MessageId = messageId;
-            MessageOffset = messageOffset;
-            QueueId = queueId;
-            QueueOffset = queueOffset;
+            MessageLogRecord = messageLogRecord;
+            NextLogPosition = nextLogPosition;
         }
     }
 }

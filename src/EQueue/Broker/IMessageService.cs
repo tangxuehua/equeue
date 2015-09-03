@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using EQueue.Broker.Storage;
 using EQueue.Protocols;
 
 namespace EQueue.Broker
@@ -8,6 +9,6 @@ namespace EQueue.Broker
         void Start();
         void Shutdown();
         MessageStoreResult StoreMessage(Message message, int queueId, string routingKey);
-        IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize);
+        IEnumerable<MessageLogRecord> GetMessages(string topic, int queueId, long queueOffset, int batchSize);
     }
 }

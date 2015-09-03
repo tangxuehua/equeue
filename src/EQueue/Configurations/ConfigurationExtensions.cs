@@ -2,6 +2,7 @@
 using EQueue.Broker;
 using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
+using EQueue.Broker.Storage;
 using EQueue.Clients.Consumers;
 using EQueue.Clients.Producers;
 
@@ -14,28 +15,29 @@ namespace EQueue.Configurations
             configuration.SetDefault<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             configuration.SetDefault<IQueueSelector, QueueHashSelector>();
             configuration.SetDefault<IQueueStore, InMemoryQueueStore>();
-            configuration.SetDefault<IMessageStore, InMemoryMessageStore>();
             configuration.SetDefault<ConsumerManager, ConsumerManager>();
             configuration.SetDefault<IOffsetManager, InMemoryOffsetManager>();
             configuration.SetDefault<IQueueService, QueueService>();
             configuration.SetDefault<IMessageService, MessageService>();
             configuration.SetDefault<SuspendedPullRequestManager, SuspendedPullRequestManager>();
+
+            var recordParserProvider = new DefaultLogRecordParserProvider();
+            recordParserProvider
+                .RegisterParser(1, new MessageLogRecordParser())
+                .RegisterParser(2, new QueueIndexLogRecordParser());
+            configuration.SetDefault<ILogRecordParserProvider, DefaultLogRecordParserProvider>(recordParserProvider);
+
             return configuration;
         }
 
-        public static Configuration UseInMemoryMessageStore(this Configuration configuration, InMemoryMessageStoreSetting setting)
+        public static Configuration UseFileMessageStore(this Configuration configuration, TFChunkDbConfig config)
         {
-            configuration.SetDefault<IMessageStore, InMemoryMessageStore>(new InMemoryMessageStore(setting));
+            configuration.SetDefault<IMessageStore, FileMessageStore>(new FileMessageStore(new TFChunkDb(config)));
             return configuration;
         }
         public static Configuration UseSqlServerQueueStore(this Configuration configuration, SqlServerQueueStoreSetting setting)
         {
             configuration.SetDefault<IQueueStore, SqlServerQueueStore>(new SqlServerQueueStore(setting));
-            return configuration;
-        }
-        public static Configuration UseSqlServerMessageStore(this Configuration configuration, SqlServerMessageStoreSetting setting)
-        {
-            configuration.SetDefault<IMessageStore, SqlServerMessageStore>(new SqlServerMessageStore(setting));
             return configuration;
         }
         public static Configuration UseSqlServerOffsetManager(this Configuration configuration, SqlServerOffsetManagerSetting setting)

@@ -107,7 +107,6 @@ namespace EQueue.AdminWeb.Controllers
                 model.Content = Encoding.UTF8.GetString(message.Body);
                 model.Topic = message.Topic;
                 model.CreatedTime = message.CreatedTime.ToString();
-                model.ArrivedTime = message.ArrivedTime.ToString();
                 model.StoredTime = message.StoredTime.ToString();
             }
             return View(model);

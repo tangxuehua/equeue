@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using EQueue.Broker.Storage;
 using EQueue.Protocols;
 
 namespace EQueue.Broker
@@ -14,8 +15,8 @@ namespace EQueue.Broker
         void Shutdown();
         void DeleteQueueMessage(string topic, int queueId);
         long GetNextMessageOffset();
-        QueueMessage StoreMessage(int queueId, long messageOffset, long queueOffset, Message message, string routingKey);
-        QueueMessage GetMessage(long offset);
+        MessageStoreResult StoreMessage(int queueId, long messageOffset, long queueOffset, Message message, string routingKey);
+        MessageLogRecord GetMessage(long logPosition);
         QueueMessage FindMessage(long? offset, string messageId);
         void UpdateConsumedQueueOffset(string topic, int queueId, long queueOffset);
         IDictionary<long, long> BatchLoadQueueIndex(string topic, int queueId, long startQueueOffset);

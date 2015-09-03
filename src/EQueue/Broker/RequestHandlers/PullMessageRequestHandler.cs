@@ -8,6 +8,7 @@ using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
+using EQueue.Broker.Storage;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -153,7 +154,7 @@ namespace EQueue.Broker.Processors
         {
             return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.NextOffsetReset, BitConverter.GetBytes(nextOffset));
         }
-        private RemotingResponse BuildFoundResponse(RemotingRequest remotingRequest, IEnumerable<QueueMessage> messages)
+        private RemotingResponse BuildFoundResponse(RemotingRequest remotingRequest, IEnumerable<MessageLogRecord> messages)
         {
             return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.Found, _binarySerializer.Serialize(messages));
         }

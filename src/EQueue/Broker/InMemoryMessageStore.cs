@@ -68,7 +68,6 @@ namespace EQueue.Broker
                 queueOffset,
                 message.CreatedTime,
                 DateTime.Now,
-                DateTime.Now,
                 routingKey);
             if (messageOffset < _setting.MessageMaxCacheSize)
             {

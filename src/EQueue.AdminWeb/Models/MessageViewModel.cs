@@ -15,7 +15,6 @@ namespace EQueue.AdminWeb.Models
         public string Topic { get; set; }
         public string Code { get; set; }
         public string CreatedTime { get; set; }
-        public string ArrivedTime { get; set; }
         public string StoredTime { get; set; }
         public string RoutingKey { get; set; }
         public string Content { get; set; }

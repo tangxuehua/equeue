@@ -18,12 +18,14 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
+    <Optimize>true</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -34,6 +36,7 @@
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>D:\nugetpublish\EQueue.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Dapper">
@@ -54,13 +57,17 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Broker\FileMessageStore.cs" />
+    <Compile Include="Broker\LogRecordType.cs" />
+    <Compile Include="Broker\QueueIndexLogRecordParser.cs" />
+    <Compile Include="Broker\QueueIndexLogRecord.cs" />
+    <Compile Include="Broker\MessageLogRecord.cs" />
     <Compile Include="Broker\RequestHandlers\CreateTopicRequestHandler.cs" />
     <Compile Include="Broker\SqlServerQueueStoreSetting.cs" />
     <Compile Include="Broker\SqlServerQueueStore.cs" />
     <Compile Include="Broker\InMemoryQueueStore.cs" />
     <Compile Include="Broker\IQueueStore.cs" />
     <Compile Include="Broker\IQueueService.cs" />
-    <Compile Include="Broker\InMemoryMessageStoreSetting.cs" />
     <Compile Include="Broker\QueueService.cs" />
     <Compile Include="Broker\RequestHandlers\DisableQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\EnableQueueRequestHandler.cs" />
@@ -77,12 +84,10 @@
     <Compile Include="Broker\RequestHandlers\QueryConsumerInfoRequestHandler.cs" />
     <Compile Include="Broker\SqlServerOffsetManager.cs" />
     <Compile Include="Broker\SqlServerOffsetManagerSetting.cs" />
-    <Compile Include="Broker\SqlServerMessageStoreSetting.cs" />
     <Compile Include="Broker\BrokerSetting.cs" />
     <Compile Include="Broker\Client\ClientChannel.cs" />
     <Compile Include="Broker\Client\ConsumerGroup.cs" />
     <Compile Include="Broker\Client\ConsumerManager.cs" />
-    <Compile Include="Broker\SqlServerMessageStore.cs" />
     <Compile Include="Broker\IOffsetManager.cs" />
     <Compile Include="Broker\InvalidQueueIdException.cs" />
     <Compile Include="Broker\LongPolling\PullRequest.cs" />
@@ -98,12 +103,47 @@
     <Compile Include="Broker\Queue.cs" />
     <Compile Include="Broker\MessageService.cs" />
     <Compile Include="Broker\IMessageService.cs" />
+    <Compile Include="Broker\Storage\Checkpoints\FileCheckpoint.cs" />
+    <Compile Include="Broker\Storage\ChunkFooter.cs" />
+    <Compile Include="Broker\Storage\ChunkHeader.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ChunkWriteException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ExtraneousFileFoundException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\InvalidReadException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\UnableToReadPastEndOfStreamException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\CorruptDatabaseException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ChunkNotFoundException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\FileBeingDeletedException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\BadChunkInDatabaseException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\WrongFileVersionException.cs" />
+    <Compile Include="Broker\Storage\Extensions\FileStreamExtensions.cs" />
+    <Compile Include="Broker\Storage\FileNamingStrategies\IFileNamingStrategy.cs" />
+    <Compile Include="Broker\Storage\Checkpoints\ICheckpoint.cs" />
+    <Compile Include="Broker\Storage\Checkpoints\InMemoryCheckpoint.cs" />
+    <Compile Include="Broker\Storage\LogRecords\DefaultLogRecordParserProvider.cs" />
+    <Compile Include="Broker\Storage\LogRecords\ILogRecordParser.cs" />
+    <Compile Include="Broker\Storage\LogRecords\ILogRecord.cs" />
+    <Compile Include="Broker\Storage\LogRecords\ILogRecordParserProvider.cs" />
+    <Compile Include="Broker\MessageLogRecordParser.cs" />
+    <Compile Include="Broker\Storage\Checkpoints\MemoryMappedFileCheckpoint.cs" />
+    <Compile Include="Broker\Storage\TFChunkDb.cs" />
+    <Compile Include="Broker\Storage\TFChunkDbConfig.cs" />
+    <Compile Include="Broker\Storage\TFChunkManager.cs" />
+    <Compile Include="Broker\Storage\TFChunkReader.cs" />
+    <Compile Include="Broker\Storage\TFChunkReadSide.cs" />
+    <Compile Include="Broker\Storage\LogRecords\LogRecord.cs" />
+    <Compile Include="Broker\Storage\RecordReadResult.cs" />
+    <Compile Include="Broker\Storage\RecordWriteResult.cs" />
+    <Compile Include="Broker\Storage\Consts.cs" />
+    <Compile Include="Broker\Storage\FileNamingStrategies\VersionedPatternFileNamingStrategy.cs" />
+    <Compile Include="Broker\Storage\TFChunkWriter.cs" />
+    <Compile Include="Broker\Storage\WriterWorkItem.cs" />
+    <Compile Include="Broker\Storage\ReaderWorkItem.cs" />
+    <Compile Include="Broker\Storage\TFChunk.cs" />
     <Compile Include="Clients\Consumers\ConsumingMessage.cs" />
     <Compile Include="Clients\Consumers\MessageContext.cs" />
     <Compile Include="Clients\Consumers\IMessageContext.cs" />
     <Compile Include="Protocols\ConsumeFromWhere.cs" />
     <Compile Include="Clients\Producers\IQueueSelector.cs" />
-    <Compile Include="Broker\InMemoryMessageStore.cs" />
     <Compile Include="Broker\IMessageStore.cs" />
     <Compile Include="Broker\MessageStoreResult.cs" />
     <Compile Include="Clients\Consumers\Consumer.cs" />

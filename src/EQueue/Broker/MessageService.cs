@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using ECommon.Components;
 using ECommon.Logging;
+using EQueue.Broker.Storage;
 using EQueue.Protocols;
 
 namespace EQueue.Broker
@@ -44,28 +45,27 @@ namespace EQueue.Broker
             {
                 var messageOffset = _messageStore.GetNextMessageOffset();
                 var queueOffset = queue.IncrementCurrentOffset();
-                var queueMessage = _messageStore.StoreMessage(queueId, messageOffset, queueOffset, message, routingKey);
-                queue.SetQueueIndex(queueMessage.QueueOffset, queueMessage.MessageOffset);
-                return new MessageStoreResult(queueMessage.MessageId, queueMessage.MessageOffset, queueMessage.QueueId, queueMessage.QueueOffset);
+                var storeResult = _messageStore.StoreMessage(queueId, messageOffset, queueOffset, message, routingKey);
+                //queue.SetQueueIndex(storeResult.MessageLogRecord.QueueOffset, storeResult.MessageLogRecord.LogPosition);
+                return storeResult;
             }
         }
-        public IEnumerable<QueueMessage> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
+        public IEnumerable<MessageLogRecord> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
         {
             var queue = _queueService.GetQueue(topic, queueId);
             if (queue == null)
             {
-                return new QueueMessage[0];
+                return new MessageLogRecord[0];
             }
 
-            var messages = new List<QueueMessage>();
+            var messages = new List<MessageLogRecord>();
             var currentQueueOffset = queueOffset;
             while (currentQueueOffset <= queue.CurrentOffset && messages.Count < batchSize)
             {
                 var messageOffset = queue.GetMessageOffset(currentQueueOffset);
                 if (messageOffset < 0)
                 {
-                    BatchLoadQueueIndexToMemory(queue, currentQueueOffset);
-                    messageOffset = queue.GetMessageOffset(currentQueueOffset);
+                    break;
                 }
                 if (messageOffset >= 0)
                 {

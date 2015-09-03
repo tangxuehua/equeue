@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Configuration;
+using System.IO;
 using ECommon.Autofac;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using EQueue.Broker;
+using EQueue.Broker.Storage;
 using EQueue.Configurations;
 using ECommonConfiguration = ECommon.Configurations.Configuration;
 
@@ -20,6 +21,7 @@ namespace QuickStart.BrokerServer
 
         static void InitializeEQueue()
         {
+            var config = CreateDbConfig(@"d:\chunkdb", false);
             var configuration = ECommonConfiguration
                 .Create()
                 .UseAutofac()
@@ -27,45 +29,31 @@ namespace QuickStart.BrokerServer
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
-                .RegisterEQueueComponents();
-
-            var persistMode = ConfigurationManager.AppSettings["persistMode"];
-            var maxCacheMessageSize = int.Parse(ConfigurationManager.AppSettings["maxCacheMessageSize"]);
-
-            if (persistMode == "in-memory")
+                .RegisterEQueueComponents()
+                .UseFileMessageStore(config);
+        }
+        static TFChunkDbConfig CreateDbConfig(string dbPath, bool inMemDb)
+        {
+            ICheckpoint writerCheckpoint;
+            var name = "writer";
+            if (inMemDb)
             {
-                configuration.UseInMemoryMessageStore(new InMemoryMessageStoreSetting { MessageMaxCacheSize = maxCacheMessageSize });
+                writerCheckpoint = new InMemoryCheckpoint(name);
             }
-            else if (persistMode == "sql")
+            else
             {
-                var connectionString = ConfigurationManager.AppSettings["connectionString"];
-                var persistMessageInterval = int.Parse(ConfigurationManager.AppSettings["persistMessageInterval"]);
-                var persistMessageMaxCount = int.Parse(ConfigurationManager.AppSettings["persistMessageMaxCount"]);
-                var messageLogFile = ConfigurationManager.AppSettings["messageLogFile"];
-
-                var queueStoreSetting = new SqlServerQueueStoreSetting
-                {
-                    ConnectionString = connectionString
-                };
-                var messageStoreSetting = new SqlServerMessageStoreSetting
-                {
-                    ConnectionString = connectionString,
-                    PersistMessageInterval = persistMessageInterval,
-                    PersistMessageMaxCount = persistMessageMaxCount,
-                    MessageLogFile = messageLogFile,
-                    MessageMaxCacheSize = maxCacheMessageSize
-                };
-                var offsetManagerSetting = new SqlServerOffsetManagerSetting
-                {
-                    ConnectionString = connectionString
-                };
-
-                configuration
-                    .UseSqlServerQueueStore(queueStoreSetting)
-                    .UseSqlServerMessageStore(messageStoreSetting)
-                    .UseSqlServerOffsetManager(offsetManagerSetting);
+                writerCheckpoint = new MemoryMappedFileCheckpoint(Path.Combine(dbPath, name + ".chk"), name, cached: true);
             }
 
+            var cache = Consts.ChunksCacheCount * (long)(Consts.ChunkSize + ChunkHeader.Size + ChunkFooter.Size);
+            var config = new TFChunkDbConfig(dbPath,
+                new VersionedPatternFileNamingStrategy(dbPath, "chunk-"),
+                Consts.ChunkSize,
+                cache,
+                writerCheckpoint,
+                inMemDb);
+
+            return config;
         }
     }
 }
