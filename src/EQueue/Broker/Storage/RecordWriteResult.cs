@@ -11,7 +11,7 @@ namespace EQueue.Broker.Storage
         public RecordWriteResult(bool success, long oldPosition, long newPosition)
         {
             if (newPosition < oldPosition)
-                throw new ArgumentException("New position is less than old position.");
+                throw new ArgumentException(string.Format("New position [{0}] is less than old position [{1}].", newPosition, oldPosition));
 
             Success = success;
             OldPosition = oldPosition;

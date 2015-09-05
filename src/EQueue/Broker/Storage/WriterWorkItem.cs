@@ -31,10 +31,9 @@ namespace EQueue.Broker.Storage
         }
         public void AppendData(byte[] buf, int offset, int len)
         {
-            var fileStream = _fileStream;
-            if (fileStream != null)
+            if (_fileStream != null)
             {
-                fileStream.Write(buf, 0, len);
+                _fileStream.Write(buf, 0, len);
             }
             var memStream = _memStream;
             if (memStream != null)
@@ -51,10 +50,9 @@ namespace EQueue.Broker.Storage
         }
         public void ResizeStream(long fileSize)
         {
-            var fileStream = _fileStream;
-            if (fileStream != null)
+            if (_fileStream != null)
             {
-                fileStream.SetLength(fileSize);
+                _fileStream.SetLength(fileSize);
             }
             var memStream = _memStream;
             if (memStream != null)
@@ -65,10 +63,9 @@ namespace EQueue.Broker.Storage
 
         public void Dispose()
         {
-            var fileStream = _fileStream;
-            if (fileStream != null)
+            if (_fileStream != null)
             {
-                fileStream.Dispose();
+                _fileStream.Dispose();
             }
             DisposeMemStream();
         }

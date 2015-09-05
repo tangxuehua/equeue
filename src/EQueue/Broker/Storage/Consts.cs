@@ -7,5 +7,6 @@
         public const int MaxLogRecordSize = 16 * 1024 * 1024;
         public const int ChunkSize = 256 * 1024 * 1024;
         public const int ChunksCacheCount = 2;
+        public const int FlushChunkIntervalMilliseconds = 100;
     }
 }

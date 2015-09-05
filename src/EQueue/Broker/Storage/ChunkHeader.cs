@@ -56,11 +56,11 @@ namespace EQueue.Broker.Storage
         {
             var reader = new BinaryReader(stream);
             var version = reader.ReadByte();
-            var chunkSize = reader.ReadInt32();
+            var chunkDataSize = reader.ReadInt32();
             var chunkStartNumber = reader.ReadInt32();
             var chunkEndNumber = reader.ReadInt32();
             var chunkId = new Guid(reader.ReadBytes(16));
-            return new ChunkHeader(version, chunkSize, chunkStartNumber, chunkEndNumber, chunkId);
+            return new ChunkHeader(version, chunkDataSize, chunkStartNumber, chunkEndNumber, chunkId);
         }
 
         public int GetLocalDataPosition(long globalDataPosition)
@@ -74,15 +74,14 @@ namespace EQueue.Broker.Storage
 
         public override string ToString()
         {
-            return string.Format("[Version:{0}, ChunkSize:{1}, ChunkStartNumber:{2}, ChunkEndNumber:{3}, ChunkId:{4}, ChunkStartPosition:{5}, ChunkEndPosition:{6}, ChunkFullSize:{7}]",
+            return string.Format("[Version:{0}, ChunkId:{1}, ChunkStartNumber:{2}, ChunkEndNumber:{3}, ChunkDataSize:{4}, DataStartPosition:{5}, DataEndPosition:{6}]",
                                  Version,
-                                 ChunkDataSize,
+                                 ChunkId,
                                  ChunkStartNumber,
                                  ChunkEndNumber,
-                                 ChunkId,
+                                 ChunkDataSize,
                                  ChunkDataStartPosition,
-                                 ChunkDataEndPosition,
-                                 ChunkDataEndPosition - ChunkDataStartPosition);
+                                 ChunkDataEndPosition);
         }
     }
 }

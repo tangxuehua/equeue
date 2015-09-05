@@ -289,13 +289,21 @@ namespace EQueue.Broker.Storage
 
         public void Dispose()
         {
+            Close();
+        }
+        public void Close()
+        {
             lock (_chunksLocker)
             {
+                _logger.Info("TFChunkManager is closing.");
                 for (int i = 0; i < _chunksCount; ++i)
                 {
                     if (_chunks[i] != null)
+                    {
                         _chunks[i].Dispose();
+                    }
                 }
+                _logger.Info("TFChunkManager closed.");
             }
         }
     }

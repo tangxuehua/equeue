@@ -13,7 +13,7 @@ using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
-    public class FileMessageStore : IMessageStore
+    public class FileMessageStore : IMessageStore, IDisposable
     {
         private readonly ICheckpoint _writerCheckpoint;
         private readonly TFChunkWriter _chunkWriter;
@@ -59,6 +59,8 @@ namespace EQueue.Broker
         public void Shutdown()
         {
             _scheduleService.StopTask("FileMessageStore.RemoveConsumedMessagesFromMemory");
+            _chunkWriter.Close();
+            _chunkDb.Close();
         }
         public long GetNextMessageOffset()
         {
@@ -175,6 +177,11 @@ namespace EQueue.Broker
             //        _messageDict.Remove(queueMessage.MessageOffset);
             //    }
             //}
+        }
+
+        public void Dispose()
+        {
+            Shutdown();
         }
     }
 }

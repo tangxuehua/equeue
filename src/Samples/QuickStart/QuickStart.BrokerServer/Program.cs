@@ -21,7 +21,6 @@ namespace QuickStart.BrokerServer
 
         static void InitializeEQueue()
         {
-            var config = CreateDbConfig(@"d:\chunkdb", false);
             var configuration = ECommonConfiguration
                 .Create()
                 .UseAutofac()
@@ -30,7 +29,7 @@ namespace QuickStart.BrokerServer
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
                 .RegisterEQueueComponents()
-                .UseFileMessageStore(config);
+                .UseFileMessageStore(CreateDbConfig(@"d:\chunkdb", false));
         }
         static TFChunkDbConfig CreateDbConfig(string dbPath, bool inMemDb)
         {
@@ -50,6 +49,7 @@ namespace QuickStart.BrokerServer
                 new VersionedPatternFileNamingStrategy(dbPath, "chunk-"),
                 Consts.ChunkSize,
                 cache,
+                Consts.FlushChunkIntervalMilliseconds,
                 writerCheckpoint,
                 inMemDb);
 

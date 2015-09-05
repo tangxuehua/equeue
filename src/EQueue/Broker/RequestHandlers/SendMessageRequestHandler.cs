@@ -1,5 +1,4 @@
-﻿using System.Text;
-using ECommon.Components;
+﻿using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using EQueue.Broker.LongPolling;

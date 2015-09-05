@@ -26,22 +26,25 @@ namespace EQueue.Broker.Storage
 
         public void Open(bool readOnly = false)
         {
-            var checkpoint = Config.WriterCheckpoint.Read();
-
             if (Config.InMemDb)
             {
                 Manager.AddNewChunk();
                 return;
             }
 
+            var checkpoint = Config.WriterCheckpoint.Read();
             var lastChunkNum = (int)(checkpoint / Config.ChunkDataSize);
             var lastChunkVersions = Config.FileNamingStrategy.GetAllVersionsFor(lastChunkNum);
+
+            _logger.InfoFormat("Chunkdb opening, write checkpoint: {0}, lastChunkNum: {1}", checkpoint, lastChunkNum);
 
             for (int chunkNum = 0; chunkNum < lastChunkNum; )
             {
                 var versions = Config.FileNamingStrategy.GetAllVersionsFor(chunkNum);
                 if (versions.Length == 0)
+                {
                     throw new CorruptDatabaseException(new ChunkNotFoundException(Config.FileNamingStrategy.GetFilenameFor(chunkNum, 0)));
+                }
 
                 TFChunk chunk;
                 if (lastChunkVersions.Length == 0 && (chunkNum + 1) * (long)Config.ChunkDataSize == checkpoint)
@@ -65,6 +68,7 @@ namespace EQueue.Broker.Storage
                     chunk = TFChunk.FromCompletedFile(versions[0]);
                 }
                 Manager.AddChunk(chunk);
+                _logger.InfoFormat("Loaded chunk: {0}, header: {1}, footer: {2}", chunk, chunk.ChunkHeader, chunk.ChunkFooter);
                 chunkNum = chunk.ChunkHeader.ChunkEndNumber + 1;
             }
 
@@ -83,6 +87,7 @@ namespace EQueue.Broker.Storage
                 var chunkLocalDataPosition = chunkHeader.GetLocalDataPosition(checkpoint);
                 var lastChunk = TFChunk.FromOngoingFile(chunkFileName, chunkLocalDataPosition, checkSize: false);
                 Manager.AddChunk(lastChunk);
+                _logger.InfoFormat("Loaded chunk: {0}, header: {1}, footer: {2}", lastChunk, lastChunk.ChunkHeader, lastChunk.ChunkFooter);
             }
 
             EnsureNoExcessiveChunks(lastChunkNum);
@@ -187,9 +192,13 @@ namespace EQueue.Broker.Storage
         }
         public void Close()
         {
+            _logger.Info("TFChunkDb is closing.");
             if (Manager != null)
+            {
                 Manager.Dispose();
+            }
             Config.WriterCheckpoint.Close();
+            _logger.Info("TFChunkDb closed.");
         }
     }
 }

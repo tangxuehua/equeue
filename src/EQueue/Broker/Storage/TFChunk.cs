@@ -470,11 +470,12 @@ namespace EQueue.Broker.Storage
                 return RecordWriteResult.Failed(GetDataPosition(writerWorkItem));
             }
 
-            var oldDataPosition = GetDataPosition(writerWorkItem);
-            writerWorkItem.AppendData(bufferStream.GetBuffer(), 0, (int)bufferStream.Length);
-            _dataPosition = GetDataPosition(writerWorkItem);
+            var oldPosition = GetDataPosition(writerWorkItem);
+            var buffer = bufferStream.GetBuffer();
+            writerWorkItem.AppendData(buffer, 0, (int)bufferStream.Length);
+            _dataPosition = (int)GetDataPosition(writerWorkItem);
 
-            return RecordWriteResult.Successful(oldDataPosition, _dataPosition);
+            return RecordWriteResult.Successful(oldPosition, _dataPosition);
         }
 
         #endregion
@@ -517,9 +518,16 @@ namespace EQueue.Broker.Storage
 
         public void Dispose()
         {
+            Close();
+        }
+        public void Close()
+        {
+            _logger.InfoFormat("Chunk {0} is closing.", this);
             _selfdestructin54321 = true;
+            TryFlushFileWriteStream();
             TryDestructFileStreams();
             TryDestructMemStreams();
+            _logger.InfoFormat("Chunk {0} closed.", this);
         }
         public void MarkForDeletion()
         {
@@ -536,6 +544,23 @@ namespace EQueue.Broker.Storage
             }
         }
 
+        private void TryFlushFileWriteStream()
+        {
+            if (!_inMem && !_isReadOnly)
+            {
+                _logger.InfoFormat("Chunk {0} try to flush data.", this);
+                Flush();
+                var expectFlushDataPosition = DataPosition;
+                var realFlushedDataPosition = (int)GetDataPosition(_writerWorkItem);
+                var globalDataPosition = ChunkHeader.ChunkDataStartPosition + expectFlushDataPosition;
+                _logger.InfoFormat("Chunk {0} flush data success, expectFlushDataPosition: {1}, realFlushedDataPosition: {2}, notFlushedDataSize: {3}, globalDataPosition: {4}",
+                    this,
+                    expectFlushDataPosition,
+                    realFlushedDataPosition,
+                    expectFlushDataPosition - realFlushedDataPosition,
+                    globalDataPosition);
+            }
+        }
         private void TryDestructFileStreams()
         {
             int fileStreamCount = int.MaxValue;
@@ -784,11 +809,13 @@ namespace EQueue.Broker.Storage
 
             Flush(); // trying to prevent bug with resized file, but no data in it
 
+            var streamLength = workItem.WorkingStream.Length;
             var fileSize = ChunkHeader.Size + _dataPosition + ChunkFooter.Size;
-            if (workItem.WorkingStream.Length != fileSize)
+            if (streamLength != fileSize)
             {
                 workItem.ResizeStream(fileSize);
                 _fileSize = fileSize;
+                _logger.InfoFormat("Resized file stream, chunk: {0}, old length: {1}, new length: {2}", this, streamLength, fileSize);
             }
 
             return footer;
@@ -816,9 +843,9 @@ namespace EQueue.Broker.Storage
         {
             return ChunkHeader.Size + dataPosition;
         }
-        private static int GetDataPosition(WriterWorkItem workItem)
+        private static long GetDataPosition(WriterWorkItem workItem)
         {
-            return (int)workItem.WorkingStream.Position - ChunkHeader.Size;
+            return workItem.WorkingStream.Position - ChunkHeader.Size;
         }
 
         #endregion

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
+using System.Threading;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
@@ -9,6 +11,7 @@ using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.Processors;
 using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker
 {
@@ -25,6 +28,8 @@ namespace EQueue.Broker
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
         private readonly SocketRemotingServer _adminSocketRemotingServer;
         private readonly SuspendedPullRequestManager _suspendedPullRequestManager;
+        private readonly ConsoleEventHandlerService _service;
+        private int _isShuttingdown = 0;
 
         public BrokerSetting Setting { get; private set; }
         public static BrokerController Instance
@@ -49,6 +54,15 @@ namespace EQueue.Broker
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _consumerSocketRemotingServer.RegisterConnectionEventListener(new ConsumerConnectionEventListener(this));
             RegisterRequestHandlers();
+
+            _service = new ConsoleEventHandlerService();
+            _service.RegisterClosingEventHandler(eventCode =>
+            {
+                var watch = Stopwatch.StartNew();
+                _logger.InfoFormat("Broker start to shutdown.");
+                Shutdown();
+                _logger.InfoFormat("Broker shutdown success, timespent: {0}ms", watch.ElapsedMilliseconds);
+            });
         }
 
         public static BrokerController Create(BrokerSetting setting = null)
@@ -70,20 +84,24 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.Start();
             _producerSocketRemotingServer.Start();
             _adminSocketRemotingServer.Start();
+            Interlocked.Exchange(ref _isShuttingdown, 0);
             _logger.InfoFormat("Broker started, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
             return this;
         }
         public BrokerController Shutdown()
         {
-            _producerSocketRemotingServer.Shutdown();
-            _consumerSocketRemotingServer.Shutdown();
-            _adminSocketRemotingServer.Shutdown();
-            _consumerManager.Shutdown();
-            _suspendedPullRequestManager.Shutdown();
-            _queueService.Shutdown();
-            _messageService.Shutdown();
-            _offsetManager.Shutdown();
-            _logger.InfoFormat("Broker shutdown, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
+            if (Interlocked.CompareExchange(ref _isShuttingdown, 1, 0) == 0)
+            {
+                _producerSocketRemotingServer.Shutdown();
+                _consumerSocketRemotingServer.Shutdown();
+                _adminSocketRemotingServer.Shutdown();
+                _consumerManager.Shutdown();
+                _suspendedPullRequestManager.Shutdown();
+                _queueService.Shutdown();
+                _messageService.Shutdown();
+                _offsetManager.Shutdown();
+                _logger.InfoFormat("Broker shutdown, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
+            }
             return this;
         }
         public BrokerStatisticInfo GetBrokerStatisticInfo()

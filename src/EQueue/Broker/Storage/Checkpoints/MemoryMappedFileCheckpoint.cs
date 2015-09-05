@@ -2,6 +2,8 @@
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
+using ECommon.Components;
+using ECommon.Logging;
 
 namespace EQueue.Broker.Storage
 {
@@ -17,6 +19,7 @@ namespace EQueue.Broker.Storage
         private long _last;
         private long _lastFlushed;
         private readonly MemoryMappedViewAccessor _accessor;
+        private static readonly ILogger _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(MemoryMappedFileCheckpoint));
 
         private readonly object _flushLocker = new object();
 
@@ -56,7 +59,10 @@ namespace EQueue.Broker.Storage
 
         public void Close()
         {
+            _logger.Info("Checkpoint is closing, try to flush data to file.");
             Flush();
+            _logger.InfoFormat("Flush success, last flushed writer checkpoint: {0}", Read());
+
             _accessor.Dispose();
             _file.Dispose();
         }
@@ -76,8 +82,6 @@ namespace EQueue.Broker.Storage
             _accessor.Flush();
 
             _fileStream.FlushToDisk();
-            //            if (!FileStreamExtensions.FlushFileBuffers(_fileHandle))
-            //                throw new Exception(string.Format("FlushFileBuffers failed with err: {0}", Marshal.GetLastWin32Error()));
 
             Interlocked.Exchange(ref _lastFlushed, last);
 

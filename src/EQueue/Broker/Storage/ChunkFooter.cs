@@ -39,5 +39,10 @@ namespace EQueue.Broker.Storage
             var dataPosition = reader.ReadInt32();
             return new ChunkFooter(isCompleted, dataPosition);
         }
+
+        public override string ToString()
+        {
+            return string.Format("[IsCompleted:{0}, DataPosition:{1}]", IsCompleted, DataPosition);
+        }
     }
 }
