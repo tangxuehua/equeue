@@ -6,13 +6,11 @@ namespace EQueue.Broker.Storage
     {
         public readonly Stream Stream;
         public readonly BinaryReader Reader;
-        public readonly bool IsMemory;
 
-        public ReaderWorkItem(Stream stream, BinaryReader reader, bool isMemory)
+        public ReaderWorkItem(Stream stream, BinaryReader reader)
         {
             Stream = stream;
             Reader = reader;
-            IsMemory = isMemory;
         }
     }
 }

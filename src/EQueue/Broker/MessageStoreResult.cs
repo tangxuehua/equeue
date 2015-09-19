@@ -5,12 +5,10 @@ namespace EQueue.Broker
     public class MessageStoreResult
     {
         public MessageLogRecord MessageLogRecord { get; private set; }
-        public long NextLogPosition { get; private set; }
 
-        public MessageStoreResult(MessageLogRecord messageLogRecord, long nextLogPosition)
+        public MessageStoreResult(MessageLogRecord messageLogRecord)
         {
             MessageLogRecord = messageLogRecord;
-            NextLogPosition = nextLogPosition;
         }
     }
 }

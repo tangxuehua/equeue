@@ -2,11 +2,10 @@
 {
     public static class Consts
     {
-        public const int TFChunkInitialReaderCount = 5;
-        public const int TFChunkMaxReaderCount = 10;
-        public const int MaxLogRecordSize = 16 * 1024 * 1024;
-        public const int ChunkSize = 256 * 1024 * 1024;
-        public const int ChunksCacheCount = 2;
+        public const int MaxChunksCount = 100000;
+        public const int TFChunkReaderCount = 10;
+        public const int MaxLogRecordSize = 4 * 1024 * 1024;
+        public const int ChunkDataSize = 256 * 1024 * 1024;
         public const int FlushChunkIntervalMilliseconds = 100;
     }
 }

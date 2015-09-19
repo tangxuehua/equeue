@@ -106,6 +106,7 @@
     <Compile Include="Broker\Storage\Checkpoints\FileCheckpoint.cs" />
     <Compile Include="Broker\Storage\ChunkFooter.cs" />
     <Compile Include="Broker\Storage\ChunkHeader.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ChunkCompleteException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkWriteException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ExtraneousFileFoundException.cs" />
     <Compile Include="Broker\Storage\Exceptions\InvalidReadException.cs" />
@@ -125,8 +126,7 @@
     <Compile Include="Broker\Storage\LogRecords\ILogRecordParserProvider.cs" />
     <Compile Include="Broker\MessageLogRecordParser.cs" />
     <Compile Include="Broker\Storage\Checkpoints\MemoryMappedFileCheckpoint.cs" />
-    <Compile Include="Broker\Storage\TFChunkDb.cs" />
-    <Compile Include="Broker\Storage\TFChunkDbConfig.cs" />
+    <Compile Include="Broker\Storage\TFChunkManagerConfig.cs" />
     <Compile Include="Broker\Storage\TFChunkManager.cs" />
     <Compile Include="Broker\Storage\TFChunkReader.cs" />
     <Compile Include="Broker\Storage\TFChunkReadSide.cs" />
@@ -134,7 +134,7 @@
     <Compile Include="Broker\Storage\RecordReadResult.cs" />
     <Compile Include="Broker\Storage\RecordWriteResult.cs" />
     <Compile Include="Broker\Storage\Consts.cs" />
-    <Compile Include="Broker\Storage\FileNamingStrategies\VersionedPatternFileNamingStrategy.cs" />
+    <Compile Include="Broker\Storage\FileNamingStrategies\DefaultFileNamingStrategy.cs" />
     <Compile Include="Broker\Storage\TFChunkWriter.cs" />
     <Compile Include="Broker\Storage\WriterWorkItem.cs" />
     <Compile Include="Broker\Storage\ReaderWorkItem.cs" />

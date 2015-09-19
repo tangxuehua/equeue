@@ -33,7 +33,7 @@ namespace EQueue.Broker.Storage
             _filename = filename;
             _name = name;
             _cached = cached;
-            var old = File.Exists(_filename);
+            var fileExists = File.Exists(_filename);
             _fileStream = new FileStream(_filename,
                                          mustExist ? FileMode.Open : FileMode.OpenOrCreate,
                                          FileAccess.ReadWrite,
@@ -48,8 +48,10 @@ namespace EQueue.Broker.Storage
                                                     false);
             _accessor = _file.CreateViewAccessor(0, sizeof(long));
 
-            if (old)
+            if (fileExists)
+            {
                 _last = _lastFlushed = ReadCurrent();
+            }
             else
             {
                 _last = initValue;
@@ -76,7 +78,9 @@ namespace EQueue.Broker.Storage
         {
             var last = Interlocked.Read(ref _last);
             if (last == _lastFlushed)
+            {
                 return;
+            }
 
             _accessor.Write(0, last);
             _accessor.Flush();

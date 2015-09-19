@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using ECommon.Autofac;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
@@ -29,31 +28,17 @@ namespace QuickStart.BrokerServer
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
                 .RegisterEQueueComponents()
-                .UseFileMessageStore(CreateDbConfig(@"d:\chunkdb", false));
+                .UseFileMessageStore(CreateMessageChunkManagerConfig());
         }
-        static TFChunkDbConfig CreateDbConfig(string dbPath, bool inMemDb)
+        static TFChunkManagerConfig CreateMessageChunkManagerConfig()
         {
-            ICheckpoint writerCheckpoint;
-            var name = "writer";
-            if (inMemDb)
-            {
-                writerCheckpoint = new InMemoryCheckpoint(name);
-            }
-            else
-            {
-                writerCheckpoint = new MemoryMappedFileCheckpoint(Path.Combine(dbPath, name + ".chk"), name, cached: true);
-            }
-
-            var cache = Consts.ChunksCacheCount * (long)(Consts.ChunkSize + ChunkHeader.Size + ChunkFooter.Size);
-            var config = new TFChunkDbConfig(dbPath,
-                new VersionedPatternFileNamingStrategy(dbPath, "chunk-"),
-                Consts.ChunkSize,
-                cache,
+            return new TFChunkManagerConfig(@"d:\chunkdb", new DefaultFileNamingStrategy("chunk-"),
+                Consts.MaxChunksCount,
+                Consts.ChunkDataSize,
+                0,
+                0,
                 Consts.FlushChunkIntervalMilliseconds,
-                writerCheckpoint,
-                inMemDb);
-
-            return config;
+                Consts.TFChunkReaderCount);
         }
     }
 }

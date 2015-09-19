@@ -30,9 +30,9 @@ namespace EQueue.Configurations
             return configuration;
         }
 
-        public static Configuration UseFileMessageStore(this Configuration configuration, TFChunkDbConfig config)
+        public static Configuration UseFileMessageStore(this Configuration configuration, TFChunkManagerConfig config)
         {
-            configuration.SetDefault<IMessageStore, FileMessageStore>(new FileMessageStore(new TFChunkDb(config)));
+            configuration.SetDefault<IMessageStore, FileMessageStore>(new FileMessageStore(new TFChunkManager(config)));
             return configuration;
         }
         public static Configuration UseSqlServerQueueStore(this Configuration configuration, SqlServerQueueStoreSetting setting)

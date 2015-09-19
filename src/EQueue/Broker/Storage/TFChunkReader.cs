@@ -6,31 +6,23 @@ namespace EQueue.Broker.Storage
 {
     public class TFChunkReader
     {
-        internal static long CachedReads;
-        internal static long NotCachedReads;
-
         public const int MaxRetries = 20;
 
-        public long CurrentPosition { get { return _currentDataPosition; } }
+        public long CurrentDataPosition { get { return _currentDataPosition; } }
 
-        private readonly TFChunkDb _chunkDb;
-        private readonly ICheckpoint _writerCheckpoint;
+        private readonly TFChunkManager _chunkManager;
+        private readonly TFChunkWriter _chunkWriter;
         private long _currentDataPosition;
 
-        public TFChunkReader(TFChunkDb chunkDb, ICheckpoint writerCheckpoint, long initialPosition = 0)
+        public TFChunkReader(TFChunkManager chunkManager, TFChunkWriter chunkWriter, long initialDataPosition = 0)
         {
-            Ensure.NotNull(chunkDb, "chunkDb");
-            Ensure.NotNull(writerCheckpoint, "writerCheckpoint");
-            Ensure.Nonnegative(initialPosition, "initialPosition");
+            Ensure.NotNull(chunkManager, "chunkManager");
+            Ensure.NotNull(chunkWriter, "chunkWriter");
+            Ensure.Nonnegative(initialDataPosition, "initialPosition");
 
-            _chunkDb = chunkDb;
-            _writerCheckpoint = writerCheckpoint;
-            _currentDataPosition = initialPosition;
-        }
-
-        public void Reposition(long position)
-        {
-            _currentDataPosition = position;
+            _chunkManager = chunkManager;
+            _chunkWriter = chunkWriter;
+            _currentDataPosition = initialDataPosition;
         }
 
         public SeqReadResult TryReadNext()
@@ -43,16 +35,15 @@ namespace EQueue.Broker.Storage
             while (true)
             {
                 var currentDataPosition = _currentDataPosition;
-                var writerChk = _writerCheckpoint.Read();
+                var writerChk = _chunkWriter.CurrentChunk.GlobalDataPosition;
                 if (currentDataPosition >= writerChk)
                     return SeqReadResult.Failure;
 
-                var chunk = _chunkDb.Manager.GetChunkFor(currentDataPosition);
+                var chunk = _chunkManager.GetChunkFor(currentDataPosition);
                 RecordReadResult result;
                 try
                 {
                     result = chunk.TryReadClosestForward(chunk.ChunkHeader.GetLocalDataPosition(currentDataPosition));
-                    CountRead(chunk.IsCached);
                 }
                 catch (FileBeingDeletedException)
                 {
@@ -88,28 +79,27 @@ namespace EQueue.Broker.Storage
             while (true)
             {
                 var currentDataPosition = _currentDataPosition;
-                var writerChk = _writerCheckpoint.Read();
+                var writerChk = _chunkWriter.CurrentChunk.GlobalDataPosition;
                 // we allow == writerChk, that means read the very last record
                 if (currentDataPosition > writerChk)
                     throw new Exception(string.Format("Requested position {0} is greater than writer checkpoint {1} when requesting to read previous record from TF.", currentDataPosition, writerChk));
                 if (currentDataPosition <= 0)
                     return SeqReadResult.Failure;
 
-                var chunk = _chunkDb.Manager.GetChunkFor(currentDataPosition);
+                var chunk = _chunkManager.GetChunkFor(currentDataPosition);
                 bool readLast = false;
                 if (currentDataPosition == chunk.ChunkHeader.ChunkDataStartPosition)
                 {
                     // we are exactly at the boundary of physical chunks
                     // so we switch to previous chunk and request TryReadLast
                     readLast = true;
-                    chunk = _chunkDb.Manager.GetChunkFor(currentDataPosition - 1);
+                    chunk = _chunkManager.GetChunkFor(currentDataPosition - 1);
                 }
 
                 RecordReadResult result;
                 try
                 {
                     result = readLast ? chunk.TryReadLast() : chunk.TryReadClosestBackward(chunk.ChunkHeader.GetLocalDataPosition(currentDataPosition));
-                    CountRead(chunk.IsCached);
                 }
                 catch (FileBeingDeletedException)
                 {
@@ -140,14 +130,13 @@ namespace EQueue.Broker.Storage
 
         private RecordReadResult TryReadAtInternal(long position, int retries)
         {
-            var writerChk = _writerCheckpoint.Read();
+            var writerChk = _chunkWriter.CurrentChunk.GlobalDataPosition;
             if (position >= writerChk)
                 return RecordReadResult.Failure;
 
-            var chunk = _chunkDb.Manager.GetChunkFor(position);
+            var chunk = _chunkManager.GetChunkFor(position);
             try
             {
-                CountRead(chunk.IsCached);
                 return chunk.TryReadAt(chunk.ChunkHeader.GetLocalDataPosition(position));
             }
             catch (FileBeingDeletedException)
@@ -165,14 +154,13 @@ namespace EQueue.Broker.Storage
 
         private bool ExistsAtInternal(long position, int retries)
         {
-            var writerChk = _writerCheckpoint.Read();
+            var writerChk = _chunkWriter.CurrentChunk.GlobalDataPosition;
             if (position >= writerChk)
                 return false;
 
-            var chunk = _chunkDb.Manager.GetChunkFor(position);
+            var chunk = _chunkManager.GetChunkFor(position);
             try
             {
-                CountRead(chunk.IsCached);
                 return chunk.ExistsAt(chunk.ChunkHeader.GetLocalDataPosition(position));
             }
             catch (FileBeingDeletedException)
@@ -181,14 +169,6 @@ namespace EQueue.Broker.Storage
                     throw new FileBeingDeletedException("Been told the file was deleted > MaxRetries times. Probably a problem in db.");
                 return ExistsAtInternal(position, retries + 1);
             }
-        }
-
-        private static void CountRead(bool isCached)
-        {
-            if (isCached)
-                Interlocked.Increment(ref CachedReads);
-            else
-                Interlocked.Increment(ref NotCachedReads);
         }
     }
 }

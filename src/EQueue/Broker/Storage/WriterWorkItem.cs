@@ -4,79 +4,32 @@ namespace EQueue.Broker.Storage
 {
     internal class WriterWorkItem
     {
-        private readonly FileStream _fileStream;
-        private UnmanagedMemoryStream _memStream;
-        private Stream _workingStream;
-
         public readonly MemoryStream BufferStream;
         public readonly BinaryWriter BufferWriter;
-        public Stream WorkingStream { get { return _workingStream; } }
+        public readonly FileStream FileStream;
 
-        public WriterWorkItem(FileStream fileStream, UnmanagedMemoryStream memStream)
+        public WriterWorkItem(FileStream fileStream)
         {
-            _fileStream = fileStream;
-            _memStream = memStream;
-            _workingStream = (Stream)fileStream ?? memStream;
+            FileStream = fileStream;
             BufferStream = new MemoryStream(8192);
             BufferWriter = new BinaryWriter(BufferStream);
         }
 
-        public void SetMemStream(UnmanagedMemoryStream memStream)
-        {
-            _memStream = memStream;
-            if (_fileStream == null)
-            {
-                _workingStream = memStream;
-            }
-        }
         public void AppendData(byte[] buf, int offset, int len)
         {
-            if (_fileStream != null)
-            {
-                _fileStream.Write(buf, 0, len);
-            }
-            var memStream = _memStream;
-            if (memStream != null)
-            {
-                memStream.Write(buf, 0, len);
-            }
+            FileStream.Write(buf, 0, len);
         }
         public void FlushToDisk()
         {
-            if (_fileStream != null)
-            {
-                _fileStream.FlushToDisk();
-            }
+            FileStream.FlushToDisk();
         }
-        public void ResizeStream(long fileSize)
+        public void ResizeStream(long length)
         {
-            if (_fileStream != null)
-            {
-                _fileStream.SetLength(fileSize);
-            }
-            var memStream = _memStream;
-            if (memStream != null)
-            {
-                memStream.SetLength(fileSize);
-            }
+            FileStream.SetLength(length);
         }
-
         public void Dispose()
         {
-            if (_fileStream != null)
-            {
-                _fileStream.Dispose();
-            }
-            DisposeMemStream();
-        }
-        public void DisposeMemStream()
-        {
-            var memStream = _memStream;
-            if (memStream != null)
-            {
-                memStream.Dispose();
-                _memStream = null;
-            }
+            FileStream.Dispose();
         }
     }
 }
