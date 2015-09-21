@@ -27,18 +27,7 @@ namespace QuickStart.BrokerServer
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
-                .RegisterEQueueComponents()
-                .UseFileMessageStore(CreateMessageChunkManagerConfig());
-        }
-        static TFChunkManagerConfig CreateMessageChunkManagerConfig()
-        {
-            return new TFChunkManagerConfig(@"d:\chunkdb", new DefaultFileNamingStrategy("chunk-"),
-                Consts.MaxChunksCount,
-                Consts.ChunkDataSize,
-                0,
-                0,
-                Consts.FlushChunkIntervalMilliseconds,
-                Consts.TFChunkReaderCount);
+                .RegisterEQueueComponents();
         }
     }
 }

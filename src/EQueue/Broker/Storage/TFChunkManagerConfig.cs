@@ -1,44 +1,62 @@
-﻿using System.IO;
+﻿using System;
 using ECommon.Utilities;
 
 namespace EQueue.Broker.Storage
 {
     public class TFChunkManagerConfig
     {
-        public readonly string Path;
+        public readonly string BasePath;
         public readonly IFileNamingStrategy FileNamingStrategy;
-        public readonly int MaxChunksCount;
         public readonly int ChunkDataSize;
         public readonly int ChunkDataUnitSize;
         public readonly int ChunkDataCount;
         public readonly int FlushChunkIntervalMilliseconds;
         public readonly int ChunkReaderCount;
+        public readonly int MaxLogRecordSize;
 
-        public TFChunkManagerConfig(string path,
+        public TFChunkManagerConfig(string basePath,
                                IFileNamingStrategy fileNamingStrategy,
-                               int maxChunksCount,
                                int chunkDataSize,
                                int chunkDataUnitSize,
                                int chunkDataCount,
                                int flushChunkIntervalMilliseconds,
-                               int chunkReaderCount)
+                               int chunkReaderCount,
+                               int maxLogRecordSize)
         {
-            Ensure.NotNullOrEmpty(path, "path");
+            Ensure.NotNullOrEmpty(basePath, "basePath");
             Ensure.NotNull(fileNamingStrategy, "fileNamingStrategy");
-            Ensure.Positive(maxChunksCount, "maxChunksCount");
-            Ensure.Positive(chunkDataSize, "chunkDataSize");
+            Ensure.Nonnegative(chunkDataSize, "chunkDataSize");
             Ensure.Nonnegative(chunkDataUnitSize, "chunkDataUnitSize");
             Ensure.Nonnegative(chunkDataCount, "chunkDataCount");
             Ensure.Positive(flushChunkIntervalMilliseconds, "flushChunkIntervalMilliseconds");
+            Ensure.Positive(maxLogRecordSize, "maxLogRecordSize");
 
-            Path = path;
+            if (chunkDataSize <= 0 && (chunkDataUnitSize <= 0 || chunkDataCount <= 0))
+            {
+                throw new ArgumentException(string.Format("Invalid chunk data size arugment. chunkDataSize: {0}, chunkDataUnitSize: {1}, chunkDataCount: {2}", chunkDataSize, chunkDataUnitSize, chunkDataCount));
+            }
+
+            BasePath = basePath;
             FileNamingStrategy = fileNamingStrategy;
-            MaxChunksCount = maxChunksCount;
             ChunkDataSize = chunkDataSize;
             ChunkDataUnitSize = chunkDataUnitSize;
             ChunkDataCount = chunkDataCount;
             FlushChunkIntervalMilliseconds = flushChunkIntervalMilliseconds;
             ChunkReaderCount = chunkReaderCount;
+            MaxLogRecordSize = maxLogRecordSize;
+        }
+
+        public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount)
+        {
+            return new TFChunkManagerConfig(
+                basePath,
+                new DefaultFileNamingStrategy(chunkFilePrefix),
+                chunkDataSize,
+                chunkDataUnitSize,
+                chunkDataCount,
+                100,
+                Environment.ProcessorCount * 2,
+                4 * 1024 * 1024);
         }
     }
 }

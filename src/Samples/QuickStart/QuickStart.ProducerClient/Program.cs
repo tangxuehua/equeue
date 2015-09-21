@@ -60,7 +60,7 @@ namespace QuickStart.ProducerClient
             var batchSize = int.Parse(ConfigurationManager.AppSettings["BatchSize"]);
             var actions = new List<Action>();
             var payload = new byte[messageSize];
-            var message = new Message("SampleTopic", 100, ObjectId.GenerateNewStringId(), payload);
+            var message = new Message("topic1", 100, ObjectId.GenerateNewStringId(), payload);
 
             for (var i = 1; i <= clientCount; i++)
             {

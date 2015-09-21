@@ -111,8 +111,7 @@ namespace EQueue.Broker
             statisticInfo.QueueCount = _queueService.GetAllQueueCount();
             statisticInfo.UnConsumedQueueMessageCount = _queueService.GetAllQueueUnConusmedMessageCount();
             statisticInfo.InMemoryQueueMessageCount = _queueService.GetAllQueueIndexCount();
-            statisticInfo.CurrentMessageOffset = _messageStore.CurrentMessageOffset;
-            statisticInfo.PersistedMessageOffset = _messageStore.PersistedMessageOffset;
+            statisticInfo.CurrentMessageOffset = _messageStore.CurrentMessagePosition;
             statisticInfo.MinMessageOffset = _queueService.GetQueueMinMessageOffset();
             statisticInfo.ConsumerGroupCount = _offsetManager.GetConsumerGroupCount();
             return statisticInfo;

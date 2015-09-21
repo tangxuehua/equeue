@@ -31,17 +31,17 @@ namespace EQueue.Broker.Storage
             _currentChunk = _chunkManager.GetLastChunk();
             _scheduleService.StartTask("TFChunkWriter.Flush", Flush, 1000, _chunkManager.Config.FlushChunkIntervalMilliseconds);
         }
-        public void Write(ILogRecord record)
+        public long Write(ILogRecord record)
         {
             lock (_lockObj)
             {
-                if (_isClosed) return;
+                if (_isClosed) return -1;
 
                 //先尝试写文件
                 var result = _currentChunk.TryAppend(record);
 
                 //如果当前文件已满
-                if (result.Status == RecordWriteResultStatus.NotEnoughSpace)
+                if (!result.Success)
                 {
                     //结束当前文件
                     _currentChunk.Complete();
@@ -49,18 +49,18 @@ namespace EQueue.Broker.Storage
                     //新建新的文件
                     _currentChunk = _chunkManager.AddNewChunk();
 
-                    //更新记录的写入起始位置
-                    record.LogPosition = _currentChunk.GlobalDataPosition;
-
                     //再尝试写入新的文件
                     result = _currentChunk.TryAppend(record);
 
                     //如果还是不成功，则报错
-                    if (result.Status != RecordWriteResultStatus.Success)
+                    if (!result.Success)
                     {
-                        throw new ChunkWriteException(_currentChunk.ToString());
+                        throw new ChunkWriteException(_currentChunk.ToString(), "Write record to chunk failed.");
                     }
                 }
+
+                //返回数据写入位置
+                return result.Position;
             }
         }
         public void Close()

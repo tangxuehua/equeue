@@ -136,8 +136,8 @@ namespace EQueue.Clients.Producers
 
             if (remotingResponse.Code == ResponseCode.Success)
             {
-                var messageResult = MessageUtils.DecodeMessageSendResponse(remotingResponse.Body);
-                return new SendResult(SendStatus.Success, messageResult, null);
+                var result = MessageUtils.DecodeMessageStoreResult(remotingResponse.Body);
+                return new SendResult(SendStatus.Success, result, null);
             }
             else if (remotingResponse.Code == 0)
             {

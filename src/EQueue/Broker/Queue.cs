@@ -1,14 +1,19 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using ECommon.Extensions;
+using EQueue.Broker.Storage;
 
 namespace EQueue.Broker
 {
     public class Queue
     {
+        private readonly TFChunkWriter _chunkWriter;
+        private readonly TFChunkReader _chunkReader;
+        private readonly TFChunkManager _chunkManager;
         private ConcurrentDictionary<long, long> _queueItemDict = new ConcurrentDictionary<long, long>();
-        private long _currentOffset = -1;
+        private long _currentOffset = 0;
 
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
@@ -20,8 +25,25 @@ namespace EQueue.Broker
             Topic = topic;
             QueueId = queueId;
             Status = QueueStatus.Normal;
+
+            _chunkManager = new TFChunkManager(BrokerController.Instance.Setting.QueueChunkConfig, Topic + @"\" + QueueId);
+            _chunkWriter = new TFChunkWriter(_chunkManager);
+            _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
         }
 
+        public void Load()
+        {
+            _chunkManager.Load();
+            _chunkWriter.Open();
+        }
+        public void Close()
+        {
+            _chunkWriter.Close();
+        }
+        public void AddMessage(long messageLogPosition)
+        {
+            _chunkWriter.Write(new QueueLogRecord(messageLogPosition));
+        }
         public long GetMessageCount()
         {
             return _queueItemDict.Count;
@@ -45,7 +67,7 @@ namespace EQueue.Broker
         }
         public long IncrementCurrentOffset()
         {
-            return Interlocked.Increment(ref _currentOffset);
+            return _currentOffset++;
         }
         public void RecoverQueueIndex(long queueOffset, long messageOffset, bool allowSetQueueIndex)
         {

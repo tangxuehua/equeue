@@ -3,6 +3,6 @@
     public enum LogRecordType
     {
         Message = 1,
-        QueueIndex = 2
+        Queue = 2
     }
 }

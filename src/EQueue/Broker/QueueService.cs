@@ -110,6 +110,7 @@ namespace EQueue.Broker
         {
             lock (this)
             {
+                _logger.InfoFormat("Creating topic: {0}", topic);
                 Ensure.NotNullOrEmpty(topic, "topic");
                 Ensure.Positive(initialQueueCount, "initialQueueCount");
                 if (initialQueueCount > BrokerController.Instance.Setting.TopicMaxQueueCount)
@@ -119,7 +120,9 @@ namespace EQueue.Broker
                 var queues = new List<Queue>();
                 for (var index = 0; index < initialQueueCount; index++)
                 {
-                    queues.Add(new Queue(topic, index));
+                    var queue = new Queue(topic, index);
+                    queue.Load();
+                    queues.Add(queue);
                 }
                 foreach (var queue in queues)
                 {
@@ -129,7 +132,7 @@ namespace EQueue.Broker
                     }
                     _queueDict.TryAdd(CreateQueueKey(queue.Topic, queue.QueueId), queue);
                 }
-            }
+            };
         }
         public Queue GetQueue(string topic, int queueId)
         {
@@ -143,75 +146,88 @@ namespace EQueue.Broker
         }
         public void AddQueue(string topic)
         {
-            Ensure.NotNullOrEmpty(topic, "topic");
-            var queues = _queueDict.Values.Where(x => x.Topic == topic);
-            if (queues.Count() >= BrokerController.Instance.Setting.TopicMaxQueueCount)
+            lock (this)
             {
-                throw new ArgumentException(string.Format("Queue count cannot bigger than {0}.", BrokerController.Instance.Setting.TopicMaxQueueCount));
+                Ensure.NotNullOrEmpty(topic, "topic");
+                var queues = _queueDict.Values.Where(x => x.Topic == topic);
+                if (queues.Count() >= BrokerController.Instance.Setting.TopicMaxQueueCount)
+                {
+                    throw new ArgumentException(string.Format("Queue count cannot bigger than {0}.", BrokerController.Instance.Setting.TopicMaxQueueCount));
+                }
+                var queueId = queues.Count() == 0 ? 0 : queues.Max(x => x.QueueId) + 1;
+                var queue = new Queue(topic, queueId);
+                queue.Load();
+                _queueStore.CreateQueue(queue);
+                var key = CreateQueueKey(queue.Topic, queue.QueueId);
+                _queueDict.TryAdd(key, queue);
             }
-            var queueId = queues.Count() == 0 ? 0 : queues.Max(x => x.QueueId) + 1;
-            var queue = new Queue(topic, queueId);
-            _queueStore.CreateQueue(queue);
-            var key = CreateQueueKey(queue.Topic, queue.QueueId);
-            _queueDict.TryAdd(key, queue);
         }
         public void RemoveQueue(string topic, int queueId)
         {
-            var key = CreateQueueKey(topic, queueId);
-            Queue queue;
-            if (!_queueDict.TryGetValue(key, out queue))
+            lock (this)
             {
-                return;
+                var key = CreateQueueKey(topic, queueId);
+                Queue queue;
+                if (!_queueDict.TryGetValue(key, out queue))
+                {
+                    return;
+                }
+
+                //检查队列状态是否是已禁用
+                if (queue.Status != QueueStatus.Disabled)
+                {
+                    throw new Exception("Queue status is not disabled, cannot be deleted.");
+                }
+                //检查是否有未消费完的消息
+                if (queue.GetMessageRealCount() > 0L)
+                {
+                    throw new Exception("Queue is not allowed to delete as there are messages exist in this queue.");
+                }
+
+                //删除队列消息
+                _messageStore.DeleteQueueMessage(topic, queueId);
+
+                //删除队列消费进度信息
+                _offsetManager.DeleteQueueOffset(topic, queueId);
+
+                //删除队列
+                _queueStore.DeleteQueue(queue);
+
+                //从内存移除队列
+                _queueDict.Remove(key);
             }
-
-            //检查队列状态是否是已禁用
-            if (queue.Status != QueueStatus.Disabled)
-            {
-                throw new Exception("Queue status is not disabled, cannot be deleted.");
-            }
-            //检查是否有未消费完的消息
-            if (queue.GetMessageRealCount() > 0L)
-            {
-                throw new Exception("Queue is not allowed to delete as there are messages exist in this queue.");
-            }
-
-            //删除队列消息
-            _messageStore.DeleteQueueMessage(topic, queueId);
-
-            //删除队列消费进度信息
-            _offsetManager.DeleteQueueOffset(topic, queueId);
-
-            //删除队列
-            _queueStore.DeleteQueue(queue);
-
-            //从内存移除队列
-            _queueDict.Remove(key);
         }
         public void EnableQueue(string topic, int queueId)
         {
-            var queue = GetQueue(topic, queueId);
-            if (queue != null)
+            lock (this)
             {
-                var foundQueue = _queueStore.GetQueue(topic, queueId);
-                if (foundQueue!= null)
+                var queue = GetQueue(topic, queueId);
+                if (queue != null)
                 {
-                    foundQueue.Enable();
-                    _queueStore.UpdateQueue(foundQueue);
-                    queue.Enable();
+                    var foundQueue = _queueStore.GetQueue(topic, queueId);
+                    if (foundQueue != null)
+                    {
+                        foundQueue.Enable();
+                        _queueStore.UpdateQueue(foundQueue);
+                        queue.Enable();
+                    }
                 }
             }
         }
         public void DisableQueue(string topic, int queueId)
         {
-            var queue = GetQueue(topic, queueId);
-            if (queue != null)
+            lock (this)
             {
-                var foundQueue = _queueStore.GetQueue(topic, queueId);
-                if (foundQueue != null)
+                var queue = GetQueue(topic, queueId);
+                if (queue != null)
                 {
-                    foundQueue.Disable();
-                    _queueStore.UpdateQueue(foundQueue);
-                    queue.Disable();
+                    var foundQueue = _queueStore.GetQueue(topic, queueId);
+                    if (foundQueue != null)
+                    {
+                        foundQueue.Disable();
+                        _queueStore.UpdateQueue(foundQueue);
+                        queue.Disable();
+                    }
                 }
             }
         }
@@ -221,17 +237,20 @@ namespace EQueue.Broker
         }
         public IEnumerable<Queue> GetOrCreateQueues(string topic, QueueStatus? status = null)
         {
-            var queues = _queueDict.Values.Where(x => x.Topic == topic);
-            if (queues.IsEmpty() && BrokerController.Instance.Setting.AutoCreateTopic)
+            lock (this)
             {
-                CreateTopic(topic, BrokerController.Instance.Setting.TopicDefaultQueueCount);
-                queues = _queueDict.Values.Where(x => x.Topic == topic);
+                var queues = _queueDict.Values.Where(x => x.Topic == topic);
+                if (queues.IsEmpty() && BrokerController.Instance.Setting.AutoCreateTopic)
+                {
+                    CreateTopic(topic, BrokerController.Instance.Setting.TopicDefaultQueueCount);
+                    queues = _queueDict.Values.Where(x => x.Topic == topic);
+                }
+                if (status != null)
+                {
+                    return queues.Where(x => x.Status == status.Value);
+                }
+                return queues;
             }
-            if (status != null)
-            {
-                return queues.Where(x => x.Status == status.Value);
-            }
-            return queues;
         }
         public IEnumerable<Queue> FindQueues(string topic, QueueStatus? status = null)
         {

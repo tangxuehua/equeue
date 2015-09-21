@@ -1,57 +1,50 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using ECommon.Components;
-using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
-using ECommon.Utilities;
 using EQueue.Broker.Storage;
 using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
-    public class FileMessageStore : IMessageStore, IDisposable
+    public class DefaultMessageStore : IMessageStore, IDisposable
     {
-        private readonly TFChunkWriter _chunkWriter;
-        private readonly TFChunkReader _chunkReader;
-        private readonly TFChunkManager _chunkManager;
+        private TFChunkManager _chunkManager;
+        private TFChunkWriter _chunkWriter;
+        private TFChunkReader _chunkReader;
         private readonly ConcurrentDictionary<string, long> _queueConsumedOffsetDict = new ConcurrentDictionary<string, long>();
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
-        private long _currentOffset = -1;
 
-        public long CurrentMessageOffset
+        public long CurrentMessagePosition
         {
-            get { return _currentOffset; }
-        }
-        public long PersistedMessageOffset
-        {
-            get { return _currentOffset; }
+            get
+            {
+                return _chunkWriter.CurrentChunk.GlobalDataPosition;
+            }
         }
         public bool SupportBatchLoadQueueIndex
         {
             get { return false; }
         }
 
-        public FileMessageStore(TFChunkManager chunkManager)
+        public DefaultMessageStore()
         {
-            _chunkManager = chunkManager;
-            _chunkWriter = new TFChunkWriter(chunkManager);
-            _chunkReader = new TFChunkReader(chunkManager, _chunkWriter, 0);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
-        public void Recover(IEnumerable<QueueConsumedOffset> queueConsumedOffsets, Action<long, string, int, long> messageRecoveredCallback)
-        {
-            _chunkManager.Load();
-            _chunkWriter.Open();
-        }
         public void Start()
         {
+            _chunkManager = new TFChunkManager(BrokerController.Instance.Setting.MessageChunkConfig);
+            _chunkWriter = new TFChunkWriter(_chunkManager);
+            _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
+
+            _chunkManager.Load();
+            _chunkWriter.Open();
+
             _scheduleService.StartTask("FileMessageStore.RemoveConsumedMessagesFromMemory", RemoveConsumedMessagesFromMemory, 5000, 5000);
         }
         public void Shutdown()
@@ -60,30 +53,19 @@ namespace EQueue.Broker
             _chunkWriter.Close();
             _chunkManager.Close();
         }
-        public long GetNextMessageOffset()
+        public long StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
         {
-            return Interlocked.Increment(ref _currentOffset);
-        }
-        public MessageStoreResult StoreMessage(int queueId, long messageOffset, long queueOffset, Message message, string routingKey)
-        {
-            var logPosition = _chunkWriter.CurrentChunk.GlobalDataPosition;
             var record = new MessageLogRecord(
-                1,
-                logPosition,
                 message.Topic,
                 message.Code,
-                ObjectId.GenerateNewStringId(),
                 message.Key,
                 message.Body,
-                messageOffset,
                 queueId,
                 queueOffset,
                 routingKey,
                 message.CreatedTime,
                 DateTime.Now);
-            _chunkWriter.Write(record);
-
-            return new MessageStoreResult(record);
+            return _chunkWriter.Write(record);
         }
         public MessageLogRecord GetMessage(long logPosition)
         {
