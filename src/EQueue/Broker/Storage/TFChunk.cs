@@ -248,8 +248,6 @@ namespace EQueue.Broker.Storage
             //初始化文件属性以及创建读文件的Reader
             SetAttributes();
             InitializeReaderWorkItems();
-
-            _logger.InfoFormat("Ongoing chunk {0} initialized, write data start position: {1}", this, _dataPosition);
         }
 
         #endregion
@@ -690,7 +688,7 @@ namespace EQueue.Broker.Storage
 
         public override string ToString()
         {
-            return string.Format("#{0} ({1})", _chunkHeader.ChunkNumber, Path.GetFileName(_filename));
+            return string.Format("#{0} ({1})", _chunkHeader.ChunkNumber, _filename);
         }
     }
 }

@@ -95,7 +95,7 @@ namespace EQueue.Broker
                 {
                     Topic = queue.Topic,
                     QueueId = queue.QueueId,
-                    Status = queue.Status,
+                    Status = queue.Setting.Status,
                     CreatedTime = current,
                     UpdatedTime = current
                 }, _setting.QueueTable);
@@ -123,7 +123,7 @@ namespace EQueue.Broker
             {
                 var count = connection.Update(new
                 {
-                    Status = queue.Status,
+                    Status = queue.Setting.Status,
                     UpdatedTime = DateTime.Now
                 }, new
                 {
@@ -132,7 +132,7 @@ namespace EQueue.Broker
                 }, _setting.QueueTable);
                 if (count > 0)
                 {
-                    _logger.InfoFormat("Update queue success, topic={0}, queueId={1}, status={2}", queue.Topic, queue.QueueId, queue.Status);
+                    _logger.InfoFormat("Update queue success, topic={0}, queueId={1}, status={2}", queue.Topic, queue.QueueId, queue.Setting.Status);
                 }
             }
         }

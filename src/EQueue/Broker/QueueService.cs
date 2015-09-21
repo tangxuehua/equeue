@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using ECommon.Extensions;
@@ -39,10 +40,19 @@ namespace EQueue.Broker
             _scheduleService.StopTask("QueueService.RemoveExceedMaxCacheQueueIndex");
 
             //再重新加载状态
-            var queues = _queueStore.LoadAllQueues();
-            var queueGroups = queues.GroupBy(x => x.Topic);
-            foreach (var queue in queues)
+            var chunkConfig = BrokerController.Instance.Setting.QueueChunkConfig;
+            var pathList = Directory
+                            .EnumerateDirectories(chunkConfig.BasePath, "*", SearchOption.AllDirectories)
+                            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
+                            .ToArray();
+            for (var i = 1; i < pathList.Count(); i++)
             {
+                var path = pathList[i];
+                var items = path.Split('\\');
+                var queueId = int.Parse(items[items.Length - 1]);
+                var topic = items[items.Length - 2];
+                var queue = new Queue(topic, queueId);
+                queue.Load();
                 var key = CreateQueueKey(queue.Topic, queue.QueueId);
                 _queueDict.TryAdd(key, queue);
             }
@@ -52,6 +62,10 @@ namespace EQueue.Broker
         }
         public void Shutdown()
         {
+            foreach (var queue in _queueDict.Values)
+            {
+                queue.Close();
+            }
             _queueDict.Clear();
             _scheduleService.StopTask("QueueService.RemoveConsumedQueueIndex");
             _scheduleService.StopTask("QueueService.RemoveExceedMaxCacheQueueIndex");
@@ -110,7 +124,6 @@ namespace EQueue.Broker
         {
             lock (this)
             {
-                _logger.InfoFormat("Creating topic: {0}", topic);
                 Ensure.NotNullOrEmpty(topic, "topic");
                 Ensure.Positive(initialQueueCount, "initialQueueCount");
                 if (initialQueueCount > BrokerController.Instance.Setting.TopicMaxQueueCount)
@@ -174,7 +187,7 @@ namespace EQueue.Broker
                 }
 
                 //检查队列状态是否是已禁用
-                if (queue.Status != QueueStatus.Disabled)
+                if (queue.Setting.Status != QueueStatus.Disabled)
                 {
                     throw new Exception("Queue status is not disabled, cannot be deleted.");
                 }
@@ -247,7 +260,7 @@ namespace EQueue.Broker
                 }
                 if (status != null)
                 {
-                    return queues.Where(x => x.Status == status.Value);
+                    return queues.Where(x => x.Setting.Status == status.Value);
                 }
                 return queues;
             }
@@ -257,7 +270,7 @@ namespace EQueue.Broker
             var queues = _queueDict.Values.Where(x => x.Topic == topic);
             if (status != null)
             {
-                return queues.Where(x => x.Status == status.Value);
+                return queues.Where(x => x.Setting.Status == status.Value);
             }
             return queues;
         }

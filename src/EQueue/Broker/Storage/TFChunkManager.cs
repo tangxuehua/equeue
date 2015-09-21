@@ -18,6 +18,7 @@ namespace EQueue.Broker.Storage
         private volatile int _nextChunkNumber;
 
         public TFChunkManagerConfig Config { get { return _config; } }
+        public string ChunkPath { get { return _chunkPath; } }
 
         public TFChunkManager(TFChunkManagerConfig config, string relativePath = null)
         {
