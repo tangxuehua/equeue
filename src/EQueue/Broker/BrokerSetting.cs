@@ -1,7 +1,6 @@
 ﻿using System.Net;
-using ECommon.Remoting;
 using ECommon.Socketing;
-using ECommon.Utilities;
+using EQueue.Broker.Storage;
 
 namespace EQueue.Broker
 {
@@ -21,6 +20,8 @@ namespace EQueue.Broker
         public bool AutoCreateTopic { get; set; }
         public int TopicDefaultQueueCount { get; set; }
         public int TopicMaxQueueCount { get; set; }
+        public TFChunkManagerConfig MessageChunkConfig { get; set; }
+        public TFChunkManagerConfig QueueChunkConfig { get; set; }
 
         public BrokerSetting()
         {
@@ -39,6 +40,9 @@ namespace EQueue.Broker
             AutoCreateTopic = true;
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 1024;
+
+            MessageChunkConfig = TFChunkManagerConfig.Create(@"d:\equeue-store\message-chunks", "message-chunk-", 256 * 1024 * 1024, 0, 0);
+            QueueChunkConfig = TFChunkManagerConfig.Create(@"d:\equeue-store\queue-chunks", "queue-chunk-", 0, 9, 100000);
         }
     }
 }

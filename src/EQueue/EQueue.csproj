@@ -57,10 +57,10 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Broker\FileMessageStore.cs" />
+    <Compile Include="Broker\DefaultMessageStore.cs" />
     <Compile Include="Broker\LogRecordType.cs" />
-    <Compile Include="Broker\QueueIndexLogRecordParser.cs" />
-    <Compile Include="Broker\QueueIndexLogRecord.cs" />
+    <Compile Include="Broker\QueueLogRecordParser.cs" />
+    <Compile Include="Broker\QueueLogRecord.cs" />
     <Compile Include="Broker\MessageLogRecord.cs" />
     <Compile Include="Broker\RequestHandlers\CreateTopicRequestHandler.cs" />
     <Compile Include="Broker\SqlServerQueueStoreSetting.cs" />
@@ -106,6 +106,7 @@
     <Compile Include="Broker\Storage\Checkpoints\FileCheckpoint.cs" />
     <Compile Include="Broker\Storage\ChunkFooter.cs" />
     <Compile Include="Broker\Storage\ChunkHeader.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ChunkCompleteException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkWriteException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ExtraneousFileFoundException.cs" />
     <Compile Include="Broker\Storage\Exceptions\InvalidReadException.cs" />
@@ -125,16 +126,13 @@
     <Compile Include="Broker\Storage\LogRecords\ILogRecordParserProvider.cs" />
     <Compile Include="Broker\MessageLogRecordParser.cs" />
     <Compile Include="Broker\Storage\Checkpoints\MemoryMappedFileCheckpoint.cs" />
-    <Compile Include="Broker\Storage\TFChunkDb.cs" />
-    <Compile Include="Broker\Storage\TFChunkDbConfig.cs" />
+    <Compile Include="Broker\Storage\TFChunkManagerConfig.cs" />
     <Compile Include="Broker\Storage\TFChunkManager.cs" />
     <Compile Include="Broker\Storage\TFChunkReader.cs" />
-    <Compile Include="Broker\Storage\TFChunkReadSide.cs" />
     <Compile Include="Broker\Storage\LogRecords\LogRecord.cs" />
     <Compile Include="Broker\Storage\RecordReadResult.cs" />
     <Compile Include="Broker\Storage\RecordWriteResult.cs" />
-    <Compile Include="Broker\Storage\Consts.cs" />
-    <Compile Include="Broker\Storage\FileNamingStrategies\VersionedPatternFileNamingStrategy.cs" />
+    <Compile Include="Broker\Storage\FileNamingStrategies\DefaultFileNamingStrategy.cs" />
     <Compile Include="Broker\Storage\TFChunkWriter.cs" />
     <Compile Include="Broker\Storage\WriterWorkItem.cs" />
     <Compile Include="Broker\Storage\ReaderWorkItem.cs" />
@@ -145,7 +143,6 @@
     <Compile Include="Protocols\ConsumeFromWhere.cs" />
     <Compile Include="Clients\Producers\IQueueSelector.cs" />
     <Compile Include="Broker\IMessageStore.cs" />
-    <Compile Include="Broker\MessageStoreResult.cs" />
     <Compile Include="Clients\Consumers\Consumer.cs" />
     <Compile Include="Clients\Consumers\IMessageHandler.cs" />
     <Compile Include="Clients\Consumers\MessageHandleMode.cs" />
@@ -189,7 +186,7 @@
     <Compile Include="Protocols\PullMessageRequest.cs" />
     <Compile Include="Protocols\SendMessageRequest.cs" />
     <Compile Include="Protocols\ResponseCode.cs" />
-    <Compile Include="Protocols\SendMessageResponse.cs" />
+    <Compile Include="Protocols\MessageStoreResult.cs" />
     <Compile Include="Protocols\QueryConsumerRequest.cs" />
     <Compile Include="Protocols\UpdateQueueOffsetRequest.cs" />
     <Compile Include="Utils\ConsoleEventHandlerService.cs" />

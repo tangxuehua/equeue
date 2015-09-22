@@ -7,33 +7,21 @@ namespace EQueue.Broker.Storage
     public class ChunkHeader
     {
         public const int Size = 128;
-        public readonly byte Version;
-        public readonly int ChunkDataSize;
-        public readonly int ChunkStartNumber;
-        public readonly int ChunkEndNumber;
+        public readonly int ChunkNumber;
+        public readonly int ChunkDataTotalSize;
         public readonly long ChunkDataStartPosition;
         public readonly long ChunkDataEndPosition;
-        public readonly Guid ChunkId;
 
-        public ChunkHeader(byte version, int chunkDataSize, int chunkStartNumber, int chunkEndNumber, Guid chunkId)
+        public ChunkHeader(int chunkNumber, int chunkDataTotalSize)
         {
-            Ensure.Nonnegative(version, "version");
-            Ensure.Positive(chunkDataSize, "chunkSize");
-            Ensure.Nonnegative(chunkStartNumber, "chunkStartNumber");
-            Ensure.Nonnegative(chunkEndNumber, "chunkEndNumber");
-            if (chunkStartNumber > chunkEndNumber)
-            {
-                throw new ArgumentOutOfRangeException("chunkStartNumber", "chunkStartNumber is greater than chunkEndNumber.");
-            }
+            Ensure.Nonnegative(chunkNumber, "chunkNumber");
+            Ensure.Positive(chunkDataTotalSize, "chunkDataTotalSize");
 
-            Version = version;
-            ChunkDataSize = chunkDataSize;
-            ChunkStartNumber = chunkStartNumber;
-            ChunkEndNumber = chunkEndNumber;
-            ChunkId = chunkId;
+            ChunkNumber = chunkNumber;
+            ChunkDataTotalSize = chunkDataTotalSize;
 
-            ChunkDataStartPosition = ChunkStartNumber * (long)ChunkDataSize;
-            ChunkDataEndPosition = (ChunkEndNumber + 1) * (long)ChunkDataSize;
+            ChunkDataStartPosition = ChunkNumber * (long)ChunkDataTotalSize;
+            ChunkDataEndPosition = (ChunkNumber + 1) * (long)ChunkDataTotalSize;
         }
 
         public byte[] AsByteArray()
@@ -43,24 +31,17 @@ namespace EQueue.Broker.Storage
             {
                 using (var writer = new BinaryWriter(stream))
                 {
-                    writer.Write(Version);
-                    writer.Write(ChunkDataSize);
-                    writer.Write(ChunkStartNumber);
-                    writer.Write(ChunkEndNumber);
-                    writer.Write(ChunkId.ToByteArray());
+                    writer.Write(ChunkNumber);
+                    writer.Write(ChunkDataTotalSize);
                 }
             }
             return array;
         }
-        public static ChunkHeader FromStream(Stream stream)
+        public static ChunkHeader FromStream(BinaryReader reader, Stream stream)
         {
-            var reader = new BinaryReader(stream);
-            var version = reader.ReadByte();
-            var chunkDataSize = reader.ReadInt32();
-            var chunkStartNumber = reader.ReadInt32();
-            var chunkEndNumber = reader.ReadInt32();
-            var chunkId = new Guid(reader.ReadBytes(16));
-            return new ChunkHeader(version, chunkDataSize, chunkStartNumber, chunkEndNumber, chunkId);
+            var chunkNumber = reader.ReadInt32();
+            var chunkDataTotalSize = reader.ReadInt32();
+            return new ChunkHeader(chunkNumber, chunkDataTotalSize);
         }
 
         public int GetLocalDataPosition(long globalDataPosition)
@@ -74,12 +55,9 @@ namespace EQueue.Broker.Storage
 
         public override string ToString()
         {
-            return string.Format("[Version:{0}, ChunkId:{1}, ChunkStartNumber:{2}, ChunkEndNumber:{3}, ChunkDataSize:{4}, DataStartPosition:{5}, DataEndPosition:{6}]",
-                                 Version,
-                                 ChunkId,
-                                 ChunkStartNumber,
-                                 ChunkEndNumber,
-                                 ChunkDataSize,
+            return string.Format("[ChunkNumber:{0}, ChunkDataTotalSize:{1}, ChunkDataStartPosition:{2}, ChunkDataEndPosition:{3}]",
+                                 ChunkNumber,
+                                 ChunkDataTotalSize,
                                  ChunkDataStartPosition,
                                  ChunkDataEndPosition);
         }

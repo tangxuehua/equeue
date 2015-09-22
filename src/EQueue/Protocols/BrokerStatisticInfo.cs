@@ -23,9 +23,6 @@ namespace EQueue.Protocols
         /// <summary>最大全局消息偏移量
         /// </summary>
         public long CurrentMessageOffset { get; set; }
-        /// <summary>已持久化的最大全局消息偏移量
-        /// </summary>
-        public long PersistedMessageOffset { get; set; }
         /// <summary>最小全局消息偏移量
         /// </summary>
         public long MinMessageOffset { get; set; }

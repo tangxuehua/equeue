@@ -2,7 +2,6 @@
 using ECommon.Logging;
 using ECommon.Remoting;
 using EQueue.Broker.LongPolling;
-using EQueue.Protocols;
 using EQueue.Utils;
 
 namespace EQueue.Broker.Processors
@@ -23,16 +22,9 @@ namespace EQueue.Broker.Processors
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var request = MessageUtils.DecodeSendMessageRequest(remotingRequest.Body);
-            var storeResult = _messageService.StoreMessage(request.Message, request.QueueId, request.RoutingKey);
-            _suspendedPullRequestManager.NotifyNewMessage(request.Message.Topic, storeResult.MessageLogRecord.QueueId, storeResult.MessageLogRecord.QueueOffset);
-            var data = MessageUtils.EncodeMessageSendResponse(new SendMessageResponse(
-                request.Message.Key,
-                storeResult.MessageLogRecord.MessageId,
-                storeResult.MessageLogRecord.MessageOffset,
-                request.Message.Code,
-                request.Message.Topic,
-                request.QueueId,
-                storeResult.MessageLogRecord.QueueOffset));
+            var result = _messageService.StoreMessage(request.Message, request.QueueId, request.RoutingKey);
+            _suspendedPullRequestManager.NotifyNewMessage(request.Message.Topic, result.QueueId, result.QueueOffset);
+            var data = MessageUtils.EncodeMessageStoreResult(result);
             return RemotingResponseFactory.CreateResponse(remotingRequest, data);
         }
     }

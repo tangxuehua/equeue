@@ -2,11 +2,11 @@
 
 namespace EQueue.Broker.Storage
 {
-    public class QueueIndexLogRecordParser : ILogRecordParser
+    public class QueueLogRecordParser : ILogRecordParser
     {
         public ILogRecord ParseFrom(BinaryReader reader)
         {
-            var record = new QueueIndexLogRecord();
+            var record = new QueueLogRecord();
             record.ParseFrom(reader);
             return record;
         }

@@ -15,6 +15,7 @@ namespace EQueue.Configurations
             configuration.SetDefault<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             configuration.SetDefault<IQueueSelector, QueueHashSelector>();
             configuration.SetDefault<IQueueStore, InMemoryQueueStore>();
+            configuration.SetDefault<IMessageStore, DefaultMessageStore>();
             configuration.SetDefault<ConsumerManager, ConsumerManager>();
             configuration.SetDefault<IOffsetManager, InMemoryOffsetManager>();
             configuration.SetDefault<IQueueService, QueueService>();
@@ -24,17 +25,12 @@ namespace EQueue.Configurations
             var recordParserProvider = new DefaultLogRecordParserProvider();
             recordParserProvider
                 .RegisterParser(1, new MessageLogRecordParser())
-                .RegisterParser(2, new QueueIndexLogRecordParser());
+                .RegisterParser(2, new QueueLogRecordParser());
             configuration.SetDefault<ILogRecordParserProvider, DefaultLogRecordParserProvider>(recordParserProvider);
 
             return configuration;
         }
 
-        public static Configuration UseFileMessageStore(this Configuration configuration, TFChunkDbConfig config)
-        {
-            configuration.SetDefault<IMessageStore, FileMessageStore>(new FileMessageStore(new TFChunkDb(config)));
-            return configuration;
-        }
         public static Configuration UseSqlServerQueueStore(this Configuration configuration, SqlServerQueueStoreSetting setting)
         {
             configuration.SetDefault<IQueueStore, SqlServerQueueStore>(new SqlServerQueueStore(setting));

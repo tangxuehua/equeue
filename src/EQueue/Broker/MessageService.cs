@@ -27,7 +27,6 @@ namespace EQueue.Broker
         public void Start()
         {
             _totalRecoveredQueueIndex = 0;
-            _messageStore.Recover(_offsetManager.GetQueueConsumedOffsets(), ProcessRecoveredMessage);
             _messageStore.Start();
         }
         public void Shutdown()
@@ -41,13 +40,16 @@ namespace EQueue.Broker
             {
                 throw new Exception(string.Format("Queue not exist, topic: {0}, queueId: {1}", message.Topic, queueId));
             }
+
+            //消息写文件需要加锁
             lock (_syncObj)
             {
-                var messageOffset = _messageStore.GetNextMessageOffset();
-                var queueOffset = queue.IncrementCurrentOffset();
-                var storeResult = _messageStore.StoreMessage(queueId, messageOffset, queueOffset, message, routingKey);
-                //queue.SetQueueIndex(storeResult.MessageLogRecord.QueueOffset, storeResult.MessageLogRecord.LogPosition);
-                return storeResult;
+                var queueOffset = queue.CurrentOffset;
+                var messageLogPosition = _messageStore.StoreMessage(queueId, queueOffset, message, routingKey);
+                queue.AddMessage(messageLogPosition);
+                queue.IncrementCurrentOffset();
+                var messageId = CreateMessageId(messageLogPosition);
+                return new MessageStoreResult(message.Key, messageId, message.Code, message.Topic, queueId, queueOffset);
             }
         }
         public IEnumerable<MessageLogRecord> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
@@ -84,6 +86,11 @@ namespace EQueue.Broker
             return messages;
         }
 
+        private static string CreateMessageId(long messageLogPosition)
+        {
+            //TODO，还要结合当前的Broker的IP作为MessageId的一部分
+            return messageLogPosition.ToString();
+        }
         private void BatchLoadQueueIndexToMemory(Queue queue, long startQueueOffset)
         {
             if (_messageStore.SupportBatchLoadQueueIndex)

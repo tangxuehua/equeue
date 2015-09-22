@@ -47,7 +47,7 @@ namespace QuickStart.ConsumerClient
             for (var i = 1; i <= clientCount; i++)
             {
                 new Consumer("Consumer@" + i.ToString(), "SampleGroup", consumerSetting)
-                    .Subscribe("SampleTopic")
+                    .Subscribe("topic1")
                     .SetMessageHandler(messageHandler)
                     .Start();
             }

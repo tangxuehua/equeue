@@ -7,15 +7,12 @@ namespace EQueue.Broker
 {
     public interface IMessageStore
     {
-        long CurrentMessageOffset { get; }
-        long PersistedMessageOffset { get; }
+        long CurrentMessagePosition { get; }
         bool SupportBatchLoadQueueIndex { get; }
-        void Recover(IEnumerable<QueueConsumedOffset> queueConsumedOffsets, Action<long, string, int, long> messageRecoveredCallback);
         void Start();
         void Shutdown();
         void DeleteQueueMessage(string topic, int queueId);
-        long GetNextMessageOffset();
-        MessageStoreResult StoreMessage(int queueId, long messageOffset, long queueOffset, Message message, string routingKey);
+        long StoreMessage(int queueId, long queueOffset, Message message, string routingKey);
         MessageLogRecord GetMessage(long logPosition);
         QueueMessage FindMessage(long? offset, string messageId);
         void UpdateConsumedQueueOffset(string topic, int queueId, long queueOffset);

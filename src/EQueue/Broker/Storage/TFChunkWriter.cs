@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading;
-using ECommon.Components;
+﻿using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Utilities;
@@ -9,11 +7,9 @@ namespace EQueue.Broker.Storage
 {
     public class TFChunkWriter
     {
-        public ICheckpoint Checkpoint { get { return _writerCheckpoint; } }
         public TFChunk CurrentChunk { get { return _currentChunk; } }
 
-        private readonly TFChunkDb _chunkDb;
-        private readonly ICheckpoint _writerCheckpoint;
+        private readonly TFChunkManager _chunkManager;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
         private readonly object _lockObj = new object();
@@ -21,38 +17,50 @@ namespace EQueue.Broker.Storage
 
         private TFChunk _currentChunk;
 
-        public TFChunkWriter(TFChunkDb chunkDb)
+        public TFChunkWriter(TFChunkManager chunkManager)
         {
-            Ensure.NotNull(chunkDb, "chunkDb");
+            Ensure.NotNull(chunkManager, "chunkManager");
 
-            _chunkDb = chunkDb;
-            _writerCheckpoint = chunkDb.Config.WriterCheckpoint;
+            _chunkManager = chunkManager;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(TFChunkWriter).FullName);
         }
 
         public void Open()
         {
-            _currentChunk = _chunkDb.Manager.GetChunkFor(_writerCheckpoint.Read());
-            if (_currentChunk == null)
-            {
-                throw new InvalidOperationException("No chunk given for existing position.");
-            }
-            _scheduleService.StartTask("TFChunkWriter.Flush", Flush, 1000, _chunkDb.Config.FlushChunkIntervalMilliseconds);
+            _currentChunk = _chunkManager.GetLastChunk();
+            _scheduleService.StartTask("TFChunkWriter.Flush", Flush, 1000, _chunkManager.Config.FlushChunkIntervalMilliseconds);
         }
-        public void Write(ILogRecord record)
+        public long Write(ILogRecord record)
         {
-            if (!WriteInternal(record))
+            lock (_lockObj)
             {
-                if (_isClosed) return;
+                if (_isClosed) return -1;
 
-                record.LogPosition = _writerCheckpoint.ReadNonFlushed();
-                if (!WriteInternal(record))
+                //先尝试写文件
+                var result = _currentChunk.TryAppend(record);
+
+                //如果当前文件已满
+                if (!result.Success)
                 {
-                    if (_isClosed) return;
+                    //结束当前文件
+                    _currentChunk.Complete();
 
-                    throw new ChunkWriteException(_currentChunk.ToString());
+                    //新建新的文件
+                    _currentChunk = _chunkManager.AddNewChunk();
+
+                    //再尝试写入新的文件
+                    result = _currentChunk.TryAppend(record);
+
+                    //如果还是不成功，则报错
+                    if (!result.Success)
+                    {
+                        throw new ChunkWriteException(_currentChunk.ToString(), "Write record to chunk failed.");
+                    }
                 }
+
+                //返回数据写入位置
+                return result.Position;
             }
         }
         public void Close()
@@ -63,70 +71,15 @@ namespace EQueue.Broker.Storage
                 _isClosed = true;
             }
         }
-
-        long _flushCount;
         private void Flush()
         {
             lock (_lockObj)
             {
                 if (_isClosed) return;
-                if (_currentChunk == null) return;
+                if (_currentChunk.IsCompleted) return;
 
                 _currentChunk.Flush();
-                _writerCheckpoint.Flush();
-
-                var globalDataPosition = _currentChunk.ChunkHeader.ChunkDataStartPosition + _currentChunk.DataPosition;
-                var writeCheckpoint = _writerCheckpoint.Read();
-
-                var flushCount = Interlocked.Increment(ref _flushCount);
-                if (flushCount % 100 == 0)
-                {
-                    _logger.InfoFormat("Flushed chunk: {0}, header: {1}, dataPosition: {2}, globalDataPosition: {3}, writeCheckpoint: {4}, unFlushedDataSize: {5}, flushCount: {6}",
-                        _currentChunk,
-                        _currentChunk.ChunkHeader,
-                        _currentChunk.DataPosition,
-                        globalDataPosition,
-                        writeCheckpoint,
-                        globalDataPosition - writeCheckpoint,
-                        flushCount);
-                }
             }
-        }
-
-        private bool WriteInternal(ILogRecord record)
-        {
-            lock (_lockObj)
-            {
-                if (_isClosed) return false;
-
-                if (_currentChunk == null)
-                {
-                    throw new InvalidOperationException("Cannot write record as the current chunk is null.");
-                }
-
-                var result = _currentChunk.TryAppend(record);
-                if (result.Success)
-                {
-                    _writerCheckpoint.Write(result.NewPosition + _currentChunk.ChunkHeader.ChunkDataStartPosition);
-                }
-                else
-                {
-                    CompleteChunk();
-                }
-                return result.Success;
-            }
-        }
-        private void CompleteChunk()
-        {
-            var chunk = _currentChunk;
-            _currentChunk = null; // in case creation of new chunk fails, we shouldn't use completed chunk for write
-
-            chunk.Complete();
-
-            _writerCheckpoint.Write(chunk.ChunkHeader.ChunkDataEndPosition);
-            _writerCheckpoint.Flush();
-
-            _currentChunk = _chunkDb.Manager.AddNewChunk();
         }
     }
 }
