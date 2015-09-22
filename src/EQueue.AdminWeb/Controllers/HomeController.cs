@@ -22,7 +22,6 @@ namespace EQueue.AdminWeb.Controllers
                 TopicCount = result.TopicCount,
                 QueueCount = result.QueueCount,
                 ConsumerGroupCount = result.ConsumerGroupCount,
-                InMemoryQueueMessageCount = result.InMemoryQueueMessageCount,
                 UnConsumedQueueMessageCount = result.UnConsumedQueueMessageCount,
                 CurrentMessageOffset = result.CurrentMessageOffset,
                 PersistedMessageOffset = result.CurrentMessageOffset,
@@ -62,30 +61,6 @@ namespace EQueue.AdminWeb.Controllers
                 Group = group,
                 Topic = topic,
                 TopicConsumeInfos = topicConsumeInfos
-            });
-        }
-        public ActionResult Messages(string topic, int? queueId, int? code, string routingKey, int? page)
-        {
-            var currentPage = page ?? 1;
-            var size = 20;
-            if (currentPage <= 0) currentPage = 1;
-
-            var result = _messageService.QueryMessages(topic, queueId, code, routingKey, currentPage, size);
-
-            ViewBag.Topic = topic;
-            ViewBag.QueueId = queueId;
-            ViewBag.Code = code;
-            ViewBag.RoutingKey = routingKey;
-            ViewBag.Pager = Pager.Items(result.Total).PerPage(size).Move(currentPage).Segment(5).Center();
-
-            return View(new MessagesViewModel
-            {
-                Topic = topic,
-                QueueId = queueId,
-                Code = code,
-                RoutingKey = routingKey,
-                Total = result.Total,
-                Messages = result.Messages
             });
         }
         public ActionResult Message(long? searchMessageOffset, string searchMessageId)

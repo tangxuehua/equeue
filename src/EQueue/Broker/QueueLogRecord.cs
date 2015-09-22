@@ -2,23 +2,20 @@
 
 namespace EQueue.Broker.Storage
 {
-    public class QueueLogRecord : LogRecord, ILogRecord
+    public class QueueLogRecord : ILogRecord
     {
         public long MessageLogPosition { get; private set; }
 
-        public QueueLogRecord()
-            : base((byte)LogRecordType.Queue)
-        { }
+        public QueueLogRecord() { }
         public QueueLogRecord(long messageLogPosition)
-            : base((byte)LogRecordType.Queue)
         {
             MessageLogPosition = messageLogPosition;
         }
-        public override void WriteTo(BinaryWriter writer)
+        public void WriteTo(BinaryWriter writer)
         {
             writer.Write(MessageLogPosition);
         }
-        public override void ParseFrom(BinaryReader reader)
+        public void ReadFrom(BinaryReader reader)
         {
             MessageLogPosition = reader.ReadInt64();
         }

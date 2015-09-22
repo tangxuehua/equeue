@@ -33,7 +33,7 @@ namespace EQueue.Broker
             QueueId = queueId;
 
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
-            _chunkManager = new TFChunkManager(BrokerController.Instance.Setting.QueueChunkConfig, Topic + @"\" + QueueId);
+            _chunkManager = new TFChunkManager(BrokerController.Instance.Setting.QueueChunkConfig, ReadMessageIndex, Topic + @"\" + QueueId);
             _chunkWriter = new TFChunkWriter(_chunkManager);
             _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
             _queueSettingFile = Path.Combine(_chunkManager.ChunkPath, QueueSettingFileName);
@@ -59,18 +59,15 @@ namespace EQueue.Broker
         {
             _chunkWriter.Write(new QueueLogRecord(messageLogPosition));
         }
-        public long GetMessageCount()
+        public long GetMessageOffset(long queueOffset)
         {
-            return _queueItemDict.Count;
-        }
-        public long GetMessageRealCount()
-        {
-            var minOffset = GetMinQueueOffset();
-            if (minOffset == -1L)
+            var position = queueOffset * _chunkManager.Config.ChunkDataUnitSize;
+            var result = _chunkReader.TryReadAt(position);
+            if (result.Success)
             {
-                return 0L;
+                return ((QueueLogRecord)result.LogRecord).MessageLogPosition;
             }
-            return _currentOffset - minOffset + 1;
+            return -1L;
         }
         public void Enable()
         {
@@ -86,49 +83,9 @@ namespace EQueue.Broker
         {
             return _currentOffset++;
         }
-        public void RecoverQueueIndex(long queueOffset, long messageOffset, bool allowSetQueueIndex)
-        {
-            if (allowSetQueueIndex)
-            {
-                SetQueueIndex(queueOffset, messageOffset);
-            }
-            if (queueOffset > _currentOffset)
-            {
-                _currentOffset = queueOffset;
-            }
-        }
-        public void SetQueueIndex(long queueOffset, long messageOffset)
-        {
-            _queueItemDict[queueOffset] = messageOffset;
-        }
         public long GetMinQueueOffset()
         {
-            long minOffset = -1;
-            foreach (var key in _queueItemDict.Keys)
-            {
-                if (minOffset == -1)
-                {
-                    minOffset = key;
-                }
-                else if (key < minOffset)
-                {
-                    minOffset = key;
-                }
-            }
-            return minOffset;
-        }
-        public long GetMessageOffset(long queueOffset)
-        {
-            long messageOffset;
-            if (_queueItemDict.TryGetValue(queueOffset, out messageOffset))
-            {
-                return messageOffset;
-            }
-            return -1;
-        }
-        public void RemoveQueueOffset(long queueOffset)
-        {
-            _queueItemDict.Remove(queueOffset);
+            return _chunkManager.GetFirstChunk().ChunkHeader.ChunkDataStartPosition / _chunkManager.Config.ChunkDataUnitSize;
         }
         public long RemoveAllPreviousQueueIndex(long maxAllowToRemoveQueueOffset)
         {
@@ -160,6 +117,23 @@ namespace EQueue.Broker
             return totalRemovedCount;
         }
 
+        private long GetChunkMessageCount(TFChunk chunk)
+        {
+            if (chunk.IsCompleted)
+            {
+                return chunk.ChunkFooter.ChunkDataTotalSize / _chunkManager.Config.ChunkDataUnitSize;
+            }
+            else
+            {
+                return chunk.DataPosition / _chunkManager.Config.ChunkDataUnitSize;
+            }
+        }
+        private ILogRecord ReadMessageIndex(BinaryReader reader)
+        {
+            var record = new QueueLogRecord();
+            record.ReadFrom(reader);
+            return record;
+        }
         private QueueSetting LoadQueueSetting()
         {
             if (!Directory.Exists(_chunkManager.ChunkPath))

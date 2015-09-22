@@ -59,7 +59,6 @@
   <ItemGroup>
     <Compile Include="Broker\DefaultMessageStore.cs" />
     <Compile Include="Broker\LogRecordType.cs" />
-    <Compile Include="Broker\QueueLogRecordParser.cs" />
     <Compile Include="Broker\QueueLogRecord.cs" />
     <Compile Include="Broker\MessageLogRecord.cs" />
     <Compile Include="Broker\RequestHandlers\CreateTopicRequestHandler.cs" />
@@ -73,7 +72,6 @@
     <Compile Include="Broker\RequestHandlers\EnableQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetMessageDetailRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\QueryBrokerStatisticInfoRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\QueryMessageRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\QueryTopicConsumeInfoRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\QueryConsumerRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\RemoveQueueOffsetInfoRequestHandler.cs" />
@@ -120,16 +118,11 @@
     <Compile Include="Broker\Storage\FileNamingStrategies\IFileNamingStrategy.cs" />
     <Compile Include="Broker\Storage\Checkpoints\ICheckpoint.cs" />
     <Compile Include="Broker\Storage\Checkpoints\InMemoryCheckpoint.cs" />
-    <Compile Include="Broker\Storage\LogRecords\DefaultLogRecordParserProvider.cs" />
-    <Compile Include="Broker\Storage\LogRecords\ILogRecordParser.cs" />
     <Compile Include="Broker\Storage\LogRecords\ILogRecord.cs" />
-    <Compile Include="Broker\Storage\LogRecords\ILogRecordParserProvider.cs" />
-    <Compile Include="Broker\MessageLogRecordParser.cs" />
     <Compile Include="Broker\Storage\Checkpoints\MemoryMappedFileCheckpoint.cs" />
     <Compile Include="Broker\Storage\TFChunkManagerConfig.cs" />
     <Compile Include="Broker\Storage\TFChunkManager.cs" />
     <Compile Include="Broker\Storage\TFChunkReader.cs" />
-    <Compile Include="Broker\Storage\LogRecords\LogRecord.cs" />
     <Compile Include="Broker\Storage\RecordReadResult.cs" />
     <Compile Include="Broker\Storage\RecordWriteResult.cs" />
     <Compile Include="Broker\Storage\FileNamingStrategies\DefaultFileNamingStrategy.cs" />
@@ -156,8 +149,6 @@
     <Compile Include="Configurations\ConfigurationExtensions.cs" />
     <Compile Include="Protocols\CreateTopicRequest.cs" />
     <Compile Include="Protocols\GetMessageDetailRequest.cs" />
-    <Compile Include="Protocols\QueryMessageResponse.cs" />
-    <Compile Include="Protocols\QueryMessageRequest.cs" />
     <Compile Include="Protocols\RemoveQueueOffsetInfoRequest.cs" />
     <Compile Include="Protocols\TopicConsumeInfo.cs" />
     <Compile Include="Protocols\DisableQueueRequest.cs" />

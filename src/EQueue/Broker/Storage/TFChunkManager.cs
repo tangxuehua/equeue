@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,17 +14,19 @@ namespace EQueue.Broker.Storage
         private static readonly ILogger _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(TFChunkManager));
         private readonly object _chunksLocker = new object();
         private readonly TFChunkManagerConfig _config;
-        private readonly IList<TFChunk> _chunks;
+        private readonly IDictionary<int, TFChunk> _chunks;
         private readonly string _chunkPath;
-        private volatile int _nextChunkNumber;
+        private readonly Func<BinaryReader, ILogRecord> _readRecordFunc;
+        private int _nextChunkNumber;
 
         public TFChunkManagerConfig Config { get { return _config; } }
         public string ChunkPath { get { return _chunkPath; } }
 
-        public TFChunkManager(TFChunkManagerConfig config, string relativePath = null)
+        public TFChunkManager(TFChunkManagerConfig config, Func<BinaryReader, ILogRecord> readRecordFunc, string relativePath = null)
         {
             Ensure.NotNull(config, "config");
             _config = config;
+            _readRecordFunc = readRecordFunc;
             if (string.IsNullOrEmpty(relativePath))
             {
                 _chunkPath = _config.BasePath;
@@ -32,7 +35,7 @@ namespace EQueue.Broker.Storage
             {
                 _chunkPath = Path.Combine(_config.BasePath, relativePath);
             }
-            _chunks = new List<TFChunk>();
+            _chunks = new ConcurrentDictionary<int, TFChunk>();
         }
 
         public void Load()
@@ -49,11 +52,15 @@ namespace EQueue.Broker.Storage
                 {
                     for (var i = 0; i < files.Length - 1; i++)
                     {
-                        AddChunk(TFChunk.FromCompletedFile(files[i], _config));
+                        AddChunk(TFChunk.FromCompletedFile(files[i], _config, _readRecordFunc));
                     }
-                    AddChunk(TFChunk.FromOngoingFile(files[files.Length - 1], _config));
+                    AddChunk(TFChunk.FromOngoingFile(files[files.Length - 1], _config, _readRecordFunc));
                 }
             }
+        }
+        public IList<TFChunk> GetAllChunks()
+        {
+            return _chunks.Values.ToList();
         }
         public TFChunk AddNewChunk()
         {
@@ -61,11 +68,23 @@ namespace EQueue.Broker.Storage
             {
                 var chunkNumber = _nextChunkNumber;
                 var chunkFileName = _config.FileNamingStrategy.GetFileNameFor(_chunkPath, chunkNumber);
-                var chunk = TFChunk.CreateNew(chunkFileName, chunkNumber, _config);
+                var chunk = TFChunk.CreateNew(chunkFileName, chunkNumber, _config, _readRecordFunc);
 
                 AddChunk(chunk);
 
                 return chunk;
+            }
+        }
+        public TFChunk GetFirstChunk()
+        {
+            lock (_chunksLocker)
+            {
+                if (_chunks.Count == 0)
+                {
+                    AddNewChunk();
+                }
+                var minChunkNum = _chunks.Keys.Min();
+                return _chunks[minChunkNum];
             }
         }
         public TFChunk GetLastChunk()
@@ -76,7 +95,7 @@ namespace EQueue.Broker.Storage
                 {
                     AddNewChunk();
                 }
-                return _chunks.Last();
+                return _chunks[_nextChunkNumber - 1];
             }
         }
         public TFChunk GetChunkFor(long dataPosition)
@@ -86,7 +105,7 @@ namespace EQueue.Broker.Storage
         }
         public TFChunk GetChunk(int chunkNum)
         {
-            return _chunks.FirstOrDefault(x => x.ChunkHeader.ChunkNumber == chunkNum);
+            return _chunks[chunkNum];
         }
 
         public void Dispose()
@@ -97,7 +116,7 @@ namespace EQueue.Broker.Storage
         {
             lock (_chunksLocker)
             {
-                foreach (var chunk in _chunks)
+                foreach (var chunk in _chunks.Values)
                 {
                     try
                     {
@@ -113,7 +132,7 @@ namespace EQueue.Broker.Storage
 
         private void AddChunk(TFChunk chunk)
         {
-            _chunks.Add(chunk);
+            _chunks.Add(chunk.ChunkHeader.ChunkNumber, chunk);
             _nextChunkNumber = chunk.ChunkHeader.ChunkNumber + 1;
         }
     }

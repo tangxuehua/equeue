@@ -140,21 +140,6 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("RemoveQueueOffsetInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
-        public QueryMessageResponse QueryMessages(string topic, int? queueId, int? code, string routingKey, int pageIndex, int pageSize)
-        {
-            var request = new QueryMessageRequest(topic, queueId, code, routingKey, pageIndex, pageSize);
-            var requestData = _binarySerializer.Serialize(request);
-            var remotingRequest = new RemotingRequest((int)RequestCode.QueryMessage, requestData);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
-            if (remotingResponse.Code == (int)ResponseCode.Success)
-            {
-                return _binarySerializer.Deserialize<QueryMessageResponse>(remotingResponse.Body);
-            }
-            else
-            {
-                throw new Exception(string.Format("QueryMessages failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
-            }
-        }
         public QueueMessage GetMessageDetail(long? messageOffset, string messageId)
         {
             var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageOffset, messageId));

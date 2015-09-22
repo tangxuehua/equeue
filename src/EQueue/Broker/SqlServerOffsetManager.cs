@@ -21,7 +21,6 @@ namespace EQueue.Broker
         private readonly string _getLatestVersionQueueOffsetSQL;
         private readonly string _insertNewVersionQueueOffsetSQLFormat;
         private readonly string _deleteOldVersionQueueOffsetSQLFormat;
-        private readonly string _selectQueueOffsetsSQLFormat;
         private long _currentVersion;
         private long _lastUpdateVersion;
         private long _lastPersistVersion;
@@ -36,7 +35,6 @@ namespace EQueue.Broker
             _getLatestVersionQueueOffsetSQL = "select * from [" + _setting.QueueOffsetTable + "] where Version = {0}";
             _insertNewVersionQueueOffsetSQLFormat = "insert into [" + _setting.QueueOffsetTable + "] (Version,ConsumerGroup,Topic,QueueId,QueueOffset,Timestamp) values ({0},'{1}','{2}',{3},{4},'{5}')";
             _deleteOldVersionQueueOffsetSQLFormat = "delete from [" + _setting.QueueOffsetTable + "] where Version = {0}";
-            _selectQueueOffsetsSQLFormat = "select Topic, QueueId, min(QueueOffset) as QueueOffset from [" + _setting.QueueOffsetTable + "] where Version = {0} group by Topic, QueueId";
         }
 
         public void Start()
@@ -68,7 +66,7 @@ namespace EQueue.Broker
             }
             return -1L;
         }
-        public long GetMinOffset(string topic, int queueId)
+        public long GetMinConsumedOffset(string topic, int queueId)
         {
             var key = string.Format("{0}-{1}", topic, queueId);
             var minOffset = -1L;
@@ -126,26 +124,6 @@ namespace EQueue.Broker
             }
             Interlocked.Increment(ref _lastUpdateVersion);
             TryPersistQueueOffset();
-        }
-        public IEnumerable<QueueConsumedOffset> GetQueueConsumedOffsets()
-        {
-            using (var connection = new SqlConnection(_setting.ConnectionString))
-            {
-                connection.Open();
-                var queueConsumedOffsets = new List<QueueConsumedOffset>();
-                using (var command = new SqlCommand(string.Format(_selectQueueOffsetsSQLFormat, _currentVersion), connection))
-                {
-                    var reader = command.ExecuteReader();
-                    while (reader.Read())
-                    {
-                        var topic = (string)reader["Topic"];
-                        var queueId = (int)reader["QueueId"];
-                        var queueOffset = (long)reader["QueueOffset"];
-                        queueConsumedOffsets.Add(new QueueConsumedOffset { Topic = topic, QueueId = queueId, ConsumedOffset = queueOffset });
-                    }
-                }
-                return queueConsumedOffsets;
-            }
         }
         public IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic)
         {

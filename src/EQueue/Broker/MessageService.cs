@@ -14,7 +14,6 @@ namespace EQueue.Broker
         private readonly IOffsetManager _offsetManager;
         private readonly ILogger _logger;
         private readonly object _syncObj = new object();
-        private long _totalRecoveredQueueIndex;
 
         public MessageService(IQueueService queueService, IMessageStore messageStore, IOffsetManager offsetManager)
         {
@@ -26,7 +25,6 @@ namespace EQueue.Broker
 
         public void Start()
         {
-            _totalRecoveredQueueIndex = 0;
             _messageStore.Start();
         }
         public void Shutdown()
@@ -76,10 +74,6 @@ namespace EQueue.Broker
                     {
                         messages.Add(message);
                     }
-                    else
-                    {
-                        queue.RemoveQueueOffset(currentQueueOffset);
-                    }
                 }
                 currentQueueOffset++;
             }
@@ -90,29 +84,6 @@ namespace EQueue.Broker
         {
             //TODO，还要结合当前的Broker的IP作为MessageId的一部分
             return messageLogPosition.ToString();
-        }
-        private void BatchLoadQueueIndexToMemory(Queue queue, long startQueueOffset)
-        {
-            if (_messageStore.SupportBatchLoadQueueIndex)
-            {
-                var indexDict = _messageStore.BatchLoadQueueIndex(queue.Topic, queue.QueueId, startQueueOffset);
-                foreach (var entry in indexDict)
-                {
-                    queue.SetQueueIndex(entry.Key, entry.Value);
-                }
-            }
-        }
-        private void ProcessRecoveredMessage(long messageOffset, string topic, int queueId, long queueOffset)
-        {
-            var queue = _queueService.GetQueue(topic, queueId);
-            if (queue == null)
-            {
-                _logger.ErrorFormat("Queue not found when recovering message. messageOffset: {0}, topic: {1}, queueId: {2}, queueOffset: {3}", messageOffset, topic, queueId, queueOffset);
-                return;
-            }
-            var allowSetQueueIndex = !_messageStore.SupportBatchLoadQueueIndex || _totalRecoveredQueueIndex < BrokerController.Instance.Setting.QueueIndexMaxCacheSize;
-            queue.RecoverQueueIndex(queueOffset, messageOffset, allowSetQueueIndex);
-            _totalRecoveredQueueIndex++;
         }
     }
 }

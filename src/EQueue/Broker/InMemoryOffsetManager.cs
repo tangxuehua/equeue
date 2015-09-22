@@ -59,7 +59,7 @@ namespace EQueue.Broker
             }
             return -1L;
         }
-        public long GetMinOffset(string topic, int queueId)
+        public long GetMinConsumedOffset(string topic, int queueId)
         {
             var key = string.Format("{0}-{1}", topic, queueId);
             var minOffset = -1L;
@@ -93,10 +93,6 @@ namespace EQueue.Broker
                     _logger.DebugFormat("Remove queue offset success, topic:{0}, queueId:{1}, consumer group:{2}", topic, queueId, consumerGroup);
                 }
             }
-        }
-        public IEnumerable<QueueConsumedOffset> GetQueueConsumedOffsets()
-        {
-            return new QueueConsumedOffset[0];
         }
         public IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic)
         {

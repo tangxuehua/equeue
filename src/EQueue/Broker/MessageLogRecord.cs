@@ -4,7 +4,7 @@ using System.Text;
 
 namespace EQueue.Broker.Storage
 {
-    public class MessageLogRecord : LogRecord, ILogRecord
+    public class MessageLogRecord : ILogRecord
     {
         public string Topic { get; private set; }
         public int Code { get; private set; }
@@ -16,9 +16,7 @@ namespace EQueue.Broker.Storage
         public DateTime CreatedTime { get; private set; }
         public DateTime StoredTime { get; internal set; }
 
-        public MessageLogRecord()
-            : base((byte)LogRecordType.Message)
-        { }
+        public MessageLogRecord() { }
         public MessageLogRecord(
             string topic,
             int code,
@@ -29,7 +27,6 @@ namespace EQueue.Broker.Storage
             string routingKey,
             DateTime createdTime,
             DateTime storedTime)
-            : base((byte)LogRecordType.Message)
         {
             Topic = topic;
             RoutingKey = routingKey;
@@ -42,7 +39,7 @@ namespace EQueue.Broker.Storage
             StoredTime = storedTime;
         }
 
-        public override void WriteTo(BinaryWriter writer)
+        public void WriteTo(BinaryWriter writer)
         {
             //topic
             var topicBytes = Encoding.UTF8.GetBytes(Topic);
@@ -79,7 +76,7 @@ namespace EQueue.Broker.Storage
             writer.Write(StoredTime.Ticks);
 
         }
-        public override void ParseFrom(BinaryReader reader)
+        public void ReadFrom(BinaryReader reader)
         {
             //topic
             Topic = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));

@@ -37,8 +37,7 @@ namespace EQueue.Broker.Processors
                     topicQueueInfo.QueueId = queue.QueueId;
                     topicQueueInfo.QueueCurrentOffset = queue.CurrentOffset;
                     topicQueueInfo.QueueMinOffset = queue.GetMinQueueOffset();
-                    topicQueueInfo.QueueMessageCount = queue.GetMessageRealCount();
-                    topicQueueInfo.QueueMaxConsumedOffset = _offsetManager.GetMinOffset(queue.Topic, queue.QueueId);
+                    topicQueueInfo.QueueMaxConsumedOffset = _offsetManager.GetMinConsumedOffset(queue.Topic, queue.QueueId);
                     topicQueueInfo.Status = queue.Setting.Status;
                     topicQueueInfoList.Add(topicQueueInfo);
                 }

@@ -11,9 +11,6 @@ namespace EQueue.Protocols
         /// <summary>队列个数
         /// </summary>
         public int QueueCount { get; set; }
-        /// <summary>内存中的总消息数
-        /// </summary>
-        public long InMemoryQueueMessageCount { get; set; }
         /// <summary>未消费的总消息数
         /// </summary>
         public long UnConsumedQueueMessageCount { get; set; }

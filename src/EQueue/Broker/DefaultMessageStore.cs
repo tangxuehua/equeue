@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
@@ -18,16 +19,19 @@ namespace EQueue.Broker
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
 
+        public long MinMessagePosition
+        {
+            get
+            {
+                return _chunkManager.GetFirstChunk().ChunkHeader.ChunkDataStartPosition;
+            }
+        }
         public long CurrentMessagePosition
         {
             get
             {
                 return _chunkWriter.CurrentChunk.GlobalDataPosition;
             }
-        }
-        public bool SupportBatchLoadQueueIndex
-        {
-            get { return false; }
         }
 
         public DefaultMessageStore()
@@ -38,7 +42,7 @@ namespace EQueue.Broker
 
         public void Start()
         {
-            _chunkManager = new TFChunkManager(BrokerController.Instance.Setting.MessageChunkConfig);
+            _chunkManager = new TFChunkManager(BrokerController.Instance.Setting.MessageChunkConfig, ReadMessage);
             _chunkWriter = new TFChunkWriter(_chunkManager);
             _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
 
@@ -108,41 +112,6 @@ namespace EQueue.Broker
             var key = string.Format("{0}-{1}", topic, queueId);
             _queueConsumedOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
         }
-        public IDictionary<long, long> BatchLoadQueueIndex(string topic, int queueId, long startQueueOffset)
-        {
-            throw new NotImplementedException();
-        }
-        public IEnumerable<QueueMessage> QueryMessages(string topic, int? queueId, int? code, string routingKey, int pageIndex, int pageSize, out int total)
-        {
-            total = 0;
-            return new QueueMessage[0];
-            //TODO
-            //var source = _messageDict.Values;
-            //var predicate = new Func<QueueMessage, bool>(x =>
-            //{
-            //    var pass = true;
-            //    if (!string.IsNullOrEmpty(topic))
-            //    {
-            //        pass = x.Topic == topic;
-            //    }
-            //    if (pass && queueId != null)
-            //    {
-            //        pass = x.QueueId == queueId.Value;
-            //    }
-            //    if (pass && code != null)
-            //    {
-            //        pass = x.Code == code.Value;
-            //    }
-            //    if (pass && !string.IsNullOrEmpty(routingKey))
-            //    {
-            //        pass = x.RoutingKey == routingKey;
-            //    }
-            //    return pass;
-            //});
-
-            //total = source.Count(predicate);
-            //return source.Where(predicate).Skip((pageIndex - 1) * pageSize).Take(pageSize);
-        }
 
         private void RemoveConsumedMessagesFromMemory()
         {
@@ -157,6 +126,12 @@ namespace EQueue.Broker
             //        _messageDict.Remove(queueMessage.MessageOffset);
             //    }
             //}
+        }
+        private ILogRecord ReadMessage(BinaryReader reader)
+        {
+            var record = new MessageLogRecord();
+            record.ReadFrom(reader);
+            return record;
         }
 
         public void Dispose()
