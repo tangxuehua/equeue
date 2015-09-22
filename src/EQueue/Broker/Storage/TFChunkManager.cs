@@ -19,12 +19,16 @@ namespace EQueue.Broker.Storage
         private readonly Func<BinaryReader, ILogRecord> _readRecordFunc;
         private int _nextChunkNumber;
 
+        public string Name { get; private set; }
         public TFChunkManagerConfig Config { get { return _config; } }
         public string ChunkPath { get { return _chunkPath; } }
 
-        public TFChunkManager(TFChunkManagerConfig config, Func<BinaryReader, ILogRecord> readRecordFunc, string relativePath = null)
+        public TFChunkManager(string name, TFChunkManagerConfig config, Func<BinaryReader, ILogRecord> readRecordFunc, string relativePath = null)
         {
+            Ensure.NotNull(name, "name");
             Ensure.NotNull(config, "config");
+
+            Name = name;
             _config = config;
             _readRecordFunc = readRecordFunc;
             if (string.IsNullOrEmpty(relativePath))
@@ -106,6 +110,10 @@ namespace EQueue.Broker.Storage
         public TFChunk GetChunk(int chunkNum)
         {
             return _chunks[chunkNum];
+        }
+        public void RemoveChunk(TFChunk chunk)
+        {
+            chunk.MarkForDeletion();
         }
 
         public void Dispose()

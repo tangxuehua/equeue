@@ -63,11 +63,8 @@
     <Compile Include="Broker\MessageLogRecord.cs" />
     <Compile Include="Broker\RequestHandlers\CreateTopicRequestHandler.cs" />
     <Compile Include="Broker\SqlServerQueueStoreSetting.cs" />
-    <Compile Include="Broker\SqlServerQueueStore.cs" />
-    <Compile Include="Broker\InMemoryQueueStore.cs" />
     <Compile Include="Broker\IQueueStore.cs" />
-    <Compile Include="Broker\IQueueService.cs" />
-    <Compile Include="Broker\QueueService.cs" />
+    <Compile Include="Broker\DefaultQueueStore.cs" />
     <Compile Include="Broker\RequestHandlers\DisableQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\EnableQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetMessageDetailRequestHandler.cs" />
@@ -80,13 +77,13 @@
     <Compile Include="Broker\RequestHandlers\AddQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\QueryTopicQueueInfoRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\QueryConsumerInfoRequestHandler.cs" />
-    <Compile Include="Broker\SqlServerOffsetManager.cs" />
+    <Compile Include="Broker\DefaultOffsetStore.cs" />
     <Compile Include="Broker\SqlServerOffsetManagerSetting.cs" />
     <Compile Include="Broker\BrokerSetting.cs" />
     <Compile Include="Broker\Client\ClientChannel.cs" />
     <Compile Include="Broker\Client\ConsumerGroup.cs" />
     <Compile Include="Broker\Client\ConsumerManager.cs" />
-    <Compile Include="Broker\IOffsetManager.cs" />
+    <Compile Include="Broker\IOffsetStore.cs" />
     <Compile Include="Broker\InvalidQueueIdException.cs" />
     <Compile Include="Broker\LongPolling\PullRequest.cs" />
     <Compile Include="Broker\LongPolling\SuspendedPullRequestManager.cs" />
@@ -99,8 +96,6 @@
     <Compile Include="Broker\RequestHandlers\UpdateQueueOffsetRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\SendMessageRequestHandler.cs" />
     <Compile Include="Broker\Queue.cs" />
-    <Compile Include="Broker\MessageService.cs" />
-    <Compile Include="Broker\IMessageService.cs" />
     <Compile Include="Broker\Storage\Checkpoints\FileCheckpoint.cs" />
     <Compile Include="Broker\Storage\ChunkFooter.cs" />
     <Compile Include="Broker\Storage\ChunkHeader.cs" />

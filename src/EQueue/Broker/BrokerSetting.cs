@@ -10,7 +10,8 @@ namespace EQueue.Broker
         public IPEndPoint ConsumerAddress { get; set; }
         public IPEndPoint AdminAddress { get; set; }
         public bool NotifyWhenMessageArrived { get; set; }
-        public int RemoveConsumedQueueIndexInterval { get; set; }
+        public int DeleteQueueMessagesInterval { get; set; }
+        public int DeleteMessagesInterval { get; set; }
         public int CheckBlockingPullRequestMilliseconds { get; set; }
         public int NotifyMessageArrivedThreadMaxCount { get; set; }
         public int ScanNotActiveConsumerInterval { get; set; }
@@ -29,7 +30,8 @@ namespace EQueue.Broker
             AdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
 
             NotifyWhenMessageArrived = true;
-            RemoveConsumedQueueIndexInterval = 1000 * 5;
+            DeleteQueueMessagesInterval = 1000 * 5;
+            DeleteMessagesInterval = 1000 * 5;
             CheckBlockingPullRequestMilliseconds = 1000;
             NotifyMessageArrivedThreadMaxCount = 32;
             ScanNotActiveConsumerInterval = 1000 * 5;
@@ -40,7 +42,7 @@ namespace EQueue.Broker
             TopicMaxQueueCount = 64;
 
             MessageChunkConfig = TFChunkManagerConfig.Create(@"d:\equeue-store\message-chunks", "message-chunk-", 256 * 1024 * 1024, 0, 0);
-            QueueChunkConfig = TFChunkManagerConfig.Create(@"d:\equeue-store\queue-chunks", "queue-chunk-", 0, 8, 100000);
+            QueueChunkConfig = TFChunkManagerConfig.Create(@"d:\equeue-store\queue-chunks", "queue-chunk-", 0, 8, 1000000);
         }
     }
 }

@@ -9,12 +9,12 @@ namespace EQueue.Broker.Processors
     public class RemoveQueueOffsetInfoRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IOffsetManager _offsetManager;
+        private IOffsetStore _offsetManager;
 
         public RemoveQueueOffsetInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
+            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)

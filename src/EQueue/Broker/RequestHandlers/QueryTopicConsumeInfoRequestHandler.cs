@@ -12,14 +12,14 @@ namespace EQueue.Broker.Processors
     {
         private ConsumerManager _consumerManager;
         private IBinarySerializer _binarySerializer;
-        private IOffsetManager _offsetManager;
-        private IQueueService _queueService;
+        private IOffsetStore _offsetManager;
+        private IQueueStore _queueService;
 
         public QueryTopicConsumeInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
-            _queueService = ObjectContainer.Resolve<IQueueService>();
+            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
+            _queueService = ObjectContainer.Resolve<IQueueStore>();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
         }
 

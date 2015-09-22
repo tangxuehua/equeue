@@ -18,9 +18,9 @@ namespace EQueue.Broker.Processors
     {
         private ConsumerManager _consumerManager;
         private SuspendedPullRequestManager _suspendedPullRequestManager;
-        private IMessageService _messageService;
-        private IQueueService _queueService;
-        private IOffsetManager _offsetManager;
+        private IMessageStore _messageStore;
+        private IQueueStore _queueService;
+        private IOffsetStore _offsetManager;
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
         private readonly byte[] EmptyResponseData;
@@ -29,9 +29,9 @@ namespace EQueue.Broker.Processors
         {
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
-            _messageService = ObjectContainer.Resolve<IMessageService>();
-            _queueService = ObjectContainer.Resolve<IQueueService>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
+            _messageStore = ObjectContainer.Resolve<IMessageStore>();
+            _queueService = ObjectContainer.Resolve<IQueueStore>();
+            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             EmptyResponseData = new byte[0];
@@ -52,7 +52,7 @@ namespace EQueue.Broker.Processors
             }
 
             //尝试拉取消息
-            var messages = _messageService.GetMessages(topic, queueId, pullOffset, request.PullMessageBatchSize);
+            var messages = GetMessages(topic, queueId, pullOffset, request.PullMessageBatchSize);
 
             //如果消息存在，则返回消息
             if (messages.Count() > 0)
@@ -93,6 +93,36 @@ namespace EQueue.Broker.Processors
             }
         }
 
+        private IEnumerable<MessageLogRecord> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
+        {
+            var queue = _queueService.GetQueue(topic, queueId);
+            if (queue == null)
+            {
+                return new MessageLogRecord[0];
+            }
+
+            var messages = new List<MessageLogRecord>();
+            var currentQueueOffset = queueOffset;
+            while (currentQueueOffset <= queue.CurrentOffset && messages.Count < batchSize)
+            {
+                var messagePosition = queue.GetMessagePosition(currentQueueOffset);
+                if (messagePosition < 0)
+                {
+                    //TODO,要考虑文件删除了的情况，需要告诉Consumer到新的位置拉消息
+                    break;
+                }
+                if (messagePosition >= 0)
+                {
+                    var message = _messageStore.GetMessage(messagePosition);
+                    if (message != null)
+                    {
+                        messages.Add(message);
+                    }
+                }
+                currentQueueOffset++;
+            }
+            return messages;
+        }
         private void ExecutePullRequest(PullRequest pullRequest)
         {
             if (!IsPullRequestValid(pullRequest))
@@ -105,7 +135,7 @@ namespace EQueue.Broker.Processors
             var queueId = pullMessageRequest.MessageQueue.QueueId;
             var pullOffset = pullMessageRequest.QueueOffset;
 
-            var messages = _messageService.GetMessages(topic, queueId, pullOffset, pullMessageRequest.PullMessageBatchSize);
+            var messages = GetMessages(topic, queueId, pullOffset, pullMessageRequest.PullMessageBatchSize);
 
             if (messages.Count() > 0)
             {

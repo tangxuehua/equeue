@@ -11,7 +11,7 @@ namespace EQueue.Broker
         void Shutdown();
         void DeleteQueueMessage(string topic, int queueId);
         long StoreMessage(int queueId, long queueOffset, Message message, string routingKey);
-        MessageLogRecord GetMessage(long logPosition);
+        MessageLogRecord GetMessage(long position);
         QueueMessage FindMessage(long? offset, string messageId);
         void UpdateConsumedQueueOffset(string topic, int queueId, long queueOffset);
     }

@@ -7,12 +7,12 @@ namespace EQueue.Broker.Processors
 {
     public class UpdateQueueOffsetRequestHandler : IRequestHandler
     {
-        private IOffsetManager _offsetManager;
+        private IOffsetStore _offsetManager;
         private IBinarySerializer _binarySerializer;
 
         public UpdateQueueOffsetRequestHandler()
         {
-            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
+            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
         }
 

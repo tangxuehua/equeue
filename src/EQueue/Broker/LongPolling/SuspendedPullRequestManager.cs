@@ -15,7 +15,7 @@ namespace EQueue.Broker.LongPolling
         private BlockingCollection<NotifyItem> _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
         private readonly ConcurrentDictionary<string, PullRequest> _queueRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly IScheduleService _scheduleService;
-        private readonly IQueueService _queueService;
+        private readonly IQueueStore _queueService;
         private readonly ILogger _logger;
         private TaskFactory _taskFactory;
         private Worker _notifyMessageArrivedWorker;
@@ -23,7 +23,7 @@ namespace EQueue.Broker.LongPolling
         public SuspendedPullRequestManager()
         {
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _queueService = ObjectContainer.Resolve<IQueueService>();
+            _queueService = ObjectContainer.Resolve<IQueueStore>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
         public void SuspendPullRequest(PullRequest pullRequest)

@@ -11,14 +11,14 @@ namespace EQueue.Broker.Processors
     public class QueryTopicQueueInfoRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IQueueService _queueService;
-        private IOffsetManager _offsetManager;
+        private IQueueStore _queueService;
+        private IOffsetStore _offsetManager;
 
         public QueryTopicQueueInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _queueService = ObjectContainer.Resolve<IQueueService>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
+            _queueService = ObjectContainer.Resolve<IQueueStore>();
+            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)

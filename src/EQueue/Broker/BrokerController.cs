@@ -19,10 +19,9 @@ namespace EQueue.Broker
     {
         private static BrokerController _instance;
         private readonly ILogger _logger;
-        private readonly IQueueService _queueService;
-        private readonly IMessageService _messageService;
+        private readonly IQueueStore _queueService;
         private readonly IMessageStore _messageStore;
-        private readonly IOffsetManager _offsetManager;
+        private readonly IOffsetStore _offsetManager;
         private readonly ConsumerManager _consumerManager;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
@@ -42,9 +41,8 @@ namespace EQueue.Broker
             Setting = setting ?? new BrokerSetting();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
-            _queueService = ObjectContainer.Resolve<IQueueService>();
-            _messageService = ObjectContainer.Resolve<IMessageService>();
+            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
+            _queueService = ObjectContainer.Resolve<IQueueStore>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
 
             _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.ProducerAddress);
@@ -56,13 +54,7 @@ namespace EQueue.Broker
             RegisterRequestHandlers();
 
             _service = new ConsoleEventHandlerService();
-            _service.RegisterClosingEventHandler(eventCode =>
-            {
-                var watch = Stopwatch.StartNew();
-                _logger.InfoFormat("Broker start to shutdown.");
-                Shutdown();
-                _logger.InfoFormat("Broker shutdown success, timespent: {0}ms", watch.ElapsedMilliseconds);
-            });
+            _service.RegisterClosingEventHandler(eventCode => { Shutdown(); });
         }
 
         public static BrokerController Create(BrokerSetting setting = null)
@@ -76,31 +68,35 @@ namespace EQueue.Broker
         }
         public BrokerController Start()
         {
+            var watch = Stopwatch.StartNew();
+            _logger.InfoFormat("Broker starting...");
             _queueService.Start();
             _offsetManager.Start();
-            _messageService.Start();
+            _messageStore.Start();
             _consumerManager.Start();
             _suspendedPullRequestManager.Start();
             _consumerSocketRemotingServer.Start();
             _producerSocketRemotingServer.Start();
             _adminSocketRemotingServer.Start();
             Interlocked.Exchange(ref _isShuttingdown, 0);
-            _logger.InfoFormat("Broker started, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
+            _logger.InfoFormat("Broker started, timeSpent:{0}ms, producer:[{1}], consumer:[{2}], admin:[{3}]", watch.ElapsedMilliseconds, Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
             return this;
         }
         public BrokerController Shutdown()
         {
             if (Interlocked.CompareExchange(ref _isShuttingdown, 1, 0) == 0)
             {
+                var watch = Stopwatch.StartNew();
+                _logger.InfoFormat("Broker starting to shutdown, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
                 _producerSocketRemotingServer.Shutdown();
                 _consumerSocketRemotingServer.Shutdown();
                 _adminSocketRemotingServer.Shutdown();
                 _consumerManager.Shutdown();
                 _suspendedPullRequestManager.Shutdown();
-                _queueService.Shutdown();
-                _messageService.Shutdown();
+                _messageStore.Shutdown();
                 _offsetManager.Shutdown();
-                _logger.InfoFormat("Broker shutdown, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
+                _queueService.Shutdown();
+                _logger.InfoFormat("Broker shutdown success, timeSpent:{0}ms", watch.ElapsedMilliseconds);
             }
             return this;
         }

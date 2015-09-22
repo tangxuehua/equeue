@@ -9,11 +9,11 @@ namespace EQueue.Broker.Processors
 {
     public class GetTopicQueueIdsForProducerRequestHandler : IRequestHandler
     {
-        private IQueueService _queueService;
+        private IQueueStore _queueService;
 
         public GetTopicQueueIdsForProducerRequestHandler()
         {
-            _queueService = ObjectContainer.Resolve<IQueueService>();
+            _queueService = ObjectContainer.Resolve<IQueueStore>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)

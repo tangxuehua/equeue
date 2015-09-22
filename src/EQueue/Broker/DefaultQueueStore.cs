@@ -11,20 +11,18 @@ using ECommon.Utilities;
 
 namespace EQueue.Broker
 {
-    public class QueueService : IQueueService
+    public class DefaultQueueStore : IQueueStore
     {
         private readonly ConcurrentDictionary<string, Queue> _queueDict;
-        private readonly IQueueStore _queueStore;
         private readonly IMessageStore _messageStore;
-        private readonly IOffsetManager _offsetManager;
+        private readonly IOffsetStore _offsetManager;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
-        private int _isRemovingConsumedQueueIndex;
+        private int _isRemovingConsumedMessage;
 
-        public QueueService(IQueueStore queueStore, IMessageStore messageStore, IOffsetManager offsetManager, IScheduleService scheduleService, ILoggerFactory loggerFactory)
+        public DefaultQueueStore(IMessageStore messageStore, IOffsetStore offsetManager, IScheduleService scheduleService, ILoggerFactory loggerFactory)
         {
             _queueDict = new ConcurrentDictionary<string, Queue>();
-            _queueStore = queueStore;
             _messageStore = messageStore;
             _offsetManager = offsetManager;
             _scheduleService = scheduleService;
@@ -34,13 +32,12 @@ namespace EQueue.Broker
         public void Start()
         {
             LoadQueues();
-            _scheduleService.StartTask("QueueService.RemoveConsumedQueueIndex", RemoveConsumedQueueIndex, BrokerController.Instance.Setting.RemoveConsumedQueueIndexInterval, BrokerController.Instance.Setting.RemoveConsumedQueueIndexInterval);
+            _scheduleService.StartTask(string.Format("{0}.DeleteMessages", this.GetType().Name), DeleteMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteQueueMessagesInterval);
         }
         public void Shutdown()
         {
             CloseQueues();
-            _scheduleService.StopTask("QueueService.RemoveConsumedQueueIndex");
-            _scheduleService.StopTask("QueueService.RemoveExceedMaxCacheQueueIndex");
+            _scheduleService.StopTask(string.Format("{0}.DeleteMessages", this.GetType().Name));
         }
         public IEnumerable<string> GetAllTopics()
         {
@@ -271,9 +268,9 @@ namespace EQueue.Broker
         {
             return string.Format("{0}-{1}", topic, queueId);
         }
-        private void RemoveConsumedQueueIndex()
+        private void DeleteMessages()
         {
-            if (Interlocked.CompareExchange(ref _isRemovingConsumedQueueIndex, 1, 0) == 0)
+            if (Interlocked.CompareExchange(ref _isRemovingConsumedMessage, 1, 0) == 0)
             {
                 try
                 {
@@ -284,17 +281,17 @@ namespace EQueue.Broker
                         {
                             consumedQueueOffset = queue.CurrentOffset;
                         }
-                        queue.RemoveAllPreviousQueueIndex(consumedQueueOffset);
+                        queue.DeleteAllPreviousMessages(consumedQueueOffset);
                         _messageStore.UpdateConsumedQueueOffset(queue.Topic, queue.QueueId, consumedQueueOffset);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("Failed to remove consumed queue index.", ex);
+                    _logger.Error("Delete consumed messages failed.", ex);
                 }
                 finally
                 {
-                    Interlocked.Exchange(ref _isRemovingConsumedQueueIndex, 0);
+                    Interlocked.Exchange(ref _isRemovingConsumedMessage, 0);
                 }
             }
         }

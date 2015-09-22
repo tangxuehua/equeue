@@ -11,7 +11,7 @@ using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
-    public class SqlServerOffsetManager : IOffsetManager
+    public class DefaultOffsetStore : IOffsetStore
     {
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupQueueOffsetDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
         private readonly IScheduleService _scheduleService;
@@ -26,7 +26,7 @@ namespace EQueue.Broker
         private long _lastPersistVersion;
         private int _isPersistingOffsets;
 
-        public SqlServerOffsetManager(SqlServerOffsetManagerSetting setting)
+        public DefaultOffsetStore(SqlServerOffsetManagerSetting setting)
         {
             _setting = setting;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();

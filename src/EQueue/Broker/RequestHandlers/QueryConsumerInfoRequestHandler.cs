@@ -12,16 +12,16 @@ namespace EQueue.Broker.Processors
     public class QueryConsumerInfoRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IOffsetManager _offsetManager;
+        private IOffsetStore _offsetManager;
         private ConsumerManager _consumerManager;
-        private IQueueService _queueService;
+        private IQueueStore _queueService;
 
         public QueryConsumerInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
+            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
-            _queueService = ObjectContainer.Resolve<IQueueService>();
+            _queueService = ObjectContainer.Resolve<IQueueStore>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)

@@ -13,25 +13,19 @@ namespace EQueue.Configurations
         {
             configuration.SetDefault<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             configuration.SetDefault<IQueueSelector, QueueHashSelector>();
-            configuration.SetDefault<IQueueStore, InMemoryQueueStore>();
             configuration.SetDefault<IMessageStore, DefaultMessageStore>();
+            configuration.SetDefault<IQueueStore, DefaultQueueStore>();
             configuration.SetDefault<ConsumerManager, ConsumerManager>();
-            configuration.SetDefault<IOffsetManager, InMemoryOffsetManager>();
-            configuration.SetDefault<IQueueService, QueueService>();
-            configuration.SetDefault<IMessageService, MessageService>();
+            configuration.SetDefault<IOffsetStore, InMemoryOffsetManager>();
+            configuration.SetDefault<IQueueStore, DefaultQueueStore>();
             configuration.SetDefault<SuspendedPullRequestManager, SuspendedPullRequestManager>();
 
             return configuration;
         }
 
-        public static Configuration UseSqlServerQueueStore(this Configuration configuration, SqlServerQueueStoreSetting setting)
-        {
-            configuration.SetDefault<IQueueStore, SqlServerQueueStore>(new SqlServerQueueStore(setting));
-            return configuration;
-        }
         public static Configuration UseSqlServerOffsetManager(this Configuration configuration, SqlServerOffsetManagerSetting setting)
         {
-            configuration.SetDefault<IOffsetManager, SqlServerOffsetManager>(new SqlServerOffsetManager(setting));
+            configuration.SetDefault<IOffsetStore, DefaultOffsetStore>(new DefaultOffsetStore(setting));
             return configuration;
         }
     }

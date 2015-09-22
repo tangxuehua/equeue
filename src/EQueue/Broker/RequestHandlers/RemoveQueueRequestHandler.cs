@@ -9,12 +9,12 @@ namespace EQueue.Broker.Processors
     public class RemoveQueueRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IQueueService _queueService;
+        private IQueueStore _queueService;
 
         public RemoveQueueRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _queueService = ObjectContainer.Resolve<IQueueService>();
+            _queueService = ObjectContainer.Resolve<IQueueStore>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)

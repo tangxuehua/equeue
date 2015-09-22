@@ -42,18 +42,18 @@ namespace EQueue.Broker
 
         public void Start()
         {
-            _chunkManager = new TFChunkManager(BrokerController.Instance.Setting.MessageChunkConfig, ReadMessage);
+            _chunkManager = new TFChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig, ReadMessage);
             _chunkWriter = new TFChunkWriter(_chunkManager);
             _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
 
             _chunkManager.Load();
             _chunkWriter.Open();
 
-            _scheduleService.StartTask("FileMessageStore.RemoveConsumedMessagesFromMemory", RemoveConsumedMessagesFromMemory, 5000, 5000);
+            _scheduleService.StartTask(string.Format("{0}.DeleteMessages", this.GetType().Name), DeleteMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteMessagesInterval);
         }
         public void Shutdown()
         {
-            _scheduleService.StopTask("FileMessageStore.RemoveConsumedMessagesFromMemory");
+            _scheduleService.StopTask(string.Format("{0}.DeleteMessages", this.GetType().Name));
             _chunkWriter.Close();
             _chunkManager.Close();
         }
@@ -71,9 +71,9 @@ namespace EQueue.Broker
                 DateTime.Now);
             return _chunkWriter.Write(record);
         }
-        public MessageLogRecord GetMessage(long logPosition)
+        public MessageLogRecord GetMessage(long position)
         {
-            var result = _chunkReader.TryReadAt(logPosition);
+            var result = _chunkReader.TryReadAt(position);
             if (result.Success)
             {
                 return result.LogRecord as MessageLogRecord;
@@ -113,7 +113,7 @@ namespace EQueue.Broker
             _queueConsumedOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
         }
 
-        private void RemoveConsumedMessagesFromMemory()
+        private void DeleteMessages()
         {
             //TODO
             //var queueMessages = _messageDict.Values;

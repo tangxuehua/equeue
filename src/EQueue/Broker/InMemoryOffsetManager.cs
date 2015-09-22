@@ -9,7 +9,7 @@ using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
-    public class InMemoryOffsetManager : IOffsetManager
+    public class InMemoryOffsetManager : IOffsetStore
     {
         private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupQueueOffsetDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
         private readonly ILogger _logger;
