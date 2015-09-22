@@ -25,8 +25,8 @@ namespace EQueue.AdminWeb.Controllers
                 InMemoryQueueMessageCount = result.InMemoryQueueMessageCount,
                 UnConsumedQueueMessageCount = result.UnConsumedQueueMessageCount,
                 CurrentMessageOffset = result.CurrentMessageOffset,
-                PersistedMessageOffset = result.PersistedMessageOffset,
-                UnPersistedMessageCount = result.CurrentMessageOffset - result.PersistedMessageOffset,
+                PersistedMessageOffset = result.CurrentMessageOffset,
+                UnPersistedMessageCount = result.CurrentMessageOffset - result.CurrentMessageOffset,
                 MinMessageOffset = result.MinMessageOffset
             });
         }

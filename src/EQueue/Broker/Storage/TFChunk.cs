@@ -410,17 +410,11 @@ namespace EQueue.Broker.Storage
         }
         public void Close()
         {
-            _logger.InfoFormat("Chunk {0} is closing.", this);
             CloseAllReaderWorkItems();
             if (!_isCompleted)
             {
-                _logger.InfoFormat("Chunk {0} try to flush data.", this);
                 Flush();
-                var localDataPosition = _dataPosition;
-                var globalDataPosition = ChunkHeader.ChunkDataStartPosition + localDataPosition;
-                _logger.InfoFormat("Chunk {0} flush data success, localDataPosition: {1}, globalDataPosition: {2}", this, localDataPosition, globalDataPosition);
             }
-            _logger.InfoFormat("Chunk {0} closed.", this);
         }
         public void MarkForDeletion()
         {

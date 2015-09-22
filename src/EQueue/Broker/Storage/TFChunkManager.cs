@@ -97,12 +97,17 @@ namespace EQueue.Broker.Storage
         {
             lock (_chunksLocker)
             {
-                _logger.Info("TFChunkManager is closing.");
                 foreach (var chunk in _chunks)
                 {
-                    chunk.Close();
+                    try
+                    {
+                        chunk.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(string.Format("Chunk {0} close failed.", chunk), ex);
+                    }
                 }
-                _logger.Info("TFChunkManager closed.");
             }
         }
 

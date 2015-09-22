@@ -41,6 +41,10 @@ namespace EQueue.Broker
 
             //再重新加载状态
             var chunkConfig = BrokerController.Instance.Setting.QueueChunkConfig;
+            if (!Directory.Exists(chunkConfig.BasePath))
+            {
+                Directory.CreateDirectory(chunkConfig.BasePath);
+            }
             var pathList = Directory
                             .EnumerateDirectories(chunkConfig.BasePath, "*", SearchOption.AllDirectories)
                             .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
