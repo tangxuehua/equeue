@@ -40,7 +40,7 @@ namespace EQueue.Broker.LongPolling
 
         public bool IsTimeout()
         {
-            return DateTime.Now > SuspendStartTime.AddMilliseconds(SuspendMilliseconds);
+            return (DateTime.Now - SuspendStartTime).TotalMilliseconds >= SuspendMilliseconds;
         }
     }
 }
