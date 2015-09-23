@@ -13,7 +13,7 @@ namespace EQueue.Broker.Storage
         private readonly string _format;
         private readonly Regex _fileNamePattern;
 
-        public DefaultFileNamingStrategy(string prefix, string pattern = @"\d{6}", string format = "{0}{1:000000}")
+        public DefaultFileNamingStrategy(string prefix, string pattern = @"\d{6}", string format = "{0}{1:000000000}")
         {
             Ensure.NotNull(prefix, "prefix");
             Ensure.NotNull(pattern, "pattern");
