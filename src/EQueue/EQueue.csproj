@@ -58,6 +58,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Broker\DefaultMessageStore.cs" />
+    <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByCountStrategy.cs" />
+    <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByTimeStrategy.cs" />
+    <Compile Include="Broker\DeleteMessageStrategies\IDeleteMessageStrategy.cs" />
     <Compile Include="Broker\LogRecordType.cs" />
     <Compile Include="Broker\QueueLogRecord.cs" />
     <Compile Include="Broker\MessageLogRecord.cs" />

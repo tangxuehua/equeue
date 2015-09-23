@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
+using EQueue.Broker.DeleteMessageStrategies;
 using EQueue.Broker.Storage;
 using EQueue.Protocols;
 
@@ -15,10 +13,18 @@ namespace EQueue.Broker
         private TFChunkManager _chunkManager;
         private TFChunkWriter _chunkWriter;
         private TFChunkReader _chunkReader;
-        private readonly ConcurrentDictionary<string, long> _queueConsumedOffsetDict = new ConcurrentDictionary<string, long>();
+        private readonly IDeleteMessageStrategy _deleteMessageStragegy;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
+        private long _minConsumedMessagePosition;
 
+        public long MinConsumedMessagePosition
+        {
+            get
+            {
+                return _minConsumedMessagePosition;
+            }
+        }
         public long MinMessagePosition
         {
             get
@@ -34,10 +40,11 @@ namespace EQueue.Broker
             }
         }
 
-        public DefaultMessageStore()
+        public DefaultMessageStore(IDeleteMessageStrategy deleteMessageStragegy, IScheduleService scheduleService, ILoggerFactory loggerFactory)
         {
-            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+            _deleteMessageStragegy = deleteMessageStragegy;
+            _scheduleService = scheduleService;
+            _logger = loggerFactory.Create(GetType().FullName);
         }
 
         public void Start()
@@ -80,52 +87,25 @@ namespace EQueue.Broker
             }
             return null;
         }
-        public QueueMessage FindMessage(long? offset, string messageId)
+        public void UpdateMinConsumedMessagePosition(long minConsumedMessagePosition)
         {
-            return null;
-            //TODO
-            //var predicate = new Func<QueueMessage, bool>(x =>
-            //{
-            //    var pass = true;
-            //    if (pass && offset != null)
-            //    {
-            //        pass = x.MessageOffset == offset.Value;
-            //    }
-            //    if (!string.IsNullOrWhiteSpace(messageId))
-            //    {
-            //        pass = x.MessageId == messageId;
-            //    }
-            //    return pass;
-            //});
-            //return _messageDict.Values.SingleOrDefault(predicate);
-        }
-        public void DeleteQueueMessage(string topic, int queueId)
-        {
-            //TODO
-            //var key = string.Format("{0}-{1}", topic, queueId);
-            //var messages = _messageDict.Values.Where(x => x.Topic == topic && x.QueueId == queueId);
-            //messages.ForEach(x => _messageDict.Remove(x.MessageOffset));
-            //_queueConsumedOffsetDict.Remove(key);
-        }
-        public void UpdateConsumedQueueOffset(string topic, int queueId, long queueOffset)
-        {
-            var key = string.Format("{0}-{1}", topic, queueId);
-            _queueConsumedOffsetDict.AddOrUpdate(key, queueOffset, (currentKey, oldOffset) => queueOffset > oldOffset ? queueOffset : oldOffset);
+            if (_minConsumedMessagePosition == 0 && minConsumedMessagePosition > 0)
+            {
+                _minConsumedMessagePosition = minConsumedMessagePosition;
+            }
+            else if (_minConsumedMessagePosition < minConsumedMessagePosition)
+            {
+                _minConsumedMessagePosition = minConsumedMessagePosition;
+            }
         }
 
         private void DeleteMessages()
         {
-            //TODO
-            //var queueMessages = _messageDict.Values;
-            //foreach (var queueMessage in queueMessages)
-            //{
-            //    var key = string.Format("{0}-{1}", queueMessage.Topic, queueMessage.QueueId);
-            //    long maxAllowToDeleteQueueOffset;
-            //    if (_queueConsumedOffsetDict.TryGetValue(key, out maxAllowToDeleteQueueOffset) && queueMessage.QueueOffset <= maxAllowToDeleteQueueOffset)
-            //    {
-            //        _messageDict.Remove(queueMessage.MessageOffset);
-            //    }
-            //}
+            var chunks = _deleteMessageStragegy.GetAllowDeleteChunks(_chunkManager, _minConsumedMessagePosition);
+            foreach (var chunk in chunks)
+            {
+                _chunkManager.RemoveChunk(chunk);
+            }
         }
         private ILogRecord ReadMessage(BinaryReader reader)
         {

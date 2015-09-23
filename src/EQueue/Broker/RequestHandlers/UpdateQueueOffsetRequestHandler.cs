@@ -7,19 +7,19 @@ namespace EQueue.Broker.Processors
 {
     public class UpdateQueueOffsetRequestHandler : IRequestHandler
     {
-        private IOffsetStore _offsetManager;
+        private IOffsetStore _offsetStore;
         private IBinarySerializer _binarySerializer;
 
         public UpdateQueueOffsetRequestHandler()
         {
-            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var request = _binarySerializer.Deserialize<UpdateQueueOffsetRequest>(remotingRequest.Body);
-            _offsetManager.UpdateQueueOffset(
+            _offsetStore.UpdateQueueOffset(
                 request.MessageQueue.Topic,
                 request.MessageQueue.QueueId,
                 request.QueueOffset,

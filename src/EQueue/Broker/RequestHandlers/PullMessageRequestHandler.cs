@@ -20,7 +20,7 @@ namespace EQueue.Broker.Processors
         private SuspendedPullRequestManager _suspendedPullRequestManager;
         private IMessageStore _messageStore;
         private IQueueStore _queueService;
-        private IOffsetStore _offsetManager;
+        private IOffsetStore _offsetStore;
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
         private readonly byte[] EmptyResponseData;
@@ -31,7 +31,7 @@ namespace EQueue.Broker.Processors
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _queueService = ObjectContainer.Resolve<IQueueStore>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             EmptyResponseData = new byte[0];
@@ -194,7 +194,7 @@ namespace EQueue.Broker.Processors
         }
         private long GetNextConsumeOffset(string topic, int queueId, string consumerGroup, ConsumeFromWhere consumerFromWhere)
         {
-            var lastConsumedQueueOffset = _offsetManager.GetQueueOffset(topic, queueId, consumerGroup);
+            var lastConsumedQueueOffset = _offsetStore.GetQueueOffset(topic, queueId, consumerGroup);
             if (lastConsumedQueueOffset >= 0)
             {
                 var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);

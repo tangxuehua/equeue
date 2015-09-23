@@ -46,6 +46,15 @@ namespace EQueue.Broker.Storage
             MaxLogRecordSize = maxLogRecordSize;
         }
 
+        public int GetChunkDataSize()
+        {
+            if (ChunkDataSize > 0)
+            {
+                return ChunkDataSize;
+            }
+            return ChunkDataUnitSize * ChunkDataCount;
+        }
+
         public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount)
         {
             return new TFChunkManagerConfig(

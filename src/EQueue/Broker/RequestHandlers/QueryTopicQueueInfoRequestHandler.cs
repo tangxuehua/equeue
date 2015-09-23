@@ -12,13 +12,13 @@ namespace EQueue.Broker.Processors
     {
         private IBinarySerializer _binarySerializer;
         private IQueueStore _queueService;
-        private IOffsetStore _offsetManager;
+        private IOffsetStore _offsetStore;
 
         public QueryTopicQueueInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueService = ObjectContainer.Resolve<IQueueStore>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
@@ -37,7 +37,7 @@ namespace EQueue.Broker.Processors
                     topicQueueInfo.QueueId = queue.QueueId;
                     topicQueueInfo.QueueCurrentOffset = queue.CurrentOffset;
                     topicQueueInfo.QueueMinOffset = queue.GetMinQueueOffset();
-                    topicQueueInfo.QueueMaxConsumedOffset = _offsetManager.GetMinConsumedOffset(queue.Topic, queue.QueueId);
+                    topicQueueInfo.QueueMaxConsumedOffset = _offsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
                     topicQueueInfo.Status = queue.Setting.Status;
                     topicQueueInfoList.Add(topicQueueInfo);
                 }

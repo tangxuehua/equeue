@@ -10,13 +10,12 @@ namespace EQueue.Broker
         public IPEndPoint ConsumerAddress { get; set; }
         public IPEndPoint AdminAddress { get; set; }
         public bool NotifyWhenMessageArrived { get; set; }
-        public int DeleteQueueMessagesInterval { get; set; }
         public int DeleteMessagesInterval { get; set; }
+        public int DeleteQueueMessagesInterval { get; set; }
         public int CheckBlockingPullRequestMilliseconds { get; set; }
         public int NotifyMessageArrivedThreadMaxCount { get; set; }
         public int ScanNotActiveConsumerInterval { get; set; }
         public int ConsumerExpiredTimeout { get; set; }
-        public int QueueIndexMaxCacheSize { get; set; }
         public bool AutoCreateTopic { get; set; }
         public int TopicDefaultQueueCount { get; set; }
         public int TopicMaxQueueCount { get; set; }
@@ -30,13 +29,12 @@ namespace EQueue.Broker
             AdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
 
             NotifyWhenMessageArrived = true;
-            DeleteQueueMessagesInterval = 1000 * 5;
-            DeleteMessagesInterval = 1000 * 5;
+            DeleteMessagesInterval = 1000 * 60 * 10;
+            DeleteQueueMessagesInterval = 1000 * 60 * 10;
             CheckBlockingPullRequestMilliseconds = 1000;
             NotifyMessageArrivedThreadMaxCount = 32;
             ScanNotActiveConsumerInterval = 1000 * 5;
             ConsumerExpiredTimeout = 1000 * 60;
-            QueueIndexMaxCacheSize = 20 * 10000;
             AutoCreateTopic = true;
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;

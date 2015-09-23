@@ -21,7 +21,7 @@ namespace EQueue.Broker
         private readonly ILogger _logger;
         private readonly IQueueStore _queueService;
         private readonly IMessageStore _messageStore;
-        private readonly IOffsetStore _offsetManager;
+        private readonly IOffsetStore _offsetStore;
         private readonly ConsumerManager _consumerManager;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
@@ -41,7 +41,7 @@ namespace EQueue.Broker
             Setting = setting ?? new BrokerSetting();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
             _queueService = ObjectContainer.Resolve<IQueueStore>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
 
@@ -71,7 +71,7 @@ namespace EQueue.Broker
             var watch = Stopwatch.StartNew();
             _logger.InfoFormat("Broker starting...");
             _queueService.Start();
-            _offsetManager.Start();
+            _offsetStore.Start();
             _messageStore.Start();
             _consumerManager.Start();
             _suspendedPullRequestManager.Start();
@@ -94,7 +94,7 @@ namespace EQueue.Broker
                 _consumerManager.Shutdown();
                 _suspendedPullRequestManager.Shutdown();
                 _messageStore.Shutdown();
-                _offsetManager.Shutdown();
+                _offsetStore.Shutdown();
                 _queueService.Shutdown();
                 _logger.InfoFormat("Broker shutdown success, timeSpent:{0}ms", watch.ElapsedMilliseconds);
             }
@@ -108,7 +108,7 @@ namespace EQueue.Broker
             statisticInfo.UnConsumedQueueMessageCount = _queueService.GetAllQueueUnConusmedMessageCount();
             statisticInfo.CurrentMessageOffset = _messageStore.CurrentMessagePosition;
             statisticInfo.MinMessageOffset = _messageStore.MinMessagePosition;
-            statisticInfo.ConsumerGroupCount = _offsetManager.GetConsumerGroupCount();
+            statisticInfo.ConsumerGroupCount = _offsetStore.GetConsumerGroupCount();
             return statisticInfo;
         }
 

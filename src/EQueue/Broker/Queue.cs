@@ -13,7 +13,6 @@ namespace EQueue.Broker
         private readonly TFChunkWriter _chunkWriter;
         private readonly TFChunkReader _chunkReader;
         private readonly TFChunkManager _chunkManager;
-        private ConcurrentDictionary<long, long> _queueItemDict = new ConcurrentDictionary<long, long>();
         private long _currentOffset = 0;
         private readonly IJsonSerializer _jsonSerializer;
         private QueueSetting _setting;
@@ -84,14 +83,23 @@ namespace EQueue.Broker
         {
             return _chunkManager.GetFirstChunk().ChunkHeader.ChunkDataStartPosition / _chunkManager.Config.ChunkDataUnitSize;
         }
-        public void DeleteAllPreviousMessages(long maxAllowToRemoveQueueOffset)
+        public void DeleteMessages(long minConsumedMessagePosition)
         {
-            var position = maxAllowToRemoveQueueOffset * _chunkManager.Config.ChunkDataUnitSize;
-            var chunks = _chunkManager.GetAllChunks().Where(x => x.ChunkHeader.ChunkDataEndPosition <= position);
+            var chunks = _chunkManager.GetAllChunks().Where(x => x.IsCompleted);
 
             foreach (var chunk in chunks)
             {
-                _chunkManager.RemoveChunk(chunk);
+                var maxPosition = chunk.ChunkHeader.ChunkDataEndPosition;
+                var result = _chunkReader.TryReadAt(maxPosition);
+                if (result.Success)
+                {
+                    var record = result.LogRecord as QueueLogRecord;
+                    var maxMessagePosition = record.MessageLogPosition;
+                    if (maxMessagePosition <= minConsumedMessagePosition)
+                    {
+                        _chunkManager.RemoveChunk(chunk);
+                    }
+                }
             }
         }
 

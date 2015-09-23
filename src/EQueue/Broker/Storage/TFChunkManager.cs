@@ -104,7 +104,7 @@ namespace EQueue.Broker.Storage
         }
         public TFChunk GetChunkFor(long dataPosition)
         {
-            var chunkNum = (int)(dataPosition / _config.ChunkDataSize);
+            var chunkNum = (int)(dataPosition / _config.GetChunkDataSize());
             return GetChunk(chunkNum);
         }
         public TFChunk GetChunk(int chunkNum)
@@ -114,6 +114,7 @@ namespace EQueue.Broker.Storage
         public void RemoveChunk(TFChunk chunk)
         {
             chunk.MarkForDeletion();
+            _logger.InfoFormat("Chunk {0} is deleted.", chunk);
         }
 
         public void Dispose()

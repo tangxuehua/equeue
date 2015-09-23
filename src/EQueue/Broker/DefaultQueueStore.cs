@@ -15,16 +15,17 @@ namespace EQueue.Broker
     {
         private readonly ConcurrentDictionary<string, Queue> _queueDict;
         private readonly IMessageStore _messageStore;
-        private readonly IOffsetStore _offsetManager;
+        private readonly IOffsetStore _offsetStore;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
-        private int _isRemovingConsumedMessage;
+        private int _isScanningMinConsumedMessagePosition;
+        private int _isDeletingQueueMessage;
 
-        public DefaultQueueStore(IMessageStore messageStore, IOffsetStore offsetManager, IScheduleService scheduleService, ILoggerFactory loggerFactory)
+        public DefaultQueueStore(IMessageStore messageStore, IOffsetStore offsetStore, IScheduleService scheduleService, ILoggerFactory loggerFactory)
         {
             _queueDict = new ConcurrentDictionary<string, Queue>();
             _messageStore = messageStore;
-            _offsetManager = offsetManager;
+            _offsetStore = offsetStore;
             _scheduleService = scheduleService;
             _logger = loggerFactory.Create(GetType().FullName);
         }
@@ -32,7 +33,8 @@ namespace EQueue.Broker
         public void Start()
         {
             LoadQueues();
-            _scheduleService.StartTask(string.Format("{0}.DeleteMessages", this.GetType().Name), DeleteMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteQueueMessagesInterval);
+            _scheduleService.StartTask(string.Format("{0}.ScanMinConsumedMessagePosition", this.GetType().Name), ScanMinConsumedMessagePosition, 1000 * 5, 1000 * 60);
+            _scheduleService.StartTask(string.Format("{0}.DeleteQueueMessages", this.GetType().Name), DeleteQueueMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteQueueMessagesInterval);
         }
         public void Shutdown()
         {
@@ -78,7 +80,7 @@ namespace EQueue.Broker
 
             foreach (var queue in _queueDict.Values)
             {
-                var offset = _offsetManager.GetMinConsumedOffset(queue.Topic, queue.QueueId);
+                var offset = _offsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
                 if (minConsumedQueueOffset == 0L && offset > 0)
                 {
                     minConsumedQueueOffset = offset;
@@ -148,7 +150,7 @@ namespace EQueue.Broker
             //    _messageStore.DeleteQueueMessage(topic, queueId);
 
             //    //删除队列消费进度信息
-            //    _offsetManager.DeleteQueueOffset(topic, queueId);
+            //    _offsetStore.DeleteQueueOffset(topic, queueId);
 
             //    //删除队列
             //    _queueStore.DeleteQueue(queue);
@@ -268,30 +270,50 @@ namespace EQueue.Broker
         {
             return string.Format("{0}-{1}", topic, queueId);
         }
-        private void DeleteMessages()
+        private void ScanMinConsumedMessagePosition()
         {
-            if (Interlocked.CompareExchange(ref _isRemovingConsumedMessage, 1, 0) == 0)
+            if (Interlocked.CompareExchange(ref _isScanningMinConsumedMessagePosition, 1, 0) == 0)
             {
                 try
                 {
                     foreach (var queue in _queueDict.Values)
                     {
-                        var consumedQueueOffset = _offsetManager.GetMinConsumedOffset(queue.Topic, queue.QueueId);
-                        if (consumedQueueOffset > queue.CurrentOffset)
+                        var minConsumedQueueOffset = _offsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
+                        if (minConsumedQueueOffset >= 0)
                         {
-                            consumedQueueOffset = queue.CurrentOffset;
+                            var messagePosition = queue.GetMessagePosition(minConsumedQueueOffset);
+                            _messageStore.UpdateMinConsumedMessagePosition(messagePosition);
                         }
-                        queue.DeleteAllPreviousMessages(consumedQueueOffset);
-                        _messageStore.UpdateConsumedQueueOffset(queue.Topic, queue.QueueId, consumedQueueOffset);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("Delete consumed messages failed.", ex);
+                    _logger.Error("Scan min consumed message position has exception.", ex);
                 }
                 finally
                 {
-                    Interlocked.Exchange(ref _isRemovingConsumedMessage, 0);
+                    Interlocked.Exchange(ref _isScanningMinConsumedMessagePosition, 0);
+                }
+            }
+        }
+        private void DeleteQueueMessages()
+        {
+            if (Interlocked.CompareExchange(ref _isDeletingQueueMessage, 1, 0) == 0)
+            {
+                try
+                {
+                    foreach (var queue in _queueDict.Values)
+                    {
+                        queue.DeleteMessages(_messageStore.MinConsumedMessagePosition);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("Delete queue messages has exception.", ex);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _isDeletingQueueMessage, 0);
                 }
             }
         }

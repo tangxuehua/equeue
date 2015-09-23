@@ -20,14 +20,16 @@ namespace EQueue.Broker.Processors
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var request = _binarySerializer.Deserialize<GetMessageDetailRequest>(remotingRequest.Body);
-            var message = _messageStore.FindMessage(request.MessageOffset, request.MessageId);
-            var messages = new List<QueueMessage>();
-            if (message != null)
-            {
-                messages.Add(message);
-            }
-            return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(messages));
+            return null;
+            //TODO
+            //var request = _binarySerializer.Deserialize<GetMessageDetailRequest>(remotingRequest.Body);
+            //var message = _messageStore.FindMessage(request.MessageOffset, request.MessageId);
+            //var messages = new List<QueueMessage>();
+            //if (message != null)
+            //{
+            //    messages.Add(message);
+            //}
+            //return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(messages));
         }
     }
 }

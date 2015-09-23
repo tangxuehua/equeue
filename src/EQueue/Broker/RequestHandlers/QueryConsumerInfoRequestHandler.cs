@@ -12,14 +12,14 @@ namespace EQueue.Broker.Processors
     public class QueryConsumerInfoRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IOffsetStore _offsetManager;
+        private IOffsetStore _offsetStore;
         private ConsumerManager _consumerManager;
         private IQueueStore _queueService;
 
         public QueryConsumerInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _queueService = ObjectContainer.Resolve<IQueueStore>();
         }
@@ -115,7 +115,7 @@ namespace EQueue.Broker.Processors
             consumerInfo.Topic = topic;
             consumerInfo.QueueId = queueId;
             consumerInfo.QueueMaxOffset = queueCurrentOffset;
-            consumerInfo.ConsumedOffset = _offsetManager.GetQueueOffset(topic, queueId, group);
+            consumerInfo.ConsumedOffset = _offsetStore.GetQueueOffset(topic, queueId, group);
             consumerInfo.UnConsumedMessageCount = consumerInfo.QueueMaxOffset - consumerInfo.ConsumedOffset;
             return consumerInfo;
         }
