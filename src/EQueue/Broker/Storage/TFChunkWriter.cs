@@ -1,5 +1,4 @@
 ﻿using ECommon.Components;
-using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Utilities;
 
@@ -11,7 +10,6 @@ namespace EQueue.Broker.Storage
 
         private readonly TFChunkManager _chunkManager;
         private readonly IScheduleService _scheduleService;
-        private readonly ILogger _logger;
         private readonly object _lockObj = new object();
         private bool _isClosed = false;
         private readonly string _flushTaskName;
@@ -24,7 +22,6 @@ namespace EQueue.Broker.Storage
 
             _chunkManager = chunkManager;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(TFChunkWriter).FullName);
             _flushTaskName = string.Format("{0}-FlushChunk", _chunkManager.Name);
         }
 
@@ -37,7 +34,10 @@ namespace EQueue.Broker.Storage
         {
             lock (_lockObj)
             {
-                if (_isClosed) return -1;
+                if (_isClosed)
+                {
+                    throw new ChunkWriteException(_currentChunk.ToString(), "Chunk writer is closed.");
+                }
 
                 //先尝试写文件
                 var result = _currentChunk.TryAppend(record);
