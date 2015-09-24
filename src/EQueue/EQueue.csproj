@@ -74,7 +74,6 @@
     <Compile Include="Broker\RequestHandlers\QueryBrokerStatisticInfoRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\QueryTopicConsumeInfoRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\QueryConsumerRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\RemoveQueueOffsetInfoRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\RemoveQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetTopicQueueIdsForProducerRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\AddQueueRequestHandler.cs" />
@@ -91,7 +90,6 @@
     <Compile Include="Broker\LongPolling\PullRequest.cs" />
     <Compile Include="Broker\LongPolling\SuspendedPullRequestManager.cs" />
     <Compile Include="Broker\BrokerController.cs" />
-    <Compile Include="Broker\InMemoryOffsetManager.cs" />
     <Compile Include="Broker\QueueStatus.cs" />
     <Compile Include="Broker\RequestHandlers\ConsumerHeartbeatRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\PullMessageRequestHandler.cs" />
@@ -147,7 +145,6 @@
     <Compile Include="Configurations\ConfigurationExtensions.cs" />
     <Compile Include="Protocols\CreateTopicRequest.cs" />
     <Compile Include="Protocols\GetMessageDetailRequest.cs" />
-    <Compile Include="Protocols\RemoveQueueOffsetInfoRequest.cs" />
     <Compile Include="Protocols\TopicConsumeInfo.cs" />
     <Compile Include="Protocols\DisableQueueRequest.cs" />
     <Compile Include="Protocols\EnableQueueRequest.cs" />

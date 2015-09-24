@@ -19,7 +19,7 @@ namespace EQueue.Broker
     {
         private static BrokerController _instance;
         private readonly ILogger _logger;
-        private readonly IQueueStore _queueService;
+        private readonly IQueueStore _queueStore;
         private readonly IMessageStore _messageStore;
         private readonly IOffsetStore _offsetStore;
         private readonly ConsumerManager _consumerManager;
@@ -42,7 +42,7 @@ namespace EQueue.Broker
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
-            _queueService = ObjectContainer.Resolve<IQueueStore>();
+            _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
 
             _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.ProducerAddress);
@@ -70,7 +70,7 @@ namespace EQueue.Broker
         {
             var watch = Stopwatch.StartNew();
             _logger.InfoFormat("Broker starting...");
-            _queueService.Start();
+            _queueStore.Start();
             _offsetStore.Start();
             _messageStore.Start();
             _consumerManager.Start();
@@ -95,7 +95,7 @@ namespace EQueue.Broker
                 _suspendedPullRequestManager.Shutdown();
                 _messageStore.Shutdown();
                 _offsetStore.Shutdown();
-                _queueService.Shutdown();
+                _queueStore.Shutdown();
                 _logger.InfoFormat("Broker shutdown success, timeSpent:{0}ms", watch.ElapsedMilliseconds);
             }
             return this;
@@ -103,9 +103,9 @@ namespace EQueue.Broker
         public BrokerStatisticInfo GetBrokerStatisticInfo()
         {
             var statisticInfo = new BrokerStatisticInfo();
-            statisticInfo.TopicCount = _queueService.GetAllTopics().Count();
-            statisticInfo.QueueCount = _queueService.GetAllQueueCount();
-            statisticInfo.UnConsumedQueueMessageCount = _queueService.GetAllQueueUnConusmedMessageCount();
+            statisticInfo.TopicCount = _queueStore.GetAllTopics().Count();
+            statisticInfo.QueueCount = _queueStore.GetAllQueueCount();
+            statisticInfo.UnConsumedQueueMessageCount = _queueStore.GetAllQueueUnConusmedMessageCount();
             statisticInfo.CurrentMessageOffset = _messageStore.CurrentMessagePosition;
             statisticInfo.MinMessageOffset = _messageStore.MinMessagePosition;
             statisticInfo.ConsumerGroupCount = _offsetStore.GetConsumerGroupCount();
@@ -132,7 +132,6 @@ namespace EQueue.Broker
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.EnableQueue, new EnableQueueRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.DisableQueue, new DisableQueueRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryTopicConsumeInfo, new QueryTopicConsumeInfoRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.RemoveQueueOffsetInfo, new RemoveQueueOffsetInfoRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetMessageDetail, new GetMessageDetailRequestHandler());
         }
 

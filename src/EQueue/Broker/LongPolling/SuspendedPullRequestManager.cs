@@ -83,7 +83,7 @@ namespace EQueue.Broker.LongPolling
             StopNotifyMessageArrivedWorker();
 
             _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
-            _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(BrokerController.Instance.Setting.NotifyMessageArrivedThreadMaxCount));
+            _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Environment.ProcessorCount));
             if (BrokerController.Instance.Setting.NotifyWhenMessageArrived)
             {
                 _notifyMessageArrivedWorker = new Worker("SuspendedPullRequestManager.NotifyMessageArrived", () =>

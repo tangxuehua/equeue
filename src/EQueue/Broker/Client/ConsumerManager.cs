@@ -22,7 +22,7 @@ namespace EQueue.Broker.Client
         public void Start()
         {
             _consumerGroupDict.Clear();
-            _scheduleService.StartTask("ConsumerManager.ScanNotActiveConsumer", ScanNotActiveConsumer, BrokerController.Instance.Setting.ScanNotActiveConsumerInterval, BrokerController.Instance.Setting.ScanNotActiveConsumerInterval);
+            _scheduleService.StartTask("ConsumerManager.ScanNotActiveConsumer", ScanNotActiveConsumer, 1000 * 5, 1000 * 5);
         }
         public void Shutdown()
         {

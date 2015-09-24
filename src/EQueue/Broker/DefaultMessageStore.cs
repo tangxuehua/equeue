@@ -45,14 +45,14 @@ namespace EQueue.Broker
             _deleteMessageStragegy = deleteMessageStragegy;
             _scheduleService = scheduleService;
             _logger = loggerFactory.Create(GetType().FullName);
-
-            _chunkManager = new TFChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig, ReadMessage);
-            _chunkWriter = new TFChunkWriter(_chunkManager);
-            _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
         }
 
         public void Start()
         {
+            _chunkManager = new TFChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig, ReadMessage);
+            _chunkWriter = new TFChunkWriter(_chunkManager);
+            _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
+
             _chunkManager.Load();
             _chunkWriter.Open();
 

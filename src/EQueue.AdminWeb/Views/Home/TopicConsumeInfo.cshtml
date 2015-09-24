@@ -39,9 +39,6 @@
                 <th width="10%" class="text-center vertical-center">
                     HasActiveConsumer
                 </th>
-                <th width="20%" class="text-center vertical-center">
-                    操作
-                </th>
             </tr>
         </thead>
         <tbody>
@@ -68,9 +65,6 @@
                     </td>
                     <td class="text-center vertical-center">
                         @item.HasConsumer
-                    </td>
-                    <td class="text-center vertical-center">
-                        @Html.ActionLink("删除", "RemoveQueueOffsetInfo", new { consumerGroup = item.ConsumerGroup, topic = item.Topic, queueId = item.QueueId })
                     </td>
                 </tr>
             }

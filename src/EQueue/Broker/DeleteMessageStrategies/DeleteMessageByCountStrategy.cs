@@ -10,12 +10,12 @@ namespace EQueue.Broker.DeleteMessageStrategies
         /// <summary>表示磁盘上可以保存的最多的Chunk文件的个数；
         /// <remarks>
         /// 比如设置为100，则磁盘上可以保存的最多的Chunk文件的个数为100，如果现在总的个数超过100，则最先产生的Chunk文件就会被删除。
-        /// 默认值为200，即如果每个Chunk文件的大小为256MB的话，则200 * 256 = 50GB，即磁盘总共会保存最多默认50GB的消息。
+        /// 默认值为100，即如果每个Chunk文件的大小为256MB的话，则100 * 256 = 25GB，即磁盘总共会保存最多默认25GB的消息。
         /// </remarks>
         /// </summary>
         public int MaxChunkCount { get; private set; }
 
-        public DeleteMessageByCountStrategy(int maxChunkCount = 200)
+        public DeleteMessageByCountStrategy(int maxChunkCount = 100)
         {
             Ensure.Positive(maxChunkCount, "maxChunkCount");
             MaxChunkCount = maxChunkCount;

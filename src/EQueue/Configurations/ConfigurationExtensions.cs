@@ -18,7 +18,7 @@ namespace EQueue.Configurations
             configuration.SetDefault<IMessageStore, DefaultMessageStore>();
             configuration.SetDefault<IQueueStore, DefaultQueueStore>();
             configuration.SetDefault<ConsumerManager, ConsumerManager>();
-            configuration.SetDefault<IOffsetStore, InMemoryOffsetManager>();
+            configuration.SetDefault<IOffsetStore, DefaultOffsetStore>();
             configuration.SetDefault<IQueueStore, DefaultQueueStore>();
             configuration.SetDefault<SuspendedPullRequestManager, SuspendedPullRequestManager>();
 
@@ -30,14 +30,9 @@ namespace EQueue.Configurations
             configuration.SetDefault<IDeleteMessageStrategy, DeleteMessageByTimeStrategy>(new DeleteMessageByTimeStrategy(maxStorageHours));
             return configuration;
         }
-        public static Configuration UseDeleteMessageByCountStrategy(this Configuration configuration, int maxChunkCount = 200)
+        public static Configuration UseDeleteMessageByCountStrategy(this Configuration configuration, int maxChunkCount = 100)
         {
             configuration.SetDefault<IDeleteMessageStrategy, DeleteMessageByCountStrategy>(new DeleteMessageByCountStrategy(maxChunkCount));
-            return configuration;
-        }
-        public static Configuration UseSqlServerOffsetManager(this Configuration configuration, SqlServerOffsetManagerSetting setting)
-        {
-            configuration.SetDefault<IOffsetStore, DefaultOffsetStore>(new DefaultOffsetStore(setting));
             return configuration;
         }
     }

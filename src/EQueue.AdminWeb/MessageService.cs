@@ -130,16 +130,6 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("DisableQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
-        public void RemoveQueueOffsetInfo(string consumerGroup, string topic, int queueId)
-        {
-            var requestData = _binarySerializer.Serialize(new RemoveQueueOffsetInfoRequest(consumerGroup, topic, queueId));
-            var remotingRequest = new RemotingRequest((int)RequestCode.RemoveQueueOffsetInfo, requestData);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
-            if (remotingResponse.Code != (int)ResponseCode.Success)
-            {
-                throw new Exception(string.Format("RemoveQueueOffsetInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
-            }
-        }
         public QueueMessage GetMessageDetail(long? messageOffset, string messageId)
         {
             var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageOffset, messageId));

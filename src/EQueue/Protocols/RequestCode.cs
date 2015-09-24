@@ -19,9 +19,8 @@
         EnableQueue = 1005,
         DisableQueue = 1006,
         QueryTopicConsumeInfo = 1007,
-        RemoveQueueOffsetInfo = 1008,
-        QueryMessage = 1009,
-        GetMessageDetail = 1010,
-        CreateTopic = 1011,
+        QueryMessage = 1008,
+        GetMessageDetail = 109,
+        CreateTopic = 1010,
     }
 }
