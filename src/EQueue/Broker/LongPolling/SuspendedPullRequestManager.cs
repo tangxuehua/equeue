@@ -170,7 +170,7 @@ namespace EQueue.Broker.LongPolling
                 PullRequest request;
                 if (_queueRequestDict.TryGetValue(key, out request))
                 {
-                    if (queueOffset >= request.PullMessageRequest.QueueOffset)
+                    if (queueOffset > request.PullMessageRequest.QueueOffset)
                     {
                         PullRequest currentRequest;
                         if (_queueRequestDict.TryRemove(key, out currentRequest))
