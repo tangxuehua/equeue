@@ -13,6 +13,7 @@ using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
+using EQueue.Broker.Storage;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
@@ -29,7 +30,6 @@ namespace EQueue.Clients.Consumers
         private readonly TaskFactory _taskFactory;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict;
         private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict;
-        private readonly ConcurrentDictionary<long, ConsumingMessage> _handlingMessageDict;
         private readonly BlockingCollection<PullRequest> _pullRequestQueue;
         private readonly BlockingCollection<ConsumingMessage> _consumingMessageQueue;
         private readonly BlockingCollection<ConsumingMessage> _messageRetryQueue;
@@ -80,7 +80,6 @@ namespace EQueue.Clients.Consumers
             _pullRequestDict = new ConcurrentDictionary<string, PullRequest>();
             _consumingMessageQueue = new BlockingCollection<ConsumingMessage>(new ConcurrentQueue<ConsumingMessage>());
             _messageRetryQueue = new BlockingCollection<ConsumingMessage>(new ConcurrentQueue<ConsumingMessage>());
-            _handlingMessageDict = new ConcurrentDictionary<long, ConsumingMessage>();
             _taskIds = new List<int>();
             _taskFactory = new TaskFactory();
             _remotingClient = new SocketRemotingClient(string.Format("{0}.RemotingClient", Id), Setting.BrokerAddress, Setting.LocalAddress);
@@ -248,7 +247,7 @@ namespace EQueue.Clients.Consumers
 
             if (remotingResponse.Code == (int)PullStatus.Found)
             {
-                var messages = _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.Body);
+                var messages = _binarySerializer.Deserialize<IEnumerable<MessageLogRecord>>(remotingResponse.Body);
                 if (messages.Count() > 0)
                 {
                     pullRequest.ProcessQueue.AddMessages(messages);
@@ -293,17 +292,6 @@ namespace EQueue.Clients.Consumers
 
             var handleAction = new Action(() =>
             {
-                if (!_handlingMessageDict.TryAdd(consumingMessage.Message.MessageOffset, consumingMessage))
-                {
-                    _logger.WarnFormat("Ignore to handle message [messageOffset={0}, topic={1}, queueId={2}, queueOffset={3}, consumerId={4}, group={5}], as it is being handling.",
-                        consumingMessage.Message.MessageOffset,
-                        consumingMessage.Message.Topic,
-                        consumingMessage.Message.QueueId,
-                        consumingMessage.Message.QueueOffset,
-                        Id,
-                        GroupName);
-                    return;
-                }
                 HandleMessage(consumingMessage);
             });
 
@@ -445,19 +433,14 @@ namespace EQueue.Clients.Consumers
                 }
             }
         }
-        private void RemoveHandledMessage(ConsumingMessage consumingMessage)
+        private void RemoveHandledMessage(ConsumingMessage consumedMessage)
         {
-            ConsumingMessage consumedMessage;
-            if (_handlingMessageDict.TryRemove(consumingMessage.Message.MessageOffset, out consumedMessage))
-            {
-                consumedMessage.ProcessQueue.RemoveMessage(consumedMessage.Message);
-            }
+            consumedMessage.ProcessQueue.RemoveMessage(consumedMessage.Message);
         }
         private void LogMessageHandlingException(ConsumingMessage consumingMessage, Exception exception)
         {
             _logger.Error(string.Format(
-                "Message handling has exception, message info:[messageOffset={0}, topic={1}, queueId={2}, queueOffset={3}, storedTime={4}, consumerId={5}, group={6}]",
-                consumingMessage.Message.MessageOffset,
+                "Message handling has exception, message info:[topic={0}, queueId={1}, queueOffset={2}, storedTime={3}, consumerId={4}, group={5}]",
                 consumingMessage.Message.Topic,
                 consumingMessage.Message.QueueId,
                 consumingMessage.Message.QueueOffset,

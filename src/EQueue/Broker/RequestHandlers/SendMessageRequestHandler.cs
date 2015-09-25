@@ -41,13 +41,18 @@ namespace EQueue.Broker.Processors
             {
                 var queueOffset = queue.CurrentOffset;
                 var messagePosition = _messageStore.StoreMessage(queueId, queueOffset, message, request.RoutingKey);
-                queue.AddMessage(messagePosition);
+                queue.AddMessage(messagePosition + 1);
                 queue.IncrementCurrentOffset();
                 var messageId = CreateMessageId(messagePosition);
                 result = new MessageStoreResult(message.Key, messageId, message.Code, message.Topic, queueId, queueOffset);
             }
 
-            _suspendedPullRequestManager.NotifyNewMessage(request.Message.Topic, result.QueueId, result.QueueOffset);
+            //如果需要立即通知所有消费者有新消息，则立即通知
+            if (BrokerController.Instance.Setting.NotifyWhenMessageArrived)
+            {
+                _suspendedPullRequestManager.NotifyNewMessage(request.Message.Topic, result.QueueId, result.QueueOffset);
+            }
+
             var data = MessageUtils.EncodeMessageStoreResult(result);
             return RemotingResponseFactory.CreateResponse(remotingRequest, data);
         }

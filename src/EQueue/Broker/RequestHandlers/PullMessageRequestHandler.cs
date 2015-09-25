@@ -19,7 +19,7 @@ namespace EQueue.Broker.Processors
         private ConsumerManager _consumerManager;
         private SuspendedPullRequestManager _suspendedPullRequestManager;
         private IMessageStore _messageStore;
-        private IQueueStore _queueService;
+        private IQueueStore _queueStore;
         private IOffsetStore _offsetStore;
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
@@ -30,7 +30,7 @@ namespace EQueue.Broker.Processors
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
-            _queueService = ObjectContainer.Resolve<IQueueStore>();
+            _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
@@ -76,8 +76,8 @@ namespace EQueue.Broker.Processors
                 return null;
             }
 
-            var queueMinOffset = _queueService.GetQueueMinOffset(topic, queueId);
-            var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
+            var queueMinOffset = _queueStore.GetQueueMinOffset(topic, queueId);
+            var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
 
             if (pullOffset < queueMinOffset)
             {
@@ -95,7 +95,7 @@ namespace EQueue.Broker.Processors
 
         private IEnumerable<MessageLogRecord> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
         {
-            var queue = _queueService.GetQueue(topic, queueId);
+            var queue = _queueStore.GetQueue(topic, queueId);
             if (queue == null)
             {
                 return new MessageLogRecord[0];
@@ -106,14 +106,14 @@ namespace EQueue.Broker.Processors
             while (currentQueueOffset <= queue.CurrentOffset && messages.Count < batchSize)
             {
                 var messagePosition = queue.GetMessagePosition(currentQueueOffset);
-                if (messagePosition < 0)
+                if (messagePosition <= 0)
                 {
                     //TODO,要考虑文件删除了的情况，需要告诉Consumer到新的位置拉消息
                     break;
                 }
-                if (messagePosition >= 0)
+                else
                 {
-                    var message = _messageStore.GetMessage(messagePosition);
+                    var message = _messageStore.GetMessage(messagePosition - 1);
                     if (message != null)
                     {
                         messages.Add(message);
@@ -143,8 +143,8 @@ namespace EQueue.Broker.Processors
                 return;
             }
 
-            var queueMinOffset = _queueService.GetQueueMinOffset(topic, queueId);
-            var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
+            var queueMinOffset = _queueStore.GetQueueMinOffset(topic, queueId);
+            var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
 
             if (pullOffset < queueMinOffset)
             {
@@ -194,16 +194,16 @@ namespace EQueue.Broker.Processors
         }
         private long GetNextConsumeOffset(string topic, int queueId, string consumerGroup, ConsumeFromWhere consumerFromWhere)
         {
-            var lastConsumedQueueOffset = _offsetStore.GetQueueOffset(topic, queueId, consumerGroup);
+            var lastConsumedQueueOffset = _offsetStore.GetConsumeOffset(topic, queueId, consumerGroup);
             if (lastConsumedQueueOffset >= 0)
             {
-                var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
+                var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
                 return queueCurrentOffset < lastConsumedQueueOffset ? queueCurrentOffset + 1 : lastConsumedQueueOffset + 1;
             }
 
             if (consumerFromWhere == ConsumeFromWhere.FirstOffset)
             {
-                var queueMinOffset = _queueService.GetQueueMinOffset(topic, queueId);
+                var queueMinOffset = _queueStore.GetQueueMinOffset(topic, queueId);
                 if (queueMinOffset < 0)
                 {
                     queueMinOffset = 0;
@@ -212,7 +212,7 @@ namespace EQueue.Broker.Processors
             }
             else
             {
-                var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
+                var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
                 if (queueCurrentOffset < 0)
                 {
                     queueCurrentOffset = 0;

@@ -14,7 +14,7 @@ namespace QuickStart.BrokerServer
         static void Main(string[] args)
         {
             InitializeEQueue();
-            BrokerController.Create(new BrokerSetting { NotifyWhenMessageArrived = false }).Start();
+            BrokerController.Create(new BrokerSetting()).Start();
             Console.ReadLine();
         }
 

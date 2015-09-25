@@ -19,7 +19,7 @@ namespace EQueue.Broker.Processors
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var request = _binarySerializer.Deserialize<UpdateQueueOffsetRequest>(remotingRequest.Body);
-            _offsetStore.UpdateQueueOffset(
+            _offsetStore.UpdateConsumeOffset(
                 request.MessageQueue.Topic,
                 request.MessageQueue.QueueId,
                 request.QueueOffset,

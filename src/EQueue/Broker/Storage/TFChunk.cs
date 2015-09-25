@@ -343,9 +343,7 @@ namespace EQueue.Broker.Storage
             record = _readRecordFunc(readerWorkItem.Reader);
             if (record == null)
             {
-                throw new InvalidReadException(
-                    string.Format("Cannot read a record from data position {0}. Something is seriously wrong in chunk {1}.",
-                                  dataPosition, this));
+                return false;
             }
 
             var recordLength = readerWorkItem.Stream.Position - startStreamPosition;

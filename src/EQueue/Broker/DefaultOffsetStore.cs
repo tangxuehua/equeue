@@ -53,7 +53,7 @@ namespace EQueue.Broker
         {
             return _groupConsumeOffsetsDict.Count;
         }
-        public long GetQueueOffset(string topic, int queueId, string group)
+        public long GetConsumeOffset(string topic, int queueId, string group)
         {
             ConcurrentDictionary<string, long> queueOffsetDict;
             if (_groupConsumeOffsetsDict.TryGetValue(group, out queueOffsetDict))
@@ -90,7 +90,7 @@ namespace EQueue.Broker
 
             return minOffset;
         }
-        public void UpdateQueueOffset(string topic, int queueId, long offset, string group)
+        public void UpdateConsumeOffset(string topic, int queueId, long offset, string group)
         {
             UpdateQueueOffsetInternal(topic, queueId, offset, group);
         }

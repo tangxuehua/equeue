@@ -4,6 +4,7 @@ using System.Text;
 
 namespace EQueue.Broker.Storage
 {
+    [Serializable]
     public class MessageLogRecord : ILogRecord
     {
         public string Topic { get; private set; }

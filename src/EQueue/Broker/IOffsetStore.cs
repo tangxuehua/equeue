@@ -8,9 +8,9 @@ namespace EQueue.Broker
         void Start();
         void Shutdown();
         int GetConsumerGroupCount();
-        long GetQueueOffset(string topic, int queueId, string group);
+        long GetConsumeOffset(string topic, int queueId, string group);
         long GetMinConsumedOffset(string topic, int queueId);
-        void UpdateQueueOffset(string topic, int queueId, long offset, string group);
+        void UpdateConsumeOffset(string topic, int queueId, long offset, string group);
         IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic);
     }
 }

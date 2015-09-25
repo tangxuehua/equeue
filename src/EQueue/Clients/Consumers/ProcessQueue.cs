@@ -1,13 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using ECommon.Extensions;
+using EQueue.Broker.Storage;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers
 {
     public class ProcessQueue
     {
-        private SortedDictionary<long, QueueMessage> _messageDict = new SortedDictionary<long, QueueMessage>();
+        private SortedDictionary<long, MessageLogRecord> _messageDict = new SortedDictionary<long, MessageLogRecord>();
         private long _consumedQueueOffset = -1L;
         private long _previousConsumedQueueOffset = -1L;
 
@@ -22,7 +23,7 @@ namespace EQueue.Clients.Consumers
             }
             return false;
         }
-        public void AddMessages(IEnumerable<QueueMessage> messages)
+        public void AddMessages(IEnumerable<MessageLogRecord> messages)
         {
             lock (this)
             {
@@ -32,7 +33,7 @@ namespace EQueue.Clients.Consumers
                 }
             }
         }
-        public void RemoveMessage(QueueMessage message)
+        public void RemoveMessage(MessageLogRecord message)
         {
             lock (this)
             {

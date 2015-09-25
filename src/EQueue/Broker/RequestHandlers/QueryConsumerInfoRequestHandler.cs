@@ -115,7 +115,7 @@ namespace EQueue.Broker.Processors
             consumerInfo.Topic = topic;
             consumerInfo.QueueId = queueId;
             consumerInfo.QueueMaxOffset = queueCurrentOffset;
-            consumerInfo.ConsumedOffset = _offsetStore.GetQueueOffset(topic, queueId, group);
+            consumerInfo.ConsumedOffset = _offsetStore.GetConsumeOffset(topic, queueId, group);
             consumerInfo.UnConsumedMessageCount = consumerInfo.QueueMaxOffset - consumerInfo.ConsumedOffset;
             return consumerInfo;
         }

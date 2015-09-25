@@ -7,6 +7,7 @@ using ECommon.Components;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;
+using EQueue.Broker.Storage;
 using EQueue.Clients.Consumers;
 using EQueue.Configurations;
 using EQueue.Protocols;
@@ -58,7 +59,7 @@ namespace QuickStart.ConsumerClient
             private long _handledCount;
             private Stopwatch _watch;
 
-            public void Handle(QueueMessage message, IMessageContext context)
+            public void Handle(MessageLogRecord message, IMessageContext context)
             {
                 var currentCount = Interlocked.Increment(ref _handledCount);
                 if (currentCount == 1)

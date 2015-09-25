@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using ECommon.Components;
@@ -45,6 +46,13 @@ namespace EQueue.Broker
             }
             _chunkManager.Load();
             _chunkWriter.Open();
+
+            var lastChunk = _chunkManager.GetLastChunk();
+            var lastOffsetGlobalPosition = lastChunk.DataPosition + lastChunk.ChunkHeader.ChunkDataStartPosition;
+            if (lastOffsetGlobalPosition > 0)
+            {
+                _currentOffset = lastOffsetGlobalPosition / _chunkManager.Config.ChunkDataUnitSize;
+            }
         }
         public void Close()
         {
@@ -107,6 +115,10 @@ namespace EQueue.Broker
         {
             var record = new QueueLogRecord();
             record.ReadFrom(reader);
+            if (record.MessageLogPosition <= 0)
+            {
+                return null;
+            }
             return record;
         }
         private QueueSetting LoadQueueSetting()
