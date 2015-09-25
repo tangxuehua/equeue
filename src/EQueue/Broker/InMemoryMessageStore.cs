@@ -72,9 +72,12 @@ namespace EQueue.Broker
                 routingKey);
             if (messageOffset < _setting.MessageMaxCacheSize)
             {
-                _messageDict.TryAdd(messageOffset, queueMessage);
+                if (_messageDict.TryAdd(messageOffset, queueMessage))
+                {
+                    return queueMessage;
+                }
             }
-            return queueMessage;
+            return null;
         }
         public QueueMessage GetMessage(long offset)
         {

@@ -123,8 +123,9 @@ namespace EQueue.Broker
             if (_messageDict.TryAdd(messageOffset, queueMessage))
             {
                 WriteMessageLog(queueMessage);
+                return queueMessage;
             }
-            return queueMessage;
+            return null;
         }
         public QueueMessage GetMessage(long offset)
         {

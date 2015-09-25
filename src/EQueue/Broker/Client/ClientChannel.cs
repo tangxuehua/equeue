@@ -19,7 +19,7 @@ namespace EQueue.Broker.Client
 
         public bool IsTimeout(double timeoutMilliseconds)
         {
-            return DateTime.Now > LastUpdateTime.AddMilliseconds(timeoutMilliseconds);
+            return (DateTime.Now - LastUpdateTime).TotalMilliseconds >= timeoutMilliseconds;
         }
         public void Close()
         {
