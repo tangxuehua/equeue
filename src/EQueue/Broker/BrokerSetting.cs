@@ -35,7 +35,7 @@ namespace EQueue.Broker
             NotifyMessageArrivedThreadMaxCount = 32;
             ScanNotActiveConsumerInterval = 1000 * 5;
             ConsumerExpiredTimeout = 1000 * 60;
-            QueueIndexMaxCacheSize = 20 * 10000;
+            QueueIndexMaxCacheSize = 500 * 10000;
             AutoCreateTopic = true;
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 1024;

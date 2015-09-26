@@ -332,12 +332,12 @@ namespace EQueue.Broker
                 }
                 if (totalRemovedCount > 0)
                 {
-                    _logger.InfoFormat("Auto removed {0} unconsumed messages which exceed the max cache size, current total unconsumed message count:{1}, current exceed count:{2}, currentMessageOffset:{3}, currentPersistedMessageOffset:{4}", totalRemovedCount, currentTotalCount, exceedCount, currentMessageOffset, currentPersistedMessageOffet);
+                    _logger.InfoFormat("Auto removed {0} unconsumed messages which exceed the max cache size ({1}), current total unconsumed message count:{2}, current exceed count:{3}, currentMessageOffset:{4}, currentPersistedMessageOffset:{5}", totalRemovedCount, _setting.MessageMaxCacheSize, currentTotalCount, exceedCount, currentMessageOffset, currentPersistedMessageOffet);
                 }
                 else
                 {
-                    _logger.ErrorFormat("The current unconsumed message count in memory exceeds the message max cache size, but we cannot remove any messages from memory, please check if all the messages are persisted. exceed count:{0}, current total unconsumed message count:{1}, currentMessageOffset:{2}, currentPersistedMessageOffset:{3}",
-                        exceedCount, currentTotalCount, currentMessageOffset, currentPersistedMessageOffet);
+                    _logger.ErrorFormat("The current unconsumed message count in memory exceeds the message max cache size ({0}), but we cannot remove any messages from memory, please check if all the messages are persisted. exceed count:{1}, current total unconsumed message count:{2}, currentMessageOffset:{3}, currentPersistedMessageOffset:{4}",
+                        _setting.MessageMaxCacheSize, exceedCount, currentTotalCount, currentMessageOffset, currentPersistedMessageOffet);
                 }
             }
         }
@@ -790,7 +790,7 @@ namespace EQueue.Broker
                     {
                         copy.WriteToServer(messageDataTable);
                         transaction.Commit();
-                        _logger.DebugFormat("Success to bulk copy {0} messages to db, maxMessageOffset:{1}", messageDataTable.Rows.Count, maxMessageOffset);
+                        _logger.InfoFormat("Success to bulk copy {0} messages to db, maxMessageOffset:{1}", messageDataTable.Rows.Count, maxMessageOffset);
                     }
                     catch (Exception ex)
                     {

@@ -30,17 +30,10 @@ namespace QuickStart.BrokerServer
                 .RegisterEQueueComponents();
 
             var persistMode = ConfigurationManager.AppSettings["persistMode"];
-            var maxCacheMessageSize = int.Parse(ConfigurationManager.AppSettings["maxCacheMessageSize"]);
 
-            if (persistMode == "in-memory")
-            {
-                configuration.UseInMemoryMessageStore(new InMemoryMessageStoreSetting { MessageMaxCacheSize = maxCacheMessageSize });
-            }
-            else if (persistMode == "sql")
+            if (persistMode == "sql")
             {
                 var connectionString = ConfigurationManager.AppSettings["connectionString"];
-                var persistMessageInterval = int.Parse(ConfigurationManager.AppSettings["persistMessageInterval"]);
-                var persistMessageMaxCount = int.Parse(ConfigurationManager.AppSettings["persistMessageMaxCount"]);
                 var messageLogFile = ConfigurationManager.AppSettings["messageLogFile"];
 
                 var queueStoreSetting = new SqlServerQueueStoreSetting
@@ -50,10 +43,7 @@ namespace QuickStart.BrokerServer
                 var messageStoreSetting = new SqlServerMessageStoreSetting
                 {
                     ConnectionString = connectionString,
-                    PersistMessageInterval = persistMessageInterval,
-                    PersistMessageMaxCount = persistMessageMaxCount,
-                    MessageLogFile = messageLogFile,
-                    MessageMaxCacheSize = maxCacheMessageSize
+                    MessageLogFile = messageLogFile
                 };
                 var offsetManagerSetting = new SqlServerOffsetManagerSetting
                 {

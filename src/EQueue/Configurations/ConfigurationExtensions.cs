@@ -23,11 +23,6 @@ namespace EQueue.Configurations
             return configuration;
         }
 
-        public static Configuration UseInMemoryMessageStore(this Configuration configuration, InMemoryMessageStoreSetting setting)
-        {
-            configuration.SetDefault<IMessageStore, InMemoryMessageStore>(new InMemoryMessageStore(setting));
-            return configuration;
-        }
         public static Configuration UseSqlServerQueueStore(this Configuration configuration, SqlServerQueueStoreSetting setting)
         {
             configuration.SetDefault<IQueueStore, SqlServerQueueStore>(new SqlServerQueueStore(setting));

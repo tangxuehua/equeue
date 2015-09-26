@@ -34,7 +34,7 @@ namespace EQueue.Broker
             IgnoreUnConsumedMessage = false;
             BatchLoadMessageSize = 5000;
             BatchLoadQueueIndexSize = 5000;
-            MessageMaxCacheSize = 20 * 10000;
+            MessageMaxCacheSize = 100 * 10000;
             MessageLogFile = "/home/admin/logs/equeue/message.log";
         }
     }
