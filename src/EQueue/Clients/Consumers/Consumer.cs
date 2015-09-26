@@ -245,7 +245,7 @@ namespace EQueue.Clients.Consumers
                 return;
             }
 
-            if (remotingResponse.Code == (int)PullStatus.Found)
+            if (remotingResponse.Code == (short)PullStatus.Found)
             {
                 var messages = _binarySerializer.Deserialize<IEnumerable<MessageLogRecord>>(remotingResponse.Body);
                 if (messages.Count() > 0)

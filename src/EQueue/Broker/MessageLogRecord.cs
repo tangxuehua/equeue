@@ -7,6 +7,8 @@ namespace EQueue.Broker.Storage
     [Serializable]
     public class MessageLogRecord : ILogRecord
     {
+        public string MessageId { get; private set; }
+        public long LogPosition { get; private set; }
         public string Topic { get; private set; }
         public int Code { get; private set; }
         public byte[] Body { get; private set; }
@@ -40,8 +42,19 @@ namespace EQueue.Broker.Storage
             StoredTime = storedTime;
         }
 
-        public void WriteTo(BinaryWriter writer)
+        public void WriteTo(long logPosition, BinaryWriter writer)
         {
+            LogPosition = logPosition;
+            MessageId = CreateMessageId(logPosition);
+
+            //logPosition
+            writer.Write(LogPosition);
+
+            //messageId
+            var messageIdBytes = Encoding.UTF8.GetBytes(MessageId);
+            writer.Write(messageIdBytes.Length);
+            writer.Write(messageIdBytes);
+
             //topic
             var topicBytes = Encoding.UTF8.GetBytes(Topic);
             writer.Write(topicBytes.Length);
@@ -75,10 +88,15 @@ namespace EQueue.Broker.Storage
 
             //storedTime
             writer.Write(StoredTime.Ticks);
-
         }
         public void ReadFrom(BinaryReader reader)
         {
+            //logPosition
+            LogPosition = reader.ReadInt64();
+
+            //messageId
+            MessageId = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
+
             //topic
             Topic = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
 
@@ -105,6 +123,12 @@ namespace EQueue.Broker.Storage
 
             //storedTime
             StoredTime = new DateTime(reader.ReadInt64());
+        }
+
+        private static string CreateMessageId(long messagePosition)
+        {
+            //TODO，还要结合当前的Broker的IP作为MessageId的一部分
+            return messagePosition.ToString();
         }
     }
 }

@@ -64,7 +64,7 @@ namespace EQueue.Broker
             _chunkWriter.Close();
             _chunkManager.Close();
         }
-        public long StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
+        public MessageLogRecord StoreMessage(int queueId, long queueOffset, Message message, string routingKey)
         {
             var record = new MessageLogRecord(
                 message.Topic,
@@ -76,7 +76,8 @@ namespace EQueue.Broker
                 routingKey,
                 message.CreatedTime,
                 DateTime.Now);
-            return _chunkWriter.Write(record);
+            _chunkWriter.Write(record);
+            return record;
         }
         public MessageLogRecord GetMessage(long position)
         {

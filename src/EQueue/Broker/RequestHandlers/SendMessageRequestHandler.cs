@@ -1,7 +1,7 @@
-﻿using System;
-using ECommon.Components;
+﻿using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
+using EQueue.Broker.Exceptions;
 using EQueue.Broker.LongPolling;
 using EQueue.Protocols;
 using EQueue.Utils;
@@ -32,7 +32,7 @@ namespace EQueue.Broker.Processors
             var queue = _queueService.GetQueue(message.Topic, queueId);
             if (queue == null)
             {
-                throw new Exception(string.Format("Queue not exist, topic: {0}, queueId: {1}", message.Topic, queueId));
+                throw new QueueNotExistException(message.Topic, queueId);
             }
 
             //消息写文件需要加锁，确保顺序写文件
@@ -40,11 +40,10 @@ namespace EQueue.Broker.Processors
             lock (_syncObj)
             {
                 var queueOffset = queue.CurrentOffset;
-                var messagePosition = _messageStore.StoreMessage(queueId, queueOffset, message, request.RoutingKey);
-                queue.AddMessage(messagePosition + 1);
+                var messageRecord = _messageStore.StoreMessage(queueId, queueOffset, message, request.RoutingKey);
+                queue.AddMessage(messageRecord.LogPosition + 1);
                 queue.IncrementCurrentOffset();
-                var messageId = CreateMessageId(messagePosition);
-                result = new MessageStoreResult(message.Key, messageId, message.Code, message.Topic, queueId, queueOffset);
+                result = new MessageStoreResult(message.Key, messageRecord.MessageId, message.Code, message.Topic, queueId, queueOffset);
             }
 
             //如果需要立即通知所有消费者有新消息，则立即通知
@@ -55,12 +54,6 @@ namespace EQueue.Broker.Processors
 
             var data = MessageUtils.EncodeMessageStoreResult(result);
             return RemotingResponseFactory.CreateResponse(remotingRequest, data);
-        }
-
-        private static string CreateMessageId(long messagePosition)
-        {
-            //TODO，还要结合当前的Broker的IP作为MessageId的一部分
-            return messagePosition.ToString();
         }
     }
 }

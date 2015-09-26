@@ -11,7 +11,7 @@ namespace EQueue.Broker.Storage
         {
             MessageLogPosition = messageLogPosition;
         }
-        public void WriteTo(BinaryWriter writer)
+        public void WriteTo(long logPosition, BinaryWriter writer)
         {
             writer.Write(MessageLogPosition);
         }

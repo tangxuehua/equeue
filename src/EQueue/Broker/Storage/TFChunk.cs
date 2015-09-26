@@ -379,7 +379,7 @@ namespace EQueue.Broker.Storage
                     return RecordWriteResult.NotEnoughSpace();
                 }
                 bufferStream.Position = 0;
-                record.WriteTo(bufferWriter);
+                record.WriteTo(GlobalDataPosition, bufferWriter);
                 var recordLength = bufferStream.Length;
                 if (recordLength != _chunkConfig.ChunkDataUnitSize)
                 {
@@ -390,7 +390,7 @@ namespace EQueue.Broker.Storage
             {
                 bufferStream.SetLength(4);
                 bufferStream.Position = 4;
-                record.WriteTo(bufferWriter);
+                record.WriteTo(GlobalDataPosition, bufferWriter);
                 var recordLength = (int)bufferStream.Length - 4;
                 bufferWriter.Write(recordLength); // write record length suffix
                 bufferStream.Position = 0;
