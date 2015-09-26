@@ -86,7 +86,7 @@
     <Compile Include="Broker\Client\ConsumerGroup.cs" />
     <Compile Include="Broker\Client\ConsumerManager.cs" />
     <Compile Include="Broker\IOffsetStore.cs" />
-    <Compile Include="Broker\InvalidQueueIdException.cs" />
+    <Compile Include="Broker\Exceptions\QueueNotExistException.cs" />
     <Compile Include="Broker\LongPolling\PullRequest.cs" />
     <Compile Include="Broker\LongPolling\SuspendedPullRequestManager.cs" />
     <Compile Include="Broker\BrokerController.cs" />
@@ -116,6 +116,7 @@
     <Compile Include="Broker\Storage\Checkpoints\InMemoryCheckpoint.cs" />
     <Compile Include="Broker\Storage\LogRecords\ILogRecord.cs" />
     <Compile Include="Broker\Storage\Checkpoints\MemoryMappedFileCheckpoint.cs" />
+    <Compile Include="Broker\Storage\RecordBufferReadResult.cs" />
     <Compile Include="Broker\Storage\TFChunkManagerConfig.cs" />
     <Compile Include="Broker\Storage\TFChunkManager.cs" />
     <Compile Include="Broker\Storage\TFChunkReader.cs" />
@@ -164,7 +165,6 @@
     <Compile Include="Clients\Consumers\ProcessQueue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Clients\Consumers\PullRequest.cs" />
-    <Compile Include="Clients\Consumers\PullResult.cs" />
     <Compile Include="Protocols\PullStatus.cs" />
     <Compile Include="Clients\Producers\SendResult.cs" />
     <Compile Include="Clients\Producers\SendStatus.cs" />

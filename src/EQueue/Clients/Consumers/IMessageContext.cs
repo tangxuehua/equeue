@@ -5,6 +5,6 @@ namespace EQueue.Clients.Consumers
 {
     public interface IMessageContext
     {
-        void OnMessageHandled(MessageLogRecord queueMessage);
+        void OnMessageHandled(QueueMessage queueMessage);
     }
 }

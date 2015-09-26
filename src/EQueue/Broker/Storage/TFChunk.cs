@@ -277,6 +277,27 @@ namespace EQueue.Broker.Storage
                 ReturnReaderWorkItem(readerWorkItem);
             }
         }
+        public RecordBufferReadResult TryReadRecordBufferAt(long dataPosition)
+        {
+            var readerWorkItem = GetReaderWorkItem();
+            try
+            {
+                if (dataPosition >= DataPosition)
+                {
+                    return RecordBufferReadResult.Failure;
+                }
+
+                byte[] recordBuffer;
+                var result = IsFixedDataSize() ?
+                    TryReadFixedSizeRecordBufferForwardInternal(readerWorkItem, dataPosition, out recordBuffer) :
+                    TryReadRecordBufferForwardInternal(readerWorkItem, dataPosition, out recordBuffer);
+                return new RecordBufferReadResult(result, recordBuffer);
+            }
+            finally
+            {
+                ReturnReaderWorkItem(readerWorkItem);
+            }
+        }
 
         private bool TryReadForwardInternal(ReaderWorkItem readerWorkItem, long dataPosition, out ILogRecord record)
         {
@@ -353,6 +374,70 @@ namespace EQueue.Broker.Storage
                         string.Format("Invalid fixed data length, expected length {0}, but was {1}, dataPosition: {2}. Something is seriously wrong in chunk {3}.",
                                       _chunkConfig.ChunkDataUnitSize, recordLength, dataPosition, this));
             }
+
+            return true;
+        }
+        private bool TryReadRecordBufferForwardInternal(ReaderWorkItem readerWorkItem, long dataPosition, out byte[] recordBuffer)
+        {
+            recordBuffer = null;
+
+            if (dataPosition + 2 * sizeof(int) > DataPosition) // no space even for length prefix and suffix
+            {
+                return false;
+            }
+
+            readerWorkItem.Stream.Position = GetStreamPosition(dataPosition);
+
+            var length = readerWorkItem.Reader.ReadInt32();
+            var lengthBuffer = BitConverter.GetBytes(length);
+            if (length <= 0)
+            {
+                throw new InvalidReadException(
+                    string.Format("Log record at data position {0} has non-positive length: {1} in chunk {2}",
+                                  dataPosition, length, this));
+            }
+            if (length > _chunkConfig.MaxLogRecordSize)
+            {
+                throw new InvalidReadException(
+                    string.Format("Log record at data position {0} has too large length: {1} bytes, while limit is {2} bytes, in chunk {3}",
+                                  dataPosition, length, _chunkConfig.MaxLogRecordSize, this));
+            }
+            if (dataPosition + length + 2 * sizeof(int) > DataPosition)
+            {
+                throw new InvalidReadException(
+                    string.Format("There is not enough space to read full record (length prefix: {0}). Actual pre-position: {1}. Something is seriously wrong in chunk {2}.",
+                                  length, dataPosition, this));
+            }
+
+            recordBuffer = new byte[4 + length];
+            Buffer.BlockCopy(lengthBuffer, 0, recordBuffer, 0, 4);
+            readerWorkItem.Reader.Read(recordBuffer, 4, length);
+
+            // verify suffix length == prefix length
+            int suffixLength = readerWorkItem.Reader.ReadInt32();
+            if (suffixLength != length)
+            {
+                throw new InvalidReadException(
+                    string.Format("Prefix/suffix length inconsistency: prefix length({0}) != suffix length ({1}). Actual pre-position: {2}. Something is seriously wrong in chunk {3}.",
+                                  length, suffixLength, dataPosition, this));
+            }
+
+            return true;
+        }
+        private bool TryReadFixedSizeRecordBufferForwardInternal(ReaderWorkItem readerWorkItem, long dataPosition, out byte[] recordBuffer)
+        {
+            recordBuffer = null;
+
+            if (dataPosition + _chunkConfig.ChunkDataUnitSize > DataPosition)
+            {
+                return false;
+            }
+
+            var startStreamPosition = GetStreamPosition(dataPosition);
+            readerWorkItem.Stream.Position = startStreamPosition;
+
+            recordBuffer = new byte[_chunkConfig.ChunkDataUnitSize];
+            readerWorkItem.Reader.Read(recordBuffer, 0, recordBuffer.Length);
 
             return true;
         }

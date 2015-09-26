@@ -93,15 +93,15 @@ namespace EQueue.Broker.Processors
             }
         }
 
-        private IEnumerable<MessageLogRecord> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
+        private IEnumerable<byte[]> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
         {
             var queue = _queueStore.GetQueue(topic, queueId);
             if (queue == null)
             {
-                return new MessageLogRecord[0];
+                return new List<byte[]>();
             }
 
-            var messages = new List<MessageLogRecord>();
+            var messages = new List<byte[]>();
             var currentQueueOffset = queueOffset;
             while (currentQueueOffset <= queue.CurrentOffset && messages.Count < batchSize)
             {
@@ -184,9 +184,9 @@ namespace EQueue.Broker.Processors
         {
             return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.NextOffsetReset, BitConverter.GetBytes(nextOffset));
         }
-        private RemotingResponse BuildFoundResponse(RemotingRequest remotingRequest, IEnumerable<MessageLogRecord> messages)
+        private RemotingResponse BuildFoundResponse(RemotingRequest remotingRequest, IEnumerable<byte[]> messages)
         {
-            return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.Found, _binarySerializer.Serialize(messages));
+            return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.Found, Combine(messages));
         }
         private void SendRemotingResponse(PullRequest pullRequest, RemotingResponse remotingResponse)
         {
@@ -230,6 +230,17 @@ namespace EQueue.Broker.Processors
             {
                 return PullMessageRequest.ReadFromStream(stream);
             }
+        }
+        private static byte[] Combine(IEnumerable<byte[]> arrays)
+        {
+            byte[] destination = new byte[arrays.Sum(x => x.Length)];
+            int offset = 0;
+            foreach (byte[] data in arrays)
+            {
+                Buffer.BlockCopy(data, 0, destination, offset, data.Length);
+                offset += data.Length;
+            }
+            return destination;
         }
     }
 }

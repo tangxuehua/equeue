@@ -11,7 +11,7 @@ namespace EQueue.Broker
         void Start();
         void Shutdown();
         MessageLogRecord StoreMessage(int queueId, long queueOffset, Message message, string routingKey);
-        MessageLogRecord GetMessage(long position);
+        byte[] GetMessage(long position);
         void UpdateMinConsumedMessagePosition(long minConsumedMessagePosition);
     }
 }

@@ -229,6 +229,30 @@ namespace EQueue.Clients.Consumers
                 SchedulePullRequest(pullRequest);
             }
         }
+        private IEnumerable<QueueMessage> DecodeMessages(byte[] buffer)
+        {
+            var messages = new List<QueueMessage>();
+            using (var stream = new MemoryStream(buffer))
+            {
+                using (var reader = new BinaryReader(stream))
+                {
+                    var messageLength = reader.ReadInt32();
+                    while (messageLength > 0)
+                    {
+                        var message = new QueueMessage();
+                        message.ReadFrom(reader);
+                        messages.Add(message);
+                        if (stream.Position >= stream.Length)
+                        {
+                            break;
+                        }
+                        messageLength = reader.ReadInt32();
+                    }
+                }
+            }
+
+            return messages;
+        }
         private void ProcessPullResponse(PullRequest pullRequest, RemotingResponse remotingResponse)
         {
             if (remotingResponse == null)
@@ -247,7 +271,7 @@ namespace EQueue.Clients.Consumers
 
             if (remotingResponse.Code == (short)PullStatus.Found)
             {
-                var messages = _binarySerializer.Deserialize<IEnumerable<MessageLogRecord>>(remotingResponse.Body);
+                var messages = DecodeMessages(remotingResponse.Body);
                 if (messages.Count() > 0)
                 {
                     pullRequest.ProcessQueue.AddMessages(messages);

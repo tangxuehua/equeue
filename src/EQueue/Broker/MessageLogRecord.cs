@@ -1,46 +1,25 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using EQueue.Protocols;
 
 namespace EQueue.Broker.Storage
 {
     [Serializable]
-    public class MessageLogRecord : ILogRecord
+    public class MessageLogRecord : QueueMessage, ILogRecord
     {
-        public string MessageId { get; private set; }
-        public long LogPosition { get; private set; }
-        public string Topic { get; private set; }
-        public int Code { get; private set; }
-        public byte[] Body { get; private set; }
-        public string MessageKey { get; private set; }
-        public int QueueId { get; private set; }
-        public long QueueOffset { get; private set; }
-        public string RoutingKey { get; private set; }
-        public DateTime CreatedTime { get; private set; }
-        public DateTime StoredTime { get; internal set; }
-
         public MessageLogRecord() { }
         public MessageLogRecord(
             string topic,
             int code,
-            string messageKey,
+            string key,
             byte[] body,
             int queueId,
             long queueOffset,
             string routingKey,
             DateTime createdTime,
             DateTime storedTime)
-        {
-            Topic = topic;
-            RoutingKey = routingKey;
-            MessageKey = messageKey;
-            Code = code;
-            Body = body;
-            QueueId = queueId;
-            QueueOffset = queueOffset;
-            CreatedTime = createdTime;
-            StoredTime = storedTime;
-        }
+            : base(null, topic, code, key, body, queueId, queueOffset, createdTime, storedTime, routingKey) { }
 
         public void WriteTo(long logPosition, BinaryWriter writer)
         {
@@ -65,10 +44,10 @@ namespace EQueue.Broker.Storage
             writer.Write(routingKeyBytes.Length);
             writer.Write(routingKeyBytes);
 
-            //messageKey
-            var messageKeyBytes = Encoding.UTF8.GetBytes(MessageKey);
-            writer.Write(messageKeyBytes.Length);
-            writer.Write(messageKeyBytes);
+            //key
+            var keyBytes = Encoding.UTF8.GetBytes(Key);
+            writer.Write(keyBytes.Length);
+            writer.Write(keyBytes);
 
             //code
             writer.Write(Code);
@@ -88,41 +67,6 @@ namespace EQueue.Broker.Storage
 
             //storedTime
             writer.Write(StoredTime.Ticks);
-        }
-        public void ReadFrom(BinaryReader reader)
-        {
-            //logPosition
-            LogPosition = reader.ReadInt64();
-
-            //messageId
-            MessageId = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
-
-            //topic
-            Topic = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
-
-            //routingKey
-            RoutingKey = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
-
-            //messageKey
-            MessageKey = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
-
-            //code
-            Code = reader.ReadInt32();
-
-            //body
-            Body = reader.ReadBytes(reader.ReadInt32());
-
-            //queueId
-            QueueId = reader.ReadInt32();
-
-            //queueOffset
-            QueueOffset = reader.ReadInt64();
-
-            //createdTime
-            CreatedTime = new DateTime(reader.ReadInt64());
-
-            //storedTime
-            StoredTime = new DateTime(reader.ReadInt64());
         }
 
         private static string CreateMessageId(long messagePosition)

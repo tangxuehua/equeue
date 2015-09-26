@@ -8,7 +8,7 @@ namespace EQueue.Clients.Consumers
 {
     public class ProcessQueue
     {
-        private SortedDictionary<long, MessageLogRecord> _messageDict = new SortedDictionary<long, MessageLogRecord>();
+        private SortedDictionary<long, QueueMessage> _messageDict = new SortedDictionary<long, QueueMessage>();
         private long _consumedQueueOffset = -1L;
         private long _previousConsumedQueueOffset = -1L;
 
@@ -23,7 +23,7 @@ namespace EQueue.Clients.Consumers
             }
             return false;
         }
-        public void AddMessages(IEnumerable<MessageLogRecord> messages)
+        public void AddMessages(IEnumerable<QueueMessage> messages)
         {
             lock (this)
             {
@@ -33,7 +33,7 @@ namespace EQueue.Clients.Consumers
                 }
             }
         }
-        public void RemoveMessage(MessageLogRecord message)
+        public void RemoveMessage(QueueMessage message)
         {
             lock (this)
             {

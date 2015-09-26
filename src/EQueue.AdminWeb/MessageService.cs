@@ -130,9 +130,9 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("DisableQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
-        public QueueMessage GetMessageDetail(long? messageOffset, string messageId)
+        public QueueMessage GetMessageDetail(string messageId)
         {
-            var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageOffset, messageId));
+            var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageId));
             var remotingRequest = new RemotingRequest((int)RequestCode.GetMessageDetail, requestData);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == (int)ResponseCode.Success)

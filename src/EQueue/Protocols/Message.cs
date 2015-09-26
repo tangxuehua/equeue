@@ -6,12 +6,13 @@ namespace EQueue.Protocols
     [Serializable]
     public class Message
     {
-        public string Topic { get; private set; }
-        public int Code { get; private set; }
-        public string Key { get; private set; }
-        public byte[] Body { get; private set; }
-        public DateTime CreatedTime { get; private set; }
+        public string Topic { get; set; }
+        public int Code { get; set; }
+        public string Key { get; set; }
+        public byte[] Body { get; set; }
+        public DateTime CreatedTime { get; set; }
 
+        public Message() { }
         public Message(string topic, int code, string key, byte[] body) : this(topic, code, key, body, DateTime.Now) { }
         public Message(string topic, int code, string key, byte[] body, DateTime createdTime)
         {

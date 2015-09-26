@@ -59,7 +59,7 @@ namespace QuickStart.ConsumerClient
             private long _handledCount;
             private Stopwatch _watch;
 
-            public void Handle(MessageLogRecord message, IMessageContext context)
+            public void Handle(QueueMessage message, IMessageContext context)
             {
                 var currentCount = Interlocked.Increment(ref _handledCount);
                 if (currentCount == 1)

@@ -79,12 +79,12 @@ namespace EQueue.Broker
             _chunkWriter.Write(record);
             return record;
         }
-        public MessageLogRecord GetMessage(long position)
+        public byte[] GetMessage(long position)
         {
-            var result = _chunkReader.TryReadAt(position);
+            var result = _chunkReader.TryReadRecordBufferAt(position);
             if (result.Success)
             {
-                return result.LogRecord as MessageLogRecord;
+                return result.RecordBuffer;
             }
             return null;
         }

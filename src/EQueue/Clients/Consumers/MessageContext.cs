@@ -6,14 +6,14 @@ namespace EQueue.Clients.Consumers
 {
     public class MessageContext : IMessageContext
     {
-        public Action<MessageLogRecord> MessageHandledAction { get; private set; }
+        public Action<QueueMessage> MessageHandledAction { get; private set; }
 
-        public MessageContext(Action<MessageLogRecord> messageHandledAction)
+        public MessageContext(Action<QueueMessage> messageHandledAction)
         {
             MessageHandledAction = messageHandledAction;
         }
 
-        public void OnMessageHandled(MessageLogRecord queueMessage)
+        public void OnMessageHandled(QueueMessage queueMessage)
         {
             MessageHandledAction(queueMessage);
         }
