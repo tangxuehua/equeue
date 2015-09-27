@@ -14,14 +14,14 @@ namespace EQueue.Broker
         private readonly TFChunkWriter _chunkWriter;
         private readonly TFChunkReader _chunkReader;
         private readonly TFChunkManager _chunkManager;
-        private long _currentOffset = 0;
+        private long _nextOffset = 0;
         private readonly IJsonSerializer _jsonSerializer;
         private QueueSetting _setting;
         private readonly string _queueSettingFile;
 
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
-        public long CurrentOffset { get { return _currentOffset; } }
+        public long NextOffset { get { return _nextOffset; } }
         public QueueSetting Setting { get { return _setting; } }
 
         public Queue(string topic, int queueId)
@@ -30,7 +30,7 @@ namespace EQueue.Broker
             QueueId = queueId;
 
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
-            _chunkManager = new TFChunkManager(string.Format("{0}-{1}", Topic, QueueId), BrokerController.Instance.Setting.QueueChunkConfig, ReadMessageIndex, Topic + @"\" + QueueId);
+            _chunkManager = new TFChunkManager(string.Format("{0}-{1}", Topic, QueueId), BrokerController.Instance.Setting.QueueChunkConfig, Topic + @"\" + QueueId);
             _chunkWriter = new TFChunkWriter(_chunkManager);
             _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
             _queueSettingFile = Path.Combine(_chunkManager.ChunkPath, QueueSettingFileName);
@@ -44,14 +44,14 @@ namespace EQueue.Broker
                 _setting = new QueueSetting { Status = QueueStatus.Normal };
                 SaveQueueSetting();
             }
-            _chunkManager.Load();
+            _chunkManager.Load(ReadMessageIndex);
             _chunkWriter.Open();
 
             var lastChunk = _chunkManager.GetLastChunk();
             var lastOffsetGlobalPosition = lastChunk.DataPosition + lastChunk.ChunkHeader.ChunkDataStartPosition;
             if (lastOffsetGlobalPosition > 0)
             {
-                _currentOffset = lastOffsetGlobalPosition / _chunkManager.Config.ChunkDataUnitSize;
+                _nextOffset = lastOffsetGlobalPosition / _chunkManager.Config.ChunkDataUnitSize;
             }
         }
         public void Close()
@@ -66,12 +66,32 @@ namespace EQueue.Broker
         public long GetMessagePosition(long queueOffset)
         {
             var position = queueOffset * _chunkManager.Config.ChunkDataUnitSize;
-            var result = _chunkReader.TryReadAt(position);
-            if (result.Success)
+            var record = _chunkReader.TryReadAt(position, ReadMessageIndex);
+            return record.MessageLogPosition;
+        }
+        public long GetNextChunkFirstPosition(long queueOffset)
+        {
+            var position = queueOffset * _chunkManager.Config.ChunkDataUnitSize;
+            var chunkNum = (int)(position / _chunkManager.Config.GetChunkDataSize());
+            var nextChunkNum = chunkNum + 1;
+            var chunk = _chunkManager.GetChunk(nextChunkNum);
+
+            while (chunk == null)
             {
-                return ((QueueLogRecord)result.LogRecord).MessageLogPosition;
+                if (nextChunkNum <= _chunkManager.GetLastChunk().ChunkHeader.ChunkNumber)
+                {
+                    break;
+                }
+                nextChunkNum++;
+                chunk = _chunkManager.GetChunk(nextChunkNum);
             }
-            return -1L;
+
+            if (chunk != null)
+            {
+                return chunk.ChunkHeader.ChunkDataStartPosition / _chunkManager.Config.ChunkDataUnitSize;
+            }
+
+            throw new InvalidReadException("Failed to get the next chunk start position.");
         }
         public void Enable()
         {
@@ -83,9 +103,9 @@ namespace EQueue.Broker
             _setting.Status = QueueStatus.Disabled;
             SaveQueueSetting();
         }
-        public long IncrementCurrentOffset()
+        public long IncrementNextOffset()
         {
-            return _currentOffset++;
+            return _nextOffset++;
         }
         public long GetMinQueueOffset()
         {
@@ -98,23 +118,20 @@ namespace EQueue.Broker
             foreach (var chunk in chunks)
             {
                 var maxPosition = chunk.ChunkHeader.ChunkDataEndPosition;
-                var result = _chunkReader.TryReadAt(maxPosition);
-                if (result.Success)
+                var record = _chunkReader.TryReadAt(maxPosition, ReadMessageIndex);
+                var chunkLastMessagePosition = record.MessageLogPosition;
+
+                if (chunkLastMessagePosition <= minConsumedMessagePosition)
                 {
-                    var record = result.LogRecord as QueueLogRecord;
-                    var maxMessagePosition = record.MessageLogPosition;
-                    if (maxMessagePosition <= minConsumedMessagePosition)
-                    {
-                        _chunkManager.RemoveChunk(chunk);
-                    }
+                    _chunkManager.RemoveChunk(chunk);
                 }
             }
         }
 
-        private ILogRecord ReadMessageIndex(BinaryReader reader)
+        private QueueLogRecord ReadMessageIndex(int length, BinaryReader reader)
         {
             var record = new QueueLogRecord();
-            record.ReadFrom(reader);
+            record.ReadFrom(length, reader);
             if (record.MessageLogPosition <= 0)
             {
                 return null;

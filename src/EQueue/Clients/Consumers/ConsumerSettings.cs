@@ -33,7 +33,7 @@ namespace EQueue.Clients.Consumers
             HeartbeatBrokerInterval = 1000 * 5;
             UpdateTopicQueueCountInterval = 1000 * 5;
             PersistConsumerOffsetInterval = 1000 * 5;
-            PullThresholdForQueue = 10000;
+            PullThresholdForQueue = 100000;
             PullTimeDelayMillsWhenFlowControl = 3000;
             SuspendPullRequestMilliseconds = 60 * 1000;
             PullRequestTimeoutMilliseconds = 70 * 1000;

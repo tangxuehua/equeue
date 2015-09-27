@@ -60,7 +60,7 @@ namespace EQueue.Broker
             Queue queue;
             if (_queueDict.TryGetValue(key, out queue))
             {
-                return queue.CurrentOffset;
+                return queue.NextOffset - 1;
             }
             return -1;
         }

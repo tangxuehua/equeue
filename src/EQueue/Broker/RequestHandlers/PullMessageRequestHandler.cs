@@ -52,76 +52,134 @@ namespace EQueue.Broker.Processors
             }
 
             //尝试拉取消息
-            var messages = GetMessages(topic, queueId, pullOffset, request.PullMessageBatchSize);
+            var pullResult = PullMessages(topic, queueId, pullOffset, request.PullMessageBatchSize);
 
-            //如果消息存在，则返回消息
-            if (messages.Count() > 0)
+            //处理消息拉取结果
+            if (pullResult.Status == PullStatus.Found)
             {
-                return BuildFoundResponse(remotingRequest, messages);
+                return BuildFoundResponse(remotingRequest, pullResult.Messages);
             }
-
-            //消息不存在，如果挂起时间大于0，则挂起请求
-            if (request.SuspendPullRequestMilliseconds > 0)
+            else if (pullResult.Status == PullStatus.NextOffsetReset)
             {
-                var pullRequest = new PullRequest(
-                    remotingRequest,
-                    request,
-                    context,
-                    DateTime.Now,
-                    request.SuspendPullRequestMilliseconds,
-                    ExecutePullRequest,
-                    ExecutePullRequest,
-                    ExecuteReplacedPullRequest);
-                _suspendedPullRequestManager.SuspendPullRequest(pullRequest);
-                return null;
+                return BuildNextOffsetResetResponse(remotingRequest, pullResult.NextBeginOffset);
             }
-
-            var queueMinOffset = _queueStore.GetQueueMinOffset(topic, queueId);
-            var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
-
-            if (pullOffset < queueMinOffset)
+            else if (pullResult.Status == PullStatus.QueueNotExist)
             {
-                return BuildNextOffsetResetResponse(remotingRequest, queueMinOffset);
+                return BuildQueueNotExistResponse(remotingRequest);
             }
-            else if (pullOffset > queueCurrentOffset + 1)
+            else if (pullResult.Status == PullStatus.NoNewMessage)
             {
-                return BuildNextOffsetResetResponse(remotingRequest, queueCurrentOffset + 1);
+                if (request.SuspendPullRequestMilliseconds > 0)
+                {
+                    var pullRequest = new PullRequest(
+                        remotingRequest,
+                        request,
+                        context,
+                        DateTime.Now,
+                        request.SuspendPullRequestMilliseconds,
+                        ExecutePullRequest,
+                        ExecutePullRequest,
+                        ExecuteReplacedPullRequest);
+                    _suspendedPullRequestManager.SuspendPullRequest(pullRequest);
+                    return null;
+                }
+                return BuildNoNewMessageResponse(remotingRequest);
             }
             else
             {
-                return BuildNoNewMessageResponse(remotingRequest);
+                throw new Exception("Invalid pull result status.");
             }
         }
 
-        private IEnumerable<byte[]> GetMessages(string topic, int queueId, long queueOffset, int batchSize)
+        private PullMessageResult PullMessages(string topic, int queueId, long pullOffset, int maxPullSize)
         {
+            //先找到队列
             var queue = _queueStore.GetQueue(topic, queueId);
             if (queue == null)
             {
-                return new List<byte[]>();
+                return new PullMessageResult
+                {
+                    Status = PullStatus.QueueNotExist
+                };
             }
 
+            //尝试拉取消息
             var messages = new List<byte[]>();
-            var currentQueueOffset = queueOffset;
-            while (currentQueueOffset <= queue.CurrentOffset && messages.Count < batchSize)
+            var currentQueueOffset = pullOffset;
+            while (currentQueueOffset < queue.NextOffset && messages.Count < maxPullSize)
             {
-                var messagePosition = queue.GetMessagePosition(currentQueueOffset);
-                if (messagePosition <= 0)
+                try
                 {
-                    //TODO,要考虑文件删除了的情况，需要告诉Consumer到新的位置拉消息
-                    break;
-                }
-                else
-                {
+                    var messagePosition = queue.GetMessagePosition(currentQueueOffset);
+
+                    //这里减1是因为queue中存放的消息的position是实际的position加1
                     var message = _messageStore.GetMessage(messagePosition - 1);
-                    if (message != null)
-                    {
-                        messages.Add(message);
-                    }
+                    messages.Add(message);
+
+                    currentQueueOffset++;
                 }
-                currentQueueOffset++;
+                catch (ChunkNotExistException)
+                {
+                    _logger.InfoFormat("Chunk not exist, topic: {0}, queueId: {1}, currentQueueOffset: {2}", topic, queueId, currentQueueOffset);
+                }
+                catch (InvalidReadException ex)
+                {
+                    _logger.InfoFormat("Chunk read failed, topic: {0}, queueId: {1}, currentQueueOffset: {2}, errorMsg: {3}", topic, queueId, currentQueueOffset, ex.Message);
+                    throw;
+                }
             }
-            return messages;
+
+            //如果拉取到至少一个消息，则直接返回即可；
+            if (messages.Count > 0)
+            {
+                return new PullMessageResult
+                {
+                    Status = PullStatus.Found,
+                    Messages = messages
+                };
+            }
+
+            //如果没有拉取到消息，则继续判断pullOffset的位置是否合法，分析没有拉取到消息的原因
+
+            var queueMinOffset = _queueStore.GetQueueMinOffset(topic, queueId);
+            var queueMaxOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
+
+            //pullOffset太小
+            if (pullOffset < queueMinOffset)
+            {
+                return new PullMessageResult
+                {
+                    Status = PullStatus.NextOffsetReset,
+                    NextBeginOffset = queueMinOffset
+                };
+            }
+            //pullOffset太大
+            else if (pullOffset > queueMaxOffset + 1)
+            {
+                return new PullMessageResult
+                {
+                    Status = PullStatus.NextOffsetReset,
+                    NextBeginOffset = queueMaxOffset + 1
+                };
+            }
+            //如果正好等于queueMaxOffset+1，属于正常情况，表示当前队列没有新消息，告诉客户端没有新消息即可
+            else if (pullOffset == queueMaxOffset + 1)
+            {
+                return new PullMessageResult
+                {
+                    Status = PullStatus.NoNewMessage
+                };
+            }
+            //到这里，说明当前的pullOffset在队列的正常范围，即：>=queueMinOffset and <= queueCurrentOffset；
+            //正常情况，应该有消息可以返回，除非消息或消息索引所在的物理文件被删除了或正在被删除；
+            else
+            {
+                return new PullMessageResult
+                {
+                    Status = PullStatus.NextOffsetReset,
+                    NextBeginOffset = queue.GetNextChunkFirstPosition(currentQueueOffset)
+                };
+            }
         }
         private void ExecutePullRequest(PullRequest pullRequest)
         {
@@ -134,27 +192,22 @@ namespace EQueue.Broker.Processors
             var topic = pullMessageRequest.MessageQueue.Topic;
             var queueId = pullMessageRequest.MessageQueue.QueueId;
             var pullOffset = pullMessageRequest.QueueOffset;
+            var pullResult = PullMessages(topic, queueId, pullOffset, pullMessageRequest.PullMessageBatchSize);
+            var remotingRequest = pullRequest.RemotingRequest;
 
-            var messages = GetMessages(topic, queueId, pullOffset, pullMessageRequest.PullMessageBatchSize);
-
-            if (messages.Count() > 0)
+            if (pullResult.Status == PullStatus.Found)
             {
-                SendRemotingResponse(pullRequest, BuildFoundResponse(pullRequest.RemotingRequest, messages));
-                return;
+                SendRemotingResponse(pullRequest, BuildFoundResponse(pullRequest.RemotingRequest, pullResult.Messages));
             }
-
-            var queueMinOffset = _queueStore.GetQueueMinOffset(topic, queueId);
-            var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
-
-            if (pullOffset < queueMinOffset)
+            else if (pullResult.Status == PullStatus.NextOffsetReset)
             {
-                SendRemotingResponse(pullRequest, BuildNextOffsetResetResponse(pullRequest.RemotingRequest, queueMinOffset));
+                SendRemotingResponse(pullRequest, BuildNextOffsetResetResponse(remotingRequest, pullResult.NextBeginOffset));
             }
-            else if (pullOffset > queueCurrentOffset + 1)
+            else if (pullResult.Status == PullStatus.QueueNotExist)
             {
-                SendRemotingResponse(pullRequest, BuildNextOffsetResetResponse(pullRequest.RemotingRequest, queueCurrentOffset + 1));
+                SendRemotingResponse(pullRequest, BuildQueueNotExistResponse(remotingRequest));
             }
-            else
+            else if (pullResult.Status == PullStatus.NoNewMessage)
             {
                 SendRemotingResponse(pullRequest, BuildNoNewMessageResponse(pullRequest.RemotingRequest));
             }
@@ -169,8 +222,15 @@ namespace EQueue.Broker.Processors
         }
         private bool IsPullRequestValid(PullRequest pullRequest)
         {
-            var consumerGroup = _consumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
-            return consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Connection.RemotingEndPoint.ToString());
+            try
+            {
+                var consumerGroup = _consumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
+                return consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Connection.RemotingEndPoint.ToString());
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
         }
         private RemotingResponse BuildNoNewMessageResponse(RemotingRequest remotingRequest)
         {
@@ -183,6 +243,10 @@ namespace EQueue.Broker.Processors
         private RemotingResponse BuildNextOffsetResetResponse(RemotingRequest remotingRequest, long nextOffset)
         {
             return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.NextOffsetReset, BitConverter.GetBytes(nextOffset));
+        }
+        private RemotingResponse BuildQueueNotExistResponse(RemotingRequest remotingRequest)
+        {
+            return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.QueueNotExist);
         }
         private RemotingResponse BuildFoundResponse(RemotingRequest remotingRequest, IEnumerable<byte[]> messages)
         {

@@ -16,21 +16,19 @@ namespace EQueue.Broker.Storage
         private readonly TFChunkManagerConfig _config;
         private readonly IDictionary<int, TFChunk> _chunks;
         private readonly string _chunkPath;
-        private readonly Func<BinaryReader, ILogRecord> _readRecordFunc;
         private int _nextChunkNumber;
 
         public string Name { get; private set; }
         public TFChunkManagerConfig Config { get { return _config; } }
         public string ChunkPath { get { return _chunkPath; } }
 
-        public TFChunkManager(string name, TFChunkManagerConfig config, Func<BinaryReader, ILogRecord> readRecordFunc, string relativePath = null)
+        public TFChunkManager(string name, TFChunkManagerConfig config, string relativePath = null)
         {
             Ensure.NotNull(name, "name");
             Ensure.NotNull(config, "config");
 
             Name = name;
             _config = config;
-            _readRecordFunc = readRecordFunc;
             if (string.IsNullOrEmpty(relativePath))
             {
                 _chunkPath = _config.BasePath;
@@ -42,7 +40,7 @@ namespace EQueue.Broker.Storage
             _chunks = new ConcurrentDictionary<int, TFChunk>();
         }
 
-        public void Load()
+        public void Load<T>(Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
         {
             lock (_chunksLocker)
             {
@@ -56,9 +54,9 @@ namespace EQueue.Broker.Storage
                 {
                     for (var i = 0; i < files.Length - 1; i++)
                     {
-                        AddChunk(TFChunk.FromCompletedFile(files[i], _config, _readRecordFunc));
+                        AddChunk(TFChunk.FromCompletedFile(files[i], _config));
                     }
-                    AddChunk(TFChunk.FromOngoingFile(files[files.Length - 1], _config, _readRecordFunc));
+                    AddChunk(TFChunk.FromOngoingFile(files[files.Length - 1], _config, readRecordFunc));
                 }
             }
         }
@@ -72,7 +70,7 @@ namespace EQueue.Broker.Storage
             {
                 var chunkNumber = _nextChunkNumber;
                 var chunkFileName = _config.FileNamingStrategy.GetFileNameFor(_chunkPath, chunkNumber);
-                var chunk = TFChunk.CreateNew(chunkFileName, chunkNumber, _config, _readRecordFunc);
+                var chunk = TFChunk.CreateNew(chunkFileName, chunkNumber, _config);
 
                 AddChunk(chunk);
 
@@ -109,12 +107,26 @@ namespace EQueue.Broker.Storage
         }
         public TFChunk GetChunk(int chunkNum)
         {
-            return _chunks[chunkNum];
+            if (_chunks.ContainsKey(chunkNum))
+            {
+                return _chunks[chunkNum];
+            }
+            return null;
         }
         public void RemoveChunk(TFChunk chunk)
         {
-            chunk.MarkForDeletion();
-            _logger.InfoFormat("Chunk {0} is deleted.", chunk);
+            if (_chunks.Remove(chunk.ChunkHeader.ChunkNumber))
+            {
+                _logger.InfoFormat("Chunk {0} is removed.", chunk);
+                try
+                {
+                    chunk.Destroy();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(string.Format("Chunk {0} destroy has exception.", chunk), ex);
+                }
+            }
         }
 
         public void Dispose()

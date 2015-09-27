@@ -39,10 +39,10 @@ namespace EQueue.Broker.Processors
             MessageStoreResult result = null;
             lock (_syncObj)
             {
-                var queueOffset = queue.CurrentOffset;
+                var queueOffset = queue.NextOffset;
                 var messageRecord = _messageStore.StoreMessage(queueId, queueOffset, message, request.RoutingKey);
                 queue.AddMessage(messageRecord.LogPosition + 1);
-                queue.IncrementCurrentOffset();
+                queue.IncrementNextOffset();
                 result = new MessageStoreResult(message.Key, messageRecord.MessageId, message.Code, message.Topic, queueId, queueOffset);
             }
 

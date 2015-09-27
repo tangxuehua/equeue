@@ -7,9 +7,7 @@ namespace EQueue.AdminWeb.Models
     public class MessageViewModel
     {
         public string SearchMessageId { get; set; }
-        public string SearchMessageOffset { get; set; }
         public string MessageId { get; set; }
-        public string MessageOffset { get; set; }
         public string QueueId { get; set; }
         public string QueueOffset { get; set; }
         public string Topic { get; set; }

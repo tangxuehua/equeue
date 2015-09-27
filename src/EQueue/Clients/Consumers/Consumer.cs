@@ -229,30 +229,6 @@ namespace EQueue.Clients.Consumers
                 SchedulePullRequest(pullRequest);
             }
         }
-        private IEnumerable<QueueMessage> DecodeMessages(byte[] buffer)
-        {
-            var messages = new List<QueueMessage>();
-            using (var stream = new MemoryStream(buffer))
-            {
-                using (var reader = new BinaryReader(stream))
-                {
-                    var messageLength = reader.ReadInt32();
-                    while (messageLength > 0)
-                    {
-                        var message = new QueueMessage();
-                        message.ReadFrom(reader);
-                        messages.Add(message);
-                        if (stream.Position >= stream.Length)
-                        {
-                            break;
-                        }
-                        messageLength = reader.ReadInt32();
-                    }
-                }
-            }
-
-            return messages;
-        }
         private void ProcessPullResponse(PullRequest pullRequest, RemotingResponse remotingResponse)
         {
             if (remotingResponse == null)
@@ -271,7 +247,7 @@ namespace EQueue.Clients.Consumers
 
             if (remotingResponse.Code == (short)PullStatus.Found)
             {
-                var messages = DecodeMessages(remotingResponse.Body);
+                var messages = DecodeMessages(pullRequest, remotingResponse.Body);
                 if (messages.Count() > 0)
                 {
                     pullRequest.ProcessQueue.AddMessages(messages);
@@ -282,25 +258,72 @@ namespace EQueue.Clients.Consumers
                     pullRequest.NextConsumeOffset = messages.Last().QueueOffset + 1;
                 }
             }
-            else if (remotingResponse.Code == (int)PullStatus.NextOffsetReset)
+            else if (remotingResponse.Code == (short)PullStatus.NextOffsetReset)
             {
                 var newOffset = BitConverter.ToInt64(remotingResponse.Body, 0);
                 var oldOffset = pullRequest.NextConsumeOffset;
                 pullRequest.NextConsumeOffset = newOffset;
                 _logger.InfoFormat("Reset queue next consume offset. consumerId:{0}, topic:{1}, queueId:{2}, old offset:{3}, new offset:{4}",Id, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, oldOffset, newOffset);
             }
-            else if (remotingResponse.Code == (int)PullStatus.NoNewMessage)
+            else if (remotingResponse.Code == (short)PullStatus.NoNewMessage)
             {
-                _logger.DebugFormat("No new message found, pullRequest:{0}", pullRequest);
+                if (_logger.IsDebugEnabled)
+                {
+                    _logger.DebugFormat("No new message found, pullRequest:{0}", pullRequest);
+                }
             }
-            else if (remotingResponse.Code == (int)PullStatus.Ignored)
+            else if (remotingResponse.Code == (short)PullStatus.Ignored)
             {
-                _logger.InfoFormat("Pull request was ignored, pullRequest:{0}", pullRequest);
+                if (_logger.IsDebugEnabled)
+                {
+                    _logger.DebugFormat("Pull request was ignored, pullRequest:{0}", pullRequest);
+                }
                 return;
             }
 
             //Schedule the next pull request.
             SchedulePullRequest(pullRequest);
+        }
+        private IEnumerable<QueueMessage> DecodeMessages(PullRequest pullRequest, byte[] buffer)
+        {
+            var messages = new List<QueueMessage>();
+            if (buffer == null || buffer.Length <= 4)
+            {
+                return messages;
+            }
+
+            try
+            {
+                using (var stream = new MemoryStream(buffer))
+                {
+                    using (var reader = new BinaryReader(stream))
+                    {
+                        var messageLength = reader.ReadInt32();
+                        while (messageLength > 0)
+                        {
+                            var message = new QueueMessage();
+                            message.ReadFrom(messageLength, reader);
+                            if (!message.IsValid())
+                            {
+                                _logger.ErrorFormat("Invalid pull return message, pullRequest: {0}", pullRequest);
+                                continue;
+                            }
+                            messages.Add(message);
+                            if (stream.Position >= stream.Length)
+                            {
+                                break;
+                            }
+                            messageLength = reader.ReadInt32();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(string.Format("Decode pull return message has exception, pullRequest: {0}", pullRequest), ex);
+            }
+
+            return messages;
         }
         private void SchedulePullRequest(PullRequest pullRequest)
         {

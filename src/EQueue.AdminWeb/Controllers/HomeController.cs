@@ -63,18 +63,17 @@ namespace EQueue.AdminWeb.Controllers
                 TopicConsumeInfos = topicConsumeInfos
             });
         }
-        public ActionResult Message(long? searchMessageOffset, string searchMessageId)
+        public ActionResult Message(string searchMessageId)
         {
-            if (searchMessageOffset == null && string.IsNullOrWhiteSpace(searchMessageId))
+            if (string.IsNullOrWhiteSpace(searchMessageId))
             {
                 return View(new MessageViewModel());
             }
-            var message = _messageService.GetMessageDetail(searchMessageOffset, searchMessageId);
-            var model = new MessageViewModel { SearchMessageOffset = searchMessageOffset != null ? searchMessageOffset.Value.ToString() : null, SearchMessageId = searchMessageId };
+            var message = _messageService.GetMessageDetail(searchMessageId);
+            var model = new MessageViewModel { SearchMessageId = searchMessageId };
             if (message != null)
             {
                 model.MessageId = message.MessageId;
-                model.MessageOffset = message.MessageOffset.ToString();
                 model.QueueId = message.QueueId.ToString();
                 model.QueueOffset = message.QueueOffset.ToString();
                 model.RoutingKey = message.RoutingKey;

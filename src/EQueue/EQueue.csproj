@@ -62,6 +62,7 @@
     <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByTimeStrategy.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\IDeleteMessageStrategy.cs" />
     <Compile Include="Broker\LogRecordType.cs" />
+    <Compile Include="Broker\PullMessageResult.cs" />
     <Compile Include="Broker\QueueLogRecord.cs" />
     <Compile Include="Broker\MessageLogRecord.cs" />
     <Compile Include="Broker\RequestHandlers\CreateTopicRequestHandler.cs" />
@@ -101,12 +102,13 @@
     <Compile Include="Broker\Storage\ChunkFooter.cs" />
     <Compile Include="Broker\Storage\ChunkHeader.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkCompleteException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ChunkNotExistException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkWriteException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ExtraneousFileFoundException.cs" />
     <Compile Include="Broker\Storage\Exceptions\InvalidReadException.cs" />
     <Compile Include="Broker\Storage\Exceptions\UnableToReadPastEndOfStreamException.cs" />
     <Compile Include="Broker\Storage\Exceptions\CorruptDatabaseException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\ChunkNotFoundException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ChunkFileNotExistException.cs" />
     <Compile Include="Broker\Storage\Exceptions\FileBeingDeletedException.cs" />
     <Compile Include="Broker\Storage\Exceptions\BadChunkInDatabaseException.cs" />
     <Compile Include="Broker\Storage\Exceptions\WrongFileVersionException.cs" />
@@ -114,13 +116,13 @@
     <Compile Include="Broker\Storage\FileNamingStrategies\IFileNamingStrategy.cs" />
     <Compile Include="Broker\Storage\Checkpoints\ICheckpoint.cs" />
     <Compile Include="Broker\Storage\Checkpoints\InMemoryCheckpoint.cs" />
+    <Compile Include="Broker\Storage\LogRecords\BufferLogRecord.cs" />
     <Compile Include="Broker\Storage\LogRecords\ILogRecord.cs" />
     <Compile Include="Broker\Storage\Checkpoints\MemoryMappedFileCheckpoint.cs" />
     <Compile Include="Broker\Storage\RecordBufferReadResult.cs" />
     <Compile Include="Broker\Storage\TFChunkManagerConfig.cs" />
     <Compile Include="Broker\Storage\TFChunkManager.cs" />
     <Compile Include="Broker\Storage\TFChunkReader.cs" />
-    <Compile Include="Broker\Storage\RecordReadResult.cs" />
     <Compile Include="Broker\Storage\RecordWriteResult.cs" />
     <Compile Include="Broker\Storage\FileNamingStrategies\DefaultFileNamingStrategy.cs" />
     <Compile Include="Broker\Storage\TFChunkWriter.cs" />

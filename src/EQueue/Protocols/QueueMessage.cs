@@ -25,7 +25,7 @@ namespace EQueue.Protocols
             RoutingKey = routingKey;
         }
 
-        public virtual void ReadFrom(BinaryReader reader)
+        public virtual void ReadFrom(int length, BinaryReader reader)
         {
             //logPosition
             LogPosition = reader.ReadInt64();
@@ -59,6 +59,10 @@ namespace EQueue.Protocols
 
             //storedTime
             StoredTime = new DateTime(reader.ReadInt64());
+        }
+        public bool IsValid()
+        {
+            return !string.IsNullOrEmpty(MessageId);
         }
     }
 }

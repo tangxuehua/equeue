@@ -15,7 +15,7 @@ namespace EQueue.Broker.Storage
         {
             writer.Write(MessageLogPosition);
         }
-        public void ReadFrom(BinaryReader reader)
+        public void ReadFrom(int length, BinaryReader reader)
         {
             MessageLogPosition = reader.ReadInt64();
         }

@@ -1,4 +1,7 @@
-﻿using ECommon.Utilities;
+﻿using System;
+using System.IO;
+using ECommon.Utilities;
+using EQueue.Broker.Storage.LogRecords;
 
 namespace EQueue.Broker.Storage
 {
@@ -16,39 +19,34 @@ namespace EQueue.Broker.Storage
             _chunkWriter = chunkWriter;
         }
 
-        public RecordReadResult TryReadAt(long position)
+        public T TryReadAt<T>(long position, Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
         {
-            var maxPosition = _chunkWriter.CurrentChunk.GlobalDataPosition;
+            var lastChunk = _chunkWriter.CurrentChunk;
+            var maxPosition = lastChunk.GlobalDataPosition;
             if (position >= maxPosition)
             {
-                return RecordReadResult.Failure;
+                throw new InvalidReadException(
+                    string.Format("Cannot read record after the max global data position, data position: {0}, max golbal data position: {1}, chunk: {2}.",
+                                  position, maxPosition, lastChunk));
             }
 
             var chunk = _chunkManager.GetChunkFor(position);
             if (chunk == null)
             {
-                return RecordReadResult.Failure;
+                throw new ChunkNotExistException(string.Format("Cannot get chunk by position: {0}", position));
             }
 
             var localPosition = chunk.ChunkHeader.GetLocalDataPosition(position);
-            return chunk.TryReadAt(localPosition);
+            return chunk.TryReadAt(localPosition, readRecordFunc);
         }
-        public RecordBufferReadResult TryReadRecordBufferAt(long position)
+        public BufferLogRecord TryReadRecordBufferAt(long position)
         {
-            var maxPosition = _chunkWriter.CurrentChunk.GlobalDataPosition;
-            if (position >= maxPosition)
+            return TryReadAt(position, (length, reader) =>
             {
-                return RecordBufferReadResult.Failure;
-            }
-
-            var chunk = _chunkManager.GetChunkFor(position);
-            if (chunk == null)
-            {
-                return RecordBufferReadResult.Failure;
-            }
-
-            var localPosition = chunk.ChunkHeader.GetLocalDataPosition(position);
-            return chunk.TryReadRecordBufferAt(localPosition);
+                var record = new BufferLogRecord();
+                record.ReadFrom(length, reader);
+                return record;
+            });
         }
     }
 }

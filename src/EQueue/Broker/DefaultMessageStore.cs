@@ -49,11 +49,11 @@ namespace EQueue.Broker
 
         public void Start()
         {
-            _chunkManager = new TFChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig, ReadMessage);
+            _chunkManager = new TFChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig);
             _chunkWriter = new TFChunkWriter(_chunkManager);
             _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
 
-            _chunkManager.Load();
+            _chunkManager.Load(ReadMessage);
             _chunkWriter.Open();
 
             _scheduleService.StartTask(string.Format("{0}.DeleteMessages", this.GetType().Name), DeleteMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteMessagesInterval);
@@ -81,12 +81,7 @@ namespace EQueue.Broker
         }
         public byte[] GetMessage(long position)
         {
-            var result = _chunkReader.TryReadRecordBufferAt(position);
-            if (result.Success)
-            {
-                return result.RecordBuffer;
-            }
-            return null;
+            return _chunkReader.TryReadRecordBufferAt(position).RecordBuffer;
         }
         public void UpdateMinConsumedMessagePosition(long minConsumedMessagePosition)
         {
@@ -108,10 +103,10 @@ namespace EQueue.Broker
                 _chunkManager.RemoveChunk(chunk);
             }
         }
-        private ILogRecord ReadMessage(BinaryReader reader)
+        private MessageLogRecord ReadMessage(int length, BinaryReader reader)
         {
             var record = new MessageLogRecord();
-            record.ReadFrom(reader);
+            record.ReadFrom(length, reader);
             return record;
         }
 
