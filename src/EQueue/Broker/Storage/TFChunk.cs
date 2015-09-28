@@ -24,7 +24,9 @@ namespace EQueue.Broker.Storage
         private readonly TFChunkManagerConfig _chunkConfig;
         private readonly ConcurrentQueue<ReaderWorkItem> _readerWorkItemQueue = new ConcurrentQueue<ReaderWorkItem>();
 
+        private readonly object _writeSyncObj = new object();
         private int _dataPosition;
+        private int _flushedPosition;
         private volatile bool _isCompleted;
 
         private WriterWorkItem _writerWorkItem;
@@ -40,11 +42,19 @@ namespace EQueue.Broker.Storage
         public ChunkFooter ChunkFooter { get { return _chunkFooter; } }
         public bool IsCompleted { get { return _isCompleted; } }
         public int DataPosition { get { return _dataPosition; } }
+        public int FlushedPosition { get { return _flushedPosition; } }
         public long GlobalDataPosition
         {
             get
             {
                 return ChunkHeader.ChunkDataStartPosition + DataPosition;
+            }
+        }
+        public long GlobalFlushPosition
+        {
+            get
+            {
+                return ChunkHeader.ChunkDataStartPosition + FlushedPosition;
             }
         }
 
@@ -169,6 +179,7 @@ namespace EQueue.Broker.Storage
             }
 
             _dataPosition = _chunkFooter.ChunkDataTotalSize;
+            _flushedPosition = _dataPosition;
 
             //初始化文件属性以及创建读文件的Reader
             SetAttributes();
@@ -210,6 +221,7 @@ namespace EQueue.Broker.Storage
             var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
             fileStream.Position = ChunkHeader.Size;
             _dataPosition = 0;
+            _flushedPosition = 0;
             _writerWorkItem = new WriterWorkItem(fileStream);
 
             //初始化文件属性以及创建读文件的Reader
@@ -236,6 +248,7 @@ namespace EQueue.Broker.Storage
                     _chunkHeader = ReadHeader(fileStream, reader);
                     SetStreamWriteStartPosition(fileStream, reader, readRecordFunc);
                     _dataPosition = (int)fileStream.Position - ChunkHeader.Size;
+                    _flushedPosition = _dataPosition;
                 }
             }
 
@@ -414,7 +427,11 @@ namespace EQueue.Broker.Storage
 
             var writtenPosition = _dataPosition;
             var buffer = bufferStream.GetBuffer();
-            writerWorkItem.AppendData(buffer, 0, (int)bufferStream.Length);
+
+            lock (_writeSyncObj)
+            {
+                writerWorkItem.AppendData(buffer, 0, (int)bufferStream.Length);
+            }
 
             _dataPosition = (int)writerWorkItem.FileStream.Position - ChunkHeader.Size;
 
@@ -432,7 +449,11 @@ namespace EQueue.Broker.Storage
                 throw new InvalidOperationException(string.Format("Cannot flush a read-only TFChunk: {0}", this));
             }
 
-            _writerWorkItem.FlushToDisk();
+            lock (_writeSyncObj)
+            {
+                _writerWorkItem.FlushToDisk();
+                _flushedPosition = (int)_writerWorkItem.FileStream.Position - ChunkHeader.Size;
+            }
         }
         public void Complete()
         {

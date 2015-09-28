@@ -63,13 +63,17 @@ namespace EQueue.Broker
         {
             _chunkWriter.Write(new QueueLogRecord(messagePosition));
         }
+        public long GetLastFlushedOffset()
+        {
+            return (_chunkWriter.CurrentChunk.GlobalFlushPosition / _chunkManager.Config.ChunkDataUnitSize) - 1;
+        }
         public long GetMessagePosition(long queueOffset)
         {
             var position = queueOffset * _chunkManager.Config.ChunkDataUnitSize;
             var record = _chunkReader.TryReadAt(position, ReadMessageIndex);
             return record.MessageLogPosition;
         }
-        public long GetNextChunkFirstPosition(long queueOffset)
+        public long GetNextChunkFirstOffset(long queueOffset)
         {
             var position = queueOffset * _chunkManager.Config.ChunkDataUnitSize;
             var chunkNum = (int)(position / _chunkManager.Config.GetChunkDataSize());
@@ -78,7 +82,7 @@ namespace EQueue.Broker
 
             while (chunk == null)
             {
-                if (nextChunkNum <= _chunkManager.GetLastChunk().ChunkHeader.ChunkNumber)
+                if (nextChunkNum >= _chunkManager.GetLastChunk().ChunkHeader.ChunkNumber)
                 {
                     break;
                 }
@@ -91,7 +95,7 @@ namespace EQueue.Broker
                 return chunk.ChunkHeader.ChunkDataStartPosition / _chunkManager.Config.ChunkDataUnitSize;
             }
 
-            throw new InvalidReadException("Failed to get the next chunk start position.");
+            return -1L;
         }
         public void Enable()
         {

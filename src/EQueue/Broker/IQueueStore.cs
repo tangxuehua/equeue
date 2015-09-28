@@ -13,6 +13,7 @@ namespace EQueue.Broker
         long GetAllQueueUnConusmedMessageCount();
         bool IsQueueExist(string topic, int queueId);
         long GetQueueCurrentOffset(string topic, int queueId);
+        long GetQueueLastFlushedOffset(string topic, int queueId);
         long GetQueueMinOffset(string topic, int queueId);
         void AddQueue(string topic);
         void RemoveQueue(string topic, int queueId);

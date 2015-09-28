@@ -104,9 +104,10 @@ namespace EQueue.Broker.Processors
             }
 
             //尝试拉取消息
+            var queueMaxOffset = _queueStore.GetQueueLastFlushedOffset(topic, queueId);
             var messages = new List<byte[]>();
             var currentQueueOffset = pullOffset;
-            while (currentQueueOffset < queue.NextOffset && messages.Count < maxPullSize)
+            while (currentQueueOffset <= queueMaxOffset && messages.Count < maxPullSize)
             {
                 try
                 {
@@ -141,10 +142,8 @@ namespace EQueue.Broker.Processors
 
             //如果没有拉取到消息，则继续判断pullOffset的位置是否合法，分析没有拉取到消息的原因
 
-            var queueMinOffset = _queueStore.GetQueueMinOffset(topic, queueId);
-            var queueMaxOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
-
             //pullOffset太小
+            var queueMinOffset = _queueStore.GetQueueMinOffset(topic, queueId);
             if (pullOffset < queueMinOffset)
             {
                 return new PullMessageResult
@@ -170,14 +169,19 @@ namespace EQueue.Broker.Processors
                     Status = PullStatus.NoNewMessage
                 };
             }
-            //到这里，说明当前的pullOffset在队列的正常范围，即：>=queueMinOffset and <= queueCurrentOffset；
+            //到这里，说明当前的pullOffset在队列的正常范围，即：>=queueMinOffset and <= queueMaxOffset；
             //正常情况，应该有消息可以返回，除非消息或消息索引所在的物理文件被删除了或正在被删除；
             else
             {
+                var firstOffsetOfNextChunk = queue.GetNextChunkFirstOffset(currentQueueOffset);
+                if (firstOffsetOfNextChunk < 0L)
+                {
+                    firstOffsetOfNextChunk = 0L;
+                }
                 return new PullMessageResult
                 {
                     Status = PullStatus.NextOffsetReset,
-                    NextBeginOffset = queue.GetNextChunkFirstPosition(currentQueueOffset)
+                    NextBeginOffset = firstOffsetOfNextChunk
                 };
             }
         }
@@ -261,7 +265,7 @@ namespace EQueue.Broker.Processors
             var lastConsumedQueueOffset = _offsetStore.GetConsumeOffset(topic, queueId, consumerGroup);
             if (lastConsumedQueueOffset >= 0)
             {
-                var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
+                var queueCurrentOffset = _queueStore.GetQueueLastFlushedOffset(topic, queueId);
                 return queueCurrentOffset < lastConsumedQueueOffset ? queueCurrentOffset + 1 : lastConsumedQueueOffset + 1;
             }
 
@@ -276,7 +280,7 @@ namespace EQueue.Broker.Processors
             }
             else
             {
-                var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
+                var queueCurrentOffset = _queueStore.GetQueueLastFlushedOffset(topic, queueId);
                 if (queueCurrentOffset < 0)
                 {
                     queueCurrentOffset = 0;
