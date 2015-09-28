@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Configuration;
 using ECommon.Autofac;
 using ECommon.JsonNet;
 using ECommon.Log4Net;
 using EQueue.Broker;
-using EQueue.Broker.Storage;
 using EQueue.Configurations;
 using ECommonConfiguration = ECommon.Configurations.Configuration;
 
@@ -14,7 +14,7 @@ namespace QuickStart.BrokerServer
         static void Main(string[] args)
         {
             InitializeEQueue();
-            BrokerController.Create(new BrokerSetting()).Start();
+            BrokerController.Create(new BrokerSetting { RootStorePath = ConfigurationManager.AppSettings["rootStorePath"] }).Start();
             Console.ReadLine();
         }
 

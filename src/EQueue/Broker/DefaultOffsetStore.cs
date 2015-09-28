@@ -33,7 +33,7 @@ namespace EQueue.Broker
 
         public void Start()
         {
-            var path = BrokerController.Instance.Setting.ConsumeOffsetStorePath;
+            var path = BrokerController.Instance.Setting.RootStorePath;
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
