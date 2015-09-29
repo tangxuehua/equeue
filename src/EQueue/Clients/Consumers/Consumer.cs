@@ -517,12 +517,15 @@ namespace EQueue.Clients.Consumers
                     var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, consumedQueueOffset);
                     var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
                     _remotingClient.InvokeOneway(remotingRequest);
-                    _logger.DebugFormat("Sent queue consume offset to broker. group:{0}, consumerId:{1}, topic:{2}, queueId:{3}, offset:{4}",
-                        GroupName,
-                        Id,
-                        pullRequest.MessageQueue.Topic,
-                        pullRequest.MessageQueue.QueueId,
-                        consumedQueueOffset);
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.DebugFormat("Sent queue consume offset to broker. group:{0}, consumerId:{1}, topic:{2}, queueId:{3}, offset:{4}",
+                            GroupName,
+                            Id,
+                            pullRequest.MessageQueue.Topic,
+                            pullRequest.MessageQueue.QueueId,
+                            consumedQueueOffset);
+                    }
                 }
             }
             catch (Exception ex)
@@ -574,7 +577,10 @@ namespace EQueue.Clients.Consumers
                         messageQueues.Add(new MessageQueue(topic, queueId));
                     }
                     _topicQueuesDict[topic] = messageQueues;
-                    _logger.DebugFormat("Queues of topic changed, consumerId:{0}, group:{1}, topic:{2}, old queueIds:{3}, new queueIds:{4}", Id, GroupName, topic, string.Join(":", topicQueueIdsOfLocal), string.Join(":", topicQueueIdsFromServer));
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.DebugFormat("Queues of topic changed, consumerId:{0}, group:{1}, topic:{2}, old queueIds:{3}, new queueIds:{4}", Id, GroupName, topic, string.Join(":", topicQueueIdsOfLocal), string.Join(":", topicQueueIdsFromServer));
+                    }
                 }
             }
             catch (Exception ex)

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.IO;
+using System.Net;
 using ECommon.Socketing;
 using EQueue.Broker.Storage;
 
@@ -52,9 +53,9 @@ namespace EQueue.Broker
         /// <summary>队列文件存储的相关配置，默认一个队列文件中存储100W个消息索引，每个消息索引8个字节
         /// </summary>
         public TFChunkManagerConfig QueueChunkConfig { get; set; }
-        /// <summary>文件存储路径根目录
+        /// <summary>EQueue存储文件的根目录
         /// </summary>
-        public string RootStorePath { get; set; }
+        public string FileStoreRootPath { get; set; }
 
         public BrokerSetting()
         {
@@ -72,9 +73,15 @@ namespace EQueue.Broker
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;
 
-            RootStorePath = @"c:\equeue-store";
-            MessageChunkConfig = TFChunkManagerConfig.Create(RootStorePath + @"\message-chunks", "message-chunk-", 256 * 1024 * 1024, 0, 0);
-            QueueChunkConfig = TFChunkManagerConfig.Create(RootStorePath + @"\queue-chunks", "queue-chunk-", 0, 8, 1000000);
+            SetFileStoreRootPath(@"c:\equeue-store");
+        }
+
+        public BrokerSetting SetFileStoreRootPath(string rootPath)
+        {
+            FileStoreRootPath = rootPath;
+            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(rootPath, @"message-chunks"), "message-chunk-", 256 * 1024 * 1024, 0, 0);
+            QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(rootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000);
+            return this;
         }
     }
 }

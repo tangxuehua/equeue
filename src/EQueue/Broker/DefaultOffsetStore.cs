@@ -33,7 +33,7 @@ namespace EQueue.Broker
 
         public void Start()
         {
-            var path = BrokerController.Instance.Setting.RootStorePath;
+            var path = BrokerController.Instance.Setting.FileStoreRootPath;
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
@@ -90,9 +90,24 @@ namespace EQueue.Broker
 
             return minOffset;
         }
-        public void UpdateConsumeOffset(string topic, int queueId, long offset, string group)
+        public bool UpdateConsumeOffset(string topic, int queueId, long offset, string group)
         {
-            UpdateQueueOffsetInternal(topic, queueId, offset, group);
+            var changed = false;
+            var queueOffsetDict = _groupConsumeOffsetsDict.GetOrAdd(group, k =>
+            {
+                changed = true;
+                return new ConcurrentDictionary<string, long>();
+            });
+            var key = CreateKey(topic, queueId);
+            queueOffsetDict.AddOrUpdate(key, offset, (k, oldOffset) =>
+            {
+                if (offset > oldOffset)
+                {
+                    changed = true;
+                }
+                return offset;
+            });
+            return changed;
         }
         public IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic)
         {
@@ -120,25 +135,6 @@ namespace EQueue.Broker
         private string CreateKey(string topic, int queueId)
         {
             return string.Format("{0}-{1}", topic, queueId);
-        }
-        private bool UpdateQueueOffsetInternal(string topic, int queueId, long offset, string group)
-        {
-            var changed = false;
-            var queueOffsetDict = _groupConsumeOffsetsDict.GetOrAdd(group, k =>
-            {
-                changed = true;
-                return new ConcurrentDictionary<string, long>();
-            });
-            var key = CreateKey(topic, queueId);
-            queueOffsetDict.AddOrUpdate(key, offset, (k, oldOffset) =>
-            {
-                if (offset != oldOffset)
-                {
-                    changed = true;
-                }
-                return offset;
-            });
-            return changed;
         }
         private void LoadConsumeOffsetInfo()
         {

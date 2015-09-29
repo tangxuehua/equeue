@@ -14,7 +14,7 @@ namespace QuickStart.BrokerServer
         static void Main(string[] args)
         {
             InitializeEQueue();
-            BrokerController.Create(new BrokerSetting { RootStorePath = ConfigurationManager.AppSettings["rootStorePath"] }).Start();
+            BrokerController.Create(new BrokerSetting().SetFileStoreRootPath(ConfigurationManager.AppSettings["fileStoreRootPath"])).Start();
             Console.ReadLine();
         }
 
