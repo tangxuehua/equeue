@@ -177,14 +177,25 @@ namespace EQueue.Broker
             _lastPersistVersion = 0;
             _groupQueueOffsetDict.Clear();
         }
-        private void UpdateQueueOffsetInternal(string topic, int queueId, long offset, string group)
+        private bool UpdateQueueOffsetInternal(string topic, int queueId, long offset, string group)
         {
+            var changed = false;
             var queueOffsetDict = _groupQueueOffsetDict.GetOrAdd(group, k =>
             {
+                changed = true;
                 return new ConcurrentDictionary<string, long>();
             });
             var key = string.Format("{0}-{1}", topic, queueId);
-            queueOffsetDict.AddOrUpdate(key, offset, (currentKey, oldOffset) => offset > oldOffset ? offset : oldOffset);
+            queueOffsetDict.AddOrUpdate(key, offset, (currentKey, oldOffset) =>
+            {
+                if (offset > oldOffset)
+                {
+                    changed = true;
+                    return offset;
+                }
+                return oldOffset;
+            });
+            return changed;
         }
         private void RecoverQueueOffset()
         {
