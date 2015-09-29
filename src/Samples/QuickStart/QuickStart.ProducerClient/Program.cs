@@ -11,6 +11,7 @@ using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;
 using ECommon.Remoting;
+using ECommon.Scheduling;
 using ECommon.Socketing;
 using ECommon.Utilities;
 using EQueue.Clients.Producers;
@@ -22,14 +23,17 @@ namespace QuickStart.ProducerClient
 {
     class Program
     {
-        static long _sendingCount = 0;
+        static long _previousSentCount = 0;
         static long _sentCount = 0;
+        static string _mode;
         static ILogger _logger;
         static Stopwatch _watch = new Stopwatch();
+        static IScheduleService _scheduleService;
 
         static void Main(string[] args)
         {
             InitializeEQueue();
+            StartPrintThroughputTask();
             SendMessageTest();
             Console.ReadLine();
         }
@@ -47,11 +51,13 @@ namespace QuickStart.ProducerClient
                 .SetDefault<IQueueSelector, QueueAverageSelector>();
 
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
         }
         static void SendMessageTest()
         {
+            _mode = ConfigurationManager.AppSettings["Mode"];
+
             var serverAddress = ConfigurationManager.AppSettings["ServerAddress"];
-            var mode = ConfigurationManager.AppSettings["Mode"];
             var brokerAddress = string.IsNullOrEmpty(serverAddress) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(serverAddress);
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var messageSize = int.Parse(ConfigurationManager.AppSettings["MessageSize"]);
@@ -65,7 +71,7 @@ namespace QuickStart.ProducerClient
             for (var i = 1; i <= clientCount; i++)
             {
                 var producer = new Producer("Producer@" + i.ToString(), new ProducerSetting { BrokerAddress = new IPEndPoint(brokerAddress, 5000) }).Start();
-                actions.Add(() => SendMessages(producer, mode, messageCount, sleepMilliseconds, batchSize, message));
+                actions.Add(() => SendMessages(producer, _mode, messageCount, sleepMilliseconds, batchSize, message));
             }
 
             _watch.Start();
@@ -74,18 +80,15 @@ namespace QuickStart.ProducerClient
         static void SendMessages(Producer producer, string mode, int count, int sleepMilliseconds, int batchSize, Message message)
         {
             _logger.InfoFormat("----Send message starting, producerId:{0}----", producer.Id);
+            var sendingCount = 0L;
 
             if (mode == "Oneway")
             {
                 for (var i = 1; i <= count; i++)
                 {
                     TryAction(() => producer.SendOneway(message, message.Key));
-                    var current = Interlocked.Increment(ref _sendingCount);
-                    if (current % 10000 == 0)
-                    {
-                        _logger.InfoFormat("Sening {0} messages, timeSpent: {1}ms, throughput: {2}/s", current, _watch.ElapsedMilliseconds, current * 1000 / _watch.ElapsedMilliseconds);
-                    }
-                    WaitIfNecessory(current, batchSize, sleepMilliseconds);
+                    Interlocked.Increment(ref _sentCount);
+                    WaitIfNecessory(Interlocked.Increment(ref sendingCount), batchSize, sleepMilliseconds);
                 }
             }
             else if (mode == "Async")
@@ -93,8 +96,7 @@ namespace QuickStart.ProducerClient
                 for (var i = 1; i <= count; i++)
                 {
                     TryAction(() => producer.SendAsync(message, message.Key, 100000).ContinueWith(SendCallback));
-                    var current = Interlocked.Increment(ref _sendingCount);
-                    WaitIfNecessory(current, batchSize, sleepMilliseconds);
+                    WaitIfNecessory(Interlocked.Increment(ref sendingCount), batchSize, sleepMilliseconds);
                 }
             }
             else if (mode == "Callback")
@@ -103,8 +105,7 @@ namespace QuickStart.ProducerClient
                 for (var i = 1; i <= count; i++)
                 {
                     TryAction(() => producer.SendWithCallback(message, message.Key));
-                    var current = Interlocked.Increment(ref _sendingCount);
-                    WaitIfNecessory(current, batchSize, sleepMilliseconds);
+                    WaitIfNecessory(Interlocked.Increment(ref sendingCount), batchSize, sleepMilliseconds);
                 }
             }
         }
@@ -125,11 +126,7 @@ namespace QuickStart.ProducerClient
                 _logger.ErrorFormat("Send message failed, errorMessage: {0}", task.Result.ErrorMessage);
             }
 
-            var current = Interlocked.Increment(ref _sentCount);
-            if (current % 10000 == 0)
-            {
-                _logger.InfoFormat("Sent {0} messages, timeSpent: {1}ms, throughput: {2}/s", current, _watch.ElapsedMilliseconds, current * 1000 / _watch.ElapsedMilliseconds);
-            }
+            Interlocked.Increment(ref _sentCount);
         }
         static void TryAction(Action sendMessageAction)
         {
@@ -150,6 +147,18 @@ namespace QuickStart.ProducerClient
                 Thread.Sleep(sleepMilliseconds);
             }
         }
+        static void StartPrintThroughputTask()
+        {
+            _scheduleService.StartTask("Program.PrintThroughput", PrintThroughput, 0, 1000);
+        }
+        static void PrintThroughput()
+        {
+            var totalSentCount = _sentCount;
+            var totalCountOfCurrentPeriod = totalSentCount - _previousSentCount;
+            _previousSentCount = totalSentCount;
+
+            _logger.InfoFormat("Send message mode: {0}, currentTime: {1}, totalSent: {2}, throughput: {3}/s", _mode, DateTime.Now.ToLongTimeString(), totalSentCount, totalCountOfCurrentPeriod);
+        }
 
         class ResponseHandler : IResponseHandler
         {
@@ -162,11 +171,7 @@ namespace QuickStart.ProducerClient
                     return;
                 }
 
-                var current = Interlocked.Increment(ref _sentCount);
-                if (current % 10000 == 0)
-                {
-                    _logger.InfoFormat("Sent {0} messages, timeSpent: {1}ms, throughput: {2}/s", current, _watch.ElapsedMilliseconds, current * 1000 / _watch.ElapsedMilliseconds);
-                }
+                Interlocked.Increment(ref _sentCount);
             }
         }
     }
