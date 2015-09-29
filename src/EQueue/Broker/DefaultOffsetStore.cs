@@ -90,24 +90,14 @@ namespace EQueue.Broker
 
             return minOffset;
         }
-        public bool UpdateConsumeOffset(string topic, int queueId, long offset, string group)
+        public void UpdateConsumeOffset(string topic, int queueId, long offset, string group)
         {
-            var changed = false;
             var queueOffsetDict = _groupConsumeOffsetsDict.GetOrAdd(group, k =>
             {
-                changed = true;
                 return new ConcurrentDictionary<string, long>();
             });
             var key = CreateKey(topic, queueId);
-            queueOffsetDict.AddOrUpdate(key, offset, (k, oldOffset) =>
-            {
-                if (offset > oldOffset)
-                {
-                    changed = true;
-                }
-                return offset;
-            });
-            return changed;
+            queueOffsetDict.AddOrUpdate(key, offset, (currentKey, oldOffset) => offset > oldOffset ? offset : oldOffset);
         }
         public IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic)
         {
