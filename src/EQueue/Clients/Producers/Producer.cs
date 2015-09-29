@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -20,10 +21,10 @@ namespace EQueue.Clients.Producers
     public class Producer
     {
         private readonly IList<int> EmptyIntList = new List<int>();
-        private readonly object _lockObject;
         private readonly ConcurrentDictionary<string, IList<int>> _topicQueueIdsDict;
         private readonly IScheduleService _scheduleService;
         private readonly SocketRemotingClient _remotingClient;
+        private readonly SocketRemotingClient _adminRemotingClient;
         private readonly IQueueSelector _queueSelector;
         private readonly ILogger _logger;
 
@@ -40,9 +41,9 @@ namespace EQueue.Clients.Producers
             Id = id;
             Setting = setting ?? new ProducerSetting();
 
-            _lockObject = new object();
             _topicQueueIdsDict = new ConcurrentDictionary<string, IList<int>>();
             _remotingClient = new SocketRemotingClient(Id + ".RemotingClient", Setting.BrokerAddress, Setting.LocalAddress);
+            _adminRemotingClient = new SocketRemotingClient(Id + ".AdminRemotingClient", Setting.BrokerAdminAddress, Setting.LocalAdminAddress);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
@@ -58,12 +59,14 @@ namespace EQueue.Clients.Producers
         public Producer Start()
         {
             _remotingClient.Start();
+            _adminRemotingClient.Start();
             _logger.InfoFormat("Started, producerId:{0}", Id);
             return this;
         }
         public Producer Shutdown()
         {
             _remotingClient.Shutdown();
+            _adminRemotingClient.Shutdown();
             _logger.InfoFormat("Shutdown, producerId:{0}", Id);
             return this;
         }
@@ -200,7 +203,7 @@ namespace EQueue.Clients.Producers
             try
             {
                 var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForProducer, Encoding.UTF8.GetBytes(topic));
-                var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+                var remotingResponse = _adminRemotingClient.InvokeSync(remotingRequest, 60000);
                 if (remotingResponse.Code != ResponseCode.Success)
                 {
                     _logger.ErrorFormat("Get topic queueIds from broker failed, producerId:{0}, topic:{1}, remoting response code:{2}", Id, topic, remotingResponse.Code);

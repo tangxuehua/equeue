@@ -24,9 +24,9 @@ namespace EQueue.Clients.Consumers
 
         private readonly object _lockObject;
         private readonly SocketRemotingClient _remotingClient;
+        private readonly SocketRemotingClient _adminRemotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly List<string> _subscriptionTopics;
-        private readonly List<int> _taskIds;
         private readonly TaskFactory _taskFactory;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict;
         private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict;
@@ -80,9 +80,9 @@ namespace EQueue.Clients.Consumers
             _pullRequestDict = new ConcurrentDictionary<string, PullRequest>();
             _consumingMessageQueue = new BlockingCollection<ConsumingMessage>(new ConcurrentQueue<ConsumingMessage>());
             _messageRetryQueue = new BlockingCollection<ConsumingMessage>(new ConcurrentQueue<ConsumingMessage>());
-            _taskIds = new List<int>();
             _taskFactory = new TaskFactory();
             _remotingClient = new SocketRemotingClient(string.Format("{0}.RemotingClient", Id), Setting.BrokerAddress, Setting.LocalAddress);
+            _adminRemotingClient = new SocketRemotingClient(string.Format("{0}.AdminRemotingClient", Id), Setting.BrokerAdminAddress, Setting.LocalAdminAddress);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
@@ -110,6 +110,7 @@ namespace EQueue.Clients.Consumers
         {
             _stoped = false;
             _remotingClient.Start();
+            _adminRemotingClient.Start();
             _logger.InfoFormat("Started, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
@@ -117,6 +118,7 @@ namespace EQueue.Clients.Consumers
         {
             _stoped = true;
             _remotingClient.Shutdown();
+            _adminRemotingClient.Shutdown();
             _logger.InfoFormat("Shutdown, consumerId:{0}, group:{1}.", Id, GroupName);
             return this;
         }
@@ -541,13 +543,13 @@ namespace EQueue.Clients.Consumers
             try
             {
                 var consumingQueues = _pullRequestDict.Values.ToList().Select(x => string.Format("{0}-{1}", x.MessageQueue.Topic, x.MessageQueue.QueueId)).ToList();
-                _remotingClient.InvokeOneway(new RemotingRequest(
+                _adminRemotingClient.InvokeOneway(new RemotingRequest(
                     (int)RequestCode.ConsumerHeartbeat,
                     _binarySerializer.Serialize(new ConsumerData(Id, GroupName, _subscriptionTopics, consumingQueues))));
             }
             catch (Exception ex)
             {
-                if (_remotingClient.IsConnected)
+                if (_adminRemotingClient.IsConnected)
                 {
                     _logger.Error(string.Format("SendHeartbeat remoting request to broker has exception, consumerId:{0}, group:{1}", Id, GroupName), ex);
                 }
@@ -592,7 +594,7 @@ namespace EQueue.Clients.Consumers
         {
             var queryConsumerRequest = _binarySerializer.Serialize(new QueryConsumerRequest(GroupName, topic));
             var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, queryConsumerRequest);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, Setting.DefaultTimeoutMilliseconds);
+            var remotingResponse = _adminRemotingClient.InvokeSync(remotingRequest, Setting.DefaultTimeoutMilliseconds);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -606,7 +608,7 @@ namespace EQueue.Clients.Consumers
         private IEnumerable<int> GetTopicQueueIdsFromServer(string topic)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForConsumer, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, Setting.DefaultTimeoutMilliseconds);
+            var remotingResponse = _adminRemotingClient.InvokeSync(remotingRequest, Setting.DefaultTimeoutMilliseconds);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var queueIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -676,7 +678,6 @@ namespace EQueue.Clients.Consumers
         }
         private void Clear()
         {
-            _taskIds.Clear();
             _pullRequestDict.Clear();
             _topicQueuesDict.Clear();
         }
@@ -714,6 +715,7 @@ namespace EQueue.Clients.Consumers
             {
                 _consumer = consumer;
             }
+
             public void OnConnectionAccepted(ITcpConnection connection) { }
             public void OnConnectionFailed(SocketError socketError) { }
             public void OnConnectionClosed(ITcpConnection connection, System.Net.Sockets.SocketError socketError)
