@@ -41,7 +41,10 @@ namespace EQueue.Broker
         }
         public void UpdateQueueOffset(string topic, int queueId, long offset, string group)
         {
-            var queueOffsetDict = _groupQueueOffsetDict.GetOrAdd(group, new ConcurrentDictionary<string, long>());
+            var queueOffsetDict = _groupQueueOffsetDict.GetOrAdd(group, k =>
+            {
+                return new ConcurrentDictionary<string, long>();
+            });
             var key = string.Format("{0}-{1}", topic, queueId);
             queueOffsetDict.AddOrUpdate(key, offset, (currentKey, oldOffset) => offset > oldOffset ? offset : oldOffset);
         }
