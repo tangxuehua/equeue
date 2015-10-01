@@ -27,14 +27,13 @@ namespace QuickStart.ProducerClient
         static long _sentCount = 0;
         static string _mode;
         static ILogger _logger;
-        static Stopwatch _watch = new Stopwatch();
         static IScheduleService _scheduleService;
 
         static void Main(string[] args)
         {
             InitializeEQueue();
-            StartPrintThroughputTask();
             SendMessageTest();
+            StartPrintThroughputTask();
             Console.ReadLine();
         }
 
@@ -74,7 +73,6 @@ namespace QuickStart.ProducerClient
                 actions.Add(() => SendMessages(producer, _mode, messageCount, sleepMilliseconds, batchSize, message));
             }
 
-            _watch.Start();
             Task.Factory.StartNew(() => Parallel.Invoke(actions.ToArray()));
         }
         static void SendMessages(Producer producer, string mode, int count, int sleepMilliseconds, int batchSize, Message message)
