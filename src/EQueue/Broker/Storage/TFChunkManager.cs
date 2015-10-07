@@ -119,11 +119,11 @@ namespace EQueue.Broker.Storage
             {
                 try
                 {
-                    chunk.Destroy();
+                    chunk.Delete();
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("Chunk {0} destroy has exception.", chunk), ex);
+                    _logger.Error(string.Format("Delete chunk {0} has exception.", chunk), ex);
                 }
                 return true;
             }

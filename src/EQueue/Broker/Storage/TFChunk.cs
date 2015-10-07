@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using ECommon.Components;
@@ -28,10 +29,9 @@ namespace EQueue.Broker.Storage
         private int _dataPosition;
         private int _flushedPosition;
         private volatile bool _isCompleted;
+        private volatile bool _isDeleting;
 
         private WriterWorkItem _writerWorkItem;
-
-        private readonly ManualResetEventSlim _destroyEvent = new ManualResetEventSlim(false);
 
         #endregion
 
@@ -268,6 +268,11 @@ namespace EQueue.Broker.Storage
 
         public T TryReadAt<T>(long dataPosition, Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
         {
+            if (_isDeleting)
+            {
+                throw new InvalidReadException(string.Format("Chunk {0} is being deleting.",this));
+            }
+
             var readerWorkItem = GetReaderWorkItem();
             try
             {
@@ -487,56 +492,22 @@ namespace EQueue.Broker.Storage
                 Flush();
             }
         }
-        public void Destroy()
+        public void Delete()
         {
-            //_selfdestructin54321 = true;
-            //_deleteFile = true;
-            TryDestructFileStreams();
-        }
-        public void WaitForDestroy(int timeoutMs)
-        {
-            if (!_destroyEvent.Wait(timeoutMs))
+            //检查当前chunk是否已完成
+            if (!_isCompleted)
             {
-                throw new TimeoutException();
-            }
-        }
-
-        private void TryDestructFileStreams()
-        {
-            //int fileStreamCount = int.MaxValue;
-
-            //ReaderWorkItem workItem;
-            //while (_readerWorkItemQueue.TryDequeue(out workItem))
-            //{
-            //    workItem.Stream.Dispose();
-            //    fileStreamCount = Interlocked.Decrement(ref _fileStreamCount);
-            //}
-
-            //if (fileStreamCount < 0)
-            //{
-            //    throw new Exception("Somehow we managed to decrease count of file streams below zero.");
-            //}
-            //if (fileStreamCount == 0) // we are the last who should "turn the light off" for file streams
-            //{
-            //    CleanFileStreamDestruction();
-            //}
-        }
-        private void CleanFileStreamDestruction()
-        {
-            if (_writerWorkItem != null)
-            {
-                _writerWorkItem.Dispose();
+                throw new InvalidOperationException(string.Format("Not allowed to delete a incompleted chunk {0}", this));
             }
 
-            Helper.EatException(() => File.SetAttributes(_filename, FileAttributes.Normal));
+            //首先设置删除标记
+            _isDeleting = true;
 
-            //if (_deleteFile)
-            //{
-            //    _logger.InfoFormat("File {0} has been marked for delete and will be deleted in TryDestructFileStreams.", Path.GetFileName(_filename));
-            //    Helper.EatException(() => File.Delete(_filename));
-            //}
+            //关闭所有的ReaderWorkItem
+            CloseAllReaderWorkItems();
 
-            _destroyEvent.Set();
+            //删除Chunk文件
+            File.Delete(_filename);
         }
 
         #endregion
@@ -552,10 +523,30 @@ namespace EQueue.Broker.Storage
         }
         private void CloseAllReaderWorkItems()
         {
-            ReaderWorkItem readerWorkItem;
-            while (_readerWorkItemQueue.TryDequeue(out readerWorkItem))
+            var watch = Stopwatch.StartNew();
+            var closedCount = 0;
+
+            while (closedCount < _chunkConfig.ChunkReaderCount)
             {
-                readerWorkItem.Reader.Close();
+                ReaderWorkItem readerWorkItem;
+                while (_readerWorkItemQueue.TryDequeue(out readerWorkItem))
+                {
+                    readerWorkItem.Reader.Close();
+                    closedCount++;
+                }
+
+                if (closedCount >= _chunkConfig.ChunkReaderCount)
+                {
+                    break;
+                }
+
+                Thread.Sleep(1000);
+
+                if (watch.ElapsedMilliseconds > 30 * 1000)
+                {
+                    _logger.ErrorFormat("Close chunk reader work items timeout, expect close count: {0}, real close count: {1}", _chunkConfig.ChunkReaderCount, closedCount);
+                    break;
+                }
             }
         }
         private ReaderWorkItem CreateReaderWorkItem()
