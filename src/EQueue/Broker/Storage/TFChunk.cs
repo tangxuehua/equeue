@@ -507,6 +507,7 @@ namespace EQueue.Broker.Storage
             CloseAllReaderWorkItems();
 
             //删除Chunk文件
+            File.SetAttributes(_filename, FileAttributes.Normal);
             File.Delete(_filename);
         }
 
