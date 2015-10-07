@@ -28,6 +28,7 @@ namespace EQueue.Broker.Storage
         private readonly object _writeSyncObj = new object();
         private int _dataPosition;
         private int _flushedPosition;
+        private int _lastFlushedDataLength;
         private volatile bool _isCompleted;
         private volatile bool _isDeleting;
 
@@ -55,6 +56,13 @@ namespace EQueue.Broker.Storage
             get
             {
                 return ChunkHeader.ChunkDataStartPosition + FlushedPosition;
+            }
+        }
+        public long LastFlushedDataLength
+        {
+            get
+            {
+                return _lastFlushedDataLength;
             }
         }
 
@@ -211,7 +219,7 @@ namespace EQueue.Broker.Storage
             var tempFileStream = new FileStream(tempFilename, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
             tempFileStream.SetLength(fileSize);
             tempFileStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
-            tempFileStream.FlushToDisk();
+            tempFileStream.Flush(true);
             tempFileStream.Close();
 
             //将临时文件移动到正式的位置
@@ -458,6 +466,7 @@ namespace EQueue.Broker.Storage
             {
                 _writerWorkItem.FlushToDisk();
                 _flushedPosition = (int)_writerWorkItem.FileStream.Position - ChunkHeader.Size;
+                _lastFlushedDataLength = _writerWorkItem.LastAppendDataLength;
             }
         }
         public void Complete()

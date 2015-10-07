@@ -79,8 +79,8 @@ namespace EQueue.Broker
         public BrokerSetting SetFileStoreRootPath(string rootPath)
         {
             FileStoreRootPath = rootPath;
-            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(rootPath, @"message-chunks"), "message-chunk-", 256 * 1024 * 1024, 0, 0);
-            QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(rootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000);
+            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(rootPath, @"message-chunks"), "message-chunk-", 256 * 1024 * 1024, 0, 0, 100);
+            QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(rootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000, 100);
             return this;
         }
     }

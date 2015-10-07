@@ -55,7 +55,7 @@ namespace EQueue.Broker.Storage
             return ChunkDataUnitSize * ChunkDataCount;
         }
 
-        public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount)
+        public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount, int flushChunkIntervalMilliseconds)
         {
             return new TFChunkManagerConfig(
                 basePath,
@@ -63,7 +63,7 @@ namespace EQueue.Broker.Storage
                 chunkDataSize,
                 chunkDataUnitSize,
                 chunkDataCount,
-                100,
+                flushChunkIntervalMilliseconds,
                 Environment.ProcessorCount * 2,
                 4 * 1024 * 1024);
         }

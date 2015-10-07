@@ -115,19 +115,22 @@ namespace EQueue.Broker.Storage
         }
         public bool RemoveChunk(TFChunk chunk)
         {
-            if (_chunks.Remove(chunk.ChunkHeader.ChunkNumber))
+            lock (_chunksLocker)
             {
-                try
+                if (_chunks.Remove(chunk.ChunkHeader.ChunkNumber))
                 {
-                    chunk.Delete();
+                    try
+                    {
+                        chunk.Delete();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(string.Format("Delete chunk {0} has exception.", chunk), ex);
+                    }
+                    return true;
                 }
-                catch (Exception ex)
-                {
-                    _logger.Error(string.Format("Delete chunk {0} has exception.", chunk), ex);
-                }
-                return true;
+                return false;
             }
-            return false;
         }
 
         public void Dispose()

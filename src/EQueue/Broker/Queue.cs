@@ -76,30 +76,6 @@ namespace EQueue.Broker
             var record = _chunkReader.TryReadAt(position, ReadMessageIndex);
             return record.MessageLogPosition;
         }
-        public long GetNextChunkFirstOffset(long queueOffset)
-        {
-            var position = queueOffset * _chunkManager.Config.ChunkDataUnitSize;
-            var chunkNum = (int)(position / _chunkManager.Config.GetChunkDataSize());
-            var nextChunkNum = chunkNum + 1;
-            var chunk = _chunkManager.GetChunk(nextChunkNum);
-
-            while (chunk == null)
-            {
-                if (nextChunkNum >= _chunkManager.GetLastChunk().ChunkHeader.ChunkNumber)
-                {
-                    break;
-                }
-                nextChunkNum++;
-                chunk = _chunkManager.GetChunk(nextChunkNum);
-            }
-
-            if (chunk != null)
-            {
-                return chunk.ChunkHeader.ChunkDataStartPosition / _chunkManager.Config.ChunkDataUnitSize;
-            }
-
-            return -1L;
-        }
         public void Enable()
         {
             _setting.Status = QueueStatus.Normal;

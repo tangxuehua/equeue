@@ -107,6 +107,7 @@ namespace EQueue.Broker.Processors
             var queueMaxOffset = _queueStore.GetQueueLastFlushedOffset(topic, queueId);
             var messages = new List<byte[]>();
             var currentQueueOffset = pullOffset;
+
             while (currentQueueOffset <= queueMaxOffset && messages.Count < maxPullSize)
             {
                 try
@@ -115,13 +116,16 @@ namespace EQueue.Broker.Processors
 
                     //这里减1是因为queue中存放的消息的position是实际的position加1
                     var message = _messageStore.GetMessage(messagePosition - 1);
-                    messages.Add(message);
+                    if (message != null)
+                    {
+                        messages.Add(message);
+                    }
 
                     currentQueueOffset++;
                 }
                 catch (ChunkNotExistException)
                 {
-                    _logger.InfoFormat("Chunk not exist, topic: {0}, queueId: {1}, currentQueueOffset: {2}", topic, queueId, currentQueueOffset);
+                    _logger.ErrorFormat("Chunk not exist, topic: {0}, queueId: {1}, currentQueueOffset: {2}", topic, queueId, currentQueueOffset);
                 }
                 catch (InvalidReadException ex)
                 {
@@ -170,18 +174,15 @@ namespace EQueue.Broker.Processors
                 };
             }
             //到这里，说明当前的pullOffset在队列的正常范围，即：>=queueMinOffset and <= queueMaxOffset；
-            //正常情况，应该有消息可以返回，除非消息或消息索引所在的物理文件被删除了或正在被删除；
+            //但如果还是没有找到消息，则可能的情况有：
+            //1）要拉取的消息还未来得及刷盘；
+            //2）要拉取的消息的文件或消息索引的文件被删除了；
+            //不管是哪种情况，告诉Consumer没有新消息即可。如果是情况1，则也许下次PullRequest就会拉取到消息；如果是情况2，则下次PullRequest就会被判断出pullOffset过小
             else
             {
-                var firstOffsetOfNextChunk = queue.GetNextChunkFirstOffset(currentQueueOffset);
-                if (firstOffsetOfNextChunk < 0L)
-                {
-                    firstOffsetOfNextChunk = 0L;
-                }
                 return new PullMessageResult
                 {
-                    Status = PullStatus.NextOffsetReset,
-                    NextBeginOffset = firstOffsetOfNextChunk
+                    Status = PullStatus.NoNewMessage
                 };
             }
         }

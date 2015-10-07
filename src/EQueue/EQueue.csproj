@@ -98,7 +98,6 @@
     <Compile Include="Broker\RequestHandlers\UpdateQueueOffsetRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\SendMessageRequestHandler.cs" />
     <Compile Include="Broker\Queue.cs" />
-    <Compile Include="Broker\Storage\Checkpoints\FileCheckpoint.cs" />
     <Compile Include="Broker\Storage\ChunkFooter.cs" />
     <Compile Include="Broker\Storage\ChunkHeader.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkCompleteException.cs" />
@@ -112,13 +111,9 @@
     <Compile Include="Broker\Storage\Exceptions\FileBeingDeletedException.cs" />
     <Compile Include="Broker\Storage\Exceptions\BadChunkInDatabaseException.cs" />
     <Compile Include="Broker\Storage\Exceptions\WrongFileVersionException.cs" />
-    <Compile Include="Broker\Storage\Extensions\FileStreamExtensions.cs" />
     <Compile Include="Broker\Storage\FileNamingStrategies\IFileNamingStrategy.cs" />
-    <Compile Include="Broker\Storage\Checkpoints\ICheckpoint.cs" />
-    <Compile Include="Broker\Storage\Checkpoints\InMemoryCheckpoint.cs" />
     <Compile Include="Broker\Storage\LogRecords\BufferLogRecord.cs" />
     <Compile Include="Broker\Storage\LogRecords\ILogRecord.cs" />
-    <Compile Include="Broker\Storage\Checkpoints\MemoryMappedFileCheckpoint.cs" />
     <Compile Include="Broker\Storage\RecordBufferReadResult.cs" />
     <Compile Include="Broker\Storage\TFChunkManagerConfig.cs" />
     <Compile Include="Broker\Storage\TFChunkManager.cs" />

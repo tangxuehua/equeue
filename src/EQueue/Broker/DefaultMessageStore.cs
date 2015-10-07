@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using EQueue.Broker.DeleteMessageStrategies;
@@ -74,6 +75,16 @@ namespace EQueue.Broker
         }
         public byte[] GetMessage(long position)
         {
+            var currentChunk = _chunkWriter.CurrentChunk;
+            if (currentChunk.LastFlushedDataLength > 0)
+            {
+                var lastFlushedMessageStartPosition = currentChunk.GlobalFlushPosition - currentChunk.LastFlushedDataLength;
+                if (lastFlushedMessageStartPosition < position)
+                {
+                    return null;
+                }
+            }
+
             return _chunkReader.TryReadRecordBufferAt(position).RecordBuffer;
         }
         public void UpdateMinConsumedMessagePosition(long minConsumedMessagePosition)
