@@ -6,6 +6,7 @@ namespace EQueue.Protocols
     [Serializable]
     public class PullMessageRequest
     {
+        public string ConsumerId { get; set; }
         public string ConsumerGroup { get; set; }
         public MessageQueue MessageQueue { get; set; }
         public long QueueOffset { get; set; }
@@ -17,6 +18,7 @@ namespace EQueue.Protocols
         {
             using (var writer = new BinaryWriter(stream))
             {
+                writer.Write(request.ConsumerId);
                 writer.Write(request.ConsumerGroup);
                 writer.Write(request.MessageQueue.Topic);
                 writer.Write(request.MessageQueue.QueueId);
@@ -31,6 +33,7 @@ namespace EQueue.Protocols
             using (var reader = new BinaryReader(stream))
             {
                 var request = new PullMessageRequest();
+                request.ConsumerId = reader.ReadString();
                 request.ConsumerGroup = reader.ReadString();
                 request.MessageQueue = new MessageQueue(reader.ReadString(), reader.ReadInt32());
                 request.QueueOffset = reader.ReadInt64();

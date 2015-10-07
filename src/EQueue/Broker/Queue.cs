@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using ECommon.Components;
+using ECommon.Logging;
 using ECommon.Serializing;
 using EQueue.Broker.Storage;
 
@@ -18,6 +19,7 @@ namespace EQueue.Broker
         private readonly IJsonSerializer _jsonSerializer;
         private QueueSetting _setting;
         private readonly string _queueSettingFile;
+        private ILogger _logger;
 
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
@@ -34,6 +36,7 @@ namespace EQueue.Broker
             _chunkWriter = new TFChunkWriter(_chunkManager);
             _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
             _queueSettingFile = Path.Combine(_chunkManager.ChunkPath, QueueSettingFileName);
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(this.GetType().FullName);
         }
 
         public void Load()
@@ -115,7 +118,7 @@ namespace EQueue.Broker
         {
             return _chunkManager.GetFirstChunk().ChunkHeader.ChunkDataStartPosition / _chunkManager.Config.ChunkDataUnitSize;
         }
-        public void DeleteMessages(long minConsumedMessagePosition)
+        public void DeleteMessages(long minMessagePosition)
         {
             var chunks = _chunkManager.GetAllChunks().Where(x => x.IsCompleted);
 
@@ -125,9 +128,12 @@ namespace EQueue.Broker
                 var record = _chunkReader.TryReadAt(maxPosition, ReadMessageIndex);
                 var chunkLastMessagePosition = record.MessageLogPosition;
 
-                if (chunkLastMessagePosition <= minConsumedMessagePosition)
+                if (chunkLastMessagePosition < minMessagePosition)
                 {
-                    _chunkManager.RemoveChunk(chunk);
+                    if (_chunkManager.RemoveChunk(chunk))
+                    {
+                        _logger.InfoFormat("Queue chunk {0} is deleted, chunk last message position: {1}", chunk, chunkLastMessagePosition);
+                    }
                 }
             }
         }

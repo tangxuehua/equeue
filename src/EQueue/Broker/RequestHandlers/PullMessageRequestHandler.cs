@@ -228,8 +228,7 @@ namespace EQueue.Broker.Processors
         {
             try
             {
-                var consumerGroup = _consumerManager.GetConsumerGroup(pullRequest.PullMessageRequest.ConsumerGroup);
-                return consumerGroup != null && consumerGroup.IsConsumerActive(pullRequest.RequestHandlerContext.Connection.RemotingEndPoint.ToString());
+                return _consumerManager.IsConsumerActive(pullRequest.PullMessageRequest.ConsumerGroup, pullRequest.PullMessageRequest.ConsumerId);
             }
             catch (ObjectDisposedException)
             {

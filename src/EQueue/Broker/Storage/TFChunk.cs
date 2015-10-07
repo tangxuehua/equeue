@@ -762,7 +762,7 @@ namespace EQueue.Broker.Storage
 
         public override string ToString()
         {
-            return string.Format("#{0} ({1})", _chunkHeader.ChunkNumber, _filename);
+            return string.Format("#{0} ({1},{2}-{3})", _chunkHeader.ChunkNumber, _filename, _chunkHeader.ChunkDataStartPosition, _chunkHeader.ChunkDataEndPosition);
         }
     }
 }

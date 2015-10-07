@@ -42,9 +42,9 @@
     <Reference Include="Dapper">
       <HintPath>..\packages\Dapper.1.38\lib\net45\Dapper.dll</HintPath>
     </Reference>
-    <Reference Include="ECommon, Version=1.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ECommon, Version=1.5.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\ecommon.1.5.0\lib\net45\ECommon.dll</HintPath>
+      <HintPath>..\packages\ecommon.1.5.1\lib\net45\ECommon.dll</HintPath>
     </Reference>
     <Reference Include="ECommon.Dapper, Version=1.4.2.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -83,7 +83,7 @@
     <Compile Include="Broker\DefaultOffsetStore.cs" />
     <Compile Include="Broker\SqlServerOffsetManagerSetting.cs" />
     <Compile Include="Broker\BrokerSetting.cs" />
-    <Compile Include="Broker\Client\ClientChannel.cs" />
+    <Compile Include="Broker\Client\ConsumerHeartbeatInfo.cs" />
     <Compile Include="Broker\Client\ConsumerGroup.cs" />
     <Compile Include="Broker\Client\ConsumerManager.cs" />
     <Compile Include="Broker\IOffsetStore.cs" />
@@ -180,6 +180,7 @@
     <Compile Include="Utils\ConsoleEventHandlerService.cs" />
     <Compile Include="Utils\MessageUtils.cs" />
     <Compile Include="Utils\RemotingResponseFactory.cs" />
+    <Compile Include="Utils\ClientIdFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

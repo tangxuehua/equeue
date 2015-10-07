@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using ECommon.Components;
@@ -70,10 +71,10 @@ namespace EQueue.Broker
         {
             var watch = Stopwatch.StartNew();
             _logger.InfoFormat("Broker starting...");
-            _queueStore.Start();
+            _consumerManager.Start();
             _offsetStore.Start();
             _messageStore.Start();
-            _consumerManager.Start();
+            _queueStore.Start();
             _suspendedPullRequestManager.Start();
             _consumerSocketRemotingServer.Start();
             _producerSocketRemotingServer.Start();
@@ -150,7 +151,8 @@ namespace EQueue.Broker
             public void OnConnectionFailed(SocketError socketError) { }
             public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
             {
-                _brokerController._consumerManager.RemoveConsumer(connection.RemotingEndPoint.ToString());
+                var consumerId = ClientIdFactory.CreateClientId(connection.RemotingEndPoint as IPEndPoint);
+                _brokerController._consumerManager.RemoveConsumer(consumerId);
             }
         }
     }

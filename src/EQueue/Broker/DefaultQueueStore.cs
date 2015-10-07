@@ -314,7 +314,7 @@ namespace EQueue.Broker
                 {
                     foreach (var queue in _queueDict.Values)
                     {
-                        queue.DeleteMessages(_messageStore.MinConsumedMessagePosition);
+                        queue.DeleteMessages(_messageStore.MinMessagePosition);
                     }
                 }
                 catch (Exception ex)

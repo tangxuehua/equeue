@@ -5,7 +5,6 @@ namespace EQueue.Broker
 {
     public interface IMessageStore
     {
-        long MinConsumedMessagePosition { get; }
         long MinMessagePosition { get; }
         long CurrentMessagePosition { get; }
         void Start();

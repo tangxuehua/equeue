@@ -10,6 +10,7 @@ namespace EQueue.Clients.Consumers
         public IPEndPoint BrokerAdminAddress { get; set; }
         public IPEndPoint LocalAddress { get; set; }
         public IPEndPoint LocalAdminAddress { get; set; }
+        public SocketSetting SocketSetting { get; set; }
         public int ConsumeThreadMaxCount { get; set; }
         public int DefaultTimeoutMilliseconds { get; set; }
         public int RebalanceInterval { get; set; }
@@ -29,6 +30,7 @@ namespace EQueue.Clients.Consumers
         {
             BrokerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
             BrokerAdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
+            SocketSetting = new SocketSetting();
             ConsumeThreadMaxCount = 64;
             DefaultTimeoutMilliseconds = 60 * 1000;
             RebalanceInterval = 1000 * 5;

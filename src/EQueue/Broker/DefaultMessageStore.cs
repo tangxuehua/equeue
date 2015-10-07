@@ -18,13 +18,6 @@ namespace EQueue.Broker
         private readonly ILogger _logger;
         private long _minConsumedMessagePosition;
 
-        public long MinConsumedMessagePosition
-        {
-            get
-            {
-                return _minConsumedMessagePosition;
-            }
-        }
         public long MinMessagePosition
         {
             get
@@ -100,7 +93,10 @@ namespace EQueue.Broker
             var chunks = _deleteMessageStragegy.GetAllowDeleteChunks(_chunkManager, _minConsumedMessagePosition);
             foreach (var chunk in chunks)
             {
-                _chunkManager.RemoveChunk(chunk);
+                if (_chunkManager.RemoveChunk(chunk))
+                {
+                    _logger.InfoFormat("Message chunk {0} is deleted.", chunk);
+                }
             }
         }
         private MessageLogRecord ReadMessage(int length, BinaryReader reader)
