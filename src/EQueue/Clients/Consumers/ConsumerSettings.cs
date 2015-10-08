@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using ECommon.Socketing;
 using EQueue.Protocols;
 
@@ -23,7 +24,6 @@ namespace EQueue.Clients.Consumers
         public int PullRequestTimeoutMilliseconds { get; set; }
         public int RetryMessageInterval { get; set; }
         public int PullMessageBatchSize { get; set; }
-        public MessageHandleMode MessageHandleMode { get; set; }
         public ConsumeFromWhere ConsumeFromWhere { get; set; }
 
         public ConsumerSetting()
@@ -31,7 +31,7 @@ namespace EQueue.Clients.Consumers
             BrokerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
             BrokerAdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
             SocketSetting = new SocketSetting();
-            ConsumeThreadMaxCount = 64;
+            ConsumeThreadMaxCount = Environment.ProcessorCount * 2;
             DefaultTimeoutMilliseconds = 60 * 1000;
             RebalanceInterval = 1000 * 5;
             HeartbeatBrokerInterval = 1000 * 5;
@@ -43,7 +43,6 @@ namespace EQueue.Clients.Consumers
             PullRequestTimeoutMilliseconds = 70 * 1000;
             RetryMessageInterval = 3000;
             PullMessageBatchSize = 32;
-            MessageHandleMode = MessageHandleMode.Parallel;
             ConsumeFromWhere = ConsumeFromWhere.LastOffset;
         }
     }

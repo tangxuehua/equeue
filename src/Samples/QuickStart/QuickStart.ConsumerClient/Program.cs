@@ -58,7 +58,6 @@ namespace QuickStart.ConsumerClient
         {
             private long _previusHandledCount;
             private long _handledCount;
-            private Stopwatch _watch;
             private IScheduleService _scheduleService;
 
             public MessageHandler()
