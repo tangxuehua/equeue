@@ -54,7 +54,9 @@ namespace EQueue.Broker.Storage
                 {
                     for (var i = 0; i < files.Length - 1; i++)
                     {
-                        AddChunk(TFChunk.FromCompletedFile(files[i], _config));
+                        var chunk = TFChunk.FromCompletedFile(files[i], _config);
+                        chunk.CacheInMemory();
+                        AddChunk(chunk);
                     }
                     AddChunk(TFChunk.FromOngoingFile(files[files.Length - 1], _config, readRecordFunc));
                 }

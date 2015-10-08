@@ -241,17 +241,23 @@ namespace EQueue.Broker
             {
                 Directory.CreateDirectory(chunkConfig.BasePath);
             }
-            var pathList = Directory
-                            .EnumerateDirectories(chunkConfig.BasePath, "*", SearchOption.AllDirectories)
+            var topicPathList = Directory
+                            .EnumerateDirectories(chunkConfig.BasePath, "*", SearchOption.TopDirectoryOnly)
                             .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
                             .ToArray();
-            for (var i = 1; i < pathList.Count(); i++)
+            foreach (var topicPath in topicPathList)
             {
-                var path = pathList[i];
-                var items = path.Split('\\');
-                var queueId = int.Parse(items[items.Length - 1]);
-                var topic = items[items.Length - 2];
-                LoadQueue(topic, queueId);
+                var queuePathList = Directory
+                            .EnumerateDirectories(topicPath, "*", SearchOption.TopDirectoryOnly)
+                            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
+                            .ToArray();
+                foreach (var queuePath in queuePathList)
+                {
+                    var items = queuePath.Split('\\');
+                    var queueId = int.Parse(items[items.Length - 1]);
+                    var topic = items[items.Length - 2];
+                    LoadQueue(topic, queueId);
+                }
             }
         }
         private void LoadQueue(string topic, int queueId)
