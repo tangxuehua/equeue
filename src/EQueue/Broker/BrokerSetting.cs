@@ -19,7 +19,7 @@ namespace EQueue.Broker
         /// <summary>消息到达时是否立即通知相关的PullRequest，默认为false；
         /// <remarks>
         /// 如果希望当前场景消息吞吐量不大且要求消息消费的实时性更高，可以考虑设置为true；设置为false时，最多在<see cref="CheckBlockingPullRequestMilliseconds"/>
-        /// 的时间后，PullRequest会被通知到有新消息；也就是说，设置为false时，最多延迟<see cref="CheckBlockingPullRequestMilliseconds"/>会被通知到有新消息。
+        /// 的时间后，PullRequest会被通知到有新消息；也就是说，设置为false时，消息最多延迟<see cref="CheckBlockingPullRequestMilliseconds"/>。
         /// </remarks>
         /// </summary>
         public bool NotifyWhenMessageArrived { get; set; }
