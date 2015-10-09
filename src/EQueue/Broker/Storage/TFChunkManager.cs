@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
+using ECommon.Scheduling;
 using ECommon.Utilities;
 
 namespace EQueue.Broker.Storage
@@ -16,6 +17,7 @@ namespace EQueue.Broker.Storage
         private readonly TFChunkManagerConfig _config;
         private readonly IDictionary<int, TFChunk> _chunks;
         private readonly string _chunkPath;
+        private readonly IScheduleService _scheduleService;
         private int _nextChunkNumber;
 
         public string Name { get; private set; }
@@ -38,6 +40,8 @@ namespace EQueue.Broker.Storage
                 _chunkPath = Path.Combine(_config.BasePath, relativePath);
             }
             _chunks = new ConcurrentDictionary<int, TFChunk>();
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
+            _scheduleService.StartTask(string.Format("{0}.{1}.UncacheChunks", Name, this.GetType().Name), UncacheChunks, 1000, 1000);
         }
 
         public void Load<T>(Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
@@ -52,10 +56,15 @@ namespace EQueue.Broker.Storage
 
                 if (files.Length > 0)
                 {
-                    for (var i = 0; i < files.Length - 1; i++)
+                    var cachedChunkCount = 0;
+                    for (var i = files.Length - 2; i >= 0; i--)
                     {
                         var chunk = TFChunk.FromCompletedFile(files[i], _config);
-                        chunk.CacheInMemory();
+                        if (cachedChunkCount < _config.InitialCacheChunkCount)
+                        {
+                            chunk.CacheInMemory();
+                            cachedChunkCount++;
+                        }
                         AddChunk(chunk);
                     }
                     AddChunk(TFChunk.FromOngoingFile(files[files.Length - 1], _config, readRecordFunc));
@@ -143,6 +152,7 @@ namespace EQueue.Broker.Storage
         {
             lock (_chunksLocker)
             {
+                _scheduleService.StopTask(string.Format("{0}.{1}.UncacheChunks", Name, this.GetType().Name));
                 foreach (var chunk in _chunks.Values)
                 {
                     try
@@ -161,6 +171,17 @@ namespace EQueue.Broker.Storage
         {
             _chunks.Add(chunk.ChunkHeader.ChunkNumber, chunk);
             _nextChunkNumber = chunk.ChunkHeader.ChunkNumber + 1;
+        }
+        private void UncacheChunks()
+        {
+            var chunks = _chunks.Values;
+            foreach (var chunk in chunks)
+            {
+                if ((DateTime.Now - chunk.LastActiveTime).TotalSeconds >= _config.ChunkInactiveTimeMaxSeconds)
+                {
+                    chunk.UnCacheFromMemory();
+                }
+            }
         }
     }
 }

@@ -2,11 +2,13 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Utilities;
+using EQueue.Utils;
 
 namespace EQueue.Broker.Storage
 {
@@ -24,17 +26,24 @@ namespace EQueue.Broker.Storage
 
         private readonly string _filename;
         private readonly TFChunkManagerConfig _chunkConfig;
+        private readonly bool _isMemoryChunk;
         private readonly ConcurrentQueue<ReaderWorkItem> _readerWorkItemQueue = new ConcurrentQueue<ReaderWorkItem>();
 
         private readonly object _writeSyncObj = new object();
+        private readonly object _cacheSyncObj = new object();
+
+        private IntPtr _cachedData;
+        private int _cachedLength;
+
         private int _dataPosition;
         private int _flushedPosition;
         private int _lastFlushedDataLength;
         private volatile bool _isCompleted;
         private volatile bool _isDeleting;
         private int _cachingChunk;
+        private DateTime _lastActiveTime;
 
-        private TFMemoryChunk _memoryChunk;
+        private TFChunk _memoryChunk;
 
         private WriterWorkItem _writerWorkItem;
 
@@ -47,6 +56,7 @@ namespace EQueue.Broker.Storage
         public ChunkFooter ChunkFooter { get { return _chunkFooter; } }
         public TFChunkManagerConfig Config { get { return _chunkConfig; } }
         public bool IsCompleted { get { return _isCompleted; } }
+        public DateTime LastActiveTime { get { return _lastActiveTime; } }
         public int DataPosition { get { return _dataPosition; } }
         public int FlushedPosition { get { return _flushedPosition; } }
         public long GlobalDataPosition
@@ -79,22 +89,24 @@ namespace EQueue.Broker.Storage
 
         #region Constructors
 
-        private TFChunk(string filename, TFChunkManagerConfig chunkConfig)
+        private TFChunk(string filename, TFChunkManagerConfig chunkConfig, bool isMemoryChunk)
         {
             Ensure.NotNullOrEmpty(filename, "filename");
             Ensure.NotNull(chunkConfig, "chunkConfig");
 
             _filename = filename;
             _chunkConfig = chunkConfig;
+            _isMemoryChunk = isMemoryChunk;
+            _lastActiveTime = DateTime.Now;
         }
 
         #endregion
 
         #region Factory Methods
 
-        public static TFChunk CreateNew(string filename, int chunkNumber, TFChunkManagerConfig config)
+        public static TFChunk CreateNew(string filename, int chunkNumber, TFChunkManagerConfig config, bool isMemoryChunk = false)
         {
-            var chunk = new TFChunk(filename, config);
+            var chunk = new TFChunk(filename, config, isMemoryChunk);
 
             try
             {
@@ -109,13 +121,13 @@ namespace EQueue.Broker.Storage
 
             return chunk;
         }
-        public static TFChunk FromCompletedFile(string filename, TFChunkManagerConfig config)
+        public static TFChunk FromCompletedFile(string filename, TFChunkManagerConfig config, bool isMemoryChunk = false, bool autoCacheInMemory = false)
         {
-            var chunk = new TFChunk(filename, config);
+            var chunk = new TFChunk(filename, config, isMemoryChunk);
 
             try
             {
-                chunk.InitCompleted();
+                chunk.InitCompleted(autoCacheInMemory);
             }
             catch (Exception ex)
             {
@@ -126,9 +138,9 @@ namespace EQueue.Broker.Storage
 
             return chunk;
         }
-        public static TFChunk FromOngoingFile<T>(string filename, TFChunkManagerConfig config, Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord 
+        public static TFChunk FromOngoingFile<T>(string filename, TFChunkManagerConfig config, Func<int, BinaryReader, T> readRecordFunc, bool isMemoryChunk = false) where T : ILogRecord 
         {
-            var chunk = new TFChunk(filename, config);
+            var chunk = new TFChunk(filename, config, isMemoryChunk);
 
             try
             {
@@ -148,63 +160,46 @@ namespace EQueue.Broker.Storage
 
         #region Init Methods
 
-        private void InitCompleted()
+        private void InitCompleted(bool autoCacheInMemory)
         {
-            //先判断文件是否存在
             var fileInfo = new FileInfo(_filename);
             if (!fileInfo.Exists)
             {
                 throw new CorruptDatabaseException(new ChunkFileNotExistException(_filename));
             }
 
-            //标记当前Chunk为已完成
             _isCompleted = true;
 
-            //读取文件的头尾，检查文件是否有效
             using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.RandomAccess))
             {
                 using (var reader = new BinaryReader(fileStream))
                 {
-                    //读取ChunkHeader和ChunkFooter
                     _chunkHeader = ReadHeader(fileStream, reader);
                     _chunkFooter = ReadFooter(fileStream, reader);
 
-                    //检查Chunk文件的实际大小是否正确
-                    var chunkFileSize = ChunkHeader.Size + _chunkFooter.ChunkDataTotalSize + ChunkFooter.Size;
-                    if (chunkFileSize != fileStream.Length)
-                    {
-                        throw new CorruptDatabaseException(new BadChunkInDatabaseException(
-                            string.Format("The size of chunk {0} should be equals with fileStream's length {1}, but instead it was {2}.",
-                                            this,
-                                            fileStream.Length,
-                                            chunkFileSize)));
-                    }
-
-                    //如果Chunk中的数据是固定大小的，则还需要检查数据总数是否正确
-                    if (IsFixedDataSize())
-                    {
-                        if (_chunkFooter.ChunkDataTotalSize != _chunkHeader.ChunkDataTotalSize)
-                        {
-                            throw new CorruptDatabaseException(new BadChunkInDatabaseException(
-                                string.Format("The total data size of chunk {0} should be {1}, but instead it was {2}.",
-                                                this,
-                                                _chunkHeader.ChunkDataTotalSize,
-                                                _chunkFooter.ChunkDataTotalSize)));
-                        }
-                    }
+                    CheckCompletedFileChunk();
                 }
             }
 
             _dataPosition = _chunkFooter.ChunkDataTotalSize;
             _flushedPosition = _dataPosition;
 
-            //初始化文件属性以及创建读文件的Reader
-            SetAttributes();
+            SetFileAttributes();
+
+            if (_isMemoryChunk)
+            {
+                LoadFileChunkToMemory();
+            }
+
             InitializeReaderWorkItems();
+
+            if (autoCacheInMemory)
+            {
+                CacheInMemory();
+            }
         }
         private void InitNew(int chunkNumber)
         {
-            //初始化ChunkHeader
             var chunkDataSize = 0;
             if (_chunkConfig.ChunkDataSize > 0)
             {
@@ -217,47 +212,54 @@ namespace EQueue.Broker.Storage
 
             _chunkHeader = new ChunkHeader(chunkNumber, chunkDataSize);
 
-            //计算Chunk文件大小
-            var fileSize = ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize + ChunkFooter.Size;
-
-            //标记当前Chunk为未完成
             _isCompleted = false;
 
-            //先创建临时文件，并将Chunk Header写入临时文件
-            var tempFilename = string.Format("{0}.{1}.tmp", _filename, Guid.NewGuid());
-            var tempFileStream = new FileStream(tempFilename, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
-            tempFileStream.SetLength(fileSize);
-            tempFileStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
-            tempFileStream.Flush(true);
-            tempFileStream.Close();
+            var fileSize = ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize + ChunkFooter.Size;
 
-            //将临时文件移动到正式的位置
-            File.Move(tempFilename, _filename);
+            var writeStream = default(Stream);
 
-            //创建写文件的Writer
-            var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
-            fileStream.Position = ChunkHeader.Size;
+            if (_isMemoryChunk)
+            {
+                _cachedLength = fileSize;
+                _cachedData = Marshal.AllocHGlobal(_cachedLength);
+                writeStream = new UnmanagedMemoryStream((byte*)_cachedData, _cachedLength, _cachedLength, FileAccess.ReadWrite);
+                writeStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
+            }
+            else
+            {
+                var tempFilename = string.Format("{0}.{1}.tmp", _filename, Guid.NewGuid());
+                var tempFileStream = new FileStream(tempFilename, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
+                tempFileStream.SetLength(fileSize);
+                tempFileStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
+                tempFileStream.Flush(true);
+                tempFileStream.Close();
+
+                File.Move(tempFilename, _filename);
+
+                writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
+                SetFileAttributes();
+            }
+
+            writeStream.Position = ChunkHeader.Size;
+
             _dataPosition = 0;
             _flushedPosition = 0;
-            _writerWorkItem = new WriterWorkItem(fileStream);
+            _writerWorkItem = new WriterWorkItem(writeStream);
 
-            //初始化文件属性以及创建读文件的Reader
-            SetAttributes();
             InitializeReaderWorkItems();
+
+            CacheInMemory();
         }
         private void InitOngoing<T>(Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
         {
-            //先判断文件是否存在
             var fileInfo = new FileInfo(_filename);
             if (!fileInfo.Exists)
             {
                 throw new CorruptDatabaseException(new ChunkFileNotExistException(_filename));
             }
 
-            //标记当前Chunk为未完成
             _isCompleted = false;
 
-            //读取ChunkHeader和并设置下一个数据的文件流写入起始位置
             using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.SequentialScan))
             {
                 using (var reader = new BinaryReader(fileStream))
@@ -269,14 +271,52 @@ namespace EQueue.Broker.Storage
                 }
             }
 
-            //创建写文件的Writer
-            var writeFileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
-            writeFileStream.Position = _dataPosition + ChunkHeader.Size;
-            _writerWorkItem = new WriterWorkItem(writeFileStream);
+            var writeStream = default(Stream);
 
-            //初始化文件属性以及创建读文件的Reader
-            SetAttributes();
+            if (_isMemoryChunk)
+            {
+                var fileSize = ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize + ChunkFooter.Size;
+                _cachedLength = fileSize;
+                _cachedData = Marshal.AllocHGlobal(_cachedLength);
+                writeStream = new UnmanagedMemoryStream((byte*)_cachedData, _cachedLength, _cachedLength, FileAccess.ReadWrite);
+
+                writeStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
+
+                using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 8192, FileOptions.RandomAccess))
+                {
+                    fileStream.Seek(ChunkHeader.Size, SeekOrigin.Begin);
+                    var buffer = new byte[65536];
+                    int toRead = _dataPosition + ChunkHeader.Size;
+
+                    while (toRead > 0)
+                    {
+                        int read = fileStream.Read(buffer, 0, Math.Min(toRead, buffer.Length));
+                        if (read == 0)
+                        {
+                            break;
+                        }
+                        toRead -= read;
+                        writeStream.Write(buffer, 0, read);
+                    }
+                }
+
+                if (writeStream.Position != _dataPosition + ChunkHeader.Size)
+                {
+                    throw new InvalidOperationException(string.Format("UnmanagedMemoryStream position incorrect, expect: {0}, but: {1}", _dataPosition + ChunkHeader.Size, writeStream.Position));
+                }
+            }
+            else
+            {
+                writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
+                writeStream.Position = _dataPosition + ChunkHeader.Size;
+                SetFileAttributes();
+            }
+
+            _writerWorkItem = new WriterWorkItem(writeStream);
+
             InitializeReaderWorkItems();
+
+            CacheInMemory();
         }
 
         #endregion
@@ -285,33 +325,82 @@ namespace EQueue.Broker.Storage
 
         public void CacheInMemory()
         {
-            try
+            lock (_cacheSyncObj)
             {
-                if (_memoryChunk != null) return;
+                if (!_isCompleted || _isMemoryChunk)
+                {
+                    throw new InvalidOperationException("Only completed file chunk can be cached in memory.");
+                }
 
-                var memoryChunk = new TFMemoryChunk(this);
-                memoryChunk.Initialize();
-                _memoryChunk = memoryChunk;
+                try
+                {
+                    var physicalMemorySize = MemoryInfoUtil.GetTotalPhysicalMemorySize();
+                    var usedMemoryPercent = MemoryInfoUtil.GetUsedMemoryPercent();
+                    var usedMemorySize = physicalMemorySize * usedMemoryPercent / 100;
+                    var chunkSize = ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize + ChunkFooter.Size;
+                    var maxAllowUseMemoryPercent = _chunkConfig.MessageChunkCacheMaxPercent - 5;
+
+                    if (_memoryChunk == null)
+                    {
+                        if (_chunkConfig.ForceCacheChunk || usedMemoryPercent + chunkSize < maxAllowUseMemoryPercent)
+                        {
+                            _logger.InfoFormat("Caching chunk {0} to memory, physicalMemorySize: {1}, currentUsedMemorySize: {2}, chunkSize: {3}, usedMemoryPercent: {4}, messageChunkCacheMaxPercent: {5}.",
+                                this,
+                                physicalMemorySize,
+                                usedMemorySize,
+                                chunkSize,
+                                usedMemoryPercent,
+                                _chunkConfig.MessageChunkCacheMaxPercent);
+                        }
+                        _memoryChunk = TFChunk.CreateNew(_filename, _chunkHeader.ChunkNumber, _chunkConfig, true);
+                        _logger.Info("Cached chunk {0} to memory.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(string.Format("Cache chunk {0} to memory failed.", this), ex);
+                    _cachingChunk = 0;
+                }
             }
-            catch (Exception ex)
+        }
+        public void UnCacheFromMemory()
+        {
+            lock (_cacheSyncObj)
             {
-                _logger.Error(string.Format("Cache chunk {0} to memory failed.", this), ex);
-                _cachingChunk = 0;
+                if (!_isCompleted)
+                {
+                    throw new InvalidOperationException("Only completed file chunk can be uncached from memory.");
+                }
+
+                try
+                {
+                    if (_memoryChunk != null)
+                    {
+                        var memoryChunk = _memoryChunk;
+                        _memoryChunk = null;
+                        memoryChunk.Dispose();
+                        _logger.Info("Uncached chunk {0} from memory.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(string.Format("Uncache chunk {0} from memory failed.", this), ex);
+                }
             }
         }
         public T TryReadAt<T>(long dataPosition, Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
         {
-            if (_isDeleting)
-            {
-                throw new InvalidReadException(string.Format("Chunk {0} is being deleting.",this));
-            }
-
             if (_memoryChunk != null)
             {
                 return _memoryChunk.TryReadAt<T>(dataPosition, readRecordFunc);
             }
 
-            if (this.IsCompleted && Interlocked.CompareExchange(ref _cachingChunk, 1, 0) == 0)
+            if (_isDeleting)
+            {
+                throw new InvalidReadException(string.Format("Chunk {0} is being deleting.", this));
+            }
+
+            if (!_isMemoryChunk && _isCompleted && Interlocked.CompareExchange(ref _cachingChunk, 1, 0) == 0)
             {
                 Task.Factory.StartNew(CacheInMemory);
             }
@@ -334,6 +423,7 @@ namespace EQueue.Broker.Storage
             finally
             {
                 ReturnReaderWorkItem(readerWorkItem);
+                _lastActiveTime = DateTime.Now;
             }
         }
         public RecordWriteResult TryAppend(ILogRecord record)
@@ -349,7 +439,7 @@ namespace EQueue.Broker.Storage
 
             if (IsFixedDataSize())
             {
-                if (writerWorkItem.FileStream.Position + _chunkConfig.ChunkDataUnitSize > ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize)
+                if (writerWorkItem.WorkingStream.Position + _chunkConfig.ChunkDataUnitSize > ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize)
                 {
                     return RecordWriteResult.NotEnoughSpace();
                 }
@@ -378,7 +468,7 @@ namespace EQueue.Broker.Storage
                                       _dataPosition, recordLength, _chunkConfig.MaxLogRecordSize));
                 }
 
-                if (writerWorkItem.FileStream.Position + recordLength + 2 * sizeof(int) > ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize)
+                if (writerWorkItem.WorkingStream.Position + recordLength + 2 * sizeof(int) > ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize)
                 {
                     return RecordWriteResult.NotEnoughSpace();
                 }
@@ -392,12 +482,27 @@ namespace EQueue.Broker.Storage
                 writerWorkItem.AppendData(buffer, 0, (int)bufferStream.Length);
             }
 
-            _dataPosition = (int)writerWorkItem.FileStream.Position - ChunkHeader.Size;
+            _dataPosition = (int)writerWorkItem.WorkingStream.Position - ChunkHeader.Size;
 
-            return RecordWriteResult.Successful(ChunkHeader.ChunkDataStartPosition + writtenPosition);
+            var position = ChunkHeader.ChunkDataStartPosition + writtenPosition;
+
+            var result = _memoryChunk.TryAppend(record);
+            if (!result.Success)
+            {
+                throw new ChunkWriteException(this.ToString(), "Append record to file chunk success, but append to memory chunk failed as memory space not enough, this should not be happened.");
+            }
+            else if (result.Position != position)
+            {
+                throw new ChunkWriteException(this.ToString(), string.Format("Append record to file chunk success, but append to memory chunk failed, the position is not equal, memory position: {0}, file position: {1}.", result.Position, position));
+            }
+
+            _lastActiveTime = DateTime.Now;
+            return RecordWriteResult.Successful(position);
         }
         public void Flush()
         {
+            if (_isMemoryChunk) return;
+
             if (_isCompleted)
             {
                 throw new InvalidOperationException(string.Format("Cannot flush a read-only TFChunk: {0}", this));
@@ -406,24 +511,33 @@ namespace EQueue.Broker.Storage
             lock (_writeSyncObj)
             {
                 _writerWorkItem.FlushToDisk();
-                _flushedPosition = (int)_writerWorkItem.FileStream.Position - ChunkHeader.Size;
+                _flushedPosition = (int)_writerWorkItem.WorkingStream.Position - ChunkHeader.Size;
                 _lastFlushedDataLength = _writerWorkItem.LastAppendDataLength;
             }
         }
         public void Complete()
         {
-            if (_isCompleted)
+            lock (_writeSyncObj)
             {
-                throw new ChunkCompleteException(string.Format("Cannot complete a read-only TFChunk: {0}", this));
+                if (_isCompleted)
+                {
+                    throw new ChunkCompleteException(string.Format("Cannot complete a read-only TFChunk: {0}", this));
+                }
+
+                _chunkFooter = WriteFooter();
+                Flush();
+                _isCompleted = true;
+
+                _writerWorkItem.Dispose();
+                _writerWorkItem = null;
+
+                if (!_isMemoryChunk)
+                {
+                    SetFileAttributes();
+                }
+
+                _memoryChunk.Complete();
             }
-
-            _chunkFooter = WriteFooter();
-            Flush();
-            _isCompleted = true;
-
-            _writerWorkItem.Dispose();
-            _writerWorkItem = null;
-            SetAttributes();
         }
 
         #endregion
@@ -436,14 +550,22 @@ namespace EQueue.Broker.Storage
         }
         public void Close()
         {
-            CloseAllReaderWorkItems();
-            if (!_isCompleted)
+            lock (_writeSyncObj)
             {
-                Flush();
+                if (!_isCompleted)
+                {
+                    _writerWorkItem.WorkingStream.Dispose();
+                    Flush();
+                }
+
+                CloseAllReaderWorkItems();
+                FreeCachedChunk();
             }
         }
         public void Delete()
         {
+            if (_isMemoryChunk) return;
+
             //检查当前chunk是否已完成
             if (!_isCompleted)
             {
@@ -464,6 +586,89 @@ namespace EQueue.Broker.Storage
         #endregion
 
         #region Helper Methods
+
+        private void CheckCompletedFileChunk()
+        {
+            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.RandomAccess))
+            {
+                //检查Chunk文件的实际大小是否正确
+                var chunkFileSize = ChunkHeader.Size + _chunkFooter.ChunkDataTotalSize + ChunkFooter.Size;
+                if (chunkFileSize != fileStream.Length)
+                {
+                    throw new CorruptDatabaseException(new BadChunkInDatabaseException(
+                        string.Format("The size of chunk {0} should be equals with fileStream's length {1}, but instead it was {2}.",
+                                        this,
+                                        fileStream.Length,
+                                        chunkFileSize)));
+                }
+
+                //如果Chunk中的数据是固定大小的，则还需要检查数据总数是否正确
+                if (IsFixedDataSize())
+                {
+                    if (_chunkFooter.ChunkDataTotalSize != _chunkHeader.ChunkDataTotalSize)
+                    {
+                        throw new CorruptDatabaseException(new BadChunkInDatabaseException(
+                            string.Format("The total data size of chunk {0} should be {1}, but instead it was {2}.",
+                                            this,
+                                            _chunkHeader.ChunkDataTotalSize,
+                                            _chunkFooter.ChunkDataTotalSize)));
+                    }
+                }
+            }
+        }
+        private void LoadFileChunkToMemory()
+        {
+            var watch = Stopwatch.StartNew();
+
+            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 8192, FileOptions.RandomAccess))
+            {
+                var cachedLength = (int)fileStream.Length;
+                var cachedData = Marshal.AllocHGlobal(cachedLength);
+
+                try
+                {
+                    using (var unmanagedStream = new UnmanagedMemoryStream((byte*)cachedData, cachedLength, cachedLength, FileAccess.ReadWrite))
+                    {
+                        fileStream.Seek(0, SeekOrigin.Begin);
+                        var buffer = new byte[65536];
+                        int toRead = cachedLength;
+                        while (toRead > 0)
+                        {
+                            int read = fileStream.Read(buffer, 0, Math.Min(toRead, buffer.Length));
+                            if (read == 0)
+                            {
+                                break;
+                            }
+                            toRead -= read;
+                            unmanagedStream.Write(buffer, 0, read);
+                        }
+                    }
+                }
+                catch
+                {
+                    Marshal.FreeHGlobal(cachedData);
+                    throw;
+                }
+
+                _cachedData = cachedData;
+                _cachedLength = cachedLength;
+            }
+
+            _logger.InfoFormat("Cache file chunk {0} to memory success, timeSpent: {1}ms", this, watch.ElapsedMilliseconds);
+        }
+        private void FreeCachedChunk()
+        {
+            if (_isMemoryChunk)
+            {
+                var cachedData = Interlocked.Exchange(ref _cachedData, IntPtr.Zero);
+                if (cachedData != IntPtr.Zero)
+                {
+                    var watch = Stopwatch.StartNew();
+                    Marshal.FreeHGlobal(cachedData);
+                    _logger.InfoFormat("Free file chunk {0} memory success, timeSpent: {1}ms", this, watch.ElapsedMilliseconds);
+                }
+            }
+        }
 
         private void InitializeReaderWorkItems()
         {
@@ -502,9 +707,16 @@ namespace EQueue.Broker.Storage
         }
         private ReaderWorkItem CreateReaderWorkItem()
         {
-            var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.RandomAccess);
-            var reader = new BinaryReader(fileStream);
-            return new ReaderWorkItem(fileStream, reader);
+            var stream = default(Stream);
+            if (_isMemoryChunk)
+            {
+                stream = new UnmanagedMemoryStream((byte*)_cachedData, _cachedLength);
+            }
+            else
+            {
+                stream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.RandomAccess);
+            }
+            return new ReaderWorkItem(stream, new BinaryReader(stream));
         }
         private ReaderWorkItem GetReaderWorkItem()
         {
@@ -543,7 +755,7 @@ namespace EQueue.Broker.Storage
 
             Flush(); // trying to prevent bug with resized file, but no data in it
 
-            var oldStreamLength = workItem.FileStream.Length;
+            var oldStreamLength = workItem.WorkingStream.Length;
             var newStreamLength = ChunkHeader.Size + currentTotalDataSize + ChunkFooter.Size;
 
             if (newStreamLength != oldStreamLength)
@@ -765,7 +977,7 @@ namespace EQueue.Broker.Storage
             return ChunkHeader.Size + dataPosition;
         }
 
-        private void SetAttributes()
+        private void SetFileAttributes()
         {
             Helper.EatException(() =>
             {

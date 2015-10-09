@@ -13,6 +13,10 @@ namespace EQueue.Broker.Storage
         public readonly int FlushChunkIntervalMilliseconds;
         public readonly int ChunkReaderCount;
         public readonly int MaxLogRecordSize;
+        public readonly bool ForceCacheChunk;
+        public readonly int MessageChunkCacheMaxPercent;
+        public readonly int InitialCacheChunkCount;
+        public readonly int ChunkInactiveTimeMaxSeconds;
 
         public TFChunkManagerConfig(string basePath,
                                IFileNamingStrategy fileNamingStrategy,
@@ -21,7 +25,11 @@ namespace EQueue.Broker.Storage
                                int chunkDataCount,
                                int flushChunkIntervalMilliseconds,
                                int chunkReaderCount,
-                               int maxLogRecordSize)
+                               int maxLogRecordSize,
+                               bool forceCacheChunk,
+                               int messageChunkCacheMaxPercent,
+                               int initialCacheChunkCount,
+                               int chunkInactiveTimeMaxSeconds)
         {
             Ensure.NotNullOrEmpty(basePath, "basePath");
             Ensure.NotNull(fileNamingStrategy, "fileNamingStrategy");
@@ -30,6 +38,9 @@ namespace EQueue.Broker.Storage
             Ensure.Nonnegative(chunkDataCount, "chunkDataCount");
             Ensure.Positive(flushChunkIntervalMilliseconds, "flushChunkIntervalMilliseconds");
             Ensure.Positive(maxLogRecordSize, "maxLogRecordSize");
+            Ensure.Positive(messageChunkCacheMaxPercent, "messageChunkCacheMaxPercent");
+            Ensure.Nonnegative(initialCacheChunkCount, "initialCacheChunkCount");
+            Ensure.Nonnegative(chunkInactiveTimeMaxSeconds, "chunkInactiveTimeMaxSeconds");
 
             if (chunkDataSize <= 0 && (chunkDataUnitSize <= 0 || chunkDataCount <= 0))
             {
@@ -44,6 +55,10 @@ namespace EQueue.Broker.Storage
             FlushChunkIntervalMilliseconds = flushChunkIntervalMilliseconds;
             ChunkReaderCount = chunkReaderCount;
             MaxLogRecordSize = maxLogRecordSize;
+            ForceCacheChunk = forceCacheChunk;
+            MessageChunkCacheMaxPercent = messageChunkCacheMaxPercent;
+            InitialCacheChunkCount = initialCacheChunkCount;
+            ChunkInactiveTimeMaxSeconds = chunkInactiveTimeMaxSeconds;
         }
 
         public int GetChunkDataSize()
@@ -55,7 +70,7 @@ namespace EQueue.Broker.Storage
             return ChunkDataUnitSize * ChunkDataCount;
         }
 
-        public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount, int flushChunkIntervalMilliseconds)
+        public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount, int flushChunkIntervalMilliseconds, bool forceCacheChunk, int messageChunkCacheMaxPercent, int initialCacheChunkCount, int chunkInactiveTimeMaxSeconds)
         {
             return new TFChunkManagerConfig(
                 basePath,
@@ -65,7 +80,11 @@ namespace EQueue.Broker.Storage
                 chunkDataCount,
                 flushChunkIntervalMilliseconds,
                 Environment.ProcessorCount * 2,
-                4 * 1024 * 1024);
+                4 * 1024 * 1024,
+                forceCacheChunk,
+                messageChunkCacheMaxPercent,
+                initialCacheChunkCount,
+                chunkInactiveTimeMaxSeconds);
         }
     }
 }
