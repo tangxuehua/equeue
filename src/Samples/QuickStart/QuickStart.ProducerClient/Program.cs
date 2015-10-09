@@ -164,7 +164,7 @@ namespace QuickStart.ProducerClient
             var totalCountOfCurrentPeriod = totalSentCount - _previousSentCount;
             _previousSentCount = totalSentCount;
 
-            _logger.InfoFormat("Send message mode: {0}, currentTime: {1}, totalSent: {2}, throughput: {3}/s", _mode, DateTime.Now.ToLongTimeString(), totalSentCount, totalCountOfCurrentPeriod);
+            _logger.InfoFormat("Send message mode: {0}, currentTime: {1}, totalSent: {2}, throughput: {3}/s", _mode, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"), totalSentCount, totalCountOfCurrentPeriod);
         }
 
         class ResponseHandler : IResponseHandler

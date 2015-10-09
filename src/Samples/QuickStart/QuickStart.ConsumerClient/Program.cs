@@ -78,7 +78,7 @@ namespace QuickStart.ConsumerClient
                 var totalCountOfCurrentPeriod = totalHandledCount - _previusHandledCount;
                 _previusHandledCount = totalHandledCount;
 
-                _logger.InfoFormat("currentTime: {0}, totalReceived: {1}, throughput: {2}/s", DateTime.Now.ToLongTimeString(), totalHandledCount, totalCountOfCurrentPeriod);
+                _logger.InfoFormat("currentTime: {0}, totalReceived: {1}, throughput: {2}/s", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"), totalHandledCount, totalCountOfCurrentPeriod);
             }
         }
     }
