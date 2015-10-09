@@ -327,9 +327,9 @@ namespace EQueue.Broker.Storage
         {
             lock (_cacheSyncObj)
             {
-                if (!_isCompleted || _isMemoryChunk)
+                if (_isMemoryChunk || _memoryChunk != null)
                 {
-                    throw new InvalidOperationException("Only completed file chunk can be cached in memory.");
+                    return;
                 }
 
                 try
@@ -340,20 +340,17 @@ namespace EQueue.Broker.Storage
                     var chunkSize = ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize + ChunkFooter.Size;
                     var maxAllowUseMemoryPercent = _chunkConfig.MessageChunkCacheMaxPercent - 5;
 
-                    if (_memoryChunk == null)
+                    if (_chunkConfig.ForceCacheChunk || usedMemoryPercent + chunkSize < maxAllowUseMemoryPercent)
                     {
-                        if (_chunkConfig.ForceCacheChunk || usedMemoryPercent + chunkSize < maxAllowUseMemoryPercent)
-                        {
-                            _logger.InfoFormat("Caching chunk {0} to memory, physicalMemorySize: {1}, currentUsedMemorySize: {2}, chunkSize: {3}, usedMemoryPercent: {4}, messageChunkCacheMaxPercent: {5}.",
-                                this,
-                                physicalMemorySize,
-                                usedMemorySize,
-                                chunkSize,
-                                usedMemoryPercent,
-                                _chunkConfig.MessageChunkCacheMaxPercent);
-                        }
+                        _logger.InfoFormat("Caching chunk {0} to memory, physicalMemorySize: {1}, currentUsedMemorySize: {2}, chunkSize: {3}, usedMemoryPercent: {4}, messageChunkCacheMaxPercent: {5}.",
+                            this,
+                            physicalMemorySize,
+                            usedMemorySize,
+                            chunkSize,
+                            usedMemoryPercent,
+                            _chunkConfig.MessageChunkCacheMaxPercent);
                         _memoryChunk = TFChunk.CreateNew(_filename, _chunkHeader.ChunkNumber, _chunkConfig, true);
-                        _logger.Info("Cached chunk {0} to memory.");
+                        _logger.InfoFormat("Cached chunk {0} to memory.", this);
                     }
                 }
                 catch (Exception ex)
@@ -379,7 +376,7 @@ namespace EQueue.Broker.Storage
                         var memoryChunk = _memoryChunk;
                         _memoryChunk = null;
                         memoryChunk.Dispose();
-                        _logger.Info("Uncached chunk {0} from memory.");
+                        _logger.InfoFormat("Uncached chunk {0} from memory.", this);
                     }
                 }
                 catch (Exception ex)
@@ -430,7 +427,7 @@ namespace EQueue.Broker.Storage
         {
             if (_isCompleted)
             {
-                throw new ChunkWriteException(this.ToString(), "Cannot write to a read-only chunk.");
+                throw new ChunkWriteException(this.ToString(), string.Format("Cannot write to a read-only chunk, isMemoryChunk: {0}, _dataPosition: {1}", _isMemoryChunk, _dataPosition));
             }
 
             var writerWorkItem = _writerWorkItem;
@@ -486,14 +483,17 @@ namespace EQueue.Broker.Storage
 
             var position = ChunkHeader.ChunkDataStartPosition + writtenPosition;
 
-            var result = _memoryChunk.TryAppend(record);
-            if (!result.Success)
+            if (_memoryChunk != null)
             {
-                throw new ChunkWriteException(this.ToString(), "Append record to file chunk success, but append to memory chunk failed as memory space not enough, this should not be happened.");
-            }
-            else if (result.Position != position)
-            {
-                throw new ChunkWriteException(this.ToString(), string.Format("Append record to file chunk success, but append to memory chunk failed, the position is not equal, memory position: {0}, file position: {1}.", result.Position, position));
+                var result = _memoryChunk.TryAppend(record);
+                if (!result.Success)
+                {
+                    throw new ChunkWriteException(this.ToString(), "Append record to file chunk success, but append to memory chunk failed as memory space not enough, this should not be happened.");
+                }
+                else if (result.Position != position)
+                {
+                    throw new ChunkWriteException(this.ToString(), string.Format("Append record to file chunk success, but append to memory chunk failed, the position is not equal, memory position: {0}, file position: {1}.", result.Position, position));
+                }
             }
 
             _lastActiveTime = DateTime.Now;
@@ -519,10 +519,7 @@ namespace EQueue.Broker.Storage
         {
             lock (_writeSyncObj)
             {
-                if (_isCompleted)
-                {
-                    throw new ChunkCompleteException(string.Format("Cannot complete a read-only TFChunk: {0}", this));
-                }
+                if (_isCompleted) return;
 
                 _chunkFooter = WriteFooter();
                 Flush();
@@ -534,9 +531,11 @@ namespace EQueue.Broker.Storage
                 if (!_isMemoryChunk)
                 {
                     SetFileAttributes();
+                    if (_memoryChunk != null)
+                    {
+                        _memoryChunk.Complete();
+                    }
                 }
-
-                _memoryChunk.Complete();
             }
         }
 
@@ -663,9 +662,7 @@ namespace EQueue.Broker.Storage
                 var cachedData = Interlocked.Exchange(ref _cachedData, IntPtr.Zero);
                 if (cachedData != IntPtr.Zero)
                 {
-                    var watch = Stopwatch.StartNew();
                     Marshal.FreeHGlobal(cachedData);
-                    _logger.InfoFormat("Free file chunk {0} memory success, timeSpent: {1}ms", this, watch.ElapsedMilliseconds);
                 }
             }
         }

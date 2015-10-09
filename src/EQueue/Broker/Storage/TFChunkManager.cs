@@ -174,7 +174,7 @@ namespace EQueue.Broker.Storage
         }
         private void UncacheChunks()
         {
-            var chunks = _chunks.Values;
+            var chunks = _chunks.Values.Where(x => x.IsCompleted);
             foreach (var chunk in chunks)
             {
                 if ((DateTime.Now - chunk.LastActiveTime).TotalSeconds >= _config.ChunkInactiveTimeMaxSeconds)
