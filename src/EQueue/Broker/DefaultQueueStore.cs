@@ -64,16 +64,6 @@ namespace EQueue.Broker
             }
             return -1;
         }
-        public long GetQueueLastFlushedOffset(string topic, int queueId)
-        {
-            var key = CreateQueueKey(topic, queueId);
-            Queue queue;
-            if (_queueDict.TryGetValue(key, out queue))
-            {
-                return queue.GetLastFlushedOffset();
-            }
-            return -1;
-        }
         public long GetQueueMinOffset(string topic, int queueId)
         {
             var key = CreateQueueKey(topic, queueId);

@@ -64,17 +64,13 @@ namespace EQueue.Broker
         }
         public void AddMessage(long messagePosition)
         {
-            _chunkWriter.Write(new QueueLogRecord(messagePosition));
-        }
-        public long GetLastFlushedOffset()
-        {
-            return (_chunkWriter.CurrentChunk.GlobalFlushPosition / _chunkManager.Config.ChunkDataUnitSize) - 1;
+            _chunkWriter.Write(new QueueLogRecord(messagePosition + 1));
         }
         public long GetMessagePosition(long queueOffset)
         {
             var position = queueOffset * _chunkManager.Config.ChunkDataUnitSize;
             var record = _chunkReader.TryReadAt(position, ReadMessageIndex);
-            return record.MessageLogPosition;
+            return record.MessageLogPosition - 1;
         }
         public void Enable()
         {

@@ -18,6 +18,7 @@ namespace EQueue.Broker.Storage
         private readonly IDictionary<int, TFChunk> _chunks;
         private readonly string _chunkPath;
         private readonly IScheduleService _scheduleService;
+        private readonly string _uncacheChunkTaskName;
         private int _nextChunkNumber;
 
         public string Name { get; private set; }
@@ -41,7 +42,8 @@ namespace EQueue.Broker.Storage
             }
             _chunks = new ConcurrentDictionary<int, TFChunk>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _scheduleService.StartTask(string.Format("{0}.{1}.UncacheChunks", Name, this.GetType().Name), UncacheChunks, 1000, 1000);
+            _uncacheChunkTaskName = string.Format("{0}.{1}.UncacheChunks", Name, this.GetType().Name);
+            _scheduleService.StartTask(_uncacheChunkTaskName, UncacheChunks, 1000, 5000);
         }
 
         public void Load<T>(Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
@@ -62,7 +64,7 @@ namespace EQueue.Broker.Storage
                         var chunk = TFChunk.FromCompletedFile(files[i], _config);
                         if (cachedChunkCount < _config.InitialCacheChunkCount)
                         {
-                            chunk.CacheInMemory();
+                            chunk.TryCacheInMemory();
                             cachedChunkCount++;
                         }
                         AddChunk(chunk);
@@ -152,7 +154,7 @@ namespace EQueue.Broker.Storage
         {
             lock (_chunksLocker)
             {
-                _scheduleService.StopTask(string.Format("{0}.{1}.UncacheChunks", Name, this.GetType().Name));
+                _scheduleService.StopTask(_uncacheChunkTaskName);
                 foreach (var chunk in _chunks.Values)
                 {
                     try
@@ -174,12 +176,18 @@ namespace EQueue.Broker.Storage
         }
         private void UncacheChunks()
         {
-            var chunks = _chunks.Values.Where(x => x.IsCompleted);
-            foreach (var chunk in chunks)
+            var chunks = _chunks.Values.Where(x => x.IsCompleted && !x.IsMemoryChunk && x.HasCachedChunk).OrderBy(x => x.ChunkHeader.ChunkNumber).ToList();
+            var count = chunks.Count() - _config.InitialCacheChunkCount;
+
+            if (count > 0)
             {
-                if ((DateTime.Now - chunk.LastActiveTime).TotalSeconds >= _config.ChunkInactiveTimeMaxSeconds)
+                for (var i = 0; i < count; i++)
                 {
-                    chunk.UnCacheFromMemory();
+                    var chunk = chunks[i];
+                    if ((DateTime.Now - chunk.LastActiveTime).TotalSeconds >= _config.ChunkInactiveTimeMaxSeconds)
+                    {
+                        chunk.UnCacheFromMemory();
+                    }
                 }
             }
         }

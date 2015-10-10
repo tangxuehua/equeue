@@ -115,7 +115,6 @@
     <Compile Include="Broker\Storage\LogRecords\BufferLogRecord.cs" />
     <Compile Include="Broker\Storage\LogRecords\ILogRecord.cs" />
     <Compile Include="Broker\Storage\RecordBufferReadResult.cs" />
-    <Compile Include="Broker\Storage\TFMemoryChunk.cs" />
     <Compile Include="Broker\Storage\TFChunkManagerConfig.cs" />
     <Compile Include="Broker\Storage\TFChunkManager.cs" />
     <Compile Include="Broker\Storage\TFChunkReader.cs" />

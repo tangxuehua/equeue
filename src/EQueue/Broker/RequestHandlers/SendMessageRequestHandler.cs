@@ -41,7 +41,7 @@ namespace EQueue.Broker.Processors
             {
                 var queueOffset = queue.NextOffset;
                 var messageRecord = _messageStore.StoreMessage(queueId, queueOffset, message, request.RoutingKey);
-                queue.AddMessage(messageRecord.LogPosition + 1);
+                queue.AddMessage(messageRecord.LogPosition);
                 queue.IncrementNextOffset();
                 result = new MessageStoreResult(message.Key, messageRecord.MessageId, message.Code, message.Topic, queueId, queueOffset);
             }

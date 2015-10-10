@@ -9,7 +9,6 @@ namespace EQueue.Broker.Storage
         public readonly MemoryStream BufferStream;
         public readonly BinaryWriter BufferWriter;
         public readonly Stream WorkingStream;
-        public int LastAppendDataLength;
 
         public WriterWorkItem(Stream stream)
         {
@@ -21,7 +20,6 @@ namespace EQueue.Broker.Storage
 
         public void AppendData(byte[] buf, int offset, int len)
         {
-            LastAppendDataLength = len;
             WorkingStream.Write(buf, 0, len);
         }
         public void FlushToDisk()

@@ -104,32 +104,31 @@ namespace EQueue.Broker.Processors
             }
 
             //尝试拉取消息
-            var queueMaxOffset = _queueStore.GetQueueLastFlushedOffset(topic, queueId);
+            var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
             var messages = new List<byte[]>();
-            var currentQueueOffset = pullOffset;
+            var queueOffset = pullOffset;
 
-            while (currentQueueOffset <= queueMaxOffset && messages.Count < maxPullSize)
+            while (queueOffset <= queueCurrentOffset && messages.Count < maxPullSize)
             {
                 try
                 {
-                    var messagePosition = queue.GetMessagePosition(currentQueueOffset);
+                    var messagePosition = queue.GetMessagePosition(queueOffset);
+                    var message = _messageStore.GetMessage(messagePosition);
 
-                    //这里减1是因为queue中存放的消息的position是实际的position加1
-                    var message = _messageStore.GetMessage(messagePosition - 1);
                     if (message != null)
                     {
                         messages.Add(message);
                     }
 
-                    currentQueueOffset++;
+                    queueOffset++;
                 }
                 catch (ChunkNotExistException)
                 {
-                    _logger.ErrorFormat("Chunk not exist, topic: {0}, queueId: {1}, currentQueueOffset: {2}", topic, queueId, currentQueueOffset);
+                    _logger.ErrorFormat("Chunk not exist, topic: {0}, queueId: {1}, queueOffset: {2}", topic, queueId, queueOffset);
                 }
                 catch (InvalidReadException ex)
                 {
-                    _logger.InfoFormat("Chunk read failed, topic: {0}, queueId: {1}, currentQueueOffset: {2}, errorMsg: {3}", topic, queueId, currentQueueOffset, ex.Message);
+                    _logger.ErrorFormat("Chunk read failed, topic: {0}, queueId: {1}, queueOffset: {2}, errorMsg: {3}", topic, queueId, queueOffset, ex.Message);
                     throw;
                 }
             }
@@ -157,24 +156,24 @@ namespace EQueue.Broker.Processors
                 };
             }
             //pullOffset太大
-            else if (pullOffset > queueMaxOffset + 1)
+            else if (pullOffset > queueCurrentOffset + 1)
             {
                 return new PullMessageResult
                 {
                     Status = PullStatus.NextOffsetReset,
-                    NextBeginOffset = queueMaxOffset + 1
+                    NextBeginOffset = queueCurrentOffset + 1
                 };
             }
             //如果正好等于queueMaxOffset+1，属于正常情况，表示当前队列没有新消息，告诉客户端没有新消息即可
-            else if (pullOffset == queueMaxOffset + 1)
+            else if (pullOffset == queueCurrentOffset + 1)
             {
                 return new PullMessageResult
                 {
                     Status = PullStatus.NoNewMessage
                 };
             }
-            //到这里，说明当前的pullOffset在队列的正常范围，即：>=queueMinOffset and <= queueMaxOffset；
-            //但如果还是没有找到消息，则可能的情况有：
+            //到这里，说明当前的pullOffset在队列的正确范围，即：>=queueMinOffset and <= queueCurrentOffset；
+            //但如果还是没有拉取到消息，则可能的情况有：
             //1）要拉取的消息还未来得及刷盘；
             //2）要拉取的消息的文件或消息索引的文件被删除了；
             //不管是哪种情况，告诉Consumer没有新消息即可。如果是情况1，则也许下次PullRequest就会拉取到消息；如果是情况2，则下次PullRequest就会被判断出pullOffset过小
@@ -262,11 +261,11 @@ namespace EQueue.Broker.Processors
         }
         private long GetNextConsumeOffset(string topic, int queueId, string consumerGroup, ConsumeFromWhere consumerFromWhere)
         {
-            var lastConsumedQueueOffset = _offsetStore.GetConsumeOffset(topic, queueId, consumerGroup);
-            if (lastConsumedQueueOffset >= 0)
+            var queueConsumedOffset = _offsetStore.GetConsumeOffset(topic, queueId, consumerGroup);
+            if (queueConsumedOffset >= 0)
             {
-                var queueCurrentOffset = _queueStore.GetQueueLastFlushedOffset(topic, queueId);
-                return queueCurrentOffset < lastConsumedQueueOffset ? queueCurrentOffset + 1 : lastConsumedQueueOffset + 1;
+                var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
+                return queueCurrentOffset < queueConsumedOffset ? queueCurrentOffset + 1 : queueConsumedOffset + 1;
             }
 
             if (consumerFromWhere == ConsumeFromWhere.FirstOffset)
@@ -274,22 +273,18 @@ namespace EQueue.Broker.Processors
                 var queueMinOffset = _queueStore.GetQueueMinOffset(topic, queueId);
                 if (queueMinOffset < 0)
                 {
-                    queueMinOffset = 0;
+                    return 0;
                 }
                 return queueMinOffset;
             }
             else
             {
-                var queueCurrentOffset = _queueStore.GetQueueLastFlushedOffset(topic, queueId);
+                var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
                 if (queueCurrentOffset < 0)
                 {
-                    queueCurrentOffset = 0;
+                    return 0;
                 }
-                else
-                {
-                    queueCurrentOffset++;
-                }
-                return queueCurrentOffset;
+                return queueCurrentOffset + 1;
             }
         }
         private static PullMessageRequest DeserializePullMessageRequest(byte[] data)

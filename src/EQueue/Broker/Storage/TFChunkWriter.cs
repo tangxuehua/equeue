@@ -39,6 +39,12 @@ namespace EQueue.Broker.Storage
                     throw new ChunkWriteException(_currentChunk.ToString(), "Chunk writer is closed.");
                 }
 
+                //如果当前文件已经写完，则需要新建文件
+                if (_currentChunk.IsCompleted)
+                {
+                    _currentChunk = _chunkManager.AddNewChunk();
+                }
+
                 //先尝试写文件
                 var result = _currentChunk.TryAppend(record);
 
