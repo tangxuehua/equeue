@@ -242,7 +242,7 @@ namespace EQueue.Broker.Storage
                 _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkConfig, true);
                 if (_logger.IsDebugEnabled)
                 {
-                    _logger.DebugFormat("Cached latest new chunk {0} to memory.", this);
+                    _logger.DebugFormat("Cached new chunk {0} to memory.", this);
                 }
             }
         }
