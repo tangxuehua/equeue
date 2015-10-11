@@ -43,7 +43,11 @@ namespace EQueue.Broker.Storage
             _chunks = new ConcurrentDictionary<int, TFChunk>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _uncacheChunkTaskName = string.Format("{0}.{1}.UncacheChunks", Name, this.GetType().Name);
-            _scheduleService.StartTask(_uncacheChunkTaskName, UncacheChunks, 1000, 5000);
+
+            if (!_config.ForceCacheChunkInMemory)
+            {
+                _scheduleService.StartTask(_uncacheChunkTaskName, UncacheChunks, 1000, 5000);
+            }
         }
 
         public void Load<T>(Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
@@ -62,7 +66,7 @@ namespace EQueue.Broker.Storage
                     for (var i = files.Length - 2; i >= 0; i--)
                     {
                         var chunk = TFChunk.FromCompletedFile(files[i], _config);
-                        if (cachedChunkCount < _config.InitialCacheChunkCount)
+                        if (_config.ForceCacheChunkInMemory || cachedChunkCount < _config.PreCacheChunkCount)
                         {
                             chunk.TryCacheInMemory();
                             cachedChunkCount++;
@@ -154,7 +158,11 @@ namespace EQueue.Broker.Storage
         {
             lock (_chunksLocker)
             {
-                _scheduleService.StopTask(_uncacheChunkTaskName);
+                if (!_config.ForceCacheChunkInMemory)
+                {
+                    _scheduleService.StopTask(_uncacheChunkTaskName);
+                }
+
                 foreach (var chunk in _chunks.Values)
                 {
                     try
@@ -177,7 +185,7 @@ namespace EQueue.Broker.Storage
         private void UncacheChunks()
         {
             var chunks = _chunks.Values.Where(x => x.IsCompleted && !x.IsMemoryChunk && x.HasCachedChunk).OrderBy(x => x.ChunkHeader.ChunkNumber).ToList();
-            var count = chunks.Count() - _config.InitialCacheChunkCount;
+            var count = chunks.Count() - _config.PreCacheChunkCount;
 
             if (count > 0)
             {

@@ -13,7 +13,7 @@ namespace EQueue.Broker
         /// <summary>消费消息端口号，默认为5001
         /// </summary>
         public IPEndPoint ConsumerAddress { get; set; }
-        /// <summary>后台管理控制台使用的端口号，默认为5002
+        /// <summary>Producer，Consumer对Broker发送的发消息和拉消息除外的其他内部请求，以及后台管理控制台发送的查询请求使用的端口号，默认为5002
         /// </summary>
         public IPEndPoint AdminAddress { get; set; }
         /// <summary>消息到达时是否立即通知相关的PullRequest，默认为false；
@@ -47,17 +47,17 @@ namespace EQueue.Broker
         /// <summary>一个Topic下最多允许的队列数，默认为64；
         /// </summary>
         public int TopicMaxQueueCount { get; set; }
+        /// <summary>EQueue存储文件的根目录
+        /// </summary>
+        public string FileStoreRootPath { get; set; }
         /// <summary>消息文件存储的相关配置，默认一个消息文件的大小为512MB
         /// </summary>
         public TFChunkManagerConfig MessageChunkConfig { get; set; }
         /// <summary>队列文件存储的相关配置，默认一个队列文件中存储100W个消息索引，每个消息索引8个字节
         /// </summary>
         public TFChunkManagerConfig QueueChunkConfig { get; set; }
-        /// <summary>EQueue存储文件的根目录
-        /// </summary>
-        public string FileStoreRootPath { get; set; }
 
-        public BrokerSetting()
+        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store")
         {
             ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
             ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
@@ -72,16 +72,9 @@ namespace EQueue.Broker
             AutoCreateTopic = true;
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;
-
-            SetMessageChunkConfig(@"c:\equeue-store", 75);
-        }
-
-        public BrokerSetting SetMessageChunkConfig(string fileStoreRootPath, int messageChunkCacheMaxPercent = 75)
-        {
-            FileStoreRootPath = fileStoreRootPath;
-            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(fileStoreRootPath, @"message-chunks"), "message-chunk-", 512 * 1024 * 1024, 0, 0, 100, false, messageChunkCacheMaxPercent, 1, 5);
-            QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(fileStoreRootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000, 100, true, messageChunkCacheMaxPercent, 1, 5);
-            return this;
+            FileStoreRootPath = chunkFileStoreRootPath;
+            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"message-chunks"), "message-chunk-", 512 * 1024 * 1024, 0, 0, 100, 75, false, 1, 5);
+            QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000, 100, 75, true, 1, 5);
         }
     }
 }

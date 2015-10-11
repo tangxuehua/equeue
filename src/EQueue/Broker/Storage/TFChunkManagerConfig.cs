@@ -13,9 +13,9 @@ namespace EQueue.Broker.Storage
         public readonly int FlushChunkIntervalMilliseconds;
         public readonly int ChunkReaderCount;
         public readonly int MaxLogRecordSize;
-        public readonly bool ForceCacheChunk;
-        public readonly int MessageChunkCacheMaxPercent;
-        public readonly int InitialCacheChunkCount;
+        public readonly bool ForceCacheChunkInMemory;
+        public readonly int ChunkCacheMaxPercent;
+        public readonly int PreCacheChunkCount;
         public readonly int ChunkInactiveTimeMaxSeconds;
 
         public TFChunkManagerConfig(string basePath,
@@ -26,9 +26,9 @@ namespace EQueue.Broker.Storage
                                int flushChunkIntervalMilliseconds,
                                int chunkReaderCount,
                                int maxLogRecordSize,
-                               bool forceCacheChunk,
-                               int messageChunkCacheMaxPercent,
-                               int initialCacheChunkCount,
+                               bool forceCacheChunkInMemory,
+                               int chunkCacheMaxPercent,
+                               int preCacheChunkCount,
                                int chunkInactiveTimeMaxSeconds)
         {
             Ensure.NotNullOrEmpty(basePath, "basePath");
@@ -38,8 +38,8 @@ namespace EQueue.Broker.Storage
             Ensure.Nonnegative(chunkDataCount, "chunkDataCount");
             Ensure.Positive(flushChunkIntervalMilliseconds, "flushChunkIntervalMilliseconds");
             Ensure.Positive(maxLogRecordSize, "maxLogRecordSize");
-            Ensure.Positive(messageChunkCacheMaxPercent, "messageChunkCacheMaxPercent");
-            Ensure.Nonnegative(initialCacheChunkCount, "initialCacheChunkCount");
+            Ensure.Positive(chunkCacheMaxPercent, "chunkCacheMaxPercent");
+            Ensure.Nonnegative(preCacheChunkCount, "preCacheChunkCount");
             Ensure.Nonnegative(chunkInactiveTimeMaxSeconds, "chunkInactiveTimeMaxSeconds");
 
             if (chunkDataSize <= 0 && (chunkDataUnitSize <= 0 || chunkDataCount <= 0))
@@ -55,9 +55,9 @@ namespace EQueue.Broker.Storage
             FlushChunkIntervalMilliseconds = flushChunkIntervalMilliseconds;
             ChunkReaderCount = chunkReaderCount;
             MaxLogRecordSize = maxLogRecordSize;
-            ForceCacheChunk = forceCacheChunk;
-            MessageChunkCacheMaxPercent = messageChunkCacheMaxPercent;
-            InitialCacheChunkCount = initialCacheChunkCount;
+            ForceCacheChunkInMemory = forceCacheChunkInMemory;
+            ChunkCacheMaxPercent = chunkCacheMaxPercent;
+            PreCacheChunkCount = preCacheChunkCount;
             ChunkInactiveTimeMaxSeconds = chunkInactiveTimeMaxSeconds;
         }
 
@@ -70,7 +70,7 @@ namespace EQueue.Broker.Storage
             return ChunkDataUnitSize * ChunkDataCount;
         }
 
-        public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount, int flushChunkIntervalMilliseconds, bool forceCacheChunk, int messageChunkCacheMaxPercent, int initialCacheChunkCount, int chunkInactiveTimeMaxSeconds)
+        public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount, int flushChunkIntervalMilliseconds, int chunkCacheMaxPercent, bool forceCacheChunkInMemory, int preCacheChunkCount, int chunkInactiveTimeMaxSeconds)
         {
             return new TFChunkManagerConfig(
                 basePath,
@@ -81,9 +81,9 @@ namespace EQueue.Broker.Storage
                 flushChunkIntervalMilliseconds,
                 Environment.ProcessorCount * 2,
                 4 * 1024 * 1024,
-                forceCacheChunk,
-                messageChunkCacheMaxPercent,
-                initialCacheChunkCount,
+                forceCacheChunkInMemory,
+                chunkCacheMaxPercent,
+                preCacheChunkCount,
                 chunkInactiveTimeMaxSeconds);
         }
     }

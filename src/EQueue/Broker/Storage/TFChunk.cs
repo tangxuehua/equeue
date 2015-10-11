@@ -328,6 +328,24 @@ namespace EQueue.Broker.Storage
 
         #region Public Methods
 
+        public struct ChunkApplyMemoryInfo
+        {
+            public decimal PhysicalMemorySizeMB;
+            public decimal UsedMemoryPercent;
+            public decimal UsedMemorySizeMB;
+            public int ChunkSizeMB;
+            public decimal MaxAllowUseMemorySizeMB;
+        }
+        public bool IsMemoryEnoughToCacheChunk(TFChunk chunk, out ChunkApplyMemoryInfo applyMemoryInfo)
+        {
+            applyMemoryInfo = new ChunkApplyMemoryInfo();
+            applyMemoryInfo.PhysicalMemorySizeMB = MemoryInfoUtil.GetTotalPhysicalMemorySize();
+            applyMemoryInfo.UsedMemoryPercent = MemoryInfoUtil.GetUsedMemoryPercent();
+            applyMemoryInfo.UsedMemorySizeMB = applyMemoryInfo.PhysicalMemorySizeMB * applyMemoryInfo.UsedMemoryPercent / 100;
+            applyMemoryInfo.ChunkSizeMB = (ChunkHeader.Size + chunk.ChunkHeader.ChunkDataTotalSize + ChunkFooter.Size) / 1024 / 1024;
+            applyMemoryInfo.MaxAllowUseMemorySizeMB = applyMemoryInfo.PhysicalMemorySizeMB * chunk.Config.ChunkCacheMaxPercent / 100;
+            return applyMemoryInfo.UsedMemorySizeMB + applyMemoryInfo.ChunkSizeMB <= applyMemoryInfo.MaxAllowUseMemorySizeMB;
+        }
         public void TryCacheInMemory()
         {
             lock (_cacheSyncObj)
@@ -341,25 +359,18 @@ namespace EQueue.Broker.Storage
 
                 try
                 {
-                    var physicalMemorySizeMB = MemoryInfoUtil.GetTotalPhysicalMemorySize();
-                    var usedMemoryPercent = MemoryInfoUtil.GetUsedMemoryPercent();
-                    var usedMemorySizeMB = physicalMemorySizeMB * usedMemoryPercent / 100;
-                    var chunkSizeMB = (ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize + ChunkFooter.Size) / 1024 / 1024;
-                    var maxAllowUseMemoryPercent = _chunkConfig.MessageChunkCacheMaxPercent;
-                    var maxAllowUseMemorySizeMB = physicalMemorySizeMB * maxAllowUseMemoryPercent / 100;
-
-                    if (_chunkConfig.ForceCacheChunk || usedMemorySizeMB + chunkSizeMB <= maxAllowUseMemorySizeMB)
+                    ChunkApplyMemoryInfo applyMemoryInfo;
+                    if (IsMemoryEnoughToCacheChunk(this, out applyMemoryInfo))
                     {
                         if (_logger.IsDebugEnabled)
                         {
-                            _logger.DebugFormat("Caching completed chunk {0} to memory, physicalMemorySize: {1}MB, currentUsedMemorySize: {2}MB, currentChunkSize: {3}MB, usedMemoryPercent: {4}%, maxAllowUseMemoryPercent: {5}%, isForceCache: {6}",
+                            _logger.DebugFormat("Caching completed chunk {0} to memory, physicalMemorySize: {1}MB, currentUsedMemorySize: {2}MB, currentChunkSize: {3}MB, usedMemoryPercent: {4}%, maxAllowUseMemoryPercent: {5}%",
                                 this,
-                                physicalMemorySizeMB,
-                                usedMemorySizeMB,
-                                chunkSizeMB,
-                                usedMemoryPercent,
-                                maxAllowUseMemoryPercent,
-                                _chunkConfig.ForceCacheChunk);
+                                applyMemoryInfo.PhysicalMemorySizeMB,
+                                applyMemoryInfo.UsedMemorySizeMB,
+                                applyMemoryInfo.ChunkSizeMB,
+                                applyMemoryInfo.UsedMemoryPercent,
+                                Config.ChunkCacheMaxPercent);
                         }
                         _memoryChunk = TFChunk.FromCompletedFile(_filename, _chunkConfig, true);
                         if (_logger.IsDebugEnabled)
