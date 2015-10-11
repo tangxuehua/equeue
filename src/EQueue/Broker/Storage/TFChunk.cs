@@ -180,11 +180,13 @@ namespace EQueue.Broker.Storage
 
             _dataPosition = _chunkFooter.ChunkDataTotalSize;
 
-            SetFileAttributes();
-
             if (_isMemoryChunk)
             {
                 LoadFileChunkToMemory();
+            }
+            else
+            {
+                SetFileAttributes();
             }
 
             InitializeReaderWorkItems();
@@ -353,20 +355,8 @@ namespace EQueue.Broker.Storage
                     var chunkSize = (ulong)(ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize + ChunkFooter.Size);
                     if (!ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent, out applyMemoryInfo))
                     {
-                        if (_logger.IsDebugEnabled)
-                        {
-                            _logger.DebugFormat("Failed to cache completedChunk {0} as there is no enough memory to apply, physicalMemory: {1}MB, currentUsedMemory: {2}MB, currentChunkSize: {3}MB, remainingMemory: {4}MB, usedMemoryPercent: {5}%, maxAllowUseMemoryPercent: {6}%",
-                                this,
-                                applyMemoryInfo.PhysicalMemoryMB,
-                                applyMemoryInfo.UsedMemoryMB,
-                                applyMemoryInfo.ChunkSizeMB,
-                                applyMemoryInfo.RemainingMemoryMB,
-                                applyMemoryInfo.UsedMemoryPercent,
-                                Config.ChunkCacheMaxPercent);
-                        }
                         return false;
                     }
-
                     if (_logger.IsDebugEnabled)
                     {
                         _logger.DebugFormat("Try to cache completedChunk {0} to memory, physicalMemorySize: {1}MB, currentUsedMemory: {2}MB, currentChunk: {3}MB, remainingMemory: {4}MB, usedMemoryPercent: {5}%, maxAllowUseMemoryPercent: {6}%",
