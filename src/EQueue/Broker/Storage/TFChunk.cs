@@ -26,6 +26,7 @@ namespace EQueue.Broker.Storage
         private ChunkFooter _chunkFooter;
 
         private readonly string _filename;
+        private readonly TFChunkManager _chunkManager;
         private readonly TFChunkManagerConfig _chunkConfig;
         private readonly bool _isMemoryChunk;
         private readonly ConcurrentQueue<ReaderWorkItem> _readerWorkItemQueue = new ConcurrentQueue<ReaderWorkItem>();
@@ -86,12 +87,14 @@ namespace EQueue.Broker.Storage
 
         #region Constructors
 
-        private TFChunk(string filename, TFChunkManagerConfig chunkConfig, bool isMemoryChunk)
+        private TFChunk(string filename, TFChunkManager chunkManager, TFChunkManagerConfig chunkConfig, bool isMemoryChunk)
         {
             Ensure.NotNullOrEmpty(filename, "filename");
+            Ensure.NotNull(chunkManager, "chunkManager");
             Ensure.NotNull(chunkConfig, "chunkConfig");
 
             _filename = filename;
+            _chunkManager = chunkManager;
             _chunkConfig = chunkConfig;
             _isMemoryChunk = isMemoryChunk;
             _lastActiveTime = DateTime.Now;
@@ -101,9 +104,9 @@ namespace EQueue.Broker.Storage
 
         #region Factory Methods
 
-        public static TFChunk CreateNew(string filename, int chunkNumber, TFChunkManagerConfig config, bool isMemoryChunk = false)
+        public static TFChunk CreateNew(string filename, int chunkNumber, TFChunkManager chunkManager, TFChunkManagerConfig config, bool isMemoryChunk = false)
         {
-            var chunk = new TFChunk(filename, config, isMemoryChunk);
+            var chunk = new TFChunk(filename, chunkManager, config, isMemoryChunk);
 
             try
             {
@@ -118,9 +121,9 @@ namespace EQueue.Broker.Storage
 
             return chunk;
         }
-        public static TFChunk FromCompletedFile(string filename, TFChunkManagerConfig config, bool isMemoryChunk = false)
+        public static TFChunk FromCompletedFile(string filename, TFChunkManager chunkManager, TFChunkManagerConfig config, bool isMemoryChunk = false)
         {
-            var chunk = new TFChunk(filename, config, isMemoryChunk);
+            var chunk = new TFChunk(filename, chunkManager, config, isMemoryChunk);
 
             try
             {
@@ -135,9 +138,9 @@ namespace EQueue.Broker.Storage
 
             return chunk;
         }
-        public static TFChunk FromOngoingFile<T>(string filename, TFChunkManagerConfig config, Func<int, BinaryReader, T> readRecordFunc, bool isMemoryChunk = false) where T : ILogRecord 
+        public static TFChunk FromOngoingFile<T>(string filename, TFChunkManager chunkManager, TFChunkManagerConfig config, Func<int, BinaryReader, T> readRecordFunc, bool isMemoryChunk = false) where T : ILogRecord 
         {
-            var chunk = new TFChunk(filename, config, isMemoryChunk);
+            var chunk = new TFChunk(filename, chunkManager, config, isMemoryChunk);
 
             try
             {
@@ -183,6 +186,7 @@ namespace EQueue.Broker.Storage
             if (_isMemoryChunk)
             {
                 LoadFileChunkToMemory();
+                _lastActiveTime = DateTime.Now;
             }
             else
             {
@@ -249,7 +253,7 @@ namespace EQueue.Broker.Storage
 
             if (!_isMemoryChunk)
             {
-                _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkConfig, true);
+                _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkManager, _chunkConfig, true);
                 if (_logger.IsDebugEnabled)
                 {
                     _logger.DebugFormat("Cached new chunk {0} to memory.", this);
@@ -326,7 +330,7 @@ namespace EQueue.Broker.Storage
 
             if (!_isMemoryChunk)
             {
-                _memoryChunk = TFChunk.FromOngoingFile<T>(_filename, _chunkConfig, readRecordFunc, true);
+                _memoryChunk = TFChunk.FromOngoingFile<T>(_filename, _chunkManager, _chunkConfig, readRecordFunc, true);
                 if (_logger.IsDebugEnabled)
                 {
                     _logger.DebugFormat("Cached ongoing chunk {0} to memory.", this);
@@ -338,7 +342,7 @@ namespace EQueue.Broker.Storage
 
         #region Public Methods
 
-        public bool TryCacheInMemory()
+        public bool TryCacheInMemory(bool shouldCacheNextChunk)
         {
             lock (_cacheSyncObj)
             {
@@ -357,21 +361,14 @@ namespace EQueue.Broker.Storage
                     {
                         return false;
                     }
+                    _memoryChunk = TFChunk.FromCompletedFile(_filename, _chunkManager, _chunkConfig, true);
                     if (_logger.IsDebugEnabled)
                     {
-                        _logger.DebugFormat("Try to cache completedChunk {0} to memory, physicalMemorySize: {1}MB, currentUsedMemory: {2}MB, currentChunk: {3}MB, remainingMemory: {4}MB, usedMemoryPercent: {5}%, maxAllowUseMemoryPercent: {6}%",
-                            this,
-                            applyMemoryInfo.PhysicalMemoryMB,
-                            applyMemoryInfo.UsedMemoryMB,
-                            applyMemoryInfo.ChunkSizeMB,
-                            applyMemoryInfo.RemainingMemoryMB,
-                            applyMemoryInfo.UsedMemoryPercent,
-                            Config.ChunkCacheMaxPercent);
+                        _logger.DebugFormat("Cached completedChunk {0}", this);
                     }
-                    _memoryChunk = TFChunk.FromCompletedFile(_filename, _chunkConfig, true);
-                    if (_logger.IsDebugEnabled)
+                    if (shouldCacheNextChunk)
                     {
-                        _logger.DebugFormat("Success to cache completedChunk {0}", this);
+                        _chunkManager.TryCacheNextChunk(this);
                     }
                     return true;
                 }
@@ -403,7 +400,7 @@ namespace EQueue.Broker.Storage
                     memoryChunk.Dispose();
                     if (_logger.IsDebugEnabled)
                     {
-                        _logger.DebugFormat("Success to uncache completedChunk {0}", this);
+                        _logger.DebugFormat("Uncached completedChunk {0}", this);
                     }
                     return true;
                 }
@@ -418,6 +415,7 @@ namespace EQueue.Broker.Storage
         {
             if (_memoryChunk != null)
             {
+                _chunkManager.TryCacheNextChunk(this);
                 return _memoryChunk.TryReadAt<T>(dataPosition, readRecordFunc);
             }
 
@@ -428,7 +426,7 @@ namespace EQueue.Broker.Storage
 
             if (!_isMemoryChunk && _isCompleted && Interlocked.CompareExchange(ref _cachingChunk, 1, 0) == 0)
             {
-                Task.Factory.StartNew(() => TryCacheInMemory());
+                Task.Factory.StartNew(() => TryCacheInMemory(true));
             }
 
             var readerWorkItem = GetReaderWorkItem();

@@ -48,7 +48,7 @@ namespace EQueue.Broker.Storage
 
             if (!_config.ForceCacheChunkInMemory)
             {
-                _scheduleService.StartTask(_uncacheChunkTaskName, () => UncacheChunks(), 1000, 5000);
+                _scheduleService.StartTask(_uncacheChunkTaskName, () => UncacheChunks(), 1000, 1000);
             }
         }
 
@@ -60,17 +60,26 @@ namespace EQueue.Broker.Storage
                 {
                     Directory.CreateDirectory(_chunkPath);
                 }
-                var files = _config.FileNamingStrategy.GetAllFiles(_chunkPath);
 
+                var tempFiles = _config.FileNamingStrategy.GetTempFiles(_chunkPath);
+                foreach (var file in tempFiles)
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                    File.Delete(file);
+                }
+
+                var files = _config.FileNamingStrategy.GetChunkFiles(_chunkPath);
                 if (files.Length > 0)
                 {
                     var cachedChunkCount = 0;
                     for (var i = files.Length - 2; i >= 0; i--)
                     {
-                        var chunk = TFChunk.FromCompletedFile(files[i], _config);
+                        var file = files[i];
+                        File.SetAttributes(file, FileAttributes.Normal);
+                        var chunk = TFChunk.FromCompletedFile(file, this, _config);
                         if (_config.ForceCacheChunkInMemory || cachedChunkCount < _config.PreCacheChunkCount)
                         {
-                            if (chunk.TryCacheInMemory())
+                            if (chunk.TryCacheInMemory(false))
                             {
                                 cachedChunkCount++;
                             }
@@ -89,7 +98,9 @@ namespace EQueue.Broker.Storage
                             _config.ChunkCacheMaxPercent);
                         throw new ChunkCreateException(errorMsg);
                     }
-                    AddChunk(TFChunk.FromOngoingFile(files[files.Length - 1], _config, readRecordFunc));
+                    var lastFile = files[files.Length - 1];
+                    File.SetAttributes(lastFile, FileAttributes.Normal);
+                    AddChunk(TFChunk.FromOngoingFile(lastFile, this, _config, readRecordFunc));
                 }
             }
         }
@@ -116,7 +127,7 @@ namespace EQueue.Broker.Storage
 
                 var chunkNumber = _nextChunkNumber;
                 var chunkFileName = _config.FileNamingStrategy.GetFileNameFor(_chunkPath, chunkNumber);
-                var chunk = TFChunk.CreateNew(chunkFileName, chunkNumber, _config);
+                var chunk = TFChunk.CreateNew(chunkFileName, chunkNumber, this, _config);
 
                 AddChunk(chunk);
 
@@ -176,6 +187,18 @@ namespace EQueue.Broker.Storage
                     return true;
                 }
                 return false;
+            }
+        }
+        public void TryCacheNextChunk(TFChunk currentChunk)
+        {
+            var nextChunkNumber = currentChunk.ChunkHeader.ChunkNumber + 1;
+            var nextChunk = GetChunk(nextChunkNumber);
+            if (nextChunk != null && !nextChunk.IsMemoryChunk && nextChunk.IsCompleted)
+            {
+                if (!nextChunk.HasCachedChunk)
+                {
+                    nextChunk.TryCacheInMemory(false);
+                }
             }
         }
 
@@ -240,9 +263,8 @@ namespace EQueue.Broker.Storage
                     applyMemoryInfo.UsedMemoryPercent,
                     _config.ChunkCacheMaxPercent);
 
-                var ignorePreCacheChunkCount = tryTimes * 2 > maxTryTimes; //10次重试中，前面5次需要考虑预加载内存的Chunk；后面5次不考虑；
-                UncacheChunks(ignorePreCacheChunkCount, 1);
-                Thread.Sleep(1000); //即便有内存释放了，由于通过API读取到的内存使用数可能不会立即更新，所以等待一定时间后检查内存是否足够
+                UncacheChunks();
+                Thread.Sleep(1000); 
                 hasEnoughMemory = ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_config.ChunkCacheMaxPercent, out applyMemoryInfo);
                 tryTimes++;
             }
@@ -254,7 +276,7 @@ namespace EQueue.Broker.Storage
             _chunks.Add(chunk.ChunkHeader.ChunkNumber, chunk);
             _nextChunkNumber = chunk.ChunkHeader.ChunkNumber + 1;
         }
-        private int UncacheChunks(bool ignorePreCacheChunkCount = false, int maxUncacheCount = int.MaxValue)
+        private int UncacheChunks(int maxUncacheCount = 10)
         {
             var uncachedCount = 0;
 
@@ -262,28 +284,44 @@ namespace EQueue.Broker.Storage
             {
                 try
                 {
-                    var chunks = _chunks.Values.Where(x => x.IsCompleted && !x.IsMemoryChunk && x.HasCachedChunk).OrderBy(x => x.ChunkHeader.ChunkNumber).ToList();
-                    var remainingChunkCount = ignorePreCacheChunkCount ? 0 : _config.PreCacheChunkCount;
-                    var allowUncacheChunkCount = chunks.Count() - remainingChunkCount;
-
-                    if (allowUncacheChunkCount <= 0)
+                    var usedMemoryPercent = ChunkUtil.GetUsedMemoryPercent();
+                    if (usedMemoryPercent <= (ulong)_config.ChunkCacheMinPercent)
                     {
-                        return uncachedCount;
+                        return 0;
                     }
 
-                    for (var i = 0; i < allowUncacheChunkCount; i++)
+                    if (_logger.IsDebugEnabled)
                     {
-                        var chunk = chunks[i];
+                        _logger.DebugFormat("Current memory usage {0}% exceed the chunkCacheMinPercent {1}%, try to uncache chunks.", usedMemoryPercent, _config.ChunkCacheMinPercent);
+                    }
+
+                    var chunks = _chunks.Values.Where(x => x.IsCompleted && !x.IsMemoryChunk && x.HasCachedChunk).OrderBy(x => x.LastActiveTime).ToList();
+
+                    foreach (var chunk in chunks)
+                    {
                         if ((DateTime.Now - chunk.LastActiveTime).TotalSeconds >= _config.ChunkInactiveTimeMaxSeconds)
                         {
                             if (chunk.UnCacheFromMemory())
                             {
+                                Thread.Sleep(1000); //即便有内存释放了，由于通过API读取到的内存使用数可能不会立即更新，所以等待一定时间后检查内存是否足够
                                 uncachedCount++;
-                                if (uncachedCount >= maxUncacheCount)
+                                if (uncachedCount >= maxUncacheCount || ChunkUtil.GetUsedMemoryPercent() <= (ulong)_config.ChunkCacheMinPercent)
                                 {
                                     break;
                                 }
                             }
+                        }
+                    }
+
+                    if (_logger.IsDebugEnabled)
+                    {
+                        if (uncachedCount > 0)
+                        {
+                            _logger.DebugFormat("Uncached {0} chunks, current memory usage: {1}%", uncachedCount, ChunkUtil.GetUsedMemoryPercent());
+                        }
+                        else
+                        {
+                            _logger.Debug("No chunks uncached.");
                         }
                     }
                 }

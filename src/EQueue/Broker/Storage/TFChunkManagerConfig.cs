@@ -15,6 +15,7 @@ namespace EQueue.Broker.Storage
         public readonly int MaxLogRecordSize;
         public readonly bool ForceCacheChunkInMemory;
         public readonly int ChunkCacheMaxPercent;
+        public readonly int ChunkCacheMinPercent;
         public readonly int PreCacheChunkCount;
         public readonly int ChunkInactiveTimeMaxSeconds;
 
@@ -28,6 +29,7 @@ namespace EQueue.Broker.Storage
                                int maxLogRecordSize,
                                bool forceCacheChunkInMemory,
                                int chunkCacheMaxPercent,
+                               int chunkCacheMinPercent,
                                int preCacheChunkCount,
                                int chunkInactiveTimeMaxSeconds)
         {
@@ -39,6 +41,7 @@ namespace EQueue.Broker.Storage
             Ensure.Positive(flushChunkIntervalMilliseconds, "flushChunkIntervalMilliseconds");
             Ensure.Positive(maxLogRecordSize, "maxLogRecordSize");
             Ensure.Positive(chunkCacheMaxPercent, "chunkCacheMaxPercent");
+            Ensure.Positive(chunkCacheMinPercent, "chunkCacheMinPercent");
             Ensure.Nonnegative(preCacheChunkCount, "preCacheChunkCount");
             Ensure.Nonnegative(chunkInactiveTimeMaxSeconds, "chunkInactiveTimeMaxSeconds");
 
@@ -57,6 +60,7 @@ namespace EQueue.Broker.Storage
             MaxLogRecordSize = maxLogRecordSize;
             ForceCacheChunkInMemory = forceCacheChunkInMemory;
             ChunkCacheMaxPercent = chunkCacheMaxPercent;
+            ChunkCacheMinPercent = chunkCacheMinPercent;
             PreCacheChunkCount = preCacheChunkCount;
             ChunkInactiveTimeMaxSeconds = chunkInactiveTimeMaxSeconds;
         }
@@ -70,7 +74,7 @@ namespace EQueue.Broker.Storage
             return ChunkDataUnitSize * ChunkDataCount;
         }
 
-        public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount, int flushChunkIntervalMilliseconds, int chunkCacheMaxPercent, bool forceCacheChunkInMemory, int preCacheChunkCount, int chunkInactiveTimeMaxSeconds)
+        public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount, int flushChunkIntervalMilliseconds, int chunkCacheMaxPercent, int chunkCacheMinPercent, bool forceCacheChunkInMemory, int preCacheChunkCount, int chunkInactiveTimeMaxSeconds)
         {
             return new TFChunkManagerConfig(
                 basePath,
@@ -83,6 +87,7 @@ namespace EQueue.Broker.Storage
                 4 * 1024 * 1024,
                 forceCacheChunkInMemory,
                 chunkCacheMaxPercent,
+                chunkCacheMinPercent,
                 preCacheChunkCount,
                 chunkInactiveTimeMaxSeconds);
         }

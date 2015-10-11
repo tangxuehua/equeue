@@ -64,8 +64,8 @@ namespace EQueue.Broker
             AdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
 
             NotifyWhenMessageArrived = false;
-            DeleteMessagesInterval = 1000 * 60 * 10;
-            DeleteQueueMessagesInterval = 1000 * 60 * 10;
+            DeleteMessagesInterval = 1000 * 10;
+            DeleteQueueMessagesInterval = 1000 * 10;
             PersistConsumeOffsetInterval = 1000 * 1;
             CheckBlockingPullRequestMilliseconds = 1000 * 1;
             ConsumerExpiredTimeout = 1000 * 30;
@@ -73,8 +73,8 @@ namespace EQueue.Broker
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;
             FileStoreRootPath = chunkFileStoreRootPath;
-            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"message-chunks"), "message-chunk-", 256 * 1024 * 1024, 0, 0, 100, 90, false, 1, 5);
-            QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000, 100, 90, true, 1, 5);
+            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"message-chunks"), "message-chunk-", 512 * 1024 * 1024, 0, 0, 100, 90, 40, false, 1, 5);
+            QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000, 100, 90, 40, true, 1, 5);
         }
     }
 }

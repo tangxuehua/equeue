@@ -32,7 +32,16 @@ namespace EQueue.Broker.Storage
 
             return Path.Combine(path, string.Format(_format, _prefix, index));
         }
-        public string[] GetAllFiles(string path)
+        public string[] GetChunkFiles(string path)
+        {
+            var files = Directory
+                            .EnumerateFiles(path)
+                            .Where(x => _fileNamePattern.IsMatch(Path.GetFileName(x)))
+                            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
+                            .ToArray();
+            return files;
+        }
+        public string[] GetTempFiles(string path)
         {
             var files = Directory
                             .EnumerateFiles(path)

@@ -12,7 +12,7 @@ namespace EQueue.Configurations
     {
         public static Configuration RegisterEQueueComponents(this Configuration configuration)
         {
-            configuration.SetDefault<IDeleteMessageStrategy, DeleteMessageByTimeStrategy>();
+            configuration.SetDefault<IDeleteMessageStrategy, DeleteMessageByCountStrategy>();
             configuration.SetDefault<IAllocateMessageQueueStrategy, AverageAllocateMessageQueueStrategy>();
             configuration.SetDefault<IQueueSelector, QueueHashSelector>();
             configuration.SetDefault<IMessageStore, DefaultMessageStore>();

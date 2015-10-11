@@ -29,5 +29,15 @@ namespace EQueue.Broker.Storage
             applyMemoryInfo.RemainingMemoryMB = (long)applyMemoryInfo.MaxAllowUseMemoryMB - (long)applyMemoryInfo.UsedMemoryMB;
             return applyMemoryInfo.UsedMemoryMB + applyMemoryInfo.ChunkSizeMB <= applyMemoryInfo.MaxAllowUseMemoryMB;
         }
+        /// <summary>获取当前使用的物理内存百分比
+        /// </summary>
+        /// <returns></returns>
+        public static ulong GetUsedMemoryPercent()
+        {
+            var computerInfo = new ComputerInfo();
+            var usedPhysicalMemory = computerInfo.TotalPhysicalMemory - computerInfo.AvailablePhysicalMemory;
+            var usedMemoryPercent = usedPhysicalMemory * 100 / computerInfo.TotalPhysicalMemory;
+            return usedMemoryPercent;
+        }
     }
 }
