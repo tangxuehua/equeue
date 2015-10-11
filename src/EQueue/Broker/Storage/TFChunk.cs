@@ -9,6 +9,7 @@ using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Utilities;
 using EQueue.Utils;
+using Microsoft.VisualBasic.Devices;
 
 namespace EQueue.Broker.Storage
 {
@@ -328,60 +329,56 @@ namespace EQueue.Broker.Storage
 
         #region Public Methods
 
-        public struct ChunkApplyMemoryInfo
-        {
-            public decimal PhysicalMemorySizeMB;
-            public decimal UsedMemoryPercent;
-            public decimal UsedMemorySizeMB;
-            public int ChunkSizeMB;
-            public decimal MaxAllowUseMemorySizeMB;
-        }
-        public bool IsMemoryEnoughToCacheChunk(TFChunk chunk, out ChunkApplyMemoryInfo applyMemoryInfo)
-        {
-            applyMemoryInfo = new ChunkApplyMemoryInfo();
-            applyMemoryInfo.PhysicalMemorySizeMB = MemoryInfoUtil.GetTotalPhysicalMemorySize();
-            applyMemoryInfo.UsedMemoryPercent = MemoryInfoUtil.GetUsedMemoryPercent();
-            applyMemoryInfo.UsedMemorySizeMB = applyMemoryInfo.PhysicalMemorySizeMB * applyMemoryInfo.UsedMemoryPercent / 100;
-            applyMemoryInfo.ChunkSizeMB = (ChunkHeader.Size + chunk.ChunkHeader.ChunkDataTotalSize + ChunkFooter.Size) / 1024 / 1024;
-            applyMemoryInfo.MaxAllowUseMemorySizeMB = applyMemoryInfo.PhysicalMemorySizeMB * chunk.Config.ChunkCacheMaxPercent / 100;
-            return applyMemoryInfo.UsedMemorySizeMB + applyMemoryInfo.ChunkSizeMB <= applyMemoryInfo.MaxAllowUseMemorySizeMB;
-        }
-        public void TryCacheInMemory()
+        public bool TryCacheInMemory()
         {
             lock (_cacheSyncObj)
             {
                 if (_isMemoryChunk || !_isCompleted || _memoryChunk != null)
                 {
-                    _logger.ErrorFormat("Cache completed chunk failed, _isMemoryChunk: {0}, _isCompleted: {1}, _memoryChunk is null: {2}", _isMemoryChunk, _isCompleted, _memoryChunk == null);
+                    _logger.ErrorFormat("Not allowed to cache completedChunk {0}, _isMemoryChunk: {1}, _isCompleted: {2}, _memoryChunk is null: {3}", this, _isMemoryChunk, _isCompleted, _memoryChunk == null);
                     _cachingChunk = 0;
-                    return;
+                    return false;
                 }
 
                 try
                 {
-                    ChunkApplyMemoryInfo applyMemoryInfo;
-                    if (IsMemoryEnoughToCacheChunk(this, out applyMemoryInfo))
+                    ChunkUtil.ChunkApplyMemoryInfo applyMemoryInfo;
+                    var chunkSize = (ulong)(ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize + ChunkFooter.Size);
+                    if (!ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent, out applyMemoryInfo))
                     {
-                        if (_logger.IsDebugEnabled)
-                        {
-                            _logger.DebugFormat("Caching completed chunk {0} to memory, physicalMemorySize: {1}MB, currentUsedMemorySize: {2}MB, currentChunkSize: {3}MB, usedMemoryPercent: {4}%, maxAllowUseMemoryPercent: {5}%",
-                                this,
-                                applyMemoryInfo.PhysicalMemorySizeMB,
-                                applyMemoryInfo.UsedMemorySizeMB,
-                                applyMemoryInfo.ChunkSizeMB,
-                                applyMemoryInfo.UsedMemoryPercent,
-                                Config.ChunkCacheMaxPercent);
-                        }
-                        _memoryChunk = TFChunk.FromCompletedFile(_filename, _chunkConfig, true);
-                        if (_logger.IsDebugEnabled)
-                        {
-                            _logger.DebugFormat("Cached completed chunk {0} to memory.", this);
-                        }
+                        _logger.DebugFormat("Failed to cache completedChunk {0} as there is no enough memory to apply, physicalMemory: {1}MB, currentUsedMemory: {2}MB, currentChunkSize: {3}MB, remainingMemory: {4}MB, usedMemoryPercent: {5}%, maxAllowUseMemoryPercent: {6}%",
+                            this,
+                            applyMemoryInfo.PhysicalMemoryMB,
+                            applyMemoryInfo.UsedMemoryMB,
+                            applyMemoryInfo.ChunkSizeMB,
+                            applyMemoryInfo.RemainingMemoryMB,
+                            applyMemoryInfo.UsedMemoryPercent,
+                            Config.ChunkCacheMaxPercent);
+                        return false;
                     }
+
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.DebugFormat("Try to cache completedChunk {0} to memory, physicalMemorySize: {1}MB, currentUsedMemory: {2}MB, currentChunk: {3}MB, remainingMemory: {4}MB, usedMemoryPercent: {5}%, maxAllowUseMemoryPercent: {6}%",
+                            this,
+                            applyMemoryInfo.PhysicalMemoryMB,
+                            applyMemoryInfo.UsedMemoryMB,
+                            applyMemoryInfo.ChunkSizeMB,
+                            applyMemoryInfo.RemainingMemoryMB,
+                            applyMemoryInfo.UsedMemoryPercent,
+                            Config.ChunkCacheMaxPercent);
+                    }
+                    _memoryChunk = TFChunk.FromCompletedFile(_filename, _chunkConfig, true);
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.DebugFormat("Success to cache completedChunk {0}", this);
+                    }
+                    return true;
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("Cache completed chunk {0} to memory failed.", this), ex);
+                    _logger.Error(string.Format("Failed to cache completedChunk {0}", this), ex);
+                    return false;
                 }
                 finally
                 {
@@ -389,14 +386,14 @@ namespace EQueue.Broker.Storage
                 }
             }
         }
-        public void UnCacheFromMemory()
+        public bool UnCacheFromMemory()
         {
             lock (_cacheSyncObj)
             {
                 if (_isMemoryChunk || !_isCompleted || _memoryChunk == null)
                 {
-                    _logger.ErrorFormat("UnCache completed chunk failed, _isMemoryChunk: {0}, _isCompleted: {1}, _memoryChunk is null: {2}", _isMemoryChunk, _isCompleted, _memoryChunk == null);
-                    return;
+                    _logger.ErrorFormat("Not allowed to uncache completedChunk {0}, _isMemoryChunk: {1}, _isCompleted: {2}, _memoryChunk is null: {3}", this, _isMemoryChunk, _isCompleted, _memoryChunk == null);
+                    return false;
                 }
 
                 try
@@ -406,12 +403,14 @@ namespace EQueue.Broker.Storage
                     memoryChunk.Dispose();
                     if (_logger.IsDebugEnabled)
                     {
-                        _logger.DebugFormat("Uncached completed chunk {0} from memory.", this);
+                        _logger.DebugFormat("Success to uncache completedChunk {0}", this);
                     }
+                    return true;
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("Uncache completed chunk {0} from memory failed.", this), ex);
+                    _logger.Error(string.Format("Failed to uncache completedChunk {0}", this), ex);
+                    return false;
                 }
             }
         }
@@ -429,7 +428,7 @@ namespace EQueue.Broker.Storage
 
             if (!_isMemoryChunk && _isCompleted && Interlocked.CompareExchange(ref _cachingChunk, 1, 0) == 0)
             {
-                Task.Factory.StartNew(TryCacheInMemory);
+                Task.Factory.StartNew(() => TryCacheInMemory());
             }
 
             var readerWorkItem = GetReaderWorkItem();

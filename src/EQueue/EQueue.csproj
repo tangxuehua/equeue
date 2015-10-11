@@ -51,6 +51,7 @@
       <HintPath>..\packages\ECommon.Dapper.1.4.2\lib\net45\ECommon.Dapper.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
@@ -100,6 +101,8 @@
     <Compile Include="Broker\Queue.cs" />
     <Compile Include="Broker\Storage\ChunkFooter.cs" />
     <Compile Include="Broker\Storage\ChunkHeader.cs" />
+    <Compile Include="Broker\Storage\ChunkUtil.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ChunkCreateException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkCompleteException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkNotExistException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkWriteException.cs" />
@@ -173,7 +176,6 @@
     <Compile Include="Protocols\QueryConsumerRequest.cs" />
     <Compile Include="Protocols\UpdateQueueOffsetRequest.cs" />
     <Compile Include="Utils\ConsoleEventHandlerService.cs" />
-    <Compile Include="Utils\MemoryInfoUtil.cs" />
     <Compile Include="Utils\MessageUtils.cs" />
     <Compile Include="Utils\RemotingResponseFactory.cs" />
     <Compile Include="Utils\ClientIdFactory.cs" />
