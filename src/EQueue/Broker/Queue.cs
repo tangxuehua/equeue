@@ -96,9 +96,9 @@ namespace EQueue.Broker
 
             foreach (var chunk in chunks)
             {
-                var maxPosition = chunk.ChunkHeader.ChunkDataEndPosition;
+                var maxPosition = chunk.ChunkHeader.ChunkDataEndPosition - _chunkManager.Config.ChunkDataUnitSize;
                 var record = _chunkReader.TryReadAt(maxPosition, ReadMessageIndex);
-                var chunkLastMessagePosition = record.MessageLogPosition;
+                var chunkLastMessagePosition = record.MessageLogPosition - 1;
 
                 if (chunkLastMessagePosition < minMessagePosition)
                 {
