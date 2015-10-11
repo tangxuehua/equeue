@@ -45,7 +45,7 @@ namespace EQueue.Broker.Storage
         {
             var files = Directory
                             .EnumerateFiles(path)
-                            .Where(x => _fileNamePattern.IsMatch(Path.GetFileName(x)) && !x.EndsWith(".tmp"))
+                            .Where(x => _fileNamePattern.IsMatch(Path.GetFileName(x)) && x.EndsWith(".tmp"))
                             .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
                             .ToArray();
             return files;
