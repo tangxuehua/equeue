@@ -28,7 +28,8 @@ namespace EQueue.Broker.DeleteMessageStrategies
             var chunks = new List<TFChunk>();
             var allCompletedChunks = chunkManager
                 .GetAllChunks()
-                .Where(x => x.IsCompleted && x.ChunkHeader.ChunkDataEndPosition <= maxMessagePosition);
+                .Where(x => x.IsCompleted && x.ChunkHeader.ChunkDataEndPosition <= maxMessagePosition)
+                .OrderBy(x => x.ChunkHeader.ChunkNumber);
 
             foreach (var chunk in allCompletedChunks)
             {

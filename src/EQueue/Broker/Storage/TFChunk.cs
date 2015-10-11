@@ -218,6 +218,19 @@ namespace EQueue.Broker.Storage
             }
             else
             {
+                _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkConfig, true);
+                if (_logger.IsDebugEnabled)
+                {
+                    _logger.DebugFormat("Created memoryChunk for new chunk {0}", this);
+                }
+
+                var fileInfo = new FileInfo(_filename);
+                if (fileInfo.Exists)
+                {
+                    File.SetAttributes(_filename, FileAttributes.Normal);
+                    File.Delete(_filename);
+                }
+
                 var tempFilename = string.Format("{0}.{1}.tmp", _filename, Guid.NewGuid());
                 var tempFileStream = new FileStream(tempFilename, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
                 tempFileStream.SetLength(fileSize);
@@ -237,15 +250,6 @@ namespace EQueue.Broker.Storage
             _writerWorkItem = new WriterWorkItem(writeStream);
 
             InitializeReaderWorkItems();
-
-            if (!_isMemoryChunk)
-            {
-                _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkConfig, true);
-                if (_logger.IsDebugEnabled)
-                {
-                    _logger.DebugFormat("Cached new chunk {0} to memory.", this);
-                }
-            }
         }
         private void InitOngoing<T>(Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
         {
@@ -346,14 +350,17 @@ namespace EQueue.Broker.Storage
                     var chunkSize = (ulong)(ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize + ChunkFooter.Size);
                     if (!ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent, out applyMemoryInfo))
                     {
-                        _logger.DebugFormat("Failed to cache completedChunk {0} as there is no enough memory to apply, physicalMemory: {1}MB, currentUsedMemory: {2}MB, currentChunkSize: {3}MB, remainingMemory: {4}MB, usedMemoryPercent: {5}%, maxAllowUseMemoryPercent: {6}%",
-                            this,
-                            applyMemoryInfo.PhysicalMemoryMB,
-                            applyMemoryInfo.UsedMemoryMB,
-                            applyMemoryInfo.ChunkSizeMB,
-                            applyMemoryInfo.RemainingMemoryMB,
-                            applyMemoryInfo.UsedMemoryPercent,
-                            Config.ChunkCacheMaxPercent);
+                        if (_logger.IsDebugEnabled)
+                        {
+                            _logger.DebugFormat("Failed to cache completedChunk {0} as there is no enough memory to apply, physicalMemory: {1}MB, currentUsedMemory: {2}MB, currentChunkSize: {3}MB, remainingMemory: {4}MB, usedMemoryPercent: {5}%, maxAllowUseMemoryPercent: {6}%",
+                                this,
+                                applyMemoryInfo.PhysicalMemoryMB,
+                                applyMemoryInfo.UsedMemoryMB,
+                                applyMemoryInfo.ChunkSizeMB,
+                                applyMemoryInfo.RemainingMemoryMB,
+                                applyMemoryInfo.UsedMemoryPercent,
+                                Config.ChunkCacheMaxPercent);
+                        }
                         return false;
                     }
 
@@ -539,7 +546,10 @@ namespace EQueue.Broker.Storage
 
             lock (_writeSyncObj)
             {
-                _writerWorkItem.FlushToDisk();
+                if (_writerWorkItem != null)
+                {
+                    _writerWorkItem.FlushToDisk();
+                }
             }
         }
         public void Complete()
@@ -552,8 +562,11 @@ namespace EQueue.Broker.Storage
                 Flush();
                 _isCompleted = true;
 
-                _writerWorkItem.Dispose();
-                _writerWorkItem = null;
+                if (_writerWorkItem != null)
+                {
+                    _writerWorkItem.Dispose();
+                    _writerWorkItem = null;
+                }
 
                 if (!_isMemoryChunk)
                 {

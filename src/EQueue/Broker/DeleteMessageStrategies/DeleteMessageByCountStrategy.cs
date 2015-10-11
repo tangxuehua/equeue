@@ -27,6 +27,7 @@ namespace EQueue.Broker.DeleteMessageStrategies
             var allCompletedChunks = chunkManager
                 .GetAllChunks()
                 .Where(x => x.IsCompleted && x.ChunkHeader.ChunkDataEndPosition <= maxMessagePosition)
+                .OrderBy(x => x.ChunkHeader.ChunkNumber)
                 .ToList();
 
             var exceedCount = allCompletedChunks.Count - MaxChunkCount;
