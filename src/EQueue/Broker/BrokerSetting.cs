@@ -73,7 +73,7 @@ namespace EQueue.Broker
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;
             FileStoreRootPath = chunkFileStoreRootPath;
-            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"message-chunks"), "message-chunk-", 128 * 1024 * 1024, 0, 0, 100, 90, false, 1, 5);
+            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"message-chunks"), "message-chunk-", 256 * 1024 * 1024, 0, 0, 100, 90, false, 1, 5);
             QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000, 100, 90, true, 1, 5);
         }
     }
