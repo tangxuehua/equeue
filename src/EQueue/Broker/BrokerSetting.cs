@@ -57,7 +57,7 @@ namespace EQueue.Broker
         /// </summary>
         public TFChunkManagerConfig QueueChunkConfig { get; set; }
 
-        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store")
+        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 64 * 1024 * 1024, int chunkCacheMaxPercent = 90, int chunkCacheMinPercent = 60)
         {
             ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
             ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
@@ -73,8 +73,8 @@ namespace EQueue.Broker
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;
             FileStoreRootPath = chunkFileStoreRootPath;
-            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"message-chunks"), "message-chunk-", 512 * 1024 * 1024, 0, 0, 100, 90, 40, false, 1, 5);
-            QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000, 100, 90, 40, true, 1, 5);
+            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"message-chunks"), "message-chunk-", messageChunkDataSize, 0, 0, 100, chunkCacheMaxPercent, chunkCacheMinPercent, false, 1, 5);
+            QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000, 100, chunkCacheMaxPercent, chunkCacheMinPercent, true, 1, 5);
         }
     }
 }
