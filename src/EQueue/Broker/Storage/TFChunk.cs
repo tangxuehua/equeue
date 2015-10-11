@@ -218,12 +218,6 @@ namespace EQueue.Broker.Storage
             }
             else
             {
-                _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkConfig, true);
-                if (_logger.IsDebugEnabled)
-                {
-                    _logger.DebugFormat("Created memoryChunk for new chunk {0}", this);
-                }
-
                 var fileInfo = new FileInfo(_filename);
                 if (fileInfo.Exists)
                 {
@@ -250,6 +244,15 @@ namespace EQueue.Broker.Storage
             _writerWorkItem = new WriterWorkItem(writeStream);
 
             InitializeReaderWorkItems();
+
+            if (!_isMemoryChunk)
+            {
+                _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkConfig, true);
+                if (_logger.IsDebugEnabled)
+                {
+                    _logger.DebugFormat("Cached new chunk {0} to memory.", this);
+                }
+            }
         }
         private void InitOngoing<T>(Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
         {
