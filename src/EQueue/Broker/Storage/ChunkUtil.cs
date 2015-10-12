@@ -13,7 +13,7 @@ namespace EQueue.Broker.Storage
             public ulong ChunkSizeMB;
             public ulong AvailableMemoryMB;
         }
-        public static bool IsMemoryEnoughToCacheChunk(ulong chunkSize, uint chunkCacheMaxPercent, out ChunkApplyMemoryInfo applyMemoryInfo)
+        public static bool IsMemoryEnoughToCacheChunk(ulong chunkSize, uint maxUseMemoryPercent, out ChunkApplyMemoryInfo applyMemoryInfo)
         {
             applyMemoryInfo = new ChunkApplyMemoryInfo();
 
@@ -26,8 +26,16 @@ namespace EQueue.Broker.Storage
             applyMemoryInfo.UsedMemoryMB = usedMemory / bytesPerMB;
             applyMemoryInfo.UsedMemoryPercent = applyMemoryInfo.UsedMemoryMB * 100 / applyMemoryInfo.PhysicalMemoryMB;
             applyMemoryInfo.ChunkSizeMB = chunkSize / bytesPerMB;
-            applyMemoryInfo.MaxAllowUseMemoryMB = applyMemoryInfo.PhysicalMemoryMB * chunkCacheMaxPercent / 100;
+            applyMemoryInfo.MaxAllowUseMemoryMB = applyMemoryInfo.PhysicalMemoryMB * maxUseMemoryPercent / 100;
             return applyMemoryInfo.UsedMemoryMB + applyMemoryInfo.ChunkSizeMB <= applyMemoryInfo.MaxAllowUseMemoryMB;
+        }
+        public static bool IsMemoryEnoughToCacheChunk(ulong chunkSize, uint maxUseMemoryPercent)
+        {
+            var computerInfo = new ComputerInfo();
+            var maxAllowUseMemory = computerInfo.TotalPhysicalMemory * maxUseMemoryPercent / 100;
+            var currentUsedMemory = computerInfo.TotalPhysicalMemory - computerInfo.AvailablePhysicalMemory;
+
+            return currentUsedMemory + chunkSize <= maxAllowUseMemory;
         }
         /// <summary>获取当前使用的物理内存百分比
         /// </summary>

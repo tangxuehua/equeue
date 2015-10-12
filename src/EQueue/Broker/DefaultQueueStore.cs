@@ -288,7 +288,10 @@ namespace EQueue.Broker
                         if (minConsumedQueueOffset >= 0)
                         {
                             var messagePosition = queue.GetMessagePosition(minConsumedQueueOffset);
-                            _messageStore.UpdateMinConsumedMessagePosition(messagePosition);
+                            if (messagePosition >= 0)
+                            {
+                                _messageStore.UpdateMinConsumedMessagePosition(messagePosition);
+                            }
                         }
                     }
                 }

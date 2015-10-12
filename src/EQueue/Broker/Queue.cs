@@ -70,6 +70,10 @@ namespace EQueue.Broker
         {
             var position = queueOffset * _chunkManager.Config.ChunkDataUnitSize;
             var record = _chunkReader.TryReadAt(position, ReadMessageIndex);
+            if (record == null)
+            {
+                return -1L;
+            }
             return record.MessageLogPosition - 1;
         }
         public void Enable()
@@ -98,6 +102,10 @@ namespace EQueue.Broker
             {
                 var maxPosition = chunk.ChunkHeader.ChunkDataEndPosition - _chunkManager.Config.ChunkDataUnitSize;
                 var record = _chunkReader.TryReadAt(maxPosition, ReadMessageIndex);
+                if (record == null)
+                {
+                    continue;
+                }
                 var chunkLastMessagePosition = record.MessageLogPosition - 1;
 
                 if (chunkLastMessagePosition < minMessagePosition)

@@ -36,11 +36,12 @@ namespace EQueue.Broker.Storage
         private int _cachedLength;
 
         private int _dataPosition;
-        private volatile bool _isCompleted;
-        private volatile bool _isDestroying;
+        private bool _isCompleted;
+        private bool _isDestroying;
         private int _cachingChunk;
         private DateTime _lastActiveTime;
         private bool _isReadersInitialized;
+        private int _flushedDataPosition;
 
         private TFChunk _memoryChunk;
 
@@ -181,6 +182,7 @@ namespace EQueue.Broker.Storage
             }
 
             _dataPosition = _chunkFooter.ChunkDataTotalSize;
+            _flushedDataPosition = _chunkFooter.ChunkDataTotalSize;
 
             if (_isMemoryChunk)
             {
@@ -247,16 +249,29 @@ namespace EQueue.Broker.Storage
             writeStream.Position = ChunkHeader.Size;
 
             _dataPosition = 0;
+            _flushedDataPosition = 0;
             _writerWorkItem = new WriterWorkItem(writeStream);
 
             InitializeReaderWorkItems();
 
             if (!_isMemoryChunk)
             {
-                _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkManager, _chunkConfig, true);
-                if (_logger.IsDebugEnabled)
+                var chunkSize = (ulong)GetChunkSize(_chunkHeader);
+                if (ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
                 {
-                    _logger.DebugFormat("Cached new chunk {0} to memory.", this);
+                    try
+                    {
+                        _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkManager, _chunkConfig, true);
+                        if (_logger.IsDebugEnabled)
+                        {
+                            _logger.DebugFormat("Cached new chunk {0} to memory.", this);
+                        }
+                    }
+                    catch (OutOfMemoryException) { }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(string.Format("Failed to cache new chunk {0}", this), ex);
+                    }
                 }
             }
 
@@ -276,6 +291,8 @@ namespace EQueue.Broker.Storage
             {
                 throw new ChunkBadDataException(string.Format("Failed to parse chunk data, chunk file: {0}", _filename));
             }
+
+            _flushedDataPosition = _dataPosition;
 
             var writeStream = default(Stream);
 
@@ -327,10 +344,22 @@ namespace EQueue.Broker.Storage
 
             if (!_isMemoryChunk)
             {
-                _memoryChunk = TFChunk.FromOngoingFile<T>(_filename, _chunkManager, _chunkConfig, readRecordFunc, true);
-                if (_logger.IsDebugEnabled)
+                var chunkSize = (ulong)GetChunkSize(_chunkHeader);
+                if (ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
                 {
-                    _logger.DebugFormat("Cached ongoing chunk {0} to memory.", this);
+                    try
+                    {
+                        _memoryChunk = TFChunk.FromOngoingFile<T>(_filename, _chunkManager, _chunkConfig, readRecordFunc, true);
+                        if (_logger.IsDebugEnabled)
+                        {
+                            _logger.DebugFormat("Cached ongoing chunk {0} to memory.", this);
+                        }
+                    }
+                    catch (OutOfMemoryException) { }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(string.Format("Failed to cache ongoing chunk {0}", this), ex);
+                    }
                 }
             }
 
@@ -353,9 +382,8 @@ namespace EQueue.Broker.Storage
 
                 try
                 {
-                    ChunkUtil.ChunkApplyMemoryInfo applyMemoryInfo;
                     var chunkSize = (ulong)GetChunkSize(_chunkHeader);
-                    if (!ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent, out applyMemoryInfo))
+                    if (!ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
                     {
                         return false;
                     }
@@ -366,10 +394,11 @@ namespace EQueue.Broker.Storage
                     }
                     if (shouldCacheNextChunk)
                     {
-                        _chunkManager.TryCacheNextChunk(this);
+                        Task.Factory.StartNew(() => _chunkManager.TryCacheNextChunk(this));
                     }
                     return true;
                 }
+                catch (OutOfMemoryException) { return false; }
                 catch (Exception ex)
                 {
                     _logger.Error(string.Format("Failed to cache completed chunk {0}", this), ex);
@@ -408,17 +437,20 @@ namespace EQueue.Broker.Storage
                 }
             }
         }
-        public T TryReadAt<T>(long dataPosition, Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
+        public T TryReadAt<T>(long dataPosition, Func<int, BinaryReader, T> readRecordFunc) where T : class, ILogRecord
         {
-            if (_memoryChunk != null)
-            {
-                _chunkManager.TryCacheNextChunk(this);
-                return _memoryChunk.TryReadAt<T>(dataPosition, readRecordFunc);
-            }
-
             if (_isDestroying)
             {
                 throw new ChunkReadException(string.Format("Chunk {0} is being deleting.", this));
+            }
+
+            _lastActiveTime = DateTime.Now;
+
+            _chunkManager.TryCacheNextChunk(this);
+
+            if (!_isMemoryChunk && _memoryChunk != null)
+            {
+                return _memoryChunk.TryReadAt<T>(dataPosition, readRecordFunc);
             }
 
             if (!_isMemoryChunk && _isCompleted && Interlocked.CompareExchange(ref _cachingChunk, 1, 0) == 0)
@@ -437,14 +469,27 @@ namespace EQueue.Broker.Storage
                                       dataPosition, currentDataPosition, this));
                 }
 
-                return IsFixedDataSize() ?
-                    TryReadFixedSizeForwardInternal(readerWorkItem, dataPosition, readRecordFunc) :
-                    TryReadForwardInternal(readerWorkItem, dataPosition, readRecordFunc);
+                try
+                {
+                    return IsFixedDataSize() ?
+                        TryReadFixedSizeForwardInternal(readerWorkItem, dataPosition, readRecordFunc) :
+                        TryReadForwardInternal(readerWorkItem, dataPosition, readRecordFunc);
+                }
+                catch
+                {
+                    if (!_isMemoryChunk && _writerWorkItem != null && _writerWorkItem.LastFlushedPosition < GetStreamPosition(_dataPosition))
+                    {
+                        return null;
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
             }
             finally
             {
                 ReturnReaderWorkItem(readerWorkItem);
-                _lastActiveTime = DateTime.Now;
             }
         }
         public RecordWriteResult TryAppend(ILogRecord record)
@@ -453,6 +498,8 @@ namespace EQueue.Broker.Storage
             {
                 throw new ChunkWriteException(this.ToString(), string.Format("Cannot write to a read-only chunk, isMemoryChunk: {0}, _dataPosition: {1}", _isMemoryChunk, _dataPosition));
             }
+
+            _lastActiveTime = DateTime.Now;
 
             var writerWorkItem = _writerWorkItem;
             var bufferStream = writerWorkItem.BufferStream;
@@ -516,23 +563,18 @@ namespace EQueue.Broker.Storage
                 }
                 else if (result.Position != position)
                 {
-                    throw new ChunkWriteException(this.ToString(), string.Format("Append record to file chunk success, but append to memory chunk failed, the position is not equal, memory position: {0}, file position: {1}.", result.Position, position));
+                    throw new ChunkWriteException(this.ToString(), string.Format("Append record to file chunk success, and append to memory chunk success, but the position is not equal, memory chunk write position: {0}, file chunk write position: {1}.", result.Position, position));
                 }
             }
 
-            _lastActiveTime = DateTime.Now;
             return RecordWriteResult.Successful(position);
         }
         public void Flush()
         {
             if (_isMemoryChunk || _isCompleted) return;
-
-            lock (_writeSyncObj)
+            if (_writerWorkItem != null)
             {
-                if (_writerWorkItem != null)
-                {
-                    Helper.EatException(() => _writerWorkItem.FlushToDisk());
-                }
+                Helper.EatException(() => _writerWorkItem.FlushToDisk());
             }
         }
         public void Complete()
@@ -1019,17 +1061,7 @@ namespace EQueue.Broker.Storage
 
         private void SetFileAttributes()
         {
-            Helper.EatException(() =>
-            {
-                if (_isCompleted)
-                {
-                    File.SetAttributes(_filename, FileAttributes.ReadOnly | FileAttributes.NotContentIndexed);
-                }
-                else
-                {
-                    File.SetAttributes(_filename, FileAttributes.NotContentIndexed);
-                }
-            });
+            Helper.EatException(() => File.SetAttributes(_filename, FileAttributes.NotContentIndexed));
         }
 
         #endregion

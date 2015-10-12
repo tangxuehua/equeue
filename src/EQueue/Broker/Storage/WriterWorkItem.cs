@@ -9,6 +9,7 @@ namespace EQueue.Broker.Storage
         public readonly MemoryStream BufferStream;
         public readonly BinaryWriter BufferWriter;
         public readonly Stream WorkingStream;
+        public long LastFlushedPosition;
 
         public WriterWorkItem(Stream stream)
         {
@@ -27,6 +28,7 @@ namespace EQueue.Broker.Storage
             if (_fileStream != null)
             {
                 _fileStream.Flush(true);
+                LastFlushedPosition = _fileStream.Position;
             }
         }
         public void ResizeStream(long length)

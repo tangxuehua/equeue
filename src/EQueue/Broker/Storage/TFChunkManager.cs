@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
@@ -22,6 +23,7 @@ namespace EQueue.Broker.Storage
         private readonly string _uncacheChunkTaskName;
         private int _nextChunkNumber;
         private int _uncachingChunks;
+        private int _isCachingNextChunk;
 
         public string Name { get; private set; }
         public TFChunkManagerConfig Config { get { return _config; } }
@@ -75,7 +77,6 @@ namespace EQueue.Broker.Storage
                     for (var i = files.Length - 2; i >= 0; i--)
                     {
                         var file = files[i];
-                        File.SetAttributes(file, FileAttributes.Normal);
                         var chunk = TFChunk.FromCompletedFile(file, this, _config);
                         if (_config.ForceCacheChunkInMemory || cachedChunkCount < _config.PreCacheChunkCount)
                         {
@@ -86,20 +87,7 @@ namespace EQueue.Broker.Storage
                         }
                         AddChunk(chunk);
                     }
-                    if (!EnsureMemoryEnough())
-                    {
-                        var applyMemoryInfo = GetChunkApplyMemoryInfo();
-                        var errorMsg = string.Format("Not enough memory to create ongoing chunk, physicalMemorySize: {0}MB, currentUsedMemorySize: {1}MB, chunkSize: {2}MB, availableMemorySize: {3}MB, usedMemoryPercent: {4}%, maxAllowUseMemoryPercent: {5}%",
-                            applyMemoryInfo.PhysicalMemoryMB,
-                            applyMemoryInfo.UsedMemoryMB,
-                            applyMemoryInfo.ChunkSizeMB,
-                            applyMemoryInfo.AvailableMemoryMB,
-                            applyMemoryInfo.UsedMemoryPercent,
-                            _config.ChunkCacheMaxPercent);
-                        throw new ChunkCreateException(errorMsg);
-                    }
                     var lastFile = files[files.Length - 1];
-                    File.SetAttributes(lastFile, FileAttributes.Normal);
                     AddChunk(TFChunk.FromOngoingFile(lastFile, this, _config, readRecordFunc));
                 }
             }
@@ -112,19 +100,6 @@ namespace EQueue.Broker.Storage
         {
             lock (_chunksLocker)
             {
-                if (!EnsureMemoryEnough())
-                {
-                    var applyMemoryInfo = GetChunkApplyMemoryInfo();
-                    var errorMsg = string.Format("Not enough memory to create new chunk, physicalMemorySize: {0}MB, currentUsedMemorySize: {1}MB, chunkSize: {2}MB, availableMemorySize: {3}MB, usedMemoryPercent: {4}%, maxAllowUseMemoryPercent: {5}%",
-                        applyMemoryInfo.PhysicalMemoryMB,
-                        applyMemoryInfo.UsedMemoryMB,
-                        applyMemoryInfo.ChunkSizeMB,
-                        applyMemoryInfo.AvailableMemoryMB,
-                        applyMemoryInfo.UsedMemoryPercent,
-                        _config.ChunkCacheMaxPercent);
-                    throw new ChunkCreateException(errorMsg);
-                }
-
                 var chunkNumber = _nextChunkNumber;
                 var chunkFileName = _config.FileNamingStrategy.GetFileNameFor(_chunkPath, chunkNumber);
                 var chunk = TFChunk.CreateNew(chunkFileName, chunkNumber, this, _config);
@@ -191,13 +166,20 @@ namespace EQueue.Broker.Storage
         }
         public void TryCacheNextChunk(TFChunk currentChunk)
         {
-            var nextChunkNumber = currentChunk.ChunkHeader.ChunkNumber + 1;
-            var nextChunk = GetChunk(nextChunkNumber);
-            if (nextChunk != null && !nextChunk.IsMemoryChunk && nextChunk.IsCompleted)
+            if (Interlocked.CompareExchange(ref _isCachingNextChunk, 1, 0) == 0)
             {
-                if (!nextChunk.HasCachedChunk)
+                try
                 {
-                    nextChunk.TryCacheInMemory(false);
+                    var nextChunkNumber = currentChunk.ChunkHeader.ChunkNumber + 1;
+                    var nextChunk = GetChunk(nextChunkNumber);
+                    if (nextChunk != null && !nextChunk.IsMemoryChunk && nextChunk.IsCompleted && !nextChunk.HasCachedChunk)
+                    {
+                        Task.Factory.StartNew(() => nextChunk.TryCacheInMemory(false));
+                    }
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _isCachingNextChunk, 0);
                 }
             }
         }
@@ -229,48 +211,6 @@ namespace EQueue.Broker.Storage
             }
         }
 
-        private ChunkUtil.ChunkApplyMemoryInfo GetChunkApplyMemoryInfo()
-        {
-            ChunkUtil.ChunkApplyMemoryInfo applyMemoryInfo;
-            var chunkSize = (ulong)(ChunkHeader.Size + _config.GetChunkDataSize() + ChunkFooter.Size);
-            ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_config.ChunkCacheMaxPercent, out applyMemoryInfo);
-            return applyMemoryInfo;
-        }
-        private bool EnsureMemoryEnough()
-        {
-            ChunkUtil.ChunkApplyMemoryInfo applyMemoryInfo;
-            var chunkSize = (ulong)(ChunkHeader.Size + _config.GetChunkDataSize() + ChunkFooter.Size);
-
-            //检查剩余物理内存是否足够，如果足够直接返回true
-            var hasEnoughMemory = ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_config.ChunkCacheMaxPercent, out applyMemoryInfo);
-            if (hasEnoughMemory)
-            {
-                return true;
-            }
-
-            //如果不足，则尝试释放一些前面已经完成的Chunk文件
-            var tryTimes = 1;
-            var maxTryTimes = 10;
-
-            while (!hasEnoughMemory && tryTimes <= maxTryTimes)
-            {
-                _logger.WarnFormat("Not enough memory to create new chunk, try to release old completed chunks, tryTimes: {0}, physicalMemory: {1}MB, currentUsedMemory: {2}MB, chunkSize: {3}MB, availableMemoryMB: {4}MB, usedMemoryPercent: {5}%, maxAllowUseMemoryPercent: {6}%",
-                    tryTimes,
-                    applyMemoryInfo.PhysicalMemoryMB,
-                    applyMemoryInfo.UsedMemoryMB,
-                    applyMemoryInfo.ChunkSizeMB,
-                    applyMemoryInfo.AvailableMemoryMB,
-                    applyMemoryInfo.UsedMemoryPercent,
-                    _config.ChunkCacheMaxPercent);
-
-                UncacheChunks();
-                Thread.Sleep(1000); 
-                hasEnoughMemory = ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_config.ChunkCacheMaxPercent, out applyMemoryInfo);
-                tryTimes++;
-            }
-
-            return hasEnoughMemory;
-        }
         private void AddChunk(TFChunk chunk)
         {
             _chunks.Add(chunk.ChunkHeader.ChunkNumber, chunk);
@@ -303,7 +243,7 @@ namespace EQueue.Broker.Storage
                         {
                             if (chunk.UnCacheFromMemory())
                             {
-                                Thread.Sleep(1000); //即便有内存释放了，由于通过API读取到的内存使用数可能不会立即更新，所以等待一定时间后检查内存是否足够
+                                Thread.Sleep(100); //即便有内存释放了，由于通过API读取到的内存使用数可能不会立即更新，所以等待一定时间后检查内存是否足够
                                 uncachedCount++;
                                 if (uncachedCount >= maxUncacheCount || ChunkUtil.GetUsedMemoryPercent() <= (ulong)_config.ChunkCacheMinPercent)
                                 {

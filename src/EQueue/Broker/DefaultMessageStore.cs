@@ -75,7 +75,12 @@ namespace EQueue.Broker
         }
         public byte[] GetMessage(long position)
         {
-            return _chunkReader.TryReadRecordBufferAt(position).RecordBuffer;
+            var record = _chunkReader.TryReadRecordBufferAt(position);
+            if (record != null)
+            {
+                return record.RecordBuffer;
+            }
+            return null;
         }
         public void UpdateMinConsumedMessagePosition(long minConsumedMessagePosition)
         {

@@ -113,12 +113,17 @@ namespace EQueue.Broker.Processors
                 try
                 {
                     var messagePosition = queue.GetMessagePosition(queueOffset);
-                    var message = _messageStore.GetMessage(messagePosition);
-
-                    if (message != null)
+                    if (messagePosition < 0)
                     {
-                        messages.Add(message);
+                        break;
                     }
+
+                    var message = _messageStore.GetMessage(messagePosition);
+                    if (message == null)
+                    {
+                        break;
+                    }
+                    messages.Add(message);
 
                     queueOffset++;
                 }
