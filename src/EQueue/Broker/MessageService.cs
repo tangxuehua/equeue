@@ -43,7 +43,7 @@ namespace EQueue.Broker
             lock (_syncObj)
             {
                 var messageOffset = _messageStore.GetNextMessageOffset();
-                var queueOffset = queue.CurrentOffset;
+                var queueOffset = queue.GetNextOffset();
                 var queueMessage = _messageStore.StoreMessage(queueId, messageOffset, queueOffset, message, routingKey);
                 queue.SetQueueIndex(queueMessage.QueueOffset, queueMessage.MessageOffset);
                 queue.IncrementCurrentOffset();

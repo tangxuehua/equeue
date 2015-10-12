@@ -8,7 +8,7 @@ namespace EQueue.Broker
     public class Queue
     {
         private ConcurrentDictionary<long, long> _queueItemDict = new ConcurrentDictionary<long, long>();
-        private long _currentOffset = 0;
+        private long _currentOffset = -1;
 
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
@@ -22,6 +22,10 @@ namespace EQueue.Broker
             Status = QueueStatus.Normal;
         }
 
+        public long GetNextOffset()
+        {
+            return _currentOffset + 1;
+        }
         public long GetMessageCount()
         {
             return _queueItemDict.Count;
