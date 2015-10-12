@@ -57,7 +57,7 @@ namespace EQueue.Broker
         /// </summary>
         public TFChunkManagerConfig QueueChunkConfig { get; set; }
 
-        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 256 * 1024 * 1024, int chunkCacheMaxPercent = 90, int chunkCacheMinPercent = 60)
+        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 256 * 1024 * 1024, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40)
         {
             ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
             ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
