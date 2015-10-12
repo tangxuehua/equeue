@@ -89,11 +89,11 @@ namespace EQueue.Broker.Storage
                     if (!EnsureMemoryEnough())
                     {
                         var applyMemoryInfo = GetChunkApplyMemoryInfo();
-                        var errorMsg = string.Format("Not enough memory to create ongoing chunk, physicalMemorySize: {0}MB, currentUsedMemorySize: {1}MB, chunkSize: {2}MB, remainingMemory: {3}MB, usedMemoryPercent: {4}%, maxAllowUseMemoryPercent: {5}%",
+                        var errorMsg = string.Format("Not enough memory to create ongoing chunk, physicalMemorySize: {0}MB, currentUsedMemorySize: {1}MB, chunkSize: {2}MB, availableMemorySize: {3}MB, usedMemoryPercent: {4}%, maxAllowUseMemoryPercent: {5}%",
                             applyMemoryInfo.PhysicalMemoryMB,
                             applyMemoryInfo.UsedMemoryMB,
                             applyMemoryInfo.ChunkSizeMB,
-                            applyMemoryInfo.RemainingMemoryMB,
+                            applyMemoryInfo.AvailableMemoryMB,
                             applyMemoryInfo.UsedMemoryPercent,
                             _config.ChunkCacheMaxPercent);
                         throw new ChunkCreateException(errorMsg);
@@ -115,11 +115,11 @@ namespace EQueue.Broker.Storage
                 if (!EnsureMemoryEnough())
                 {
                     var applyMemoryInfo = GetChunkApplyMemoryInfo();
-                    var errorMsg = string.Format("Not enough memory to create new chunk, physicalMemorySize: {0}MB, currentUsedMemorySize: {1}MB, chunkSize: {2}MB, remainingMemory: {3}MB, usedMemoryPercent: {4}%, maxAllowUseMemoryPercent: {5}%",
+                    var errorMsg = string.Format("Not enough memory to create new chunk, physicalMemorySize: {0}MB, currentUsedMemorySize: {1}MB, chunkSize: {2}MB, availableMemorySize: {3}MB, usedMemoryPercent: {4}%, maxAllowUseMemoryPercent: {5}%",
                         applyMemoryInfo.PhysicalMemoryMB,
                         applyMemoryInfo.UsedMemoryMB,
                         applyMemoryInfo.ChunkSizeMB,
-                        applyMemoryInfo.RemainingMemoryMB,
+                        applyMemoryInfo.AvailableMemoryMB,
                         applyMemoryInfo.UsedMemoryPercent,
                         _config.ChunkCacheMaxPercent);
                     throw new ChunkCreateException(errorMsg);
@@ -254,12 +254,12 @@ namespace EQueue.Broker.Storage
 
             while (!hasEnoughMemory && tryTimes <= maxTryTimes)
             {
-                _logger.WarnFormat("Not enough memory to create new chunk, try to release old completed chunks, tryTimes: {0}, physicalMemory: {1}MB, currentUsedMemory: {2}MB, chunkSize: {3}MB, remainingMemory: {4}MB, usedMemoryPercent: {5}%, maxAllowUseMemoryPercent: {6}%",
+                _logger.WarnFormat("Not enough memory to create new chunk, try to release old completed chunks, tryTimes: {0}, physicalMemory: {1}MB, currentUsedMemory: {2}MB, chunkSize: {3}MB, availableMemoryMB: {4}MB, usedMemoryPercent: {5}%, maxAllowUseMemoryPercent: {6}%",
                     tryTimes,
                     applyMemoryInfo.PhysicalMemoryMB,
                     applyMemoryInfo.UsedMemoryMB,
                     applyMemoryInfo.ChunkSizeMB,
-                    applyMemoryInfo.RemainingMemoryMB,
+                    applyMemoryInfo.AvailableMemoryMB,
                     applyMemoryInfo.UsedMemoryPercent,
                     _config.ChunkCacheMaxPercent);
 

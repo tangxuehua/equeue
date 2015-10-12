@@ -108,7 +108,7 @@
     <Compile Include="Broker\Storage\Exceptions\ChunkWriteException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkReadException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkFileNotExistException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\ChunkBadException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ChunkBadDataException.cs" />
     <Compile Include="Broker\Storage\FileNamingStrategies\IFileNamingStrategy.cs" />
     <Compile Include="Broker\Storage\LogRecords\BufferLogRecord.cs" />
     <Compile Include="Broker\Storage\LogRecords\ILogRecord.cs" />
