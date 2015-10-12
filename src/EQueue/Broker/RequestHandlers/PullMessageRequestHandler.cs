@@ -126,7 +126,7 @@ namespace EQueue.Broker.Processors
                 {
                     _logger.ErrorFormat("Chunk not exist, topic: {0}, queueId: {1}, queueOffset: {2}", topic, queueId, queueOffset);
                 }
-                catch (InvalidReadException ex)
+                catch (ChunkReadException ex)
                 {
                     _logger.ErrorFormat("Chunk read failed, topic: {0}, queueId: {1}, queueOffset: {2}, errorMsg: {3}", topic, queueId, queueOffset, ex.Message);
                     throw;

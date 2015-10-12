@@ -25,7 +25,7 @@ namespace EQueue.Broker.Storage
             var maxPosition = lastChunk.GlobalDataPosition;
             if (position >= maxPosition)
             {
-                throw new InvalidReadException(
+                throw new ChunkReadException(
                     string.Format("Cannot read record after the max global data position, data position: {0}, max global data position: {1}, chunk: {2}.",
                                   position, maxPosition, lastChunk));
             }

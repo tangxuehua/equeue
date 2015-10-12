@@ -106,14 +106,9 @@
     <Compile Include="Broker\Storage\Exceptions\ChunkCompleteException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkNotExistException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkWriteException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\ExtraneousFileFoundException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\InvalidReadException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\UnableToReadPastEndOfStreamException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\CorruptDatabaseException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ChunkReadException.cs" />
     <Compile Include="Broker\Storage\Exceptions\ChunkFileNotExistException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\FileBeingDeletedException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\BadChunkInDatabaseException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\WrongFileVersionException.cs" />
+    <Compile Include="Broker\Storage\Exceptions\ChunkBadException.cs" />
     <Compile Include="Broker\Storage\FileNamingStrategies\IFileNamingStrategy.cs" />
     <Compile Include="Broker\Storage\LogRecords\BufferLogRecord.cs" />
     <Compile Include="Broker\Storage\LogRecords\ILogRecord.cs" />
