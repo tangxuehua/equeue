@@ -50,7 +50,11 @@ namespace EQueue.Broker
         }
         public long GetNextMessageOffset()
         {
-            return Interlocked.Increment(ref _currentOffset);
+            return _currentOffset + 1;
+        }
+        public void IncrementMessageOffset()
+        {
+            Interlocked.Increment(ref _currentOffset);
         }
         public QueueMessage StoreMessage(int queueId, long messageOffset, long queueOffset, Message message, string routingKey)
         {

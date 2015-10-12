@@ -47,6 +47,7 @@ namespace EQueue.Broker
                 var queueMessage = _messageStore.StoreMessage(queueId, messageOffset, queueOffset, message, routingKey);
                 queue.SetQueueIndex(queueMessage.QueueOffset, queueMessage.MessageOffset);
                 queue.IncrementCurrentOffset();
+                _messageStore.IncrementMessageOffset();
                 return new MessageStoreResult(queueMessage.MessageId, queueMessage.MessageOffset, queueMessage.QueueId, queueMessage.QueueOffset);
             }
         }
