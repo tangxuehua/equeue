@@ -83,7 +83,7 @@ namespace EQueue.Clients.Consumers
             _handlingMessageDict = new ConcurrentDictionary<long, ConsumingMessage>();
             _taskIds = new List<int>();
             _taskFactory = new TaskFactory();
-            _remotingClient = new SocketRemotingClient(string.Format("{0}.RemotingClient", Id), Setting.BrokerAddress, Setting.LocalAddress);
+            _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.SocketSetting, Setting.LocalAddress);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();

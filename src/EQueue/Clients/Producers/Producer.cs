@@ -42,7 +42,7 @@ namespace EQueue.Clients.Producers
 
             _lockObject = new object();
             _topicQueueIdsDict = new ConcurrentDictionary<string, IList<int>>();
-            _remotingClient = new SocketRemotingClient(Id + ".RemotingClient", Setting.BrokerAddress, Setting.LocalAddress);
+            _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.SocketSetting, Setting.LocalAddress);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
