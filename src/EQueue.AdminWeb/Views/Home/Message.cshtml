@@ -1,0 +1,87 @@
+﻿@model EQueue.AdminWeb.Models.MessageViewModel
+@{
+    ViewBag.Title = "消息详情";
+}
+<div>
+    @using (Html.BeginForm("Message", "Home", new { }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
+    {
+        <div class="form-group">
+            <label class="sr-only" for="SearchMessageOffset"></label>
+            @Html.TextBoxFor(m => m.SearchMessageOffset, new { @class = "form-control", placeholder = "MessageOffset" })
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="SearchMessageId"></label>
+            @Html.TextBoxFor(m => m.SearchMessageId, new { @class = "form-control", placeholder = "MessageId" })
+        </div>
+        <button type="submit" class="btn btn-default">查询</button>
+    }
+    <br />
+    <form class="form-horizontal" role="form">
+        <div class="form-group">
+            <label class="col-sm-2 control-label">MessageId</label>
+            <div class="col-sm-10">
+                @Html.TextBoxFor(m => m.MessageId, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">MessageOffset</label>
+            <div class="col-sm-10">
+                @Html.TextBoxFor(m => m.MessageOffset, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">Topic</label>
+            <div class="col-sm-10">
+                @Html.TextBoxFor(m => m.Topic, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">QueueId</label>
+            <div class="col-sm-10">
+                @Html.TextBoxFor(m => m.QueueId, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">QueueOffset</label>
+            <div class="col-sm-10">
+                @Html.TextBoxFor(m => m.QueueOffset, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">Code</label>
+            <div class="col-sm-10">
+                @Html.TextBoxFor(m => m.Code, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">CreatedTime</label>
+            <div class="col-sm-10">
+                @Html.TextBoxFor(m => m.CreatedTime, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">ArrivedTime</label>
+            <div class="col-sm-10">
+                @Html.TextBoxFor(m => m.ArrivedTime, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">StoredTime</label>
+            <div class="col-sm-10">
+                @Html.TextBoxFor(m => m.StoredTime, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">RoutingKey</label>
+            <div class="col-sm-10">
+                @Html.TextBoxFor(m => m.RoutingKey, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">Content</label>
+            <div class="col-sm-10">
+                @Html.TextAreaFor(m => m.Content, new { @class = "form-control", @rows = "8", @disabled = "disabled" })
+            </div>
+        </div>
+    </form>
+</div>
