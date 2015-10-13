@@ -67,7 +67,7 @@ namespace QuickStart.ProducerClient
 
             for (var i = 0; i < clientCount; i++)
             {
-                var producer = new Producer(new ProducerSetting { BrokerAddress = new IPEndPoint(brokerAddress, 5000) }).Start();
+                var producer = new Producer(new ProducerSetting { BrokerAddress = new IPEndPoint(brokerAddress, 5000), BrokerAdminAddress = new IPEndPoint(brokerAddress, 5002) }).Start();
                 actions.Add(() => SendMessages(producer, _mode, messageCount, message));
             }
 
