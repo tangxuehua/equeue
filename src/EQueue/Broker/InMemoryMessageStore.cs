@@ -69,7 +69,6 @@ namespace EQueue.Broker
                 queueOffset,
                 message.CreatedTime,
                 DateTime.Now,
-                DateTime.Now,
                 routingKey);
             _messageDict.TryAdd(messageOffset, queueMessage);
             return queueMessage;

@@ -11,14 +11,14 @@ namespace EQueue.Broker.Processors
     public class QueryTopicQueueInfoRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IQueueService _queueService;
-        private IOffsetManager _offsetManager;
+        private IQueueStore _queueService;
+        private IOffsetStore _offsetStore;
 
         public QueryTopicQueueInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _queueService = ObjectContainer.Resolve<IQueueService>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
+            _queueService = ObjectContainer.Resolve<IQueueStore>();
+            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
@@ -35,11 +35,10 @@ namespace EQueue.Broker.Processors
                     var topicQueueInfo = new TopicQueueInfo();
                     topicQueueInfo.Topic = queue.Topic;
                     topicQueueInfo.QueueId = queue.QueueId;
-                    topicQueueInfo.QueueCurrentOffset = queue.CurrentOffset;
+                    topicQueueInfo.QueueCurrentOffset = queue.NextOffset - 1;
                     topicQueueInfo.QueueMinOffset = queue.GetMinQueueOffset();
-                    topicQueueInfo.QueueMessageCount = queue.GetMessageRealCount();
-                    topicQueueInfo.QueueMaxConsumedOffset = _offsetManager.GetMinOffset(queue.Topic, queue.QueueId);
-                    topicQueueInfo.Status = queue.Status;
+                    topicQueueInfo.QueueMaxConsumedOffset = _offsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
+                    topicQueueInfo.Status = queue.Setting.Status;
                     topicQueueInfoList.Add(topicQueueInfo);
                 }
             }

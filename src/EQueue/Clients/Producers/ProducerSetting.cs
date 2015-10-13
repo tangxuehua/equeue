@@ -7,11 +7,16 @@ namespace EQueue.Clients.Producers
     {
         public IPEndPoint BrokerAddress { get; set; }
         public IPEndPoint LocalAddress { get; set; }
+        public IPEndPoint BrokerAdminAddress { get; set; }
+        public IPEndPoint LocalAdminAddress { get; set; }
+        public SocketSetting SocketSetting { get; set; }
         public int UpdateTopicQueueCountInterval { get; set; }
 
         public ProducerSetting()
         {
             BrokerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
+            BrokerAdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
+            SocketSetting = new SocketSetting();
             UpdateTopicQueueCountInterval = 1000 * 5;
         }
     }

@@ -17,7 +17,7 @@ namespace EQueue.AdminWeb
 
         public MessageService(IBinarySerializer binarySerializer)
         {
-            _remotingClient = new SocketRemotingClient("Client", Settings.BrokerAddress);
+            _remotingClient = new SocketRemotingClient(Settings.BrokerAddress);
             _binarySerializer = binarySerializer;
         }
 
@@ -130,34 +130,9 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("DisableQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
-        public void RemoveQueueOffsetInfo(string consumerGroup, string topic, int queueId)
+        public QueueMessage GetMessageDetail(string messageId)
         {
-            var requestData = _binarySerializer.Serialize(new RemoveQueueOffsetInfoRequest(consumerGroup, topic, queueId));
-            var remotingRequest = new RemotingRequest((int)RequestCode.RemoveQueueOffsetInfo, requestData);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
-            if (remotingResponse.Code != (int)ResponseCode.Success)
-            {
-                throw new Exception(string.Format("RemoveQueueOffsetInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
-            }
-        }
-        public QueryMessageResponse QueryMessages(string topic, int? queueId, int? code, string routingKey, int pageIndex, int pageSize)
-        {
-            var request = new QueryMessageRequest(topic, queueId, code, routingKey, pageIndex, pageSize);
-            var requestData = _binarySerializer.Serialize(request);
-            var remotingRequest = new RemotingRequest((int)RequestCode.QueryMessage, requestData);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
-            if (remotingResponse.Code == (int)ResponseCode.Success)
-            {
-                return _binarySerializer.Deserialize<QueryMessageResponse>(remotingResponse.Body);
-            }
-            else
-            {
-                throw new Exception(string.Format("QueryMessages failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
-            }
-        }
-        public QueueMessage GetMessageDetail(long? messageOffset, string messageId)
-        {
-            var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageOffset, messageId));
+            var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageId));
             var remotingRequest = new RemotingRequest((int)RequestCode.GetMessageDetail, requestData);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == (int)ResponseCode.Success)

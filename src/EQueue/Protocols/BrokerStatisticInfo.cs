@@ -11,9 +11,6 @@ namespace EQueue.Protocols
         /// <summary>队列个数
         /// </summary>
         public int QueueCount { get; set; }
-        /// <summary>内存中的总消息数
-        /// </summary>
-        public long InMemoryQueueMessageCount { get; set; }
         /// <summary>未消费的总消息数
         /// </summary>
         public long UnConsumedQueueMessageCount { get; set; }
@@ -23,9 +20,6 @@ namespace EQueue.Protocols
         /// <summary>最大全局消息偏移量
         /// </summary>
         public long CurrentMessageOffset { get; set; }
-        /// <summary>已持久化的最大全局消息偏移量
-        /// </summary>
-        public long PersistedMessageOffset { get; set; }
         /// <summary>最小全局消息偏移量
         /// </summary>
         public long MinMessageOffset { get; set; }

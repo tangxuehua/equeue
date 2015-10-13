@@ -14,7 +14,7 @@ namespace QuickStart.BrokerServer
         static void Main(string[] args)
         {
             InitializeEQueue();
-            BrokerController.Create(new BrokerSetting { NotifyWhenMessageArrived = false }).Start();
+            BrokerController.Create(new BrokerSetting(ConfigurationManager.AppSettings["fileStoreRootPath"])).Start();
             Console.ReadLine();
         }
 
@@ -28,34 +28,6 @@ namespace QuickStart.BrokerServer
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
                 .RegisterEQueueComponents();
-
-            var persistMode = ConfigurationManager.AppSettings["persistMode"];
-
-            if (persistMode == "sql")
-            {
-                var connectionString = ConfigurationManager.AppSettings["connectionString"];
-                var messageLogFile = ConfigurationManager.AppSettings["messageLogFile"];
-
-                var queueStoreSetting = new SqlServerQueueStoreSetting
-                {
-                    ConnectionString = connectionString
-                };
-                var messageStoreSetting = new SqlServerMessageStoreSetting
-                {
-                    ConnectionString = connectionString,
-                    MessageLogFile = messageLogFile
-                };
-                var offsetManagerSetting = new SqlServerOffsetManagerSetting
-                {
-                    ConnectionString = connectionString
-                };
-
-                configuration
-                    .UseSqlServerQueueStore(queueStoreSetting)
-                    .UseSqlServerMessageStore(messageStoreSetting)
-                    .UseSqlServerOffsetManager(offsetManagerSetting);
-            }
-
         }
     }
 }

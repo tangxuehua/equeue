@@ -22,11 +22,10 @@ namespace EQueue.AdminWeb.Controllers
                 TopicCount = result.TopicCount,
                 QueueCount = result.QueueCount,
                 ConsumerGroupCount = result.ConsumerGroupCount,
-                InMemoryQueueMessageCount = result.InMemoryQueueMessageCount,
                 UnConsumedQueueMessageCount = result.UnConsumedQueueMessageCount,
                 CurrentMessageOffset = result.CurrentMessageOffset,
-                PersistedMessageOffset = result.PersistedMessageOffset,
-                UnPersistedMessageCount = result.CurrentMessageOffset - result.PersistedMessageOffset,
+                PersistedMessageOffset = result.CurrentMessageOffset,
+                UnPersistedMessageCount = result.CurrentMessageOffset - result.CurrentMessageOffset,
                 MinMessageOffset = result.MinMessageOffset
             });
         }
@@ -64,42 +63,17 @@ namespace EQueue.AdminWeb.Controllers
                 TopicConsumeInfos = topicConsumeInfos
             });
         }
-        public ActionResult Messages(string topic, int? queueId, int? code, string routingKey, int? page)
+        public ActionResult Message(string searchMessageId)
         {
-            var currentPage = page ?? 1;
-            var size = 20;
-            if (currentPage <= 0) currentPage = 1;
-
-            var result = _messageService.QueryMessages(topic, queueId, code, routingKey, currentPage, size);
-
-            ViewBag.Topic = topic;
-            ViewBag.QueueId = queueId;
-            ViewBag.Code = code;
-            ViewBag.RoutingKey = routingKey;
-            ViewBag.Pager = Pager.Items(result.Total).PerPage(size).Move(currentPage).Segment(5).Center();
-
-            return View(new MessagesViewModel
-            {
-                Topic = topic,
-                QueueId = queueId,
-                Code = code,
-                RoutingKey = routingKey,
-                Total = result.Total,
-                Messages = result.Messages
-            });
-        }
-        public ActionResult Message(long? searchMessageOffset, string searchMessageId)
-        {
-            if (searchMessageOffset == null && string.IsNullOrWhiteSpace(searchMessageId))
+            if (string.IsNullOrWhiteSpace(searchMessageId))
             {
                 return View(new MessageViewModel());
             }
-            var message = _messageService.GetMessageDetail(searchMessageOffset, searchMessageId);
-            var model = new MessageViewModel { SearchMessageOffset = searchMessageOffset != null ? searchMessageOffset.Value.ToString() : null, SearchMessageId = searchMessageId };
+            var message = _messageService.GetMessageDetail(searchMessageId);
+            var model = new MessageViewModel { SearchMessageId = searchMessageId };
             if (message != null)
             {
                 model.MessageId = message.MessageId;
-                model.MessageOffset = message.MessageOffset.ToString();
                 model.QueueId = message.QueueId.ToString();
                 model.QueueOffset = message.QueueOffset.ToString();
                 model.RoutingKey = message.RoutingKey;
@@ -107,7 +81,6 @@ namespace EQueue.AdminWeb.Controllers
                 model.Content = Encoding.UTF8.GetString(message.Body);
                 model.Topic = message.Topic;
                 model.CreatedTime = message.CreatedTime.ToString();
-                model.ArrivedTime = message.ArrivedTime.ToString();
                 model.StoredTime = message.StoredTime.ToString();
             }
             return View(model);
@@ -130,11 +103,6 @@ namespace EQueue.AdminWeb.Controllers
         public ActionResult DisableQueue(string topic, int queueId)
         {
             _messageService.DisableQueue(topic, queueId);
-            return RedirectToAction("TopicInfo");
-        }
-        public ActionResult RemoveQueueOffsetInfo(string consumerGroup, string topic, int queueId)
-        {
-            _messageService.RemoveQueueOffsetInfo(consumerGroup, topic, queueId);
             return RedirectToAction("TopicInfo");
         }
     }

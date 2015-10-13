@@ -107,34 +107,30 @@ namespace EQueue.Utils
             return new SendMessageRequest { QueueId = queueId, Message = new Message(topic, code, key, bodyBytes, createdTime), RoutingKey = routingKey };
         }
 
-        public static byte[] EncodeMessageSendResponse(SendMessageResponse response)
+        public static byte[] EncodeMessageStoreResult(MessageStoreResult result)
         {
-            //messageOffset
-            var messageOffsetBytes = BitConverter.GetBytes(response.MessageOffset);
-
             //code
-            var messageCodeBytes = BitConverter.GetBytes(response.MessageCode);
+            var messageCodeBytes = BitConverter.GetBytes(result.MessageCode);
 
             //queueId
-            var queueIdBytes = BitConverter.GetBytes(response.QueueId);
+            var queueIdBytes = BitConverter.GetBytes(result.QueueId);
 
             //queueOffset
-            var queueOffsetBytes = BitConverter.GetBytes(response.QueueOffset);
+            var queueOffsetBytes = BitConverter.GetBytes(result.QueueOffset);
 
             //messageId
-            var messageIdBytes = Encoding.UTF8.GetBytes(response.MessageId);
+            var messageIdBytes = Encoding.UTF8.GetBytes(result.MessageId);
             var messageIdLengthBytes = BitConverter.GetBytes(messageIdBytes.Length);
 
             //messageKey
-            var messageKeyBytes = Encoding.UTF8.GetBytes(response.MessageKey);
+            var messageKeyBytes = Encoding.UTF8.GetBytes(result.MessageKey);
             var messageKeyLengthBytes = BitConverter.GetBytes(messageKeyBytes.Length);
 
             //topic
-            var topicBytes = Encoding.UTF8.GetBytes(response.Topic);
+            var topicBytes = Encoding.UTF8.GetBytes(result.Topic);
             var topicLengthBytes = BitConverter.GetBytes(topicBytes.Length);
 
             return Combine(
-                messageOffsetBytes,
                 messageCodeBytes,
                 queueIdBytes,
                 queueOffsetBytes,
@@ -145,9 +141,8 @@ namespace EQueue.Utils
                 topicLengthBytes,
                 topicBytes);
         }
-        public static SendMessageResponse DecodeMessageSendResponse(byte[] buffer)
+        public static MessageStoreResult DecodeMessageStoreResult(byte[] buffer)
         {
-            var messageOffsetBytes = new byte[8];
             var messageCodeBytes = new byte[4];
             var queueIdBytes = new byte[4];
             var queueOffsetBytes = new byte[8];
@@ -155,10 +150,6 @@ namespace EQueue.Utils
             var messageKeyLengthBytes = new byte[4];
             var topicLengthBytes = new byte[4];
             var headerLength = 0;
-
-            //messageOffset
-            Buffer.BlockCopy(buffer, 0, messageOffsetBytes, 0, 8);
-            headerLength += 8;
 
             //messageCode
             Buffer.BlockCopy(buffer, 0, messageCodeBytes, 0, 4);
@@ -199,7 +190,6 @@ namespace EQueue.Utils
             Buffer.BlockCopy(buffer, headerLength, topicBytes, 0, topicLength);
             headerLength += topicLength;
 
-            var messageOffset = BitConverter.ToInt64(messageOffsetBytes, 0);
             var messageCode = BitConverter.ToInt32(messageCodeBytes, 0);
             var queueId = BitConverter.ToInt32(queueIdBytes, 0);
             var queueOffset = BitConverter.ToInt32(queueOffsetBytes, 0);
@@ -207,10 +197,9 @@ namespace EQueue.Utils
             var messageKey = Encoding.UTF8.GetString(messageKeyBytes);
             var topic = Encoding.UTF8.GetString(topicBytes);
 
-            return new SendMessageResponse(
+            return new MessageStoreResult(
                 messageKey,
                 messageId,
-                messageOffset,
                 messageCode,
                 topic,
                 queueId,

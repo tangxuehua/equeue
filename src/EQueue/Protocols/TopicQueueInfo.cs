@@ -21,9 +21,6 @@ namespace EQueue.Protocols
         /// <summary>队列当前被所有消费者都消费了的最大Offset
         /// </summary>
         public long QueueMaxConsumedOffset { get; set; }
-        /// <summary>队列中的目前还存在的消息数
-        /// </summary>
-        public long QueueMessageCount { get; set; }
         /// <summary>队列的状态
         /// </summary>
         public QueueStatus Status { get; set; }

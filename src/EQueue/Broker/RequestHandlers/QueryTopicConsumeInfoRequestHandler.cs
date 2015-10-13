@@ -12,21 +12,21 @@ namespace EQueue.Broker.Processors
     {
         private ConsumerManager _consumerManager;
         private IBinarySerializer _binarySerializer;
-        private IOffsetManager _offsetManager;
-        private IQueueService _queueService;
+        private IOffsetStore _offsetStore;
+        private IQueueStore _queueService;
 
         public QueryTopicConsumeInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _offsetManager = ObjectContainer.Resolve<IOffsetManager>();
-            _queueService = ObjectContainer.Resolve<IQueueService>();
+            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
+            _queueService = ObjectContainer.Resolve<IQueueStore>();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var request = _binarySerializer.Deserialize<QueryTopicConsumeInfoRequest>(remotingRequest.Body);
-            var topicConsumeInfoList = _offsetManager.QueryTopicConsumeInfos(request.GroupName, request.Topic).ToList().Where(x => _queueService.IsQueueExist(x.Topic, x.QueueId)).ToList();
+            var topicConsumeInfoList = _offsetStore.QueryTopicConsumeInfos(request.GroupName, request.Topic).ToList().Where(x => _queueService.IsQueueExist(x.Topic, x.QueueId)).ToList();
 
             topicConsumeInfoList.Sort((x, y) =>
             {
