@@ -56,7 +56,7 @@ namespace EQueue.Broker.Processors
                 var consumerGroup = _consumerManager.GetConsumerGroup(topicConsumeInfo.ConsumerGroup);
                 topicConsumeInfo.HasConsumer = consumerGroup != null && consumerGroup.GetAllConsumerIds().Count() > 0;
                 var queueCurrentOffset = _queueService.GetQueueCurrentOffset(topicConsumeInfo.Topic, topicConsumeInfo.QueueId);
-                topicConsumeInfo.QueueMaxOffset = queueCurrentOffset - 1;
+                topicConsumeInfo.QueueMaxOffset = queueCurrentOffset;
                 topicConsumeInfo.UnConsumedMessageCount = topicConsumeInfo.QueueMaxOffset - topicConsumeInfo.ConsumedOffset;
             }
 

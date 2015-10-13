@@ -251,7 +251,7 @@ namespace EQueue.Broker
 
                 var pageSql = string.Format(@"
                         SELECT * FROM (
-                            SELECT ROW_NUMBER() OVER (ORDER BY m.MessageOffset desc) AS RowNumber,m.MessageId,m.MessageOffset,m.Topic,m.QueueId,m.QueueOffset,m.Code,m.CreatedTime,m.ArrivedTime,m.StoredTime,m.RoutingKey
+                            SELECT ROW_NUMBER() OVER (ORDER BY m.MessageOffset desc) AS RowNumber,m.MessageId,m.MessageOffset,m.MessageKey,m.Topic,m.QueueId,m.QueueOffset,m.Code,m.CreatedTime,m.ArrivedTime,m.StoredTime,m.RoutingKey
                             FROM {0} m{1}) AS Total
                         WHERE RowNumber >= {2} AND RowNumber <= {3}",
                     _setting.MessageTable, whereSql, (pageIndex - 1) * pageSize + 1, pageIndex * pageSize);
