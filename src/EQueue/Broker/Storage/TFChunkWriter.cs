@@ -13,6 +13,7 @@ namespace EQueue.Broker.Storage
         private readonly object _lockObj = new object();
         private bool _isClosed = false;
         private readonly string _flushTaskName;
+        private readonly bool _flushAsync;
 
         private TFChunk _currentChunk;
 
@@ -23,12 +24,17 @@ namespace EQueue.Broker.Storage
             _chunkManager = chunkManager;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _flushTaskName = string.Format("{0}-FlushChunk", _chunkManager.Name);
+            _flushAsync = !BrokerController.Instance.Setting.SyncFlushMessage;
         }
 
         public void Open()
         {
             _currentChunk = _chunkManager.GetLastChunk();
-            _scheduleService.StartTask(_flushTaskName, Flush, 1000, _chunkManager.Config.FlushChunkIntervalMilliseconds);
+
+            if (_flushAsync)
+            {
+                _scheduleService.StartTask(_flushTaskName, Flush, 1000, _chunkManager.Config.FlushChunkIntervalMilliseconds);
+            }
         }
         public long Write(ILogRecord record)
         {
@@ -79,7 +85,7 @@ namespace EQueue.Broker.Storage
                 _isClosed = true;
             }
         }
-        private void Flush()
+        public void Flush()
         {
             lock (_lockObj)
             {

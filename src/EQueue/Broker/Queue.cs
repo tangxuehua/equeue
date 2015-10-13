@@ -15,8 +15,9 @@ namespace EQueue.Broker
         private readonly TFChunkWriter _chunkWriter;
         private readonly TFChunkReader _chunkReader;
         private readonly TFChunkManager _chunkManager;
-        private long _nextOffset = 0;
         private readonly IJsonSerializer _jsonSerializer;
+        private readonly bool _flushSync;
+        private long _nextOffset = 0;
         private QueueSetting _setting;
         private readonly string _queueSettingFile;
         private ILogger _logger;
@@ -37,6 +38,7 @@ namespace EQueue.Broker
             _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
             _queueSettingFile = Path.Combine(_chunkManager.ChunkPath, QueueSettingFileName);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(this.GetType().FullName);
+            _flushSync = BrokerController.Instance.Setting.SyncFlushMessage;
         }
 
         public void Load()
@@ -65,6 +67,10 @@ namespace EQueue.Broker
         public void AddMessage(long messagePosition)
         {
             _chunkWriter.Write(new QueueLogRecord(messagePosition + 1));
+            if (_flushSync)
+            {
+                _chunkWriter.Flush();
+            }
         }
         public long GetMessagePosition(long queueOffset)
         {

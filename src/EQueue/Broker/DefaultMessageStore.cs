@@ -17,6 +17,7 @@ namespace EQueue.Broker
         private readonly IDeleteMessageStrategy _deleteMessageStragegy;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
+        private bool _flushSync;
         private long _minConsumedMessagePosition;
 
         public long MinMessagePosition
@@ -43,6 +44,8 @@ namespace EQueue.Broker
 
         public void Start()
         {
+            _flushSync = BrokerController.Instance.Setting.SyncFlushMessage;
+
             _chunkManager = new TFChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig);
             _chunkWriter = new TFChunkWriter(_chunkManager);
             _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
@@ -71,6 +74,10 @@ namespace EQueue.Broker
                 message.CreatedTime,
                 DateTime.Now);
             _chunkWriter.Write(record);
+            if (_flushSync)
+            {
+                _chunkWriter.Flush();
+            }
             return record;
         }
         public byte[] GetMessage(long position)

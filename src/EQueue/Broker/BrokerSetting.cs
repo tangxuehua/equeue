@@ -56,6 +56,9 @@ namespace EQueue.Broker
         /// <summary>队列文件存储的相关配置，默认一个队列文件中存储100W个消息索引，每个消息索引8个字节
         /// </summary>
         public TFChunkManagerConfig QueueChunkConfig { get; set; }
+        /// <summary>表示消息写入文件后是否立即刷盘，默认为False，即异步刷盘，采用每隔100毫秒刷一次盘；
+        /// </summary>
+        public bool SyncFlushMessage { get; set; }
 
         public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 256 * 1024 * 1024, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40)
         {
@@ -75,6 +78,7 @@ namespace EQueue.Broker
             FileStoreRootPath = chunkFileStoreRootPath;
             MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"message-chunks"), "message-chunk-", messageChunkDataSize, 0, 0, 100, chunkCacheMaxPercent, chunkCacheMinPercent, false, 1, 5);
             QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000, 100, chunkCacheMaxPercent, chunkCacheMinPercent, true, 1, 5);
+            SyncFlushMessage = false;
         }
     }
 }
