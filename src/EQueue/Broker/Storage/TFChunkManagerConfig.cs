@@ -29,6 +29,9 @@ namespace EQueue.Broker.Storage
         /// <summary>Chunk文件允许最大的记录的大小，字节为单位；
         /// </summary>
         public readonly int MaxLogRecordSize;
+        /// <summary>消息写入时的缓冲大小，字节为单位；
+        /// </summary>
+        public readonly int WriteMessageBuffer;
         /// <summary>是否强制缓存Chunk文件到非托管内存；
         /// </summary>
         public readonly bool ForceCacheChunkInMemory;
@@ -59,6 +62,7 @@ namespace EQueue.Broker.Storage
                                int flushChunkIntervalMilliseconds,
                                int chunkReaderCount,
                                int maxLogRecordSize,
+                               int writeMessageBuffer,
                                bool forceCacheChunkInMemory,
                                int chunkCacheMaxPercent,
                                int chunkCacheMinPercent,
@@ -72,6 +76,7 @@ namespace EQueue.Broker.Storage
             Ensure.Nonnegative(chunkDataCount, "chunkDataCount");
             Ensure.Positive(flushChunkIntervalMilliseconds, "flushChunkIntervalMilliseconds");
             Ensure.Positive(maxLogRecordSize, "maxLogRecordSize");
+            Ensure.Positive(writeMessageBuffer, "writeMessageBuffer");
             Ensure.Positive(chunkCacheMaxPercent, "chunkCacheMaxPercent");
             Ensure.Positive(chunkCacheMinPercent, "chunkCacheMinPercent");
             Ensure.Nonnegative(preCacheChunkCount, "preCacheChunkCount");
@@ -90,6 +95,7 @@ namespace EQueue.Broker.Storage
             FlushChunkIntervalMilliseconds = flushChunkIntervalMilliseconds;
             ChunkReaderCount = chunkReaderCount;
             MaxLogRecordSize = maxLogRecordSize;
+            WriteMessageBuffer = writeMessageBuffer;
             ForceCacheChunkInMemory = forceCacheChunkInMemory;
             ChunkCacheMaxPercent = chunkCacheMaxPercent;
             ChunkCacheMinPercent = chunkCacheMinPercent;
@@ -104,24 +110,6 @@ namespace EQueue.Broker.Storage
                 return ChunkDataSize;
             }
             return ChunkDataUnitSize * ChunkDataCount;
-        }
-
-        public static TFChunkManagerConfig Create(string basePath, string chunkFilePrefix, int chunkDataSize, int chunkDataUnitSize, int chunkDataCount, int flushChunkIntervalMilliseconds, int chunkCacheMaxPercent, int chunkCacheMinPercent, bool forceCacheChunkInMemory, int preCacheChunkCount, int chunkInactiveTimeMaxSeconds)
-        {
-            return new TFChunkManagerConfig(
-                basePath,
-                new DefaultFileNamingStrategy(chunkFilePrefix),
-                chunkDataSize,
-                chunkDataUnitSize,
-                chunkDataCount,
-                flushChunkIntervalMilliseconds,
-                Environment.ProcessorCount * 2,
-                4 * 1024 * 1024,
-                forceCacheChunkInMemory,
-                chunkCacheMaxPercent,
-                chunkCacheMinPercent,
-                preCacheChunkCount,
-                chunkInactiveTimeMaxSeconds);
         }
     }
 }

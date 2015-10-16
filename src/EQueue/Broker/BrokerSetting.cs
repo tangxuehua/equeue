@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net;
 using ECommon.Socketing;
 using EQueue.Broker.Storage;
@@ -50,6 +51,9 @@ namespace EQueue.Broker
         /// <summary>EQueue存储文件的根目录
         /// </summary>
         public string FileStoreRootPath { get; set; }
+        /// <summary>TCP通行层设置
+        /// </summary>
+        public SocketSetting SocketSetting { get; set; }
         /// <summary>消息文件存储的相关配置，默认一个消息文件的大小为512MB
         /// </summary>
         public TFChunkManagerConfig MessageChunkConfig { get; set; }
@@ -73,8 +77,36 @@ namespace EQueue.Broker
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;
             FileStoreRootPath = chunkFileStoreRootPath;
-            MessageChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"message-chunks"), "message-chunk-", messageChunkDataSize, 0, 0, 100, chunkCacheMaxPercent, chunkCacheMinPercent, false, 1, 5);
-            QueueChunkConfig = TFChunkManagerConfig.Create(Path.Combine(chunkFileStoreRootPath, @"queue-chunks"), "queue-chunk-", 0, 8, 1000000, 100, chunkCacheMaxPercent, chunkCacheMinPercent, true, 1, 5);
+            MessageChunkConfig = new TFChunkManagerConfig(
+                Path.Combine(chunkFileStoreRootPath, @"message-chunks"),
+                new DefaultFileNamingStrategy("message-chunk-"),
+                messageChunkDataSize,
+                0,
+                0,
+                100,
+                Environment.ProcessorCount * 2,
+                4 * 1024 * 1024,
+                128 * 1024,
+                false,
+                chunkCacheMaxPercent,
+                chunkCacheMinPercent,
+                1,
+                5);
+            QueueChunkConfig = new TFChunkManagerConfig(
+                Path.Combine(chunkFileStoreRootPath, @"queue-chunks"),
+                new DefaultFileNamingStrategy("queue-chunk-"),
+                0,
+                8,
+                1000000,
+                100,
+                Environment.ProcessorCount * 2,
+                8,
+                128 * 1024,
+                true,
+                chunkCacheMaxPercent,
+                chunkCacheMinPercent,
+                1,
+                5);
         }
     }
 }

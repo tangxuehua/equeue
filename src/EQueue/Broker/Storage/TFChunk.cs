@@ -250,7 +250,7 @@ namespace EQueue.Broker.Storage
 
             _dataPosition = 0;
             _flushedDataPosition = 0;
-            _writerWorkItem = new WriterWorkItem(writeStream);
+            _writerWorkItem = new WriterWorkItem(new BufferedStream(writeStream, _chunkConfig.WriteMessageBuffer));
 
             InitializeReaderWorkItems();
 
@@ -338,7 +338,7 @@ namespace EQueue.Broker.Storage
                 SetFileAttributes();
             }
 
-            _writerWorkItem = new WriterWorkItem(writeStream);
+            _writerWorkItem = new WriterWorkItem(new BufferedStream(writeStream, _chunkConfig.WriteMessageBuffer));
 
             InitializeReaderWorkItems();
 
@@ -780,7 +780,7 @@ namespace EQueue.Broker.Storage
             }
             else
             {
-                stream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.RandomAccess);
+                stream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.None);
             }
             return new ReaderWorkItem(stream, new BinaryReader(stream));
         }
