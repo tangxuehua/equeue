@@ -13,8 +13,7 @@ namespace EQueue.Broker.Storage
 {
     public unsafe class TFChunk : IDisposable
     {
-        public const int WriteBufferSize = 8192;
-        public const int ReadBufferSize = 8192;
+        public const int ReadBufferSize = 1024 * 16;
 
         #region Private Variables
 
@@ -216,63 +215,83 @@ namespace EQueue.Broker.Storage
             var fileSize = ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize + ChunkFooter.Size;
 
             var writeStream = default(Stream);
+            var tempFilename = string.Format("{0}.{1}.tmp", _filename, Guid.NewGuid());
+            var tempFileStream = default(FileStream);
 
-            if (_isMemoryChunk)
+            try
             {
-                _cachedLength = fileSize;
-                _cachedData = Marshal.AllocHGlobal(_cachedLength);
-                writeStream = new UnmanagedMemoryStream((byte*)_cachedData, _cachedLength, _cachedLength, FileAccess.ReadWrite);
-                writeStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
-            }
-            else
-            {
-                var fileInfo = new FileInfo(_filename);
-                if (fileInfo.Exists)
+                if (_isMemoryChunk)
                 {
-                    File.SetAttributes(_filename, FileAttributes.Normal);
-                    File.Delete(_filename);
+                    _cachedLength = fileSize;
+                    _cachedData = Marshal.AllocHGlobal(_cachedLength);
+                    writeStream = new UnmanagedMemoryStream((byte*)_cachedData, _cachedLength, _cachedLength, FileAccess.ReadWrite);
+                    writeStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
+                }
+                else
+                {
+                    var fileInfo = new FileInfo(_filename);
+                    if (fileInfo.Exists)
+                    {
+                        File.SetAttributes(_filename, FileAttributes.Normal);
+                        File.Delete(_filename);
+                    }
+
+                    tempFileStream = new FileStream(tempFilename, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
+                    tempFileStream.SetLength(fileSize);
+                    tempFileStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
+                    tempFileStream.Flush(true);
+                    tempFileStream.Close();
+
+                    File.Move(tempFilename, _filename);
+
+                    writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
+                    SetFileAttributes();
                 }
 
-                var tempFilename = string.Format("{0}.{1}.tmp", _filename, Guid.NewGuid());
-                var tempFileStream = new FileStream(tempFilename, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
-                tempFileStream.SetLength(fileSize);
-                tempFileStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
-                tempFileStream.Flush(true);
-                tempFileStream.Close();
+                writeStream.Position = ChunkHeader.Size;
 
-                File.Move(tempFilename, _filename);
+                _dataPosition = 0;
+                _flushedDataPosition = 0;
+                _writerWorkItem = new WriterWorkItem(new BufferedStream(writeStream, _chunkConfig.WriteMessageBuffer));
 
-                writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
-                SetFileAttributes();
-            }
+                InitializeReaderWorkItems();
 
-            writeStream.Position = ChunkHeader.Size;
-
-            _dataPosition = 0;
-            _flushedDataPosition = 0;
-            _writerWorkItem = new WriterWorkItem(new BufferedStream(writeStream, _chunkConfig.WriteMessageBuffer));
-
-            InitializeReaderWorkItems();
-
-            if (!_isMemoryChunk)
-            {
-                var chunkSize = (ulong)GetChunkSize(_chunkHeader);
-                if (ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
+                if (!_isMemoryChunk)
                 {
-                    try
+                    var chunkSize = (ulong)GetChunkSize(_chunkHeader);
+                    if (ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
                     {
-                        _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkManager, _chunkConfig, true);
-                        if (_logger.IsDebugEnabled)
+                        try
                         {
-                            _logger.DebugFormat("Cached new chunk {0} to memory.", this);
+                            _memoryChunk = TFChunk.CreateNew(_filename, chunkNumber, _chunkManager, _chunkConfig, true);
+                            if (_logger.IsDebugEnabled)
+                            {
+                                _logger.DebugFormat("Cached new chunk {0} to memory.", this);
+                            }
+                        }
+                        catch (OutOfMemoryException) { }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(string.Format("Failed to cache new chunk {0}", this), ex);
                         }
                     }
-                    catch (OutOfMemoryException) { }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(string.Format("Failed to cache new chunk {0}", this), ex);
-                    }
                 }
+            }
+            catch
+            {
+                if (tempFileStream != null)
+                {
+                    Helper.EatException(() => tempFileStream.Close());
+                }
+                if (File.Exists(tempFilename))
+                {
+                    Helper.EatException(() =>
+                    {
+                        File.SetAttributes(tempFilename, FileAttributes.Normal);
+                        File.Delete(tempFilename);
+                    });
+                }
+                throw;
             }
 
             _lastActiveTime = DateTime.Now;
@@ -333,7 +352,7 @@ namespace EQueue.Broker.Storage
             }
             else
             {
-                writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, WriteBufferSize, FileOptions.SequentialScan);
+                writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
                 writeStream.Position = GetStreamPosition(_dataPosition);
                 SetFileAttributes();
             }
