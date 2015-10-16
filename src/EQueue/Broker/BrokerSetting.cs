@@ -24,10 +24,10 @@ namespace EQueue.Broker
         /// </remarks>
         /// </summary>
         public bool NotifyWhenMessageArrived { get; set; }
-        /// <summary>删除符合删除条件的消息的定时间隔，默认为10分钟；
+        /// <summary>删除符合删除条件的消息的定时间隔，默认为10秒钟；
         /// </summary>
         public int DeleteMessagesInterval { get; set; }
-        /// <summary>删除符合删除条件的队列中的消息索引的定时间隔；一定是消息先被删除后，该消息索引才会从队列中删除；默认为10分钟；
+        /// <summary>删除符合删除条件的队列中的消息索引的定时间隔；一定是消息先被删除后，该消息索引才会从队列中删除；默认为10秒钟；
         /// </summary>
         public int DeleteQueueMessagesInterval { get; set; }
         /// <summary>持久化消息消费进度的间隔，默认为1s；
