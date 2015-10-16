@@ -244,7 +244,8 @@ namespace EQueue.Broker.Storage
 
                     File.Move(tempFilename, _filename);
 
-                    writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
+                    var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
+                    writeStream = new BufferedStream(fileStream, _chunkConfig.WriteMessageBuffer);
                     SetFileAttributes();
                 }
 
@@ -252,7 +253,7 @@ namespace EQueue.Broker.Storage
 
                 _dataPosition = 0;
                 _flushedDataPosition = 0;
-                _writerWorkItem = new WriterWorkItem(new BufferedStream(writeStream, _chunkConfig.WriteMessageBuffer));
+                _writerWorkItem = new WriterWorkItem(writeStream);
 
                 InitializeReaderWorkItems();
 
@@ -353,11 +354,15 @@ namespace EQueue.Broker.Storage
             else
             {
                 writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
-                writeStream.Position = GetStreamPosition(_dataPosition);
+                
+
+                var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
+                fileStream.Position = GetStreamPosition(_dataPosition);
+                writeStream = new BufferedStream(fileStream, _chunkConfig.WriteMessageBuffer);
                 SetFileAttributes();
             }
 
-            _writerWorkItem = new WriterWorkItem(new BufferedStream(writeStream, _chunkConfig.WriteMessageBuffer));
+            _writerWorkItem = new WriterWorkItem(writeStream);
 
             InitializeReaderWorkItems();
 
