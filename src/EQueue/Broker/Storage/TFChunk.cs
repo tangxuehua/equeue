@@ -353,9 +353,6 @@ namespace EQueue.Broker.Storage
             }
             else
             {
-                writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
-                
-
                 var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
                 fileStream.Position = GetStreamPosition(_dataPosition);
                 writeStream = new BufferedStream(fileStream, _chunkConfig.WriteMessageBuffer);
