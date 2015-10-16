@@ -98,6 +98,10 @@ namespace EQueue.Broker.Storage
             _isMemoryChunk = isMemoryChunk;
             _lastActiveTime = DateTime.Now;
         }
+        ~TFChunk()
+        {
+            UnCacheFromMemory();
+        }
 
         #endregion
 
@@ -642,7 +646,7 @@ namespace EQueue.Broker.Storage
                 }
 
                 CloseAllReaderWorkItems();
-                FreeCachedChunk();
+                FreeMemory();
             }
         }
         public void Destroy()
@@ -657,6 +661,9 @@ namespace EQueue.Broker.Storage
 
             //首先设置删除标记
             _isDestroying = true;
+
+            //释放缓存的内存
+            UnCacheFromMemory();
 
             //关闭所有的ReaderWorkItem
             CloseAllReaderWorkItems();
@@ -735,7 +742,7 @@ namespace EQueue.Broker.Storage
                 _cachedLength = cachedLength;
             }
         }
-        private void FreeCachedChunk()
+        private void FreeMemory()
         {
             if (_isMemoryChunk)
             {

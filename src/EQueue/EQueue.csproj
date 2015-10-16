@@ -42,9 +42,9 @@
     <Reference Include="Dapper">
       <HintPath>..\packages\Dapper.1.38\lib\net45\Dapper.dll</HintPath>
     </Reference>
-    <Reference Include="ECommon, Version=1.5.1.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ECommon, Version=1.5.2.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\ecommon.1.5.1\lib\net45\ECommon.dll</HintPath>
+      <HintPath>..\packages\ecommon.1.5.2\lib\net45\ECommon.dll</HintPath>
     </Reference>
     <Reference Include="ECommon.Dapper, Version=1.4.2.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
