@@ -11,9 +11,9 @@ namespace EQueue.Broker
 {
     public class DefaultMessageStore : IMessageStore, IDisposable
     {
-        private TFChunkManager _chunkManager;
-        private TFChunkWriter _chunkWriter;
-        private TFChunkReader _chunkReader;
+        private ChunkManager _chunkManager;
+        private ChunkWriter _chunkWriter;
+        private ChunkReader _chunkReader;
         private readonly IDeleteMessageStrategy _deleteMessageStragegy;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
@@ -43,9 +43,9 @@ namespace EQueue.Broker
 
         public int Load()
         {
-            _chunkManager = new TFChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig);
-            _chunkWriter = new TFChunkWriter(_chunkManager);
-            _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
+            _chunkManager = new ChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig);
+            _chunkWriter = new ChunkWriter(_chunkManager);
+            _chunkReader = new ChunkReader(_chunkManager, _chunkWriter);
 
             _chunkManager.Load(ReadMessage);
 

@@ -3,7 +3,7 @@ using ECommon.Utilities;
 
 namespace EQueue.Broker.Storage
 {
-    public class TFChunkManagerConfig
+    public class ChunkManagerConfig
     {
         /// <summary>Chunk文件存储的根目录；
         /// </summary>
@@ -54,7 +54,7 @@ namespace EQueue.Broker.Storage
         /// </summary>
         public readonly int ChunkInactiveTimeMaxSeconds;
 
-        public TFChunkManagerConfig(string basePath,
+        public ChunkManagerConfig(string basePath,
                                IFileNamingStrategy fileNamingStrategy,
                                int chunkDataSize,
                                int chunkDataUnitSize,

@@ -12,9 +12,9 @@ namespace EQueue.Broker
     public class Queue
     {
         private const string QueueSettingFileName = "queue.setting";
-        private readonly TFChunkWriter _chunkWriter;
-        private readonly TFChunkReader _chunkReader;
-        private readonly TFChunkManager _chunkManager;
+        private readonly ChunkWriter _chunkWriter;
+        private readonly ChunkReader _chunkReader;
+        private readonly ChunkManager _chunkManager;
         private long _nextOffset = 0;
         private readonly IJsonSerializer _jsonSerializer;
         private QueueSetting _setting;
@@ -32,9 +32,9 @@ namespace EQueue.Broker
             QueueId = queueId;
 
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
-            _chunkManager = new TFChunkManager(string.Format("{0}-{1}", Topic, QueueId), BrokerController.Instance.Setting.QueueChunkConfig, Topic + @"\" + QueueId);
-            _chunkWriter = new TFChunkWriter(_chunkManager);
-            _chunkReader = new TFChunkReader(_chunkManager, _chunkWriter);
+            _chunkManager = new ChunkManager(string.Format("{0}-{1}", Topic, QueueId), BrokerController.Instance.Setting.QueueChunkConfig, Topic + @"\" + QueueId);
+            _chunkWriter = new ChunkWriter(_chunkManager);
+            _chunkReader = new ChunkReader(_chunkManager, _chunkWriter);
             _queueSettingFile = Path.Combine(_chunkManager.ChunkPath, QueueSettingFileName);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(this.GetType().FullName);
         }

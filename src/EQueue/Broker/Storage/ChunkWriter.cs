@@ -5,19 +5,19 @@ using EQueue.Broker.Storage.LogRecords;
 
 namespace EQueue.Broker.Storage
 {
-    public class TFChunkWriter
+    public class ChunkWriter
     {
-        public TFChunk CurrentChunk { get { return _currentChunk; } }
+        public Chunk CurrentChunk { get { return _currentChunk; } }
 
-        private readonly TFChunkManager _chunkManager;
+        private readonly ChunkManager _chunkManager;
         private readonly IScheduleService _scheduleService;
         private readonly object _lockObj = new object();
         private bool _isClosed = false;
         private readonly string _flushTaskName;
 
-        private TFChunk _currentChunk;
+        private Chunk _currentChunk;
 
-        public TFChunkWriter(TFChunkManager chunkManager)
+        public ChunkWriter(ChunkManager chunkManager)
         {
             Ensure.NotNull(chunkManager, "chunkManager");
 

@@ -56,10 +56,10 @@ namespace EQueue.Broker
         public SocketSetting SocketSetting { get; set; }
         /// <summary>消息文件存储的相关配置，默认一个消息文件的大小为256MB
         /// </summary>
-        public TFChunkManagerConfig MessageChunkConfig { get; set; }
+        public ChunkManagerConfig MessageChunkConfig { get; set; }
         /// <summary>队列文件存储的相关配置，默认一个队列文件中存储100W个消息索引，每个消息索引8个字节
         /// </summary>
-        public TFChunkManagerConfig QueueChunkConfig { get; set; }
+        public ChunkManagerConfig QueueChunkConfig { get; set; }
 
         public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 256 * 1024 * 1024, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40)
         {
@@ -77,7 +77,7 @@ namespace EQueue.Broker
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;
             FileStoreRootPath = chunkFileStoreRootPath;
-            MessageChunkConfig = new TFChunkManagerConfig(
+            MessageChunkConfig = new ChunkManagerConfig(
                 Path.Combine(chunkFileStoreRootPath, @"message-chunks"),
                 new DefaultFileNamingStrategy("message-chunk-"),
                 messageChunkDataSize,
@@ -92,7 +92,7 @@ namespace EQueue.Broker
                 chunkCacheMinPercent,
                 1,
                 5);
-            QueueChunkConfig = new TFChunkManagerConfig(
+            QueueChunkConfig = new ChunkManagerConfig(
                 Path.Combine(chunkFileStoreRootPath, @"queue-chunks"),
                 new DefaultFileNamingStrategy("queue-chunk-"),
                 0,

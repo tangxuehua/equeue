@@ -5,12 +5,12 @@ using EQueue.Broker.Storage.LogRecords;
 
 namespace EQueue.Broker.Storage
 {
-    public class TFChunkReader
+    public class ChunkReader
     {
-        private readonly TFChunkManager _chunkManager;
-        private readonly TFChunkWriter _chunkWriter;
+        private readonly ChunkManager _chunkManager;
+        private readonly ChunkWriter _chunkWriter;
 
-        public TFChunkReader(TFChunkManager chunkManager, TFChunkWriter chunkWriter)
+        public ChunkReader(ChunkManager chunkManager, ChunkWriter chunkWriter)
         {
             Ensure.NotNull(chunkManager, "chunkManager");
             Ensure.NotNull(chunkWriter, "chunkWriter");

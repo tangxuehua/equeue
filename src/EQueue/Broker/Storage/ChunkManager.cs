@@ -13,12 +13,12 @@ using EQueue.Broker.Storage.LogRecords;
 
 namespace EQueue.Broker.Storage
 {
-    public class TFChunkManager : IDisposable
+    public class ChunkManager : IDisposable
     {
-        private static readonly ILogger _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(TFChunkManager));
+        private static readonly ILogger _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(ChunkManager));
         private readonly object _chunksLocker = new object();
-        private readonly TFChunkManagerConfig _config;
-        private readonly IDictionary<int, TFChunk> _chunks;
+        private readonly ChunkManagerConfig _config;
+        private readonly IDictionary<int, Chunk> _chunks;
         private readonly string _chunkPath;
         private readonly IScheduleService _scheduleService;
         private readonly string _uncacheChunkTaskName;
@@ -27,10 +27,10 @@ namespace EQueue.Broker.Storage
         private int _isCachingNextChunk;
 
         public string Name { get; private set; }
-        public TFChunkManagerConfig Config { get { return _config; } }
+        public ChunkManagerConfig Config { get { return _config; } }
         public string ChunkPath { get { return _chunkPath; } }
 
-        public TFChunkManager(string name, TFChunkManagerConfig config, string relativePath = null)
+        public ChunkManager(string name, ChunkManagerConfig config, string relativePath = null)
         {
             Ensure.NotNull(name, "name");
             Ensure.NotNull(config, "config");
@@ -45,7 +45,7 @@ namespace EQueue.Broker.Storage
             {
                 _chunkPath = Path.Combine(_config.BasePath, relativePath);
             }
-            _chunks = new ConcurrentDictionary<int, TFChunk>();
+            _chunks = new ConcurrentDictionary<int, Chunk>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _uncacheChunkTaskName = string.Format("{0}.{1}.UncacheChunks", Name, this.GetType().Name);
 
@@ -102,7 +102,7 @@ namespace EQueue.Broker.Storage
                     for (var i = files.Length - 2; i >= 0; i--)
                     {
                         var file = files[i];
-                        var chunk = TFChunk.FromCompletedFile(file, this, _config);
+                        var chunk = Chunk.FromCompletedFile(file, this, _config);
                         if (_config.ForceCacheChunkInMemory || cachedChunkCount < _config.PreCacheChunkCount)
                         {
                             if (chunk.TryCacheInMemory(false))
@@ -113,28 +113,28 @@ namespace EQueue.Broker.Storage
                         AddChunk(chunk);
                     }
                     var lastFile = files[files.Length - 1];
-                    AddChunk(TFChunk.FromOngoingFile(lastFile, this, _config, readRecordFunc));
+                    AddChunk(Chunk.FromOngoingFile(lastFile, this, _config, readRecordFunc));
                 }
             }
         }
-        public IList<TFChunk> GetAllChunks()
+        public IList<Chunk> GetAllChunks()
         {
             return _chunks.Values.ToList();
         }
-        public TFChunk AddNewChunk()
+        public Chunk AddNewChunk()
         {
             lock (_chunksLocker)
             {
                 var chunkNumber = _nextChunkNumber;
                 var chunkFileName = _config.FileNamingStrategy.GetFileNameFor(_chunkPath, chunkNumber);
-                var chunk = TFChunk.CreateNew(chunkFileName, chunkNumber, this, _config);
+                var chunk = Chunk.CreateNew(chunkFileName, chunkNumber, this, _config);
 
                 AddChunk(chunk);
 
                 return chunk;
             }
         }
-        public TFChunk GetFirstChunk()
+        public Chunk GetFirstChunk()
         {
             lock (_chunksLocker)
             {
@@ -146,7 +146,7 @@ namespace EQueue.Broker.Storage
                 return _chunks[minChunkNum];
             }
         }
-        public TFChunk GetLastChunk()
+        public Chunk GetLastChunk()
         {
             lock (_chunksLocker)
             {
@@ -161,12 +161,12 @@ namespace EQueue.Broker.Storage
         {
             return (int)(dataPosition / _config.GetChunkDataSize());
         }
-        public TFChunk GetChunkFor(long dataPosition)
+        public Chunk GetChunkFor(long dataPosition)
         {
             var chunkNum = (int)(dataPosition / _config.GetChunkDataSize());
             return GetChunk(chunkNum);
         }
-        public TFChunk GetChunk(int chunkNum)
+        public Chunk GetChunk(int chunkNum)
         {
             if (_chunks.ContainsKey(chunkNum))
             {
@@ -174,7 +174,7 @@ namespace EQueue.Broker.Storage
             }
             return null;
         }
-        public bool RemoveChunk(TFChunk chunk)
+        public bool RemoveChunk(Chunk chunk)
         {
             lock (_chunksLocker)
             {
@@ -193,7 +193,7 @@ namespace EQueue.Broker.Storage
                 return false;
             }
         }
-        public void TryCacheNextChunk(TFChunk currentChunk)
+        public void TryCacheNextChunk(Chunk currentChunk)
         {
             if (Interlocked.CompareExchange(ref _isCachingNextChunk, 1, 0) == 0)
             {
@@ -240,7 +240,7 @@ namespace EQueue.Broker.Storage
             }
         }
 
-        private void AddChunk(TFChunk chunk)
+        private void AddChunk(Chunk chunk)
         {
             _chunks.Add(chunk.ChunkHeader.ChunkNumber, chunk);
             _nextChunkNumber = chunk.ChunkHeader.ChunkNumber + 1;

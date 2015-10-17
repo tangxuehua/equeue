@@ -5,6 +5,6 @@ namespace EQueue.Broker.DeleteMessageStrategies
 {
     public interface IDeleteMessageStrategy
     {
-        IEnumerable<TFChunk> GetAllowDeleteChunks(TFChunkManager chunkManager, long maxMessagePosition);
+        IEnumerable<Chunk> GetAllowDeleteChunks(ChunkManager chunkManager, long maxMessagePosition);
     }
 }

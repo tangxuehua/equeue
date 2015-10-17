@@ -23,9 +23,9 @@ namespace EQueue.Broker.DeleteMessageStrategies
             MaxStorageHours = maxStorageHours;
         }
 
-        public IEnumerable<TFChunk> GetAllowDeleteChunks(TFChunkManager chunkManager, long maxMessagePosition)
+        public IEnumerable<Chunk> GetAllowDeleteChunks(ChunkManager chunkManager, long maxMessagePosition)
         {
-            var chunks = new List<TFChunk>();
+            var chunks = new List<Chunk>();
             var allCompletedChunks = chunkManager
                 .GetAllChunks()
                 .Where(x => x.IsCompleted && x.ChunkHeader.ChunkDataEndPosition <= maxMessagePosition)
