@@ -39,6 +39,10 @@ namespace EQueue.Broker
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(this.GetType().FullName);
         }
 
+        public void CleanChunks()
+        {
+            _chunkManager.Clean();
+        }
         public void Load()
         {
             _setting = LoadQueueSetting();

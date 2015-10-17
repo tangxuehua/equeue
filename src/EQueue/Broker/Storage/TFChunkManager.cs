@@ -55,6 +55,30 @@ namespace EQueue.Broker.Storage
             }
         }
 
+        public void Clean()
+        {
+            lock (_chunksLocker)
+            {
+                if (!Directory.Exists(_chunkPath))
+                {
+                    return;
+                }
+
+                var tempFiles = _config.FileNamingStrategy.GetTempFiles(_chunkPath);
+                foreach (var file in tempFiles)
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                    File.Delete(file);
+                }
+
+                var files = _config.FileNamingStrategy.GetChunkFiles(_chunkPath);
+                foreach (var file in files)
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                    File.Delete(file);
+                }
+            }
+        }
         public void Load<T>(Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
         {
             lock (_chunksLocker)
@@ -132,6 +156,10 @@ namespace EQueue.Broker.Storage
                 }
                 return _chunks[_nextChunkNumber - 1];
             }
+        }
+        public int GetChunkNum(long dataPosition)
+        {
+            return (int)(dataPosition / _config.GetChunkDataSize());
         }
         public TFChunk GetChunkFor(long dataPosition)
         {

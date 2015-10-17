@@ -23,7 +23,7 @@ namespace EQueue.Broker
         private readonly ILogger _logger;
         private readonly IQueueStore _queueStore;
         private readonly IMessageStore _messageStore;
-        private readonly IConsumeOffsetStore _offsetStore;
+        private readonly IConsumeOffsetStore _consumeOffsetStore;
         private readonly ConsumerManager _consumerManager;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
@@ -43,7 +43,7 @@ namespace EQueue.Broker
             Setting = setting ?? new BrokerSetting();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
-            _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
+            _consumeOffsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
 
@@ -72,10 +72,18 @@ namespace EQueue.Broker
         {
             var watch = Stopwatch.StartNew();
             _logger.InfoFormat("Broker starting...");
-            _consumerManager.Start();
-            _offsetStore.Start();
+
+            var messageChunkCount = _messageStore.Load();
+            if (messageChunkCount == 0)
+            {
+                _queueStore.Clean();
+                _consumeOffsetStore.Clean();
+            }
+
             _messageStore.Start();
             _queueStore.Start();
+            _consumeOffsetStore.Start();
+            _consumerManager.Start();
             _suspendedPullRequestManager.Start();
             _consumerSocketRemotingServer.Start();
             _producerSocketRemotingServer.Start();
@@ -96,7 +104,7 @@ namespace EQueue.Broker
                 _consumerManager.Shutdown();
                 _suspendedPullRequestManager.Shutdown();
                 _messageStore.Shutdown();
-                _offsetStore.Shutdown();
+                _consumeOffsetStore.Shutdown();
                 _queueStore.Shutdown();
                 _logger.InfoFormat("Broker shutdown success, timeSpent:{0}ms", watch.ElapsedMilliseconds);
             }
@@ -110,7 +118,7 @@ namespace EQueue.Broker
             statisticInfo.UnConsumedQueueMessageCount = _queueStore.GetAllQueueUnConusmedMessageCount();
             statisticInfo.CurrentMessageOffset = _messageStore.CurrentMessagePosition;
             statisticInfo.MinMessageOffset = _messageStore.MinMessagePosition;
-            statisticInfo.ConsumerGroupCount = _offsetStore.GetConsumerGroupCount();
+            statisticInfo.ConsumerGroupCount = _consumeOffsetStore.GetConsumerGroupCount();
             return statisticInfo;
         }
 

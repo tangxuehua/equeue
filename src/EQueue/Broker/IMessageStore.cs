@@ -7,10 +7,13 @@ namespace EQueue.Broker
     {
         long MinMessagePosition { get; }
         long CurrentMessagePosition { get; }
+
+        int Load();
         void Start();
         void Shutdown();
         MessageLogRecord StoreMessage(int queueId, long queueOffset, Message message, string routingKey);
         byte[] GetMessage(long position);
+        bool IsMessagePositionExist(long position);
         void UpdateMinConsumedMessagePosition(long minConsumedMessagePosition);
     }
 }

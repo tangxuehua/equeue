@@ -31,6 +31,10 @@ namespace EQueue.Broker
             _persistConsumeOffsetTaskName = string.Format("{0}.PersistConsumeOffsetInfo", this.GetType().Name);
         }
 
+        public void Clean()
+        {
+            CleanConsumeOffsets();
+        }
         public void Start()
         {
             var path = BrokerController.Instance.Setting.FileStoreRootPath;
@@ -48,7 +52,6 @@ namespace EQueue.Broker
             PersistConsumeOffsetInfo();
             _scheduleService.StopTask(_persistConsumeOffsetTaskName);
         }
-
         public int GetConsumerGroupCount()
         {
             return _groupConsumeOffsetsDict.Count;
@@ -125,6 +128,18 @@ namespace EQueue.Broker
         private string CreateKey(string topic, int queueId)
         {
             return string.Format("{0}-{1}", topic, queueId);
+        }
+        private void CleanConsumeOffsets()
+        {
+            var path = BrokerController.Instance.Setting.FileStoreRootPath;
+            if (!Directory.Exists(path))
+            {
+                return;
+            }
+
+            _consumeOffsetFile = Path.Combine(path, ConsumeOffsetFileName);
+            _groupConsumeOffsetsDict.Clear();
+            PersistConsumeOffsetInfo();
         }
         private void LoadConsumeOffsetInfo()
         {

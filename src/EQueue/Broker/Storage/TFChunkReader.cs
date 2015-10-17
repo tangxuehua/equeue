@@ -30,10 +30,11 @@ namespace EQueue.Broker.Storage
                                   position, maxPosition, lastChunk));
             }
 
-            var chunk = _chunkManager.GetChunkFor(position);
+            var chunkNum = _chunkManager.GetChunkNum(position);
+            var chunk = _chunkManager.GetChunk(chunkNum);
             if (chunk == null)
             {
-                throw new ChunkNotExistException(string.Format("Cannot get chunk by position: {0}", position));
+                throw new ChunkNotExistException(position, chunkNum);
             }
 
             var localPosition = chunk.ChunkHeader.GetLocalDataPosition(position);

@@ -21,9 +21,7 @@ namespace EQueue.Broker.RequestHandlers
         private IMessageStore _messageStore;
         private IQueueStore _queueStore;
         private IConsumeOffsetStore _offsetStore;
-        private IBinarySerializer _binarySerializer;
         private ILogger _logger;
-        private readonly byte[] EmptyResponseData;
 
         public PullMessageRequestHandler()
         {
@@ -32,9 +30,7 @@ namespace EQueue.Broker.RequestHandlers
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
-            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            EmptyResponseData = new byte[0];
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
@@ -107,17 +103,35 @@ namespace EQueue.Broker.RequestHandlers
             var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
             var messages = new List<byte[]>();
             var queueOffset = pullOffset;
+            var messageChunkNotExistException = default(ChunkNotExistException);
 
             while (queueOffset <= queueCurrentOffset && messages.Count < maxPullSize)
             {
+                long messagePosition = -1;
+
+                //先获取消息的位置
                 try
                 {
-                    var messagePosition = queue.GetMessagePosition(queueOffset);
-                    if (messagePosition < 0)
-                    {
-                        break;
-                    }
+                    messagePosition = queue.GetMessagePosition(queueOffset);
+                }
+                catch (ChunkNotExistException ex)
+                {
+                    _logger.Error(string.Format("Queue chunk not exist, topic: {0}, queueId: {1}, queueOffset: {2}", topic, queueId, queueOffset), ex);
+                    break;
+                }
+                catch (ChunkReadException ex)
+                {
+                    _logger.Error(string.Format("Queue chunk read failed, topic: {0}, queueId: {1}, queueOffset: {2}", topic, queueId, queueOffset), ex);
+                    throw;
+                }
 
+                //再获取消息
+                if (messagePosition < 0)
+                {
+                    break;
+                }
+                try
+                {
                     var message = _messageStore.GetMessage(messagePosition);
                     if (message == null)
                     {
@@ -127,13 +141,15 @@ namespace EQueue.Broker.RequestHandlers
 
                     queueOffset++;
                 }
-                catch (ChunkNotExistException)
+                catch (ChunkNotExistException ex)
                 {
-                    _logger.ErrorFormat("Chunk not exist, topic: {0}, queueId: {1}, queueOffset: {2}", topic, queueId, queueOffset);
+                    _logger.Error(string.Format("Message chunk not exist, topic: {0}, queueId: {1}, queueOffset: {2}", topic, queueId, queueOffset), ex);
+                    messageChunkNotExistException = ex;
+                    break;
                 }
                 catch (ChunkReadException ex)
                 {
-                    _logger.ErrorFormat("Chunk read failed, topic: {0}, queueId: {1}, queueOffset: {2}, errorMsg: {3}", topic, queueId, queueOffset, ex.Message);
+                    _logger.Error(string.Format("Message chunk read failed, topic: {0}, queueId: {1}, queueOffset: {2}", topic, queueId, queueOffset), ex);
                     throw;
                 }
             }
@@ -177,10 +193,20 @@ namespace EQueue.Broker.RequestHandlers
                     Status = PullStatus.NoNewMessage
                 };
             }
+            //如果当前的pullOffset对应的Message的Chunk文件不存在，则需要重新计算将下一个pullOffset
+            else if (messageChunkNotExistException != null)
+            {
+                var nextPullOffset = CalculateNextPullOffset(queue, pullOffset, queueCurrentOffset);
+                return new PullMessageResult
+                {
+                    Status = PullStatus.NextOffsetReset,
+                    NextBeginOffset = nextPullOffset
+                };
+            }
             //到这里，说明当前的pullOffset在队列的正确范围，即：>=queueMinOffset and <= queueCurrentOffset；
             //但如果还是没有拉取到消息，则可能的情况有：
             //1）要拉取的消息还未来得及刷盘；
-            //2）要拉取的消息的文件或消息索引的文件被删除了；
+            //2）要拉取的消息对应的Queue的Chunk文件被删除了；
             //不管是哪种情况，告诉Consumer没有新消息即可。如果是情况1，则也许下次PullRequest就会拉取到消息；如果是情况2，则下次PullRequest就会被判断出pullOffset过小
             else
             {
@@ -189,6 +215,20 @@ namespace EQueue.Broker.RequestHandlers
                     Status = PullStatus.NoNewMessage
                 };
             }
+        }
+        private long CalculateNextPullOffset(Queue queue, long pullOffset, long queueCurrentOffset)
+        {
+            var queueOffset = pullOffset + 1;
+            while (queueOffset <= queueCurrentOffset)
+            {
+                var messagePosition = queue.GetMessagePosition(queueOffset);
+                if (_messageStore.IsMessagePositionExist(messagePosition))
+                {
+                    return queueOffset;
+                }
+                queueOffset++;
+            }
+            return queueOffset;
         }
         private void ExecutePullRequest(PullRequest pullRequest)
         {

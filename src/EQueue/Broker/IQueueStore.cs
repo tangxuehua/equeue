@@ -5,6 +5,7 @@ namespace EQueue.Broker
 {
     public interface IQueueStore
     {
+        void Clean();
         void Start();
         void Shutdown();
         IEnumerable<string> GetAllTopics();

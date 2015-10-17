@@ -15,25 +15,29 @@ namespace EQueue.Broker
     {
         private readonly ConcurrentDictionary<string, Queue> _queueDict;
         private readonly IMessageStore _messageStore;
-        private readonly IConsumeOffsetStore _offsetStore;
+        private readonly IConsumeOffsetStore _consumeOffsetStore;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
         private int _isScanningMinConsumedMessagePosition;
         private int _isDeletingQueueMessage;
 
-        public DefaultQueueStore(IMessageStore messageStore, IConsumeOffsetStore offsetStore, IScheduleService scheduleService, ILoggerFactory loggerFactory)
+        public DefaultQueueStore(IMessageStore messageStore, IConsumeOffsetStore consumeOffsetStore, IScheduleService scheduleService, ILoggerFactory loggerFactory)
         {
             _queueDict = new ConcurrentDictionary<string, Queue>();
             _messageStore = messageStore;
-            _offsetStore = offsetStore;
+            _consumeOffsetStore = consumeOffsetStore;
             _scheduleService = scheduleService;
             _logger = loggerFactory.Create(GetType().FullName);
         }
 
+        public void Clean()
+        {
+            CleanQueueChunks();
+        }
         public void Start()
         {
             LoadQueues();
-            _scheduleService.StartTask(string.Format("{0}.ScanMinConsumedMessagePosition", this.GetType().Name), ScanMinConsumedMessagePosition, 1000 * 5, 1000 * 60);
+            _scheduleService.StartTask(string.Format("{0}.ScanMinConsumedMessagePosition", this.GetType().Name), ScanMinConsumedMessagePosition, 1000 * 5, 1000 * 5);
             _scheduleService.StartTask(string.Format("{0}.DeleteQueueMessages", this.GetType().Name), DeleteQueueMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteQueueMessagesInterval);
         }
         public void Shutdown()
@@ -80,7 +84,7 @@ namespace EQueue.Broker
 
             foreach (var queue in _queueDict.Values)
             {
-                var offset = _offsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
+                var offset = _consumeOffsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
                 if (minConsumedQueueOffset == 0L && offset > 0)
                 {
                     minConsumedQueueOffset = offset;
@@ -222,6 +226,32 @@ namespace EQueue.Broker
             return queues;
         }
 
+        private void CleanQueueChunks()
+        {
+            var chunkConfig = BrokerController.Instance.Setting.QueueChunkConfig;
+            if (!Directory.Exists(chunkConfig.BasePath))
+            {
+                return;
+            }
+            var topicPathList = Directory
+                            .EnumerateDirectories(chunkConfig.BasePath, "*", SearchOption.TopDirectoryOnly)
+                            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
+                            .ToArray();
+            foreach (var topicPath in topicPathList)
+            {
+                var queuePathList = Directory
+                            .EnumerateDirectories(topicPath, "*", SearchOption.TopDirectoryOnly)
+                            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
+                            .ToArray();
+                foreach (var queuePath in queuePathList)
+                {
+                    var items = queuePath.Split('\\');
+                    var queueId = int.Parse(items[items.Length - 1]);
+                    var topic = items[items.Length - 2];
+                    new Queue(topic, queueId).CleanChunks();
+                }
+            }
+        }
         private void LoadQueues()
         {
             _queueDict.Clear();
@@ -284,7 +314,7 @@ namespace EQueue.Broker
                 {
                     foreach (var queue in _queueDict.Values)
                     {
-                        var minConsumedQueueOffset = _offsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
+                        var minConsumedQueueOffset = _consumeOffsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
                         if (minConsumedQueueOffset >= 0)
                         {
                             var messagePosition = queue.GetMessagePosition(minConsumedQueueOffset);
