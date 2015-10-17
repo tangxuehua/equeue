@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using EQueue.Broker.Storage.LogRecords;
 using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker.Storage
 {
@@ -25,7 +26,7 @@ namespace EQueue.Broker.Storage
         public void WriteTo(long logPosition, BinaryWriter writer)
         {
             LogPosition = logPosition;
-            MessageId = CreateMessageId(logPosition);
+            MessageId = MessageIdService.CreateMessageId(logPosition);
 
             //logPosition
             writer.Write(LogPosition);
@@ -68,12 +69,6 @@ namespace EQueue.Broker.Storage
 
             //storedTime
             writer.Write(StoredTime.Ticks);
-        }
-
-        private static string CreateMessageId(long messagePosition)
-        {
-            //TODO，还要结合当前的Broker的IP作为MessageId的一部分
-            return messagePosition.ToString();
         }
     }
 }

@@ -192,7 +192,7 @@ namespace EQueue.Utils
 
             var messageCode = BitConverter.ToInt32(messageCodeBytes, 0);
             var queueId = BitConverter.ToInt32(queueIdBytes, 0);
-            var queueOffset = BitConverter.ToInt32(queueOffsetBytes, 0);
+            var queueOffset = BitConverter.ToInt64(queueOffsetBytes, 0);
             var messageId = Encoding.UTF8.GetString(messageIdBytes);
             var messageKey = Encoding.UTF8.GetString(messageKeyBytes);
             var topic = Encoding.UTF8.GetString(topicBytes);
