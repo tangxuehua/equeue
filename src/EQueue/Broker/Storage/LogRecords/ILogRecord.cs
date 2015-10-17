@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace EQueue.Broker
+namespace EQueue.Broker.Storage.LogRecords
 {
     public interface ILogRecord
     {

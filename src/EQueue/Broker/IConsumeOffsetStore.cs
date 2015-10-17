@@ -3,7 +3,7 @@ using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
-    public interface IOffsetStore
+    public interface IConsumeOffsetStore
     {
         void Start();
         void Shutdown();

@@ -4,14 +4,14 @@ using ECommon.Serializing;
 using EQueue.Protocols;
 using EQueue.Utils;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers.Admin
 {
-    public class DisableQueueRequestHandler : IRequestHandler
+    public class AddQueueRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
         private IQueueStore _queueService;
 
-        public DisableQueueRequestHandler()
+        public AddQueueRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueService = ObjectContainer.Resolve<IQueueStore>();
@@ -19,8 +19,8 @@ namespace EQueue.Broker.Processors
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var disableQueueRequest = _binarySerializer.Deserialize<DisableQueueRequest>(remotingRequest.Body);
-            _queueService.DisableQueue(disableQueueRequest.Topic, disableQueueRequest.QueueId);
+            var addQueueRequest = _binarySerializer.Deserialize<AddQueueRequest>(remotingRequest.Body);
+            _queueService.AddQueue(addQueueRequest.Topic);
             return RemotingResponseFactory.CreateResponse(remotingRequest);
         }
     }

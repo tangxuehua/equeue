@@ -5,7 +5,7 @@ using ECommon.Remoting;
 using EQueue.Protocols;
 using EQueue.Utils;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers
 {
     public class GetTopicQueueIdsForConsumerRequestHandler : IRequestHandler
     {

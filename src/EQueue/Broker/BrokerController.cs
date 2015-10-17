@@ -10,7 +10,8 @@ using ECommon.Remoting;
 using ECommon.Socketing;
 using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
-using EQueue.Broker.Processors;
+using EQueue.Broker.RequestHandlers;
+using EQueue.Broker.RequestHandlers.Admin;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -22,7 +23,7 @@ namespace EQueue.Broker
         private readonly ILogger _logger;
         private readonly IQueueStore _queueStore;
         private readonly IMessageStore _messageStore;
-        private readonly IOffsetStore _offsetStore;
+        private readonly IConsumeOffsetStore _offsetStore;
         private readonly ConsumerManager _consumerManager;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
@@ -42,7 +43,7 @@ namespace EQueue.Broker
             Setting = setting ?? new BrokerSetting();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
-            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
 

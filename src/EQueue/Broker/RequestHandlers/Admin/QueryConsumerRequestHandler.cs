@@ -8,7 +8,7 @@ using EQueue.Broker.Client;
 using EQueue.Protocols;
 using EQueue.Utils;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers.Admin
 {
     public class QueryConsumerRequestHandler : IRequestHandler
     {

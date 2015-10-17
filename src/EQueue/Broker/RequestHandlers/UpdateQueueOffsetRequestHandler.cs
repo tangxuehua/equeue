@@ -3,16 +3,16 @@ using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Protocols;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers
 {
     public class UpdateQueueOffsetRequestHandler : IRequestHandler
     {
-        private IOffsetStore _offsetStore;
+        private IConsumeOffsetStore _offsetStore;
         private IBinarySerializer _binarySerializer;
 
         public UpdateQueueOffsetRequestHandler()
         {
-            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
         }
 

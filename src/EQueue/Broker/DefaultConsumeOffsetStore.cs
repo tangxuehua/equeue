@@ -11,7 +11,7 @@ using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
-    public class DefaultOffsetStore : IOffsetStore
+    public class DefaultConsumeOffsetStore : IConsumeOffsetStore
     {
         private const string ConsumeOffsetFileName = "consume-offsets.json";
         private readonly IScheduleService _scheduleService;
@@ -22,7 +22,7 @@ namespace EQueue.Broker
         private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupConsumeOffsetsDict;
         private int _isPersistingOffsets;
 
-        public DefaultOffsetStore(IScheduleService scheduleService, IJsonSerializer jsonSerializer, ILoggerFactory loggerFactory)
+        public DefaultConsumeOffsetStore(IScheduleService scheduleService, IJsonSerializer jsonSerializer, ILoggerFactory loggerFactory)
         {
             _groupConsumeOffsetsDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
             _scheduleService = scheduleService;

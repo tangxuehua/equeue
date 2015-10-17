@@ -3,7 +3,7 @@ using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Utils;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers.Admin
 {
     public class QueryBrokerStatisticInfoRequestHandler : IRequestHandler
     {

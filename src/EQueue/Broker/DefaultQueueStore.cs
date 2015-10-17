@@ -15,13 +15,13 @@ namespace EQueue.Broker
     {
         private readonly ConcurrentDictionary<string, Queue> _queueDict;
         private readonly IMessageStore _messageStore;
-        private readonly IOffsetStore _offsetStore;
+        private readonly IConsumeOffsetStore _offsetStore;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
         private int _isScanningMinConsumedMessagePosition;
         private int _isDeletingQueueMessage;
 
-        public DefaultQueueStore(IMessageStore messageStore, IOffsetStore offsetStore, IScheduleService scheduleService, ILoggerFactory loggerFactory)
+        public DefaultQueueStore(IMessageStore messageStore, IConsumeOffsetStore offsetStore, IScheduleService scheduleService, ILoggerFactory loggerFactory)
         {
             _queueDict = new ConcurrentDictionary<string, Queue>();
             _messageStore = messageStore;

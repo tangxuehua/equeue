@@ -62,32 +62,28 @@
     <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByCountStrategy.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByTimeStrategy.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\IDeleteMessageStrategy.cs" />
-    <Compile Include="Broker\LogRecordType.cs" />
-    <Compile Include="Broker\PullMessageResult.cs" />
     <Compile Include="Broker\QueueLogRecord.cs" />
     <Compile Include="Broker\MessageLogRecord.cs" />
-    <Compile Include="Broker\RequestHandlers\CreateTopicRequestHandler.cs" />
-    <Compile Include="Broker\SqlServerQueueStoreSetting.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\CreateTopicRequestHandler.cs" />
     <Compile Include="Broker\IQueueStore.cs" />
     <Compile Include="Broker\DefaultQueueStore.cs" />
-    <Compile Include="Broker\RequestHandlers\DisableQueueRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\EnableQueueRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\GetMessageDetailRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\QueryBrokerStatisticInfoRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\QueryTopicConsumeInfoRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\QueryConsumerRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\RemoveQueueRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\DisableQueueRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\EnableQueueRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\GetMessageDetailRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\QueryBrokerStatisticInfoRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\QueryTopicConsumeInfoRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\QueryConsumerRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\RemoveQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetTopicQueueIdsForProducerRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\AddQueueRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\QueryTopicQueueInfoRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\QueryConsumerInfoRequestHandler.cs" />
-    <Compile Include="Broker\DefaultOffsetStore.cs" />
-    <Compile Include="Broker\SqlServerOffsetManagerSetting.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\AddQueueRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\QueryTopicQueueInfoRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\QueryConsumerInfoRequestHandler.cs" />
+    <Compile Include="Broker\DefaultConsumeOffsetStore.cs" />
     <Compile Include="Broker\BrokerSetting.cs" />
     <Compile Include="Broker\Client\ConsumerHeartbeatInfo.cs" />
     <Compile Include="Broker\Client\ConsumerGroup.cs" />
     <Compile Include="Broker\Client\ConsumerManager.cs" />
-    <Compile Include="Broker\IOffsetStore.cs" />
+    <Compile Include="Broker\IConsumeOffsetStore.cs" />
     <Compile Include="Broker\Exceptions\QueueNotExistException.cs" />
     <Compile Include="Broker\LongPolling\PullRequest.cs" />
     <Compile Include="Broker\LongPolling\SuspendedPullRequestManager.cs" />
@@ -180,9 +176,6 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup />
-  <ItemGroup>
-    <Content Include="SqlScripts\GenerateSqlServerTables.sql" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

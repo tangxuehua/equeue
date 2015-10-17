@@ -18,7 +18,7 @@ namespace EQueue.Configurations
             configuration.SetDefault<IMessageStore, DefaultMessageStore>();
             configuration.SetDefault<IQueueStore, DefaultQueueStore>();
             configuration.SetDefault<ConsumerManager, ConsumerManager>();
-            configuration.SetDefault<IOffsetStore, DefaultOffsetStore>();
+            configuration.SetDefault<IConsumeOffsetStore, DefaultConsumeOffsetStore>();
             configuration.SetDefault<IQueueStore, DefaultQueueStore>();
             configuration.SetDefault<SuspendedPullRequestManager, SuspendedPullRequestManager>();
 

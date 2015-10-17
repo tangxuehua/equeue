@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using EQueue.Broker.Storage.LogRecords;
 using EQueue.Protocols;
 
 namespace EQueue.Broker.Storage

@@ -6,19 +6,19 @@ using ECommon.Serializing;
 using EQueue.Protocols;
 using EQueue.Utils;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers.Admin
 {
     public class QueryTopicQueueInfoRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
         private IQueueStore _queueService;
-        private IOffsetStore _offsetStore;
+        private IConsumeOffsetStore _offsetStore;
 
         public QueryTopicQueueInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _queueService = ObjectContainer.Resolve<IQueueStore>();
-            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)

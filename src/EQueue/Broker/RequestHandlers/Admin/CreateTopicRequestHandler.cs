@@ -4,7 +4,7 @@ using ECommon.Serializing;
 using EQueue.Protocols;
 using EQueue.Utils;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers.Admin
 {
     public class CreateTopicRequestHandler : IRequestHandler
     {

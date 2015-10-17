@@ -12,7 +12,7 @@ using EQueue.Broker.Storage;
 using EQueue.Protocols;
 using EQueue.Utils;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers
 {
     public class PullMessageRequestHandler : IRequestHandler
     {
@@ -20,7 +20,7 @@ namespace EQueue.Broker.Processors
         private SuspendedPullRequestManager _suspendedPullRequestManager;
         private IMessageStore _messageStore;
         private IQueueStore _queueStore;
-        private IOffsetStore _offsetStore;
+        private IConsumeOffsetStore _offsetStore;
         private IBinarySerializer _binarySerializer;
         private ILogger _logger;
         private readonly byte[] EmptyResponseData;
@@ -31,7 +31,7 @@ namespace EQueue.Broker.Processors
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
-            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             EmptyResponseData = new byte[0];
@@ -309,6 +309,13 @@ namespace EQueue.Broker.Processors
                 offset += data.Length;
             }
             return destination;
+        }
+
+        class PullMessageResult
+        {
+            public PullStatus Status { get; set; }
+            public long NextBeginOffset { get; set; }
+            public IEnumerable<byte[]> Messages { get; set; }
         }
     }
 }

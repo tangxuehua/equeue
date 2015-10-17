@@ -43,6 +43,11 @@ namespace EQueue.Clients.Producers
             _remotingClient.RegisterConnectionEventListener(new ConnectionEventListener(this));
         }
 
+        public Producer RegisterConnectionEventListener(IConnectionEventListener listener)
+        {
+            _remotingClient.RegisterConnectionEventListener(listener);
+            return this;
+        }
         public Producer RegisterResponseHandler(IResponseHandler responseHandler)
         {
             _remotingClient.RegisterResponseHandler((int)RequestCode.SendMessage, responseHandler);

@@ -4,7 +4,7 @@ using ECommon.Serializing;
 using EQueue.Broker.Client;
 using EQueue.Protocols;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers
 {
     public class ConsumerHeartbeatRequestHandler : IRequestHandler
     {

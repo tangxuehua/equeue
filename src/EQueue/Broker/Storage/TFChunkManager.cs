@@ -9,6 +9,7 @@ using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Utilities;
+using EQueue.Broker.Storage.LogRecords;
 
 namespace EQueue.Broker.Storage
 {

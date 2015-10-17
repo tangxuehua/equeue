@@ -6,19 +6,19 @@ using EQueue.Broker.Client;
 using EQueue.Protocols;
 using EQueue.Utils;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers.Admin
 {
     public class QueryTopicConsumeInfoRequestHandler : IRequestHandler
     {
         private ConsumerManager _consumerManager;
         private IBinarySerializer _binarySerializer;
-        private IOffsetStore _offsetStore;
+        private IConsumeOffsetStore _offsetStore;
         private IQueueStore _queueService;
 
         public QueryTopicConsumeInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _offsetStore = ObjectContainer.Resolve<IOffsetStore>();
+            _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
             _queueService = ObjectContainer.Resolve<IQueueStore>();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
         }

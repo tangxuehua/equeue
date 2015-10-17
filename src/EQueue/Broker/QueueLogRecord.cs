@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using EQueue.Broker.Storage.LogRecords;
 
 namespace EQueue.Broker.Storage
 {

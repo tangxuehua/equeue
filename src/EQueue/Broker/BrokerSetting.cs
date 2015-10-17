@@ -54,7 +54,7 @@ namespace EQueue.Broker
         /// <summary>TCP通行层设置
         /// </summary>
         public SocketSetting SocketSetting { get; set; }
-        /// <summary>消息文件存储的相关配置，默认一个消息文件的大小为512MB
+        /// <summary>消息文件存储的相关配置，默认一个消息文件的大小为256MB
         /// </summary>
         public TFChunkManagerConfig MessageChunkConfig { get; set; }
         /// <summary>队列文件存储的相关配置，默认一个队列文件中存储100W个消息索引，每个消息索引8个字节

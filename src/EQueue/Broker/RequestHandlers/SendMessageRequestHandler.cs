@@ -6,7 +6,7 @@ using EQueue.Broker.LongPolling;
 using EQueue.Protocols;
 using EQueue.Utils;
 
-namespace EQueue.Broker.Processors
+namespace EQueue.Broker.RequestHandlers
 {
     public class SendMessageRequestHandler : IRequestHandler
     {
