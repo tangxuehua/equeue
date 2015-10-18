@@ -14,7 +14,7 @@ namespace QuickStart.BrokerServer
         static void Main(string[] args)
         {
             InitializeEQueue();
-            BrokerController.Create(new BrokerSetting(ConfigurationManager.AppSettings["fileStoreRootPath"])).Start();
+            BrokerController.Create(new BrokerSetting(ConfigurationManager.AppSettings["fileStoreRootPath"], chunkCacheMaxPercent: 95)).Start();
             Console.ReadLine();
         }
 

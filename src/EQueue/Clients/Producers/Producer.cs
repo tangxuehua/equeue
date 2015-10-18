@@ -67,7 +67,7 @@ namespace EQueue.Clients.Producers
             _logger.Info("Producer shutdown");
             return this;
         }
-        public SendResult Send(Message message, string routingKey, int timeoutMilliseconds = 30000)
+        public SendResult Send(Message message, string routingKey, int timeoutMilliseconds = 120000)
         {
             var sendResult = SendAsync(message, routingKey, timeoutMilliseconds).WaitResult<SendResult>(timeoutMilliseconds + 1000);
             if (sendResult == null)
@@ -76,7 +76,7 @@ namespace EQueue.Clients.Producers
             }
             return sendResult;
         }
-        public async Task<SendResult> SendAsync(Message message, string routingKey, int timeoutMilliseconds = 30000)
+        public async Task<SendResult> SendAsync(Message message, string routingKey, int timeoutMilliseconds = 120000)
         {
             Ensure.NotNull(message, "message");
 
