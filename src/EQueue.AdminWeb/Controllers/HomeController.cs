@@ -76,7 +76,6 @@ namespace EQueue.AdminWeb.Controllers
                 model.MessageId = message.MessageId;
                 model.QueueId = message.QueueId.ToString();
                 model.QueueOffset = message.QueueOffset.ToString();
-                model.RoutingKey = message.RoutingKey;
                 model.Code = message.Code.ToString();
                 model.Content = Encoding.UTF8.GetString(message.Body);
                 model.Topic = message.Topic;
