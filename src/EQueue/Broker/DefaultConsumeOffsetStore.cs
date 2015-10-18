@@ -138,8 +138,14 @@ namespace EQueue.Broker
             }
 
             _consumeOffsetFile = Path.Combine(path, ConsumeOffsetFileName);
+
+            if (File.Exists(_consumeOffsetFile))
+            {
+                File.SetAttributes(_consumeOffsetFile, FileAttributes.Normal);
+                File.Delete(_consumeOffsetFile);
+            }
+
             _groupConsumeOffsetsDict.Clear();
-            PersistConsumeOffsetInfo();
         }
         private void LoadConsumeOffsetInfo()
         {
