@@ -14,14 +14,12 @@ namespace EQueue.Broker.Storage
         public MessageLogRecord(
             string topic,
             int code,
-            string key,
             byte[] body,
             int queueId,
             long queueOffset,
-            string routingKey,
             DateTime createdTime,
             DateTime storedTime)
-            : base(null, topic, code, key, body, queueId, queueOffset, createdTime, storedTime, routingKey) { }
+            : base(null, topic, code, body, queueId, queueOffset, createdTime, storedTime) { }
 
         public void WriteTo(long logPosition, BinaryWriter writer)
         {
@@ -40,16 +38,6 @@ namespace EQueue.Broker.Storage
             var topicBytes = Encoding.UTF8.GetBytes(Topic);
             writer.Write(topicBytes.Length);
             writer.Write(topicBytes);
-
-            //routingKey
-            var routingKeyBytes = Encoding.UTF8.GetBytes(RoutingKey);
-            writer.Write(routingKeyBytes.Length);
-            writer.Write(routingKeyBytes);
-
-            //key
-            var keyBytes = Encoding.UTF8.GetBytes(Key);
-            writer.Write(keyBytes.Length);
-            writer.Write(keyBytes);
 
             //code
             writer.Write(Code);

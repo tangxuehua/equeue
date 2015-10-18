@@ -85,7 +85,7 @@ namespace EQueue.Clients.Producers
             {
                 throw new Exception(string.Format("No available routing queue for topic [{0}].", message.Topic));
             }
-            var remotingRequest = BuildSendMessageRequest(message, queueId, routingKey);
+            var remotingRequest = BuildSendMessageRequest(message, queueId);
 
             try
             {
@@ -112,7 +112,7 @@ namespace EQueue.Clients.Producers
             {
                 throw new Exception(string.Format("No available routing queue for topic [{0}].", message.Topic));
             }
-            var remotingRequest = BuildSendMessageRequest(message, queueId, routingKey);
+            var remotingRequest = BuildSendMessageRequest(message, queueId);
 
             _remotingClient.InvokeWithCallback(remotingRequest);
         }
@@ -125,7 +125,7 @@ namespace EQueue.Clients.Producers
             {
                 throw new Exception(string.Format("No available routing queue for topic [{0}].", message.Topic));
             }
-            var remotingRequest = BuildSendMessageRequest(message, queueId, routingKey);
+            var remotingRequest = BuildSendMessageRequest(message, queueId);
 
             _remotingClient.InvokeOneway(remotingRequest);
         }
@@ -214,9 +214,9 @@ namespace EQueue.Clients.Producers
             var queueIds = Encoding.UTF8.GetString(remotingResponse.Body);
             return queueIds.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x));
         }
-        private RemotingRequest BuildSendMessageRequest(Message message, int queueId, string routingKey)
+        private RemotingRequest BuildSendMessageRequest(Message message, int queueId)
         {
-            var request = new SendMessageRequest { Message = message, QueueId = queueId, RoutingKey = routingKey };
+            var request = new SendMessageRequest { Message = message, QueueId = queueId };
             var data = MessageUtils.EncodeSendMessageRequest(request);
             return new RemotingRequest((int)RequestCode.SendMessage, data);
         }

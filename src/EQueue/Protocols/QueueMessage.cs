@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Text;
 using EQueue.Utils;
 
 namespace EQueue.Protocols
@@ -13,17 +11,15 @@ namespace EQueue.Protocols
         public int QueueId { get; set; }
         public long QueueOffset { get; set; }
         public DateTime StoredTime { get; set; }
-        public string RoutingKey { get; set; }
 
         public QueueMessage() { }
-        public QueueMessage(string messageId, string topic, int code, string key, byte[] body, int queueId, long queueOffset, DateTime createdTime, DateTime storedTime, string routingKey)
-            : base(topic, code, key, body, createdTime)
+        public QueueMessage(string messageId, string topic, int code, byte[] body, int queueId, long queueOffset, DateTime createdTime, DateTime storedTime)
+            : base(topic, code, body, createdTime)
         {
             MessageId = messageId;
             QueueId = queueId;
             QueueOffset = queueOffset;
             StoredTime = storedTime;
-            RoutingKey = routingKey;
         }
 
         public virtual void ReadFrom(byte[] recordBuffer)
@@ -33,8 +29,6 @@ namespace EQueue.Protocols
             LogPosition = MessageUtils.DecodeLong(recordBuffer, srcOffset, out srcOffset);
             MessageId = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
             Topic = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
-            RoutingKey = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
-            Key = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
             Code = MessageUtils.DecodeInt(recordBuffer, srcOffset, out srcOffset);
             Body = MessageUtils.DecodeBytes(recordBuffer, srcOffset, out srcOffset);
             QueueId = MessageUtils.DecodeInt(recordBuffer, srcOffset, out srcOffset);

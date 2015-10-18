@@ -198,9 +198,6 @@
     <Content Include="Views\Home\TopicConsumeInfo.cshtml" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Views\Home\Messages.cshtml" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="Views\Home\Message.cshtml" />
   </ItemGroup>
   <ItemGroup>

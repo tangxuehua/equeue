@@ -63,7 +63,7 @@ namespace QuickStart.ProducerClient
             var messageCount = int.Parse(ConfigurationManager.AppSettings["MessageCount"]);
             var actions = new List<Action>();
             var payload = new byte[messageSize];
-            var message = new Message("topic1", 100, ObjectId.GenerateNewStringId(), payload);
+            var message = new Message("topic1", 100, payload);
 
             for (var i = 0; i < clientCount; i++)
             {
@@ -77,21 +77,21 @@ namespace QuickStart.ProducerClient
         {
             _logger.Info("----Send message starting----");
 
-            var sendAction = default(Action);
+            var sendAction = default(Action<int>);
 
             if (_mode == "Oneway")
             {
-                sendAction = () =>
+                sendAction = index =>
                 {
-                    producer.SendOneway(message, message.Key);
+                    producer.SendOneway(message, index.ToString());
                     Interlocked.Increment(ref _sentCount);
                 };
             }
             else if (_mode == "Sync")
             {
-                sendAction = () =>
+                sendAction = index =>
                 {
-                    var result = producer.Send(message, message.Key, 100000);
+                    var result = producer.Send(message, index.ToString());
                     if (result.SendStatus != SendStatus.Success)
                     {
                         throw new Exception(result.ErrorMessage);
@@ -101,7 +101,7 @@ namespace QuickStart.ProducerClient
             }
             else if (_mode == "Async")
             {
-                sendAction = () => producer.SendAsync(message, message.Key, 100000).ContinueWith(t =>
+                sendAction = index => producer.SendAsync(message, index.ToString()).ContinueWith(t =>
                 {
                     if (t.Exception != null)
                     {
@@ -128,7 +128,7 @@ namespace QuickStart.ProducerClient
             else if (_mode == "Callback")
             {
                 producer.RegisterResponseHandler(new ResponseHandler());
-                sendAction = () => producer.SendWithCallback(message, message.Key);
+                sendAction = index => producer.SendWithCallback(message, index.ToString());
             }
 
             Task.Factory.StartNew(() =>
@@ -137,7 +137,7 @@ namespace QuickStart.ProducerClient
                 {
                     try
                     {
-                        sendAction();
+                        sendAction(i);
                     }
                     catch (Exception ex)
                     {
