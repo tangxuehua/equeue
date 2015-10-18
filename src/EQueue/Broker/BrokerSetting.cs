@@ -87,11 +87,14 @@ namespace EQueue.Broker
                 Environment.ProcessorCount * 2,
                 4 * 1024 * 1024,
                 128 * 1024,
+                128 * 1024,
                 false,
                 chunkCacheMaxPercent,
                 chunkCacheMinPercent,
                 1,
-                5);
+                5,
+                50000,
+                true);
             QueueChunkConfig = new ChunkManagerConfig(
                 Path.Combine(chunkFileStoreRootPath, @"queue-chunks"),
                 new DefaultFileNamingStrategy("queue-chunk-"),
@@ -102,11 +105,14 @@ namespace EQueue.Broker
                 Environment.ProcessorCount * 2,
                 8,
                 128 * 1024,
+                128 * 1024,
                 true,
                 chunkCacheMaxPercent,
                 chunkCacheMinPercent,
                 1,
-                5);
+                5,
+                50000,
+                false);
         }
     }
 }

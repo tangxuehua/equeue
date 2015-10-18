@@ -19,7 +19,7 @@ namespace EQueue.Broker.Storage
             _chunkWriter = chunkWriter;
         }
 
-        public T TryReadAt<T>(long position, Func<int, BinaryReader, T> readRecordFunc) where T : class, ILogRecord
+        public T TryReadAt<T>(long position, Func<byte[], T> readRecordFunc) where T : class, ILogRecord
         {
             var lastChunk = _chunkWriter.CurrentChunk;
             var maxPosition = lastChunk.GlobalDataPosition;
@@ -42,10 +42,10 @@ namespace EQueue.Broker.Storage
         }
         public BufferLogRecord TryReadRecordBufferAt(long position)
         {
-            return TryReadAt(position, (length, reader) =>
+            return TryReadAt(position, recordBuffer =>
             {
                 var record = new BufferLogRecord();
-                record.ReadFrom(length, reader);
+                record.ReadFrom(recordBuffer);
                 return record;
             });
         }

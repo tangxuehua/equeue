@@ -317,6 +317,11 @@ namespace EQueue.Broker
                         var minConsumedQueueOffset = _consumeOffsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
                         if (minConsumedQueueOffset >= 0)
                         {
+                            var currentOffset = queue.NextOffset - 1;
+                            if (minConsumedQueueOffset > currentOffset)
+                            {
+                                minConsumedQueueOffset = currentOffset;
+                            }
                             var messagePosition = queue.GetMessagePosition(minConsumedQueueOffset);
                             if (messagePosition >= 0)
                             {

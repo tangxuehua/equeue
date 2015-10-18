@@ -288,28 +288,26 @@ namespace EQueue.Clients.Consumers
 
             try
             {
-                using (var stream = new MemoryStream(buffer))
+                var nextOffset = 0;
+                var messageLength = MessageUtils.DecodeInt(buffer, nextOffset, out nextOffset);
+                while (messageLength > 0)
                 {
-                    using (var reader = new BinaryReader(stream))
+                    var message = new QueueMessage();
+                    var messageBytes = new byte[messageLength];
+                    Buffer.BlockCopy(buffer, nextOffset, messageBytes, 0, messageLength);
+                    nextOffset += messageLength;
+                    message.ReadFrom(messageBytes);
+                    if (!message.IsValid())
                     {
-                        var messageLength = reader.ReadInt32();
-                        while (messageLength > 0)
-                        {
-                            var message = new QueueMessage();
-                            message.ReadFrom(messageLength, reader);
-                            if (!message.IsValid())
-                            {
-                                _logger.ErrorFormat("Invalid pull return message, pullRequest: {0}", pullRequest);
-                                continue;
-                            }
-                            messages.Add(message);
-                            if (stream.Position >= stream.Length)
-                            {
-                                break;
-                            }
-                            messageLength = reader.ReadInt32();
-                        }
+                        _logger.ErrorFormat("Invalid message, pullRequest: {0}", pullRequest);
+                        continue;
                     }
+                    messages.Add(message);
+                    if (nextOffset >= buffer.Length)
+                    {
+                        break;
+                    }
+                    messageLength = MessageUtils.DecodeInt(buffer, nextOffset, out nextOffset);
                 }
             }
             catch (Exception ex)

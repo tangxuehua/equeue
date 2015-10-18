@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Logging;
+using ECommon.Scheduling;
 using ECommon.Utilities;
 using EQueue.Broker.Storage.LogRecords;
 
@@ -14,11 +15,10 @@ namespace EQueue.Broker.Storage
 {
     public unsafe class Chunk : IDisposable
     {
-        public const int ReadBufferSize = 1024 * 16;
-
         #region Private Variables
 
         private static readonly ILogger _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Chunk));
+        private readonly IScheduleService _scheduleService;
 
         private ChunkHeader _chunkHeader;
         private ChunkFooter _chunkFooter;
@@ -32,9 +32,6 @@ namespace EQueue.Broker.Storage
         private readonly object _writeSyncObj = new object();
         private readonly object _cacheSyncObj = new object();
 
-        private IntPtr _cachedData;
-        private int _cachedLength;
-
         private int _dataPosition;
         private bool _isCompleted;
         private bool _isDestroying;
@@ -43,7 +40,17 @@ namespace EQueue.Broker.Storage
         private bool _isReadersInitialized;
         private int _flushedDataPosition;
 
+        private long _fileReadCount;
+        private long _cacheItemReadCount;
+        private long _unmanagedReadCount;
+        private long _previousFileReadCount;
+        private long _previousCacheReadCount;
+        private long _previousUnmanagedReadCount;
+
         private Chunk _memoryChunk;
+        private CacheItem[] _cacheItems;
+        private IntPtr _cachedData;
+        private int _cachedLength;
 
         private WriterWorkItem _writerWorkItem;
 
@@ -98,6 +105,8 @@ namespace EQueue.Broker.Storage
             _chunkConfig = chunkConfig;
             _isMemoryChunk = isMemoryChunk;
             _lastActiveTime = DateTime.Now;
+
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
         }
         ~Chunk()
         {
@@ -142,7 +151,7 @@ namespace EQueue.Broker.Storage
 
             return chunk;
         }
-        public static Chunk FromOngoingFile<T>(string filename, ChunkManager chunkManager, ChunkManagerConfig config, Func<int, BinaryReader, T> readRecordFunc, bool isMemoryChunk = false) where T : ILogRecord 
+        public static Chunk FromOngoingFile<T>(string filename, ChunkManager chunkManager, ChunkManagerConfig config, Func<byte[], T> readRecordFunc, bool isMemoryChunk = false) where T : ILogRecord 
         {
             var chunk = new Chunk(filename, chunkManager, config, isMemoryChunk);
 
@@ -174,7 +183,7 @@ namespace EQueue.Broker.Storage
 
             _isCompleted = true;
 
-            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.RandomAccess))
+            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _chunkConfig.ChunkReadBuffer, FileOptions.RandomAccess))
             {
                 using (var reader = new BinaryReader(fileStream))
                 {
@@ -241,7 +250,7 @@ namespace EQueue.Broker.Storage
                         File.Delete(_filename);
                     }
 
-                    tempFileStream = new FileStream(tempFilename, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
+                    tempFileStream = new FileStream(tempFilename, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.ChunkWriteBuffer, FileOptions.SequentialScan);
                     tempFileStream.SetLength(fileSize);
                     tempFileStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
                     tempFileStream.Flush(true);
@@ -249,8 +258,8 @@ namespace EQueue.Broker.Storage
 
                     File.Move(tempFilename, _filename);
 
-                    var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
-                    writeStream = new BufferedStream(fileStream, _chunkConfig.WriteMessageBuffer);
+                    var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.ChunkWriteBuffer, FileOptions.SequentialScan);
+                    writeStream = new BufferedStream(fileStream, _chunkConfig.ChunkWriteBuffer);
                     SetFileAttributes();
                 }
 
@@ -275,11 +284,19 @@ namespace EQueue.Broker.Storage
                                 _logger.DebugFormat("Cached new chunk {0} to memory.", this);
                             }
                         }
-                        catch (OutOfMemoryException) { }
+                        catch (OutOfMemoryException)
+                        {
+                            _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
+                        }
                         catch (Exception ex)
                         {
                             _logger.Error(string.Format("Failed to cache new chunk {0}", this), ex);
+                            _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
                         }
+                    }
+                    else
+                    {
+                        _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
                     }
                 }
             }
@@ -300,9 +317,14 @@ namespace EQueue.Broker.Storage
                 throw;
             }
 
+            if (!_isMemoryChunk && _chunkConfig.EnableCalculateLatestChunkReadStatisticInfo)
+            {
+                _scheduleService.StartTask("PrintReadStatus", PrintReadStatus, 1000, 1000);
+            }
+
             _lastActiveTime = DateTime.Now;
         }
-        private void InitOngoing<T>(Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
+        private void InitOngoing<T>(Func<byte[], T> readRecordFunc) where T : ILogRecord
         {
             var fileInfo = new FileInfo(_filename);
             if (!fileInfo.Exists)
@@ -358,9 +380,9 @@ namespace EQueue.Broker.Storage
             }
             else
             {
-                var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.WriteMessageBuffer, FileOptions.SequentialScan);
+                var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.ChunkWriteBuffer, FileOptions.SequentialScan);
                 fileStream.Position = GetStreamPosition(_dataPosition);
-                writeStream = new BufferedStream(fileStream, _chunkConfig.WriteMessageBuffer);
+                writeStream = new BufferedStream(fileStream, _chunkConfig.ChunkWriteBuffer);
                 SetFileAttributes();
             }
 
@@ -381,12 +403,25 @@ namespace EQueue.Broker.Storage
                             _logger.DebugFormat("Cached ongoing chunk {0} to memory.", this);
                         }
                     }
-                    catch (OutOfMemoryException) { }
+                    catch (OutOfMemoryException)
+                    {
+                        _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
+                    }
                     catch (Exception ex)
                     {
                         _logger.Error(string.Format("Failed to cache ongoing chunk {0}", this), ex);
+                        _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
                     }
                 }
+                else
+                {
+                    _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
+                }
+            }
+
+            if (!_isMemoryChunk && _chunkConfig.EnableCalculateLatestChunkReadStatisticInfo)
+            {
+                _scheduleService.StartTask("PrintReadStatus", PrintReadStatus, 1000, 1000);
             }
 
             _lastActiveTime = DateTime.Now;
@@ -463,7 +498,7 @@ namespace EQueue.Broker.Storage
                 }
             }
         }
-        public T TryReadAt<T>(long dataPosition, Func<int, BinaryReader, T> readRecordFunc) where T : class, ILogRecord
+        public T TryReadAt<T>(long dataPosition, Func<byte[], T> readRecordFunc) where T : class, ILogRecord
         {
             if (_isDestroying)
             {
@@ -474,9 +509,34 @@ namespace EQueue.Broker.Storage
 
             _chunkManager.TryCacheNextChunk(this);
 
-            if (!_isMemoryChunk && _memoryChunk != null)
+            if (!_isMemoryChunk)
             {
-                return _memoryChunk.TryReadAt<T>(dataPosition, readRecordFunc);
+                if (_cacheItems != null)
+                {
+                    var index = dataPosition % _chunkConfig.ChunkLocalCacheSize;
+                    var cacheItem = _cacheItems[index];
+                    if (cacheItem != null && cacheItem.RecordPosition == dataPosition)
+                    {
+                        var record = readRecordFunc(cacheItem.RecordBuffer);
+                        if (record == null)
+                        {
+                            throw new ChunkReadException(
+                                string.Format("Cannot read a record from data position {0}. Something is seriously wrong in chunk {1}.",
+                                              dataPosition, this));
+                        }
+                        Interlocked.Increment(ref _cacheItemReadCount);
+                        return record;
+                    }
+                }
+                else if (_memoryChunk != null)
+                {
+                    var record = _memoryChunk.TryReadAt<T>(dataPosition, readRecordFunc);
+                    if (record != null)
+                    {
+                        Interlocked.Increment(ref _unmanagedReadCount);
+                    }
+                    return record;
+                }
             }
 
             if (!_isMemoryChunk && _isCompleted && Interlocked.CompareExchange(ref _cachingChunk, 1, 0) == 0)
@@ -497,9 +557,14 @@ namespace EQueue.Broker.Storage
 
                 try
                 {
-                    return IsFixedDataSize() ?
+                    var record = IsFixedDataSize() ?
                         TryReadFixedSizeForwardInternal(readerWorkItem, dataPosition, readRecordFunc) :
                         TryReadForwardInternal(readerWorkItem, dataPosition, readRecordFunc);
+                    if (!_isMemoryChunk)
+                    {
+                        Interlocked.Increment(ref _fileReadCount);
+                    }
+                    return record;
                 }
                 catch
                 {
@@ -530,6 +595,7 @@ namespace EQueue.Broker.Storage
             var writerWorkItem = _writerWorkItem;
             var bufferStream = writerWorkItem.BufferStream;
             var bufferWriter = writerWorkItem.BufferWriter;
+            var recordBuffer = default(byte[]);
 
             if (IsFixedDataSize())
             {
@@ -539,10 +605,16 @@ namespace EQueue.Broker.Storage
                 }
                 bufferStream.Position = 0;
                 record.WriteTo(GlobalDataPosition, bufferWriter);
-                var recordLength = bufferStream.Length;
+                var recordLength = (int)bufferStream.Length;
                 if (recordLength != _chunkConfig.ChunkDataUnitSize)
                 {
                     throw new ChunkWriteException(this.ToString(), string.Format("Invalid fixed data length, expected length {0}, but was {1}", _chunkConfig.ChunkDataUnitSize, recordLength));
+                }
+
+                if (_cacheItems != null)
+                {
+                    recordBuffer = new byte[recordLength];
+                    Buffer.BlockCopy(bufferStream.GetBuffer(), 0, recordBuffer, 0, recordLength);
                 }
             }
             else
@@ -565,6 +637,12 @@ namespace EQueue.Broker.Storage
                 if (writerWorkItem.WorkingStream.Position + recordLength + 2 * sizeof(int) > ChunkHeader.Size + _chunkHeader.ChunkDataTotalSize)
                 {
                     return RecordWriteResult.NotEnoughSpace();
+                }
+
+                if (_cacheItems != null)
+                {
+                    recordBuffer = new byte[recordLength];
+                    Buffer.BlockCopy(bufferStream.GetBuffer(), 4, recordBuffer, 0, recordLength);
                 }
             }
 
@@ -591,6 +669,11 @@ namespace EQueue.Broker.Storage
                 {
                     throw new ChunkWriteException(this.ToString(), string.Format("Append record to file chunk success, and append to memory chunk success, but the position is not equal, memory chunk write position: {0}, file chunk write position: {1}.", result.Position, position));
                 }
+            }
+            else if (_cacheItems != null && recordBuffer != null)
+            {
+                var index = writtenPosition % _chunkConfig.ChunkLocalCacheSize;
+                _cacheItems[index] = new CacheItem { RecordPosition = writtenPosition, RecordBuffer = recordBuffer };
             }
 
             return RecordWriteResult.Successful(position);
@@ -625,6 +708,15 @@ namespace EQueue.Broker.Storage
 
                 if (!_isMemoryChunk)
                 {
+                    if (_chunkConfig.EnableCalculateLatestChunkReadStatisticInfo)
+                    {
+                        _scheduleService.StopTask("PrintReadStatus");
+                    }
+                    if (_cacheItems != null)
+                    {
+                        _cacheItems = null;
+                    }
+
                     SetFileAttributes();
                     if (_memoryChunk != null)
                     {
@@ -646,6 +738,17 @@ namespace EQueue.Broker.Storage
                     Flush();
                 }
 
+                if (!_isMemoryChunk)
+                {
+                    if (_chunkConfig.EnableCalculateLatestChunkReadStatisticInfo)
+                    {
+                        _scheduleService.StopTask("PrintReadStatus");
+                    }
+                    if (_cacheItems != null)
+                    {
+                        _cacheItems = null;
+                    }
+                }
                 CloseAllReaderWorkItems();
                 FreeMemory();
             }
@@ -662,6 +765,15 @@ namespace EQueue.Broker.Storage
 
             //首先设置删除标记
             _isDestroying = true;
+
+            if (_chunkConfig.EnableCalculateLatestChunkReadStatisticInfo)
+            {
+                _scheduleService.StopTask("PrintReadStatus");
+            }
+            if (_cacheItems != null)
+            {
+                _cacheItems = null;
+            }
 
             //释放缓存的内存
             UnCacheFromMemory();
@@ -680,7 +792,7 @@ namespace EQueue.Broker.Storage
 
         private void CheckCompletedFileChunk()
         {
-            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.RandomAccess))
+            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _chunkConfig.ChunkReadBuffer, FileOptions.RandomAccess))
             {
                 //检查Chunk文件的实际大小是否正确
                 var chunkFileSize = ChunkHeader.Size + _chunkFooter.ChunkDataTotalSize + ChunkFooter.Size;
@@ -809,7 +921,7 @@ namespace EQueue.Broker.Storage
             }
             else
             {
-                stream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.None);
+                stream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _chunkConfig.ChunkReadBuffer, FileOptions.None);
             }
             return new ReaderWorkItem(stream, new BinaryReader(stream));
         }
@@ -883,7 +995,7 @@ namespace EQueue.Broker.Storage
             return ChunkHeader.Size + chunkHeader.ChunkDataTotalSize + ChunkFooter.Size;
         }
 
-        private T TryReadForwardInternal<T>(ReaderWorkItem readerWorkItem, long dataPosition, Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
+        private T TryReadForwardInternal<T>(ReaderWorkItem readerWorkItem, long dataPosition, Func<byte[], T> readRecordFunc) where T : ILogRecord
         {
             var currentDataPosition = DataPosition;
 
@@ -916,7 +1028,8 @@ namespace EQueue.Broker.Storage
                                   length, dataPosition, currentDataPosition, this));
             }
 
-            var record = readRecordFunc(length, readerWorkItem.Reader);
+            var recordBuffer = readerWorkItem.Reader.ReadBytes(length);
+            var record = readRecordFunc(recordBuffer);
             if (record == null)
             {
                 throw new ChunkReadException(
@@ -934,7 +1047,7 @@ namespace EQueue.Broker.Storage
 
             return record;
         }
-        private T TryReadFixedSizeForwardInternal<T>(ReaderWorkItem readerWorkItem, long dataPosition, Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
+        private T TryReadFixedSizeForwardInternal<T>(ReaderWorkItem readerWorkItem, long dataPosition, Func<byte[], T> readRecordFunc) where T : ILogRecord
         {
             var currentDataPosition = DataPosition;
 
@@ -948,7 +1061,8 @@ namespace EQueue.Broker.Storage
             var startStreamPosition = GetStreamPosition(dataPosition);
             readerWorkItem.Stream.Position = startStreamPosition;
 
-            var record = readRecordFunc(_chunkConfig.ChunkDataUnitSize, readerWorkItem.Reader);
+            var recordBuffer = readerWorkItem.Reader.ReadBytes(_chunkConfig.ChunkDataUnitSize);
+            var record = readRecordFunc(recordBuffer);
             if (record == null)
             {
                 throw new ChunkReadException(
@@ -967,9 +1081,9 @@ namespace EQueue.Broker.Storage
             return record;
         }
 
-        private bool TryParsingDataPosition<T>(Func<int, BinaryReader, T> readRecordFunc, out ChunkHeader chunkHeader, out int dataPosition) where T : ILogRecord
+        private bool TryParsingDataPosition<T>(Func<byte[], T> readRecordFunc, out ChunkHeader chunkHeader, out int dataPosition) where T : ILogRecord
         {
-            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, ReadBufferSize, FileOptions.SequentialScan))
+            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _chunkConfig.ChunkReadBuffer, FileOptions.SequentialScan))
             {
                 using (var reader = new BinaryReader(fileStream))
                 {
@@ -1014,7 +1128,7 @@ namespace EQueue.Broker.Storage
                 }
             }
         }
-        private bool TryReadRecord<T>(FileStream stream, BinaryReader reader, long maxStreamPosition, Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
+        private bool TryReadRecord<T>(FileStream stream, BinaryReader reader, long maxStreamPosition, Func<byte[], T> readRecordFunc) where T : ILogRecord
         {
             try
             {
@@ -1034,7 +1148,8 @@ namespace EQueue.Broker.Storage
                     return false;
                 }
 
-                var record = readRecordFunc(length, reader);
+                var recordBuffer = reader.ReadBytes(length);
+                var record = readRecordFunc(recordBuffer);
                 if (record == null)
                 {
                     return false;
@@ -1053,7 +1168,7 @@ namespace EQueue.Broker.Storage
                 return false;
             }
         }
-        private bool TryReadFixedSizeRecord<T>(FileStream stream, BinaryReader reader, long maxStreamPosition, Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
+        private bool TryReadFixedSizeRecord<T>(FileStream stream, BinaryReader reader, long maxStreamPosition, Func<byte[], T> readRecordFunc) where T : ILogRecord
         {
             try
             {
@@ -1063,7 +1178,8 @@ namespace EQueue.Broker.Storage
                     return false;
                 }
 
-                var record = readRecordFunc(_chunkConfig.ChunkDataUnitSize, reader);
+                var recordBuffer = reader.ReadBytes(_chunkConfig.ChunkDataUnitSize);
+                var record = readRecordFunc(recordBuffer);
                 if (record == null)
                 {
                     return false;
@@ -1092,8 +1208,38 @@ namespace EQueue.Broker.Storage
         {
             Helper.EatException(() => File.SetAttributes(_filename, FileAttributes.NotContentIndexed));
         }
+        private void PrintReadStatus()
+        {
+            if (_logger.IsDebugEnabled)
+            {
+                var fileReadCount = _fileReadCount;
+                var fileReadThroughput = fileReadCount - _previousFileReadCount;
+                _previousFileReadCount = fileReadCount;
+
+                var unmanagedReadCount = _unmanagedReadCount;
+                var unmanagedReadThroughput = unmanagedReadCount - _previousUnmanagedReadCount;
+                _previousUnmanagedReadCount = unmanagedReadCount;
+
+                var cacheItemReadCount = _cacheItemReadCount;
+                var cacheReadThroughput = cacheItemReadCount - _previousCacheReadCount;
+                _previousCacheReadCount = cacheItemReadCount;
+
+                _logger.DebugFormat("Read status: chunk: {0}, currentTime: {1}, fileRead: {2}/s, unmanagedRead: {3}/s, cacheRead: {4}/s",
+                    this,
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                    fileReadThroughput,
+                    unmanagedReadThroughput,
+                    cacheReadThroughput);
+            }
+        }
 
         #endregion
+
+        class CacheItem
+        {
+            public long RecordPosition;
+            public byte[] RecordBuffer;
+        }
 
         public override string ToString()
         {

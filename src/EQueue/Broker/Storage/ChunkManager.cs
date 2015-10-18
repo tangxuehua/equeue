@@ -79,7 +79,7 @@ namespace EQueue.Broker.Storage
                 }
             }
         }
-        public void Load<T>(Func<int, BinaryReader, T> readRecordFunc) where T : ILogRecord
+        public void Load<T>(Func<byte[], T> readRecordFunc) where T : ILogRecord
         {
             lock (_chunksLocker)
             {

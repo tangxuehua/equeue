@@ -122,10 +122,10 @@ namespace EQueue.Broker
             }
         }
 
-        private QueueLogRecord ReadMessageIndex(int length, BinaryReader reader)
+        private QueueLogRecord ReadMessageIndex(byte[] recordBuffer)
         {
             var record = new QueueLogRecord();
-            record.ReadFrom(length, reader);
+            record.ReadFrom(recordBuffer);
             if (record.MessageLogPosition <= 0)
             {
                 return null;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using EQueue.Utils;
 
 namespace EQueue.Protocols
 {
@@ -25,40 +26,21 @@ namespace EQueue.Protocols
             RoutingKey = routingKey;
         }
 
-        public virtual void ReadFrom(int length, BinaryReader reader)
+        public virtual void ReadFrom(byte[] recordBuffer)
         {
-            //logPosition
-            LogPosition = reader.ReadInt64();
+            var srcOffset = 0;
 
-            //messageId
-            MessageId = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
-
-            //topic
-            Topic = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
-
-            //routingKey
-            RoutingKey = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
-
-            //key
-            Key = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
-
-            //code
-            Code = reader.ReadInt32();
-
-            //body
-            Body = reader.ReadBytes(reader.ReadInt32());
-
-            //queueId
-            QueueId = reader.ReadInt32();
-
-            //queueOffset
-            QueueOffset = reader.ReadInt64();
-
-            //createdTime
-            CreatedTime = new DateTime(reader.ReadInt64());
-
-            //storedTime
-            StoredTime = new DateTime(reader.ReadInt64());
+            LogPosition = MessageUtils.DecodeLong(recordBuffer, srcOffset, out srcOffset);
+            MessageId = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
+            Topic = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
+            RoutingKey = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
+            Key = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
+            Code = MessageUtils.DecodeInt(recordBuffer, srcOffset, out srcOffset);
+            Body = MessageUtils.DecodeBytes(recordBuffer, srcOffset, out srcOffset);
+            QueueId = MessageUtils.DecodeInt(recordBuffer, srcOffset, out srcOffset);
+            QueueOffset = MessageUtils.DecodeLong(recordBuffer, srcOffset, out srcOffset);
+            CreatedTime = MessageUtils.DecodeDateTime(recordBuffer, srcOffset, out srcOffset);
+            StoredTime = MessageUtils.DecodeDateTime(recordBuffer, srcOffset, out srcOffset);
         }
         public bool IsValid()
         {

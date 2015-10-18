@@ -29,9 +29,12 @@ namespace EQueue.Broker.Storage
         /// <summary>Chunk文件允许最大的记录的大小，字节为单位；
         /// </summary>
         public readonly int MaxLogRecordSize;
-        /// <summary>消息写入时的缓冲大小，字节为单位；
+        /// <summary>Chunk写入时的缓冲大小，字节为单位；
         /// </summary>
-        public readonly int WriteMessageBuffer;
+        public readonly int ChunkWriteBuffer;
+        /// <summary>Chunk读取时的缓冲大小，字节为单位；
+        /// </summary>
+        public readonly int ChunkReadBuffer;
         /// <summary>是否强制缓存Chunk文件到非托管内存；
         /// </summary>
         public readonly bool ForceCacheChunkInMemory;
@@ -53,6 +56,12 @@ namespace EQueue.Broker.Storage
         /// </remarks>
         /// </summary>
         public readonly int ChunkInactiveTimeMaxSeconds;
+        /// <summary>表示当Chunk文件无法分配非托管内存时，使用本地的环形数组进行缓存最新的记录。此属性指定本地环形数组的大小；
+        /// </summary>
+        public readonly int ChunkLocalCacheSize;
+        /// <summary>是否允许统计最新的一个Chunk的数据读取的统计信息，可以统计每秒消息分别从文件、非托管内存、本地缓存读取的数量；如果允许，则结果将以Debug日志级别打印输出；
+        /// </summary>
+        public readonly bool EnableCalculateLatestChunkReadStatisticInfo;
 
         public ChunkManagerConfig(string basePath,
                                IFileNamingStrategy fileNamingStrategy,
@@ -62,12 +71,15 @@ namespace EQueue.Broker.Storage
                                int flushChunkIntervalMilliseconds,
                                int chunkReaderCount,
                                int maxLogRecordSize,
-                               int writeMessageBuffer,
+                               int chunkWriteBuffer,
+                               int chunkReadBuffer,
                                bool forceCacheChunkInMemory,
                                int chunkCacheMaxPercent,
                                int chunkCacheMinPercent,
                                int preCacheChunkCount,
-                               int chunkInactiveTimeMaxSeconds)
+                               int chunkInactiveTimeMaxSeconds,
+                               int chunkLocalCacheSize,
+                               bool enableCalculateLatestChunkReadStatisticInfo)
         {
             Ensure.NotNullOrEmpty(basePath, "basePath");
             Ensure.NotNull(fileNamingStrategy, "fileNamingStrategy");
@@ -76,11 +88,13 @@ namespace EQueue.Broker.Storage
             Ensure.Nonnegative(chunkDataCount, "chunkDataCount");
             Ensure.Positive(flushChunkIntervalMilliseconds, "flushChunkIntervalMilliseconds");
             Ensure.Positive(maxLogRecordSize, "maxLogRecordSize");
-            Ensure.Positive(writeMessageBuffer, "writeMessageBuffer");
+            Ensure.Positive(chunkWriteBuffer, "chunkWriteBuffer");
+            Ensure.Positive(chunkReadBuffer, "chunkReadBuffer");
             Ensure.Positive(chunkCacheMaxPercent, "chunkCacheMaxPercent");
             Ensure.Positive(chunkCacheMinPercent, "chunkCacheMinPercent");
             Ensure.Nonnegative(preCacheChunkCount, "preCacheChunkCount");
             Ensure.Nonnegative(chunkInactiveTimeMaxSeconds, "chunkInactiveTimeMaxSeconds");
+            Ensure.Positive(chunkLocalCacheSize, "chunkLocalCacheSize");
 
             if (chunkDataSize <= 0 && (chunkDataUnitSize <= 0 || chunkDataCount <= 0))
             {
@@ -95,12 +109,15 @@ namespace EQueue.Broker.Storage
             FlushChunkIntervalMilliseconds = flushChunkIntervalMilliseconds;
             ChunkReaderCount = chunkReaderCount;
             MaxLogRecordSize = maxLogRecordSize;
-            WriteMessageBuffer = writeMessageBuffer;
+            ChunkWriteBuffer = chunkWriteBuffer;
+            ChunkReadBuffer = chunkReadBuffer;
             ForceCacheChunkInMemory = forceCacheChunkInMemory;
             ChunkCacheMaxPercent = chunkCacheMaxPercent;
             ChunkCacheMinPercent = chunkCacheMinPercent;
             PreCacheChunkCount = preCacheChunkCount;
             ChunkInactiveTimeMaxSeconds = chunkInactiveTimeMaxSeconds;
+            ChunkLocalCacheSize = chunkLocalCacheSize;
+            EnableCalculateLatestChunkReadStatisticInfo = enableCalculateLatestChunkReadStatisticInfo;
         }
 
         public int GetChunkDataSize()

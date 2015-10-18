@@ -5,6 +5,6 @@ namespace EQueue.Broker.Storage.LogRecords
     public interface ILogRecord
     {
         void WriteTo(long logPosition, BinaryWriter writer);
-        void ReadFrom(int length, BinaryReader reader);
+        void ReadFrom(byte[] recordBuffer);
     }
 }

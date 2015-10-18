@@ -12,11 +12,11 @@ namespace EQueue.Broker.Storage.LogRecords
             writer.Write(RecordBuffer);
         }
 
-        public void ReadFrom(int length, BinaryReader reader)
+        public void ReadFrom(byte[] recordBuffer)
         {
-            RecordBuffer = new byte[4 + length];
-            Buffer.BlockCopy(BitConverter.GetBytes(length), 0, RecordBuffer, 0, 4);
-            reader.Read(RecordBuffer, 4, length);
+            RecordBuffer = new byte[4 + recordBuffer.Length];
+            Buffer.BlockCopy(BitConverter.GetBytes(recordBuffer.Length), 0, RecordBuffer, 0, 4);
+            Buffer.BlockCopy(recordBuffer, 0, RecordBuffer, 4, recordBuffer.Length);
         }
     }
 }

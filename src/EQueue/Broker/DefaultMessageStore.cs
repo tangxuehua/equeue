@@ -114,10 +114,10 @@ namespace EQueue.Broker
                 }
             }
         }
-        private MessageLogRecord ReadMessage(int length, BinaryReader reader)
+        private MessageLogRecord ReadMessage(byte[] recordBuffer)
         {
             var record = new MessageLogRecord();
-            record.ReadFrom(length, reader);
+            record.ReadFrom(recordBuffer);
             return record;
         }
 

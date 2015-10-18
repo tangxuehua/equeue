@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using EQueue.Broker.Storage.LogRecords;
 
 namespace EQueue.Broker.Storage
@@ -16,9 +17,9 @@ namespace EQueue.Broker.Storage
         {
             writer.Write(MessageLogPosition);
         }
-        public void ReadFrom(int length, BinaryReader reader)
+        public void ReadFrom(byte[] recordBuffer)
         {
-            MessageLogPosition = reader.ReadInt64();
+            MessageLogPosition = BitConverter.ToInt64(recordBuffer, 0);
         }
     }
 }
