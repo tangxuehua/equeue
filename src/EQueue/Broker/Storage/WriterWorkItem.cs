@@ -4,8 +4,6 @@ namespace EQueue.Broker.Storage
 {
     internal class WriterWorkItem
     {
-        private readonly FileStream _fileStream;
-
         public readonly MemoryStream BufferStream;
         public readonly BinaryWriter BufferWriter;
         public readonly Stream WorkingStream;
@@ -16,7 +14,6 @@ namespace EQueue.Broker.Storage
             WorkingStream = stream;
             BufferStream = new MemoryStream(8192);
             BufferWriter = new BinaryWriter(BufferStream);
-            _fileStream = WorkingStream as FileStream;
         }
 
         public void AppendData(byte[] buf, int offset, int len)
@@ -25,11 +22,8 @@ namespace EQueue.Broker.Storage
         }
         public void FlushToDisk()
         {
-            if (_fileStream != null)
-            {
-                _fileStream.Flush(true);
-                LastFlushedPosition = _fileStream.Position;
-            }
+            WorkingStream.Flush();
+            LastFlushedPosition = WorkingStream.Position;
         }
         public void ResizeStream(long length)
         {

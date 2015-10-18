@@ -23,6 +23,9 @@ namespace EQueue.Broker.Storage
         /// <summary>Chunk文件刷磁盘的间隔，毫秒为单位；
         /// </summary>
         public readonly int FlushChunkIntervalMilliseconds;
+        /// <summary>表示是否同步刷盘，如果选择同步刷盘，则消息会写完全写入磁盘后再返回给消息发送者；默认为false，即异步刷盘，每个FlushChunkIntervalMilliseconds刷一次磁盘；
+        /// </summary>
+        public readonly bool SyncFlush;
         /// <summary>Chunk文件的BinaryReader的个数；
         /// </summary>
         public readonly int ChunkReaderCount;
@@ -69,6 +72,7 @@ namespace EQueue.Broker.Storage
                                int chunkDataUnitSize,
                                int chunkDataCount,
                                int flushChunkIntervalMilliseconds,
+                               bool syncFlush,
                                int chunkReaderCount,
                                int maxLogRecordSize,
                                int chunkWriteBuffer,
@@ -107,6 +111,7 @@ namespace EQueue.Broker.Storage
             ChunkDataUnitSize = chunkDataUnitSize;
             ChunkDataCount = chunkDataCount;
             FlushChunkIntervalMilliseconds = flushChunkIntervalMilliseconds;
+            SyncFlush = syncFlush;
             ChunkReaderCount = chunkReaderCount;
             MaxLogRecordSize = maxLogRecordSize;
             ChunkWriteBuffer = chunkWriteBuffer;

@@ -29,7 +29,11 @@ namespace EQueue.Broker.Storage
         public void Open()
         {
             _currentChunk = _chunkManager.GetLastChunk();
-            _scheduleService.StartTask(_flushTaskName, Flush, 1000, _chunkManager.Config.FlushChunkIntervalMilliseconds);
+
+            if (!_chunkManager.Config.SyncFlush)
+            {
+                _scheduleService.StartTask(_flushTaskName, Flush, 1000, _chunkManager.Config.FlushChunkIntervalMilliseconds);
+            }
         }
         public long Write(ILogRecord record)
         {
@@ -66,6 +70,12 @@ namespace EQueue.Broker.Storage
                     {
                         throw new ChunkWriteException(_currentChunk.ToString(), "Write record to chunk failed.");
                     }
+                }
+
+                //如果需要同步刷盘，则立即同步刷盘
+                if (_chunkManager.Config.SyncFlush)
+                {
+                    _currentChunk.Flush();
                 }
 
                 //返回数据写入位置
