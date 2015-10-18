@@ -22,10 +22,10 @@ namespace EQueue.AdminWeb.Controllers
                 TopicCount = result.TopicCount,
                 QueueCount = result.QueueCount,
                 ConsumerGroupCount = result.ConsumerGroupCount,
-                UnConsumedQueueMessageCount = result.UnConsumedQueueMessageCount,
-                CurrentMessageOffset = result.CurrentMessageOffset,
-                PersistedMessageOffset = result.CurrentMessageOffset,
-                UnPersistedMessageCount = result.CurrentMessageOffset - result.CurrentMessageOffset,
+                UnConsumedQueueMessageCount = result.MinConsumedMessagePosition,
+                CurrentMessageOffset = result.CurrentMessagePosition,
+                PersistedMessageOffset = result.CurrentMessagePosition,
+                UnPersistedMessageCount = result.CurrentMessagePosition - result.CurrentMessagePosition,
                 MinMessageOffset = result.MinMessageOffset
             });
         }

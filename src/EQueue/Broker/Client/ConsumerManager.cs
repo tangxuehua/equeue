@@ -47,6 +47,10 @@ namespace EQueue.Broker.Client
         {
             return _consumerGroupDict.Values.ToList();
         }
+        public int GetConsumerCount()
+        {
+            return GetAllConsumerGroups().Sum(x => x.GetConsumerCount());
+        }
         public ConsumerGroup GetConsumerGroup(string groupName)
         {
             ConsumerGroup consumerGroup;

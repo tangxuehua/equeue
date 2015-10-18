@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Threading;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using EQueue.Broker.DeleteMessageStrategies;
@@ -32,6 +30,18 @@ namespace EQueue.Broker
             {
                 return _chunkWriter.CurrentChunk.GlobalDataPosition;
             }
+        }
+        public int ChunkCount
+        {
+            get { return _chunkManager.GetChunkCount(); }
+        }
+        public int MinChunkNum
+        {
+            get { return _chunkManager.GetFirstChunk().ChunkHeader.ChunkNumber; }
+        }
+        public int MaxChunkNum
+        {
+            get { return _chunkManager.GetLastChunk().ChunkHeader.ChunkNumber; }
         }
 
         public DefaultMessageStore(IDeleteMessageStrategy deleteMessageStragegy, IScheduleService scheduleService, ILoggerFactory loggerFactory)
@@ -93,14 +103,7 @@ namespace EQueue.Broker
         }
         public void UpdateMinConsumedMessagePosition(long minConsumedMessagePosition)
         {
-            if (_minConsumedMessagePosition == 0 && minConsumedMessagePosition > 0)
-            {
-                _minConsumedMessagePosition = minConsumedMessagePosition;
-            }
-            else if (_minConsumedMessagePosition < minConsumedMessagePosition)
-            {
-                _minConsumedMessagePosition = minConsumedMessagePosition;
-            }
+            _minConsumedMessagePosition = minConsumedMessagePosition;
         }
 
         private void DeleteMessages()

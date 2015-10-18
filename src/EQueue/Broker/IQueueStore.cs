@@ -11,7 +11,8 @@ namespace EQueue.Broker
         IEnumerable<string> GetAllTopics();
         Queue GetQueue(string topic, int queueId);
         int GetAllQueueCount();
-        long GetAllQueueUnConusmedMessageCount();
+        long GetMinConusmedMessagePosition();
+        bool IsTopicExist(string topic);
         bool IsQueueExist(string topic, int queueId);
         long GetQueueCurrentOffset(string topic, int queueId);
         long GetQueueMinOffset(string topic, int queueId);
@@ -21,7 +22,6 @@ namespace EQueue.Broker
         void DisableQueue(string topic, int queueId);
         void CreateTopic(string topic, int initialQueueCount);
         IEnumerable<Queue> QueryQueues(string topic);
-        IEnumerable<Queue> FindQueues(string topic, QueueStatus? status = null);
-        IEnumerable<Queue> GetOrCreateQueues(string topic, QueueStatus? status = null);
+        IEnumerable<Queue> GetQueues(string topic, QueueStatus? status = null, bool autoCreate = false);
     }
 }

@@ -7,6 +7,9 @@ namespace EQueue.Broker
     {
         long MinMessagePosition { get; }
         long CurrentMessagePosition { get; }
+        int ChunkCount { get; }
+        int MinChunkNum { get; }
+        int MaxChunkNum { get; }
 
         int Load();
         void Start();

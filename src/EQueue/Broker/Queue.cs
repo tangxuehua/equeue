@@ -90,6 +90,12 @@ namespace EQueue.Broker
             _setting.Status = QueueStatus.Disabled;
             SaveQueueSetting();
         }
+        public void Delete()
+        {
+            Close();
+            CleanChunks();
+            Directory.Delete(_chunkManager.ChunkPath);
+        }
         public long IncrementNextOffset()
         {
             return _nextOffset++;

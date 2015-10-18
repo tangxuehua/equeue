@@ -77,6 +77,8 @@ namespace EQueue.Broker.Storage
                     File.SetAttributes(file, FileAttributes.Normal);
                     File.Delete(file);
                 }
+
+                _chunks.Clear();
             }
         }
         public void Load<T>(Func<byte[], T> readRecordFunc) where T : ILogRecord
@@ -116,6 +118,10 @@ namespace EQueue.Broker.Storage
                     AddChunk(Chunk.FromOngoingFile(lastFile, this, _config, readRecordFunc));
                 }
             }
+        }
+        public int GetChunkCount()
+        {
+            return _chunks.Count;
         }
         public IList<Chunk> GetAllChunks()
         {

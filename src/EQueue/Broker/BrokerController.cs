@@ -115,10 +115,14 @@ namespace EQueue.Broker
             var statisticInfo = new BrokerStatisticInfo();
             statisticInfo.TopicCount = _queueStore.GetAllTopics().Count();
             statisticInfo.QueueCount = _queueStore.GetAllQueueCount();
-            statisticInfo.UnConsumedQueueMessageCount = _queueStore.GetAllQueueUnConusmedMessageCount();
-            statisticInfo.CurrentMessageOffset = _messageStore.CurrentMessagePosition;
+            statisticInfo.CurrentMessagePosition = _messageStore.CurrentMessagePosition;
             statisticInfo.MinMessageOffset = _messageStore.MinMessagePosition;
+            statisticInfo.MinConsumedMessagePosition = _queueStore.GetMinConusmedMessagePosition();
             statisticInfo.ConsumerGroupCount = _consumeOffsetStore.GetConsumerGroupCount();
+            statisticInfo.ConsumerCount = _consumerManager.GetConsumerCount();
+            statisticInfo.MessageChunkCount = _messageStore.ChunkCount;
+            statisticInfo.MessageMinChunkNum = _messageStore.MinChunkNum;
+            statisticInfo.MessageMaxChunkNum = _messageStore.MaxChunkNum;
             return statisticInfo;
         }
 

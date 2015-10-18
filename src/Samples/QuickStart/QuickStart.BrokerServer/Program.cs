@@ -27,7 +27,8 @@ namespace QuickStart.BrokerServer
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
-                .RegisterEQueueComponents();
+                .RegisterEQueueComponents()
+                .UseDeleteMessageByCountStrategy(20);
         }
     }
 }

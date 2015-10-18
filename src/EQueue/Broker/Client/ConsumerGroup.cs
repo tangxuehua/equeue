@@ -129,6 +129,10 @@ namespace EQueue.Broker.Client
         {
             return _consumerDict.Keys;
         }
+        public int GetConsumerCount()
+        {
+            return _consumerDict.Count;
+        }
         public IEnumerable<string> GetConsumerIdsForTopic(string topic)
         {
             return _consumerSubscriptionTopicDict.Where(x => x.Value.Any(y => y == topic)).Select(z => z.Key);

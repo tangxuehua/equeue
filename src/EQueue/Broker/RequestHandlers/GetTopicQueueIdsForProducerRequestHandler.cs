@@ -19,7 +19,7 @@ namespace EQueue.Broker.RequestHandlers
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var topic = Encoding.UTF8.GetString(remotingRequest.Body);
-            var queueIds = _queueService.GetOrCreateQueues(topic, QueueStatus.Normal).Select(x => x.QueueId).ToList();
+            var queueIds = _queueService.GetQueues(topic, QueueStatus.Normal, BrokerController.Instance.Setting.AutoCreateTopic).Select(x => x.QueueId).ToList();
             var data = Encoding.UTF8.GetBytes(string.Join(",", queueIds));
             return RemotingResponseFactory.CreateResponse(remotingRequest, data);
         }
