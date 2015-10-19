@@ -142,6 +142,11 @@ namespace EQueue.Broker.Storage
             {
                 chunk.InitCompleted();
             }
+            catch (OutOfMemoryException)
+            {
+                chunk.Dispose();
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.Error(string.Format("Chunk {0} init from completed file failed.", chunk), ex);
@@ -1243,7 +1248,7 @@ namespace EQueue.Broker.Storage
 
         public override string ToString()
         {
-            return string.Format("#{0} ({1},{2}-{3},{4})", _chunkHeader.ChunkNumber, _filename, _chunkHeader.ChunkDataStartPosition, _chunkHeader.ChunkDataEndPosition, _isMemoryChunk);
+            return string.Format("({0})", _filename);
         }
     }
 }
