@@ -70,10 +70,10 @@ namespace EQueue.Broker
         {
             _chunkWriter.Write(new QueueLogRecord(messagePosition + 1));
         }
-        public long GetMessagePosition(long queueOffset)
+        public long GetMessagePosition(long queueOffset, bool autoCache = true)
         {
             var position = queueOffset * _chunkManager.Config.ChunkDataUnitSize;
-            var record = _chunkReader.TryReadAt(position, ReadMessageIndex);
+            var record = _chunkReader.TryReadAt(position, ReadMessageIndex, autoCache);
             if (record == null)
             {
                 return -1L;
@@ -106,23 +106,22 @@ namespace EQueue.Broker
         }
         public void DeleteMessages(long minMessagePosition)
         {
-            var chunks = _chunkManager.GetAllChunks().Where(x => x.IsCompleted);
+            var chunks = _chunkManager.GetAllChunks().Where(x => x.IsCompleted).OrderBy(x => x.ChunkHeader.ChunkNumber);
 
             foreach (var chunk in chunks)
             {
                 var maxPosition = chunk.ChunkHeader.ChunkDataEndPosition - _chunkManager.Config.ChunkDataUnitSize;
-                var record = _chunkReader.TryReadAt(maxPosition, ReadMessageIndex);
+                var record = _chunkReader.TryReadAt(maxPosition, ReadMessageIndex, false);
                 if (record == null)
                 {
                     continue;
                 }
                 var chunkLastMessagePosition = record.MessageLogPosition - 1;
-
                 if (chunkLastMessagePosition < minMessagePosition)
                 {
                     if (_chunkManager.RemoveChunk(chunk))
                     {
-                        _logger.InfoFormat("Queue chunk {0} is deleted, chunk last message position: {1}", chunk, chunkLastMessagePosition);
+                        _logger.InfoFormat("Queue (topic: {0}, queueId: {1}) chunk #{2} is deleted, chunkLastMessagePosition: {3}, messageStoreMinMessagePosition: {4}", Topic, QueueId, chunk.ChunkHeader.ChunkNumber, chunkLastMessagePosition, minMessagePosition);
                     }
                 }
             }

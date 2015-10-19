@@ -11,12 +11,10 @@ namespace EQueue.Broker.Client
     {
         private readonly ConcurrentDictionary<string, ConsumerGroup> _consumerGroupDict = new ConcurrentDictionary<string, ConsumerGroup>();
         private readonly IScheduleService _scheduleService;
-        private readonly ILogger _logger;
 
         public ConsumerManager()
         {
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
         public void Start()

@@ -111,7 +111,7 @@ namespace EQueue.Broker
 
             if (queue != null && minConsumedQueueOffset >= 0)
             {
-                return queue.GetMessagePosition(minConsumedQueueOffset);
+                return queue.GetMessagePosition(minConsumedQueueOffset, false);
             }
 
             return -1L;
@@ -350,7 +350,8 @@ namespace EQueue.Broker
             {
                 try
                 {
-                    foreach (var queue in _queueDict.Values)
+                    var queues = _queueDict.OrderBy(x => x.Key).Select(x => x.Value).ToList();
+                    foreach (var queue in queues)
                     {
                         try
                         {
@@ -358,7 +359,7 @@ namespace EQueue.Broker
                         }
                         catch (Exception ex)
                         {
-                            _logger.Error(string.Format("Delete queue messages has exception, topic: {0}, queueId: {1}", queue.Topic, queue.QueueId), ex);
+                            _logger.Error(string.Format("Delete queue (topic: {0}, queueId: {1}) messages has exception.", queue.Topic, queue.QueueId), ex);
                         }
                     }
                 }

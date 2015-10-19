@@ -284,10 +284,6 @@ namespace EQueue.Broker.Storage
                         try
                         {
                             _memoryChunk = Chunk.CreateNew(_filename, chunkNumber, _chunkManager, _chunkConfig, true);
-                            if (_logger.IsDebugEnabled)
-                            {
-                                _logger.DebugFormat("Cached new chunk {0} to memory.", this);
-                            }
                         }
                         catch (OutOfMemoryException)
                         {
@@ -403,10 +399,6 @@ namespace EQueue.Broker.Storage
                     try
                     {
                         _memoryChunk = Chunk.FromOngoingFile<T>(_filename, _chunkManager, _chunkConfig, readRecordFunc, true);
-                        if (_logger.IsDebugEnabled)
-                        {
-                            _logger.DebugFormat("Cached ongoing chunk {0} to memory.", this);
-                        }
                     }
                     catch (OutOfMemoryException)
                     {
@@ -454,10 +446,6 @@ namespace EQueue.Broker.Storage
                         return false;
                     }
                     _memoryChunk = Chunk.FromCompletedFile(_filename, _chunkManager, _chunkConfig, true);
-                    if (_logger.IsDebugEnabled)
-                    {
-                        _logger.DebugFormat("Cached completed chunk {0} to memory.", this);
-                    }
                     if (shouldCacheNextChunk)
                     {
                         Task.Factory.StartNew(() => _chunkManager.TryCacheNextChunk(this));
@@ -490,10 +478,6 @@ namespace EQueue.Broker.Storage
                     var memoryChunk = _memoryChunk;
                     _memoryChunk = null;
                     memoryChunk.Dispose();
-                    if (_logger.IsDebugEnabled)
-                    {
-                        _logger.DebugFormat("Uncached completed chunk {0} from memory.", this);
-                    }
                     return true;
                 }
                 catch (Exception ex)
@@ -503,7 +487,7 @@ namespace EQueue.Broker.Storage
                 }
             }
         }
-        public T TryReadAt<T>(long dataPosition, Func<byte[], T> readRecordFunc) where T : class, ILogRecord
+        public T TryReadAt<T>(long dataPosition, Func<byte[], T> readRecordFunc, bool autoCache = true) where T : class, ILogRecord
         {
             if (_isDestroying)
             {
@@ -511,8 +495,6 @@ namespace EQueue.Broker.Storage
             }
 
             _lastActiveTime = DateTime.Now;
-
-            _chunkManager.TryCacheNextChunk(this);
 
             if (!_isMemoryChunk)
             {
@@ -544,7 +526,7 @@ namespace EQueue.Broker.Storage
                 }
             }
 
-            if (!_isMemoryChunk && _isCompleted && Interlocked.CompareExchange(ref _cachingChunk, 1, 0) == 0)
+            if (autoCache && !_isMemoryChunk && _isCompleted && Interlocked.CompareExchange(ref _cachingChunk, 1, 0) == 0)
             {
                 Task.Factory.StartNew(() => TryCacheInMemory(true));
             }
@@ -1229,9 +1211,8 @@ namespace EQueue.Broker.Storage
                 var cacheReadThroughput = cacheItemReadCount - _previousCacheReadCount;
                 _previousCacheReadCount = cacheItemReadCount;
 
-                _logger.DebugFormat("Read status: chunk: {0}, currentTime: {1}, fileRead: {2}/s, unmanagedRead: {3}/s, cacheRead: {4}/s",
-                    this,
-                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                _logger.DebugFormat("Read status: chunkNum: #{0}, fileRead: {1}/s, unmanagedRead: {2}/s, cacheRead: {3}/s",
+                    ChunkHeader.ChunkNumber,
                     fileReadThroughput,
                     unmanagedReadThroughput,
                     cacheReadThroughput);

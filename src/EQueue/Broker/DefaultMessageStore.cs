@@ -111,7 +111,11 @@ namespace EQueue.Broker
             {
                 if (_chunkManager.RemoveChunk(chunk))
                 {
-                    _logger.InfoFormat("Message chunk {0} is deleted.", chunk);
+                    _logger.InfoFormat("Message chunk #{0} is deleted, chunkPositionScale: [{1}, {2}], minConsumedMessagePosition: {3}",
+                        chunk.ChunkHeader.ChunkNumber,
+                        chunk.ChunkHeader.ChunkDataStartPosition,
+                        chunk.ChunkHeader.ChunkDataEndPosition,
+                        _minConsumedMessagePosition);
                 }
             }
         }
