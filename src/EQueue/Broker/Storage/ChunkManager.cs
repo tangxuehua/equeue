@@ -48,11 +48,6 @@ namespace EQueue.Broker.Storage
             _chunks = new ConcurrentDictionary<int, Chunk>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _uncacheChunkTaskName = string.Format("{0}.{1}.UncacheChunks", Name, this.GetType().Name);
-
-            if (!_config.ForceCacheChunkInMemory)
-            {
-                _scheduleService.StartTask(_uncacheChunkTaskName, () => UncacheChunks(), 1000, 1000);
-            }
         }
 
         public void Clean()
@@ -105,7 +100,7 @@ namespace EQueue.Broker.Storage
                     {
                         var file = files[i];
                         var chunk = Chunk.FromCompletedFile(file, this, _config);
-                        if (_config.ForceCacheChunkInMemory || cachedChunkCount < _config.PreCacheChunkCount)
+                        if (cachedChunkCount < _config.PreCacheChunkCount)
                         {
                             if (chunk.TryCacheInMemory(false))
                             {
@@ -117,6 +112,8 @@ namespace EQueue.Broker.Storage
                     var lastFile = files[files.Length - 1];
                     AddChunk(Chunk.FromOngoingFile(lastFile, this, _config, readRecordFunc));
                 }
+
+                _scheduleService.StartTask(_uncacheChunkTaskName, () => UncacheChunks(), 1000, 1000);
             }
         }
         public int GetChunkCount()
@@ -227,10 +224,7 @@ namespace EQueue.Broker.Storage
         {
             lock (_chunksLocker)
             {
-                if (!_config.ForceCacheChunkInMemory)
-                {
-                    _scheduleService.StopTask(_uncacheChunkTaskName);
-                }
+                _scheduleService.StopTask(_uncacheChunkTaskName);
 
                 foreach (var chunk in _chunks.Values)
                 {

@@ -89,12 +89,11 @@ namespace EQueue.Broker
                 4 * 1024 * 1024,
                 128 * 1024,
                 128 * 1024,
-                false,
                 chunkCacheMaxPercent,
                 chunkCacheMinPercent,
                 1,
                 5,
-                50000,
+                500000,
                 true);
             QueueChunkConfig = new ChunkManagerConfig(
                 Path.Combine(chunkFileStoreRootPath, @"queue-chunks"),
@@ -108,12 +107,11 @@ namespace EQueue.Broker
                 8,
                 128 * 1024,
                 128 * 1024,
-                true,
                 chunkCacheMaxPercent,
                 chunkCacheMinPercent,
                 1,
                 5,
-                50000,
+                500000,
                 false);
         }
     }

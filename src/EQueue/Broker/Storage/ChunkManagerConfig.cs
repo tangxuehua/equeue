@@ -38,9 +38,6 @@ namespace EQueue.Broker.Storage
         /// <summary>Chunk读取时的缓冲大小，字节为单位；
         /// </summary>
         public readonly int ChunkReadBuffer;
-        /// <summary>是否强制缓存Chunk文件到非托管内存；
-        /// </summary>
-        public readonly bool ForceCacheChunkInMemory;
         /// <summary>使用的总物理内存上限，如果超过上限，则不允许创建新的Chunk文件；
         /// </summary>
         public readonly int ChunkCacheMaxPercent;
@@ -77,7 +74,6 @@ namespace EQueue.Broker.Storage
                                int maxLogRecordSize,
                                int chunkWriteBuffer,
                                int chunkReadBuffer,
-                               bool forceCacheChunkInMemory,
                                int chunkCacheMaxPercent,
                                int chunkCacheMinPercent,
                                int preCacheChunkCount,
@@ -116,7 +112,6 @@ namespace EQueue.Broker.Storage
             MaxLogRecordSize = maxLogRecordSize;
             ChunkWriteBuffer = chunkWriteBuffer;
             ChunkReadBuffer = chunkReadBuffer;
-            ForceCacheChunkInMemory = forceCacheChunkInMemory;
             ChunkCacheMaxPercent = chunkCacheMaxPercent;
             ChunkCacheMinPercent = chunkCacheMinPercent;
             PreCacheChunkCount = preCacheChunkCount;
