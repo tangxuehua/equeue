@@ -18,7 +18,7 @@ namespace EQueue.Broker.Storage
         #region Private Variables
 
         private static readonly ILogger _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Chunk));
-        private readonly IScheduleService _scheduleService;
+        private static readonly IChunkReadStatisticService _consumeStatisticService = ObjectContainer.Resolve<IChunkReadStatisticService>();
 
         private ChunkHeader _chunkHeader;
         private ChunkFooter _chunkFooter;
@@ -39,13 +39,6 @@ namespace EQueue.Broker.Storage
         private DateTime _lastActiveTime;
         private bool _isReadersInitialized;
         private int _flushedDataPosition;
-
-        private long _fileReadCount;
-        private long _cacheItemReadCount;
-        private long _unmanagedReadCount;
-        private long _previousFileReadCount;
-        private long _previousCacheReadCount;
-        private long _previousUnmanagedReadCount;
 
         private Chunk _memoryChunk;
         private CacheItem[] _cacheItems;
@@ -105,8 +98,6 @@ namespace EQueue.Broker.Storage
             _chunkConfig = chunkConfig;
             _isMemoryChunk = isMemoryChunk;
             _lastActiveTime = DateTime.Now;
-
-            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
         }
         ~Chunk()
         {
@@ -318,11 +309,6 @@ namespace EQueue.Broker.Storage
                 throw;
             }
 
-            if (!_isMemoryChunk && _chunkConfig.EnableCalculateLatestChunkReadStatisticInfo)
-            {
-                _scheduleService.StartTask("PrintReadStatus", PrintReadStatus, 1000, 1000);
-            }
-
             _lastActiveTime = DateTime.Now;
         }
         private void InitOngoing<T>(Func<byte[], T> readRecordFunc) where T : ILogRecord
@@ -416,11 +402,6 @@ namespace EQueue.Broker.Storage
                 }
             }
 
-            if (!_isMemoryChunk && _chunkConfig.EnableCalculateLatestChunkReadStatisticInfo)
-            {
-                _scheduleService.StartTask("PrintReadStatus", PrintReadStatus, 1000, 1000);
-            }
-
             _lastActiveTime = DateTime.Now;
         }
 
@@ -511,16 +492,19 @@ namespace EQueue.Broker.Storage
                                 string.Format("Cannot read a record from data position {0}. Something is seriously wrong in chunk {1}.",
                                               dataPosition, this));
                         }
-                        Interlocked.Increment(ref _cacheItemReadCount);
+                        if (_chunkConfig.RegisterReadStatus)
+                        {
+                            _consumeStatisticService.AddCachedReadCount(ChunkHeader.ChunkNumber);
+                        }
                         return record;
                     }
                 }
                 else if (_memoryChunk != null)
                 {
                     var record = _memoryChunk.TryReadAt<T>(dataPosition, readRecordFunc);
-                    if (record != null)
+                    if (record != null && _chunkConfig.RegisterReadStatus)
                     {
-                        Interlocked.Increment(ref _unmanagedReadCount);
+                        _consumeStatisticService.AddUnmanagedReadCount(ChunkHeader.ChunkNumber);
                     }
                     return record;
                 }
@@ -547,9 +531,9 @@ namespace EQueue.Broker.Storage
                     var record = IsFixedDataSize() ?
                         TryReadFixedSizeForwardInternal(readerWorkItem, dataPosition, readRecordFunc) :
                         TryReadForwardInternal(readerWorkItem, dataPosition, readRecordFunc);
-                    if (!_isMemoryChunk)
+                    if (!_isMemoryChunk && _chunkConfig.RegisterReadStatus)
                     {
-                        Interlocked.Increment(ref _fileReadCount);
+                        _consumeStatisticService.AddFileReadCount(ChunkHeader.ChunkNumber);
                     }
                     return record;
                 }
@@ -695,10 +679,6 @@ namespace EQueue.Broker.Storage
 
                 if (!_isMemoryChunk)
                 {
-                    if (_chunkConfig.EnableCalculateLatestChunkReadStatisticInfo)
-                    {
-                        _scheduleService.StopTask("PrintReadStatus");
-                    }
                     if (_cacheItems != null)
                     {
                         _cacheItems = null;
@@ -727,10 +707,6 @@ namespace EQueue.Broker.Storage
 
                 if (!_isMemoryChunk)
                 {
-                    if (_chunkConfig.EnableCalculateLatestChunkReadStatisticInfo)
-                    {
-                        _scheduleService.StopTask("PrintReadStatus");
-                    }
                     if (_cacheItems != null)
                     {
                         _cacheItems = null;
@@ -753,10 +729,6 @@ namespace EQueue.Broker.Storage
             //首先设置删除标记
             _isDestroying = true;
 
-            if (_chunkConfig.EnableCalculateLatestChunkReadStatisticInfo)
-            {
-                _scheduleService.StopTask("PrintReadStatus");
-            }
             if (_cacheItems != null)
             {
                 _cacheItems = null;
@@ -1194,29 +1166,6 @@ namespace EQueue.Broker.Storage
         private void SetFileAttributes()
         {
             Helper.EatException(() => File.SetAttributes(_filename, FileAttributes.NotContentIndexed));
-        }
-        private void PrintReadStatus()
-        {
-            if (_logger.IsDebugEnabled)
-            {
-                var fileReadCount = _fileReadCount;
-                var fileReadThroughput = fileReadCount - _previousFileReadCount;
-                _previousFileReadCount = fileReadCount;
-
-                var unmanagedReadCount = _unmanagedReadCount;
-                var unmanagedReadThroughput = unmanagedReadCount - _previousUnmanagedReadCount;
-                _previousUnmanagedReadCount = unmanagedReadCount;
-
-                var cacheItemReadCount = _cacheItemReadCount;
-                var cacheReadThroughput = cacheItemReadCount - _previousCacheReadCount;
-                _previousCacheReadCount = cacheItemReadCount;
-
-                _logger.DebugFormat("Read status: chunkNum: #{0}, fileRead: {1}/s, unmanagedRead: {2}/s, cacheRead: {3}/s",
-                    ChunkHeader.ChunkNumber,
-                    fileReadThroughput,
-                    unmanagedReadThroughput,
-                    cacheReadThroughput);
-            }
         }
 
         #endregion
