@@ -179,7 +179,7 @@ namespace EQueue.Broker.Storage
 
             _isCompleted = true;
 
-            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _chunkConfig.ChunkReadBuffer, FileOptions.RandomAccess))
+            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _chunkConfig.ChunkReadBuffer, FileOptions.None))
             {
                 using (var reader = new BinaryReader(fileStream))
                 {
@@ -246,7 +246,7 @@ namespace EQueue.Broker.Storage
                         File.Delete(_filename);
                     }
 
-                    tempFileStream = new FileStream(tempFilename, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.ChunkWriteBuffer, FileOptions.SequentialScan);
+                    tempFileStream = new FileStream(tempFilename, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.ChunkWriteBuffer, FileOptions.None);
                     tempFileStream.SetLength(fileSize);
                     tempFileStream.Write(_chunkHeader.AsByteArray(), 0, ChunkHeader.Size);
                     tempFileStream.Flush(true);
@@ -341,7 +341,7 @@ namespace EQueue.Broker.Storage
 
                 if (_dataPosition > 0)
                 {
-                    using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 8192, FileOptions.SequentialScan))
+                    using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 8192, FileOptions.None))
                     {
                         fileStream.Seek(ChunkHeader.Size, SeekOrigin.Begin);
                         var buffer = new byte[65536];
@@ -751,7 +751,7 @@ namespace EQueue.Broker.Storage
 
         private void CheckCompletedFileChunk()
         {
-            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _chunkConfig.ChunkReadBuffer, FileOptions.RandomAccess))
+            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _chunkConfig.ChunkReadBuffer, FileOptions.None))
             {
                 //检查Chunk文件的实际大小是否正确
                 var chunkFileSize = ChunkHeader.Size + _chunkFooter.ChunkDataTotalSize + ChunkFooter.Size;
@@ -780,7 +780,7 @@ namespace EQueue.Broker.Storage
         }
         private void LoadFileChunkToMemory()
         {
-            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 8192, FileOptions.SequentialScan))
+            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 8192, FileOptions.None))
             {
                 var cachedLength = (int)fileStream.Length;
                 var cachedData = Marshal.AllocHGlobal(cachedLength);
@@ -1042,7 +1042,7 @@ namespace EQueue.Broker.Storage
 
         private bool TryParsingDataPosition<T>(Func<byte[], T> readRecordFunc, out ChunkHeader chunkHeader, out int dataPosition) where T : ILogRecord
         {
-            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _chunkConfig.ChunkReadBuffer, FileOptions.SequentialScan))
+            using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _chunkConfig.ChunkReadBuffer, FileOptions.None))
             {
                 using (var reader = new BinaryReader(fileStream))
                 {
