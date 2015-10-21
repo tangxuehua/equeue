@@ -30,6 +30,7 @@ namespace EQueue.Broker
         private readonly SocketRemotingServer _adminSocketRemotingServer;
         private readonly SuspendedPullRequestManager _suspendedPullRequestManager;
         private readonly ConsoleEventHandlerService _service;
+        private readonly IChunkReadStatisticService _chunkReadStatisticService;
         private int _isShuttingdown = 0;
 
         public BrokerSetting Setting { get; private set; }
@@ -46,6 +47,7 @@ namespace EQueue.Broker
             _consumeOffsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
+            _chunkReadStatisticService = ObjectContainer.Resolve<IChunkReadStatisticService>();
 
             _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.ProducerAddress, Setting.SocketSetting);
             _consumerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ConsumerRemotingServer", Setting.ConsumerAddress, Setting.SocketSetting);
@@ -88,6 +90,7 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.Start();
             _producerSocketRemotingServer.Start();
             _adminSocketRemotingServer.Start();
+            _chunkReadStatisticService.Start();
             Interlocked.Exchange(ref _isShuttingdown, 0);
             _logger.InfoFormat("Broker started, timeSpent:{0}ms, producer:[{1}], consumer:[{2}], admin:[{3}]", watch.ElapsedMilliseconds, Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
             return this;
@@ -106,6 +109,7 @@ namespace EQueue.Broker
                 _messageStore.Shutdown();
                 _consumeOffsetStore.Shutdown();
                 _queueStore.Shutdown();
+                _chunkReadStatisticService.Shutdown();
                 _logger.InfoFormat("Broker shutdown success, timeSpent:{0}ms", watch.ElapsedMilliseconds);
             }
             return this;

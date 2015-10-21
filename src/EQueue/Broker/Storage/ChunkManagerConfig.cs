@@ -59,9 +59,9 @@ namespace EQueue.Broker.Storage
         /// <summary>表示当Chunk文件无法分配非托管内存时，使用本地的环形数组进行缓存最新的记录。此属性指定本地环形数组的大小；
         /// </summary>
         public readonly int ChunkLocalCacheSize;
-        /// <summary>是否允许统计最新的一个Chunk的数据读取的统计信息，可以统计每秒消息分别从文件、非托管内存、本地缓存读取的数量；如果允许，则结果将以Debug日志级别打印输出；
+        /// <summary>表示是否需要向ChunkRead统计服务注册读取情况，只有消息的Chunk需要注册，队列的Chunk不需要
         /// </summary>
-        public readonly bool EnableCalculateLatestChunkReadStatisticInfo;
+        public readonly bool RegisterReadStatus;
 
         public ChunkManagerConfig(string basePath,
                                IFileNamingStrategy fileNamingStrategy,
@@ -79,7 +79,7 @@ namespace EQueue.Broker.Storage
                                int preCacheChunkCount,
                                int chunkInactiveTimeMaxSeconds,
                                int chunkLocalCacheSize,
-                               bool enableCalculateLatestChunkReadStatisticInfo)
+                               bool registerReadStatus)
         {
             Ensure.NotNullOrEmpty(basePath, "basePath");
             Ensure.NotNull(fileNamingStrategy, "fileNamingStrategy");
@@ -117,7 +117,7 @@ namespace EQueue.Broker.Storage
             PreCacheChunkCount = preCacheChunkCount;
             ChunkInactiveTimeMaxSeconds = chunkInactiveTimeMaxSeconds;
             ChunkLocalCacheSize = chunkLocalCacheSize;
-            EnableCalculateLatestChunkReadStatisticInfo = enableCalculateLatestChunkReadStatisticInfo;
+            RegisterReadStatus = registerReadStatus;
         }
 
         public int GetChunkDataSize()
