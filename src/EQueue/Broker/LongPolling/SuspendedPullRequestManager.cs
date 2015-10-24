@@ -18,7 +18,7 @@ namespace EQueue.Broker.LongPolling
         private readonly BlockingCollection<NotifyItem> _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
         private readonly ConcurrentDictionary<string, PullRequest> _queueRequestDict = new ConcurrentDictionary<string, PullRequest>();
         private readonly IScheduleService _scheduleService;
-        private readonly IQueueStore _queueService;
+        private readonly IQueueStore _queueStore;
         private readonly ILogger _logger;
         private readonly string _checkBlockingPullRequestTaskName;
         private readonly TaskFactory _taskFactory;
@@ -29,7 +29,7 @@ namespace EQueue.Broker.LongPolling
         public SuspendedPullRequestManager()
         {
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _queueService = ObjectContainer.Resolve<IQueueStore>();
+            _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
             _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Environment.ProcessorCount));
@@ -113,7 +113,7 @@ namespace EQueue.Broker.LongPolling
                 var items = entry.Key.Split(new string[] { Separator }, StringSplitOptions.None);
                 var topic = items[0];
                 var queueId = int.Parse(items[1]);
-                var queueOffset = _queueService.GetQueueCurrentOffset(topic, queueId);
+                var queueOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
                 NotifyMessageArrived(topic, queueId, queueOffset);
             }
             var timeSpent = watch.ElapsedMilliseconds;

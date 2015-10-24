@@ -111,15 +111,15 @@ namespace EQueue.Utils
             var srcOffset = 0;
 
             //messageCode
-            Buffer.BlockCopy(buffer, 0, messageCodeBytes, 0, 4);
+            Buffer.BlockCopy(buffer, srcOffset, messageCodeBytes, 0, 4);
             srcOffset += 4;
 
             //queueId
-            Buffer.BlockCopy(buffer, 0, queueIdBytes, 0, 4);
+            Buffer.BlockCopy(buffer, srcOffset, queueIdBytes, 0, 4);
             srcOffset += 4;
 
             //queueOffset
-            Buffer.BlockCopy(buffer, 0, queueOffsetBytes, 0, 8);
+            Buffer.BlockCopy(buffer, srcOffset, queueOffsetBytes, 0, 8);
             srcOffset += 8;
 
             //messageId

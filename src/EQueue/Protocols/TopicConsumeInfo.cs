@@ -15,17 +15,11 @@ namespace EQueue.Protocols
         /// <summary>队列ID
         /// </summary>
         public int QueueId { get; set; }
-        /// <summary>队列当前最大位置
+        /// <summary>队列当前位置
         /// </summary>
-        public long QueueMaxOffset { get; set; }
-        /// <summary>消费位置
+        public long QueueCurrentOffset { get; set; }
+        /// <summary>队列消费位置
         /// </summary>
         public long ConsumedOffset { get; set; }
-        /// <summary>堆积消息数
-        /// </summary>
-        public long UnConsumedMessageCount { get; set; }
-        /// <summary>表示当前分组是否存在活跃（在线）的消费者
-        /// </summary>
-        public bool HasConsumer { get; set; }
     }
 }

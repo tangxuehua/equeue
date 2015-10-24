@@ -9,6 +9,7 @@ using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Utilities;
+using EQueue.Utils;
 
 namespace EQueue.Broker
 {
@@ -38,6 +39,7 @@ namespace EQueue.Broker
         public void Start()
         {
             LoadQueues();
+            CleanQueueConsumeOffsets();
             _scheduleService.StartTask(string.Format("{0}.UpdateMinConsumedMessagePosition", this.GetType().Name), UpdateMinConsumedMessagePosition, 1000 * 5, 1000 * 5);
             _scheduleService.StartTask(string.Format("{0}.DeleteQueueMessages", this.GetType().Name), DeleteQueueMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteQueueMessagesInterval);
         }
@@ -60,12 +62,11 @@ namespace EQueue.Broker
         }
         public bool IsQueueExist(string topic, int queueId)
         {
-            var key = CreateQueueKey(topic, queueId);
-            return _queueDict.ContainsKey(key);
+            return GetQueue(topic, queueId) != null;
         }
         public long GetQueueCurrentOffset(string topic, int queueId)
         {
-            var key = CreateQueueKey(topic, queueId);
+            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
             Queue queue;
             if (_queueDict.TryGetValue(key, out queue))
             {
@@ -75,7 +76,7 @@ namespace EQueue.Broker
         }
         public long GetQueueMinOffset(string topic, int queueId)
         {
-            var key = CreateQueueKey(topic, queueId);
+            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
             Queue queue;
             if (_queueDict.TryGetValue(key, out queue))
             {
@@ -87,8 +88,9 @@ namespace EQueue.Broker
         {
             var minConsumedQueueOffset = -1L;
             var queue = default(Queue);
+            var hasConsumerQueues = _queueDict.Values.Where(x => BrokerController.Instance.ConsumerManager.IsConsumerExistForQueue(x.Topic, x.QueueId)).ToList();
 
-            foreach (var currentQueue in _queueDict.Values)
+            foreach (var currentQueue in hasConsumerQueues)
             {
                 var offset = _consumeOffsetStore.GetMinConsumedOffset(currentQueue.Topic, currentQueue.QueueId);
                 var queueCurrentOffset = currentQueue.NextOffset - 1;
@@ -115,6 +117,23 @@ namespace EQueue.Broker
             }
 
             return -1L;
+        }
+        public long GetTotalUnConusmedMessageCount()
+        {
+            var totalCount = 0L;
+
+            foreach (var currentQueue in _queueDict.Values)
+            {
+                var minConsumedOffset = _consumeOffsetStore.GetMinConsumedOffset(currentQueue.Topic, currentQueue.QueueId);
+                var queueCurrentOffset = currentQueue.NextOffset - 1;
+                if (queueCurrentOffset > minConsumedOffset)
+                {
+                    var count = queueCurrentOffset - minConsumedOffset;
+                    totalCount += count;
+                }
+            }
+
+            return totalCount;
         }
         public void CreateTopic(string topic, int initialQueueCount)
         {
@@ -155,21 +174,43 @@ namespace EQueue.Broker
                 }
             }
         }
-        public void RemoveQueue(string topic, int queueId)
+        public void SetProducerVisible(string topic, int queueId, bool visible)
         {
             lock (this)
             {
-                var key = CreateQueueKey(topic, queueId);
+                var queue = GetQueue(topic, queueId);
+                if (queue != null)
+                {
+                    queue.SetProducerVisible(visible);
+                }
+            }
+        }
+        public void SetConsumerVisible(string topic, int queueId, bool visible)
+        {
+            lock (this)
+            {
+                var queue = GetQueue(topic, queueId);
+                if (queue != null)
+                {
+                    queue.SetConsumerVisible(visible);
+                }
+            }
+        }
+        public void DeleteQueue(string topic, int queueId)
+        {
+            lock (this)
+            {
+                var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
                 Queue queue;
                 if (!_queueDict.TryGetValue(key, out queue))
                 {
                     return;
                 }
 
-                //检查队列状态是否是已禁用
-                if (queue.Setting.Status != QueueStatus.Disabled)
+                //检查队列对Producer或Consumer是否可见，如果可见是不允许删除的
+                if (queue.Setting.ProducerVisible || queue.Setting.ConsumerVisible)
                 {
-                    throw new Exception("Queue status is not disabled, cannot be deleted.");
+                    throw new Exception("Queue is visible to producer or consumer, cannot be delete.");
                 }
                 //检查是否有未消费完的消息
                 var minConsumedOffset = _consumeOffsetStore.GetMinConsumedOffset(topic, queueId);
@@ -179,41 +220,21 @@ namespace EQueue.Broker
                     throw new Exception(string.Format("Queue is not allowed to delete as there are messages haven't been consumed, not consumed messageCount: {0}", queueCurrentOffset - minConsumedOffset));
                 }
 
-                //先从内存移除队列，确保所有的消费者再下一次查询队列信息时，查不到此队列了。
-                _queueDict.Remove(key);
+                //删除队列的消费进度信息
+                _consumeOffsetStore.DeleteConsumeOffset(queue.Key);
 
-                //10s后删除队列，如果立即删除，可能会影响消费者对这个队列拉取消息的请求
-                //所以，如果过10s后再删除，则所有的消费者负载均衡应该都已经完成，所有的消费者都不会再对这个队列发送拉取消息的请求了，就可以进行安全的删除。
-                Task.Factory.StartDelayedTask(1000 * 10, () => queue.Delete());
-            }
-        }
-        public void EnableQueue(string topic, int queueId)
-        {
-            lock (this)
-            {
-                var queue = GetQueue(topic, queueId);
-                if (queue != null)
-                {
-                    queue.Enable();
-                }
-            }
-        }
-        public void DisableQueue(string topic, int queueId)
-        {
-            lock (this)
-            {
-                var queue = GetQueue(topic, queueId);
-                if (queue != null)
-                {
-                    queue.Disable();
-                }
+                //删除队列本身，包括所有的文件
+                queue.Delete();
+
+                //最后将队列从字典中移除
+                _queueDict.Remove(key);
             }
         }
         public Queue GetQueue(string topic, int queueId)
         {
-            var key = CreateQueueKey(topic, queueId);
+            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
             Queue queue;
-            if (_queueDict.TryGetValue(key, out queue))
+            if (_queueDict.TryGetValue(key, out queue) && !queue.Setting.IsDeleted)
             {
                 return queue;
             }
@@ -221,9 +242,9 @@ namespace EQueue.Broker
         }
         public IEnumerable<Queue> QueryQueues(string topic)
         {
-            return _queueDict.Values.Where(x => x.Topic.Contains(topic));
+            return _queueDict.Values.Where(x => x.Topic.Contains(topic) && !x.Setting.IsDeleted);
         }
-        public IEnumerable<Queue> GetQueues(string topic, QueueStatus? status = null, bool autoCreate = false)
+        public IEnumerable<Queue> GetQueues(string topic, bool autoCreate = false)
         {
             lock (this)
             {
@@ -233,11 +254,7 @@ namespace EQueue.Broker
                     CreateTopic(topic, BrokerController.Instance.Setting.TopicDefaultQueueCount);
                     queues = _queueDict.Values.Where(x => x.Topic == topic);
                 }
-                if (status != null)
-                {
-                    return queues.Where(x => x.Setting.Status == status.Value);
-                }
-                return queues;
+                return queues.Where(x => !x.Setting.IsDeleted);
             }
         }
 
@@ -299,10 +316,13 @@ namespace EQueue.Broker
         {
             var queue = new Queue(topic, queueId);
             queue.Load();
-            var key = CreateQueueKey(topic, queueId);
+            if (queue.Setting.IsDeleted)
+            {
+                return;
+            }
+            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
             _queueDict.TryAdd(key, queue);
         }
-
         private void CloseQueues()
         {
             foreach (var queue in _queueDict.Values)
@@ -318,9 +338,16 @@ namespace EQueue.Broker
             }
             _queueDict.Clear();
         }
-        private static string CreateQueueKey(string topic, int queueId)
+        private void CleanQueueConsumeOffsets()
         {
-            return string.Format("{0}-{1}", topic, queueId);
+            var consumeKeys = _consumeOffsetStore.GetConsumeKeys();
+            foreach (var consumeKey in consumeKeys)
+            {
+                if (!_queueDict.ContainsKey(consumeKey))
+                {
+                    _consumeOffsetStore.DeleteConsumeOffset(consumeKey);
+                }
+            }
         }
         private void UpdateMinConsumedMessagePosition()
         {

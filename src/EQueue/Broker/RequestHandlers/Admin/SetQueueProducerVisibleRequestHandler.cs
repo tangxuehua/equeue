@@ -6,21 +6,21 @@ using EQueue.Utils;
 
 namespace EQueue.Broker.RequestHandlers.Admin
 {
-    public class RemoveQueueRequestHandler : IRequestHandler
+    public class SetQueueProducerVisibleRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IQueueStore _queueService;
+        private IQueueStore _queueStore;
 
-        public RemoveQueueRequestHandler()
+        public SetQueueProducerVisibleRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _queueService = ObjectContainer.Resolve<IQueueStore>();
+            _queueStore = ObjectContainer.Resolve<IQueueStore>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var request = _binarySerializer.Deserialize<RemoveQueueRequest>(remotingRequest.Body);
-            _queueService.RemoveQueue(request.Topic, request.QueueId);
+            var request = _binarySerializer.Deserialize<SetQueueProducerVisibleRequest>(remotingRequest.Body);
+            _queueStore.SetProducerVisible(request.Topic, request.QueueId, request.Visible);
             return RemotingResponseFactory.CreateResponse(remotingRequest);
         }
     }

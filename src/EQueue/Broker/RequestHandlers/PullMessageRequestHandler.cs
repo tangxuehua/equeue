@@ -132,7 +132,7 @@ namespace EQueue.Broker.RequestHandlers
                 }
                 try
                 {
-                    var message = _messageStore.GetMessage(messagePosition);
+                    var message = _messageStore.GetMessageBuffer(messagePosition);
                     if (message == null)
                     {
                         break;

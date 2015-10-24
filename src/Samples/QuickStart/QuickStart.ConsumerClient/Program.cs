@@ -63,7 +63,7 @@ namespace QuickStart.ConsumerClient
             public MessageHandler()
             {
                 _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-                _scheduleService.StartTask("Program.PrintThroughput", PrintThroughput, 0, 1000);
+                _scheduleService.StartTask("Program.PrintThroughput", PrintThroughput, 1000, 1000);
             }
 
             public void Handle(QueueMessage message, IMessageContext context)

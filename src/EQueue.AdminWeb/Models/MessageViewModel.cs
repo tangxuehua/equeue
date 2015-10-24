@@ -14,7 +14,6 @@ namespace EQueue.AdminWeb.Models
         public string Code { get; set; }
         public string CreatedTime { get; set; }
         public string StoredTime { get; set; }
-        public string RoutingKey { get; set; }
-        public string Content { get; set; }
+        public string Payload { get; set; }
     }
 }

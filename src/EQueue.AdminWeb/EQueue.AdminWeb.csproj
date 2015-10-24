@@ -148,8 +148,6 @@
     </Compile>
     <Compile Include="Models\BrokerStatisticInfoViewModel.cs" />
     <Compile Include="Models\MessageViewModel.cs" />
-    <Compile Include="Models\MessagesViewModel.cs" />
-    <Compile Include="Models\TopicConsumeViewModel.cs" />
     <Compile Include="Models\ConsumerViewModel.cs" />
     <Compile Include="Models\TopicQueueViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -159,6 +157,15 @@
   <ItemGroup>
     <Content Include="Content\bootstrap.css" />
     <Content Include="Content\bootstrap.min.css" />
+    <Content Include="Content\bootstrap\css\bootstrap-theme.css" />
+    <Content Include="Content\bootstrap\css\bootstrap-theme.min.css" />
+    <Content Include="Content\bootstrap\css\bootstrap.css" />
+    <Content Include="Content\bootstrap\css\bootstrap.min.css" />
+    <Content Include="Content\bootstrap\fonts\glyphicons-halflings-regular.svg" />
+    <Content Include="Content\bootstrap\js\bootstrap.js" />
+    <Content Include="Content\bootstrap\js\bootstrap.min.js" />
+    <None Include="Content\jquery\jquery-1.10.2.intellisense.js" />
+    <Content Include="Content\jquery\jquery-1.10.2.min.js" />
     <Content Include="favicon.ico" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="Global.asax" />
@@ -195,13 +202,20 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Views\Home\TopicConsumeInfo.cshtml" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="Views\Home\Message.cshtml" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Views\Home\TopicInfo.cshtml" />
+    <Content Include="Views\Home\QueueInfo.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Content\bootstrap\css\bootstrap-theme.css.map" />
+    <Content Include="Content\bootstrap\css\bootstrap.css.map" />
+    <Content Include="Content\bootstrap\fonts\glyphicons-halflings-regular.eot" />
+    <Content Include="Content\bootstrap\fonts\glyphicons-halflings-regular.ttf" />
+    <Content Include="Content\bootstrap\fonts\glyphicons-halflings-regular.woff" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Content\jquery\jquery-1.10.2.min.map" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

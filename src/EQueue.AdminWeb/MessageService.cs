@@ -76,20 +76,6 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("QueryConsumerInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
-        public IEnumerable<TopicConsumeInfo> GetTopicConsumeInfo(string group, string topic)
-        {
-            var requestData = _binarySerializer.Serialize(new QueryTopicConsumeInfoRequest(group, topic));
-            var remotingRequest = new RemotingRequest((int)RequestCode.QueryTopicConsumeInfo, requestData);
-            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
-            if (remotingResponse.Code == (int)ResponseCode.Success)
-            {
-                return _binarySerializer.Deserialize<IEnumerable<TopicConsumeInfo>>(remotingResponse.Body);
-            }
-            else
-            {
-                throw new Exception(string.Format("QueryTopicConsumeInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
-            }
-        }
         public void AddQueue(string topic)
         {
             var requestData = _binarySerializer.Serialize(new AddQueueRequest(topic));
@@ -100,34 +86,34 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("AddQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
-        public void RemoveQueue(string topic, int queueId)
+        public void DeleteQueue(string topic, int queueId)
         {
-            var requestData = _binarySerializer.Serialize(new RemoveQueueRequest(topic, queueId));
-            var remotingRequest = new RemotingRequest((int)RequestCode.RemoveQueue, requestData);
+            var requestData = _binarySerializer.Serialize(new DeleteQueueRequest(topic, queueId));
+            var remotingRequest = new RemotingRequest((int)RequestCode.DeleteQueue, requestData);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code != (int)ResponseCode.Success)
             {
                 throw new Exception(string.Format("RemoveQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
-        public void EnableQueue(string topic, int queueId)
+        public void SetQueueProducerVisible(string topic, int queueId, bool visible)
         {
-            var requestData = _binarySerializer.Serialize(new EnableQueueRequest(topic, queueId));
-            var remotingRequest = new RemotingRequest((int)RequestCode.EnableQueue, requestData);
+            var requestData = _binarySerializer.Serialize(new SetQueueProducerVisibleRequest(topic, queueId, visible));
+            var remotingRequest = new RemotingRequest((int)RequestCode.SetProducerVisible, requestData);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code != (int)ResponseCode.Success)
             {
-                throw new Exception(string.Format("EnableQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                throw new Exception(string.Format("SetQueueProducerVisible failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
-        public void DisableQueue(string topic, int queueId)
+        public void SetQueueConsumerVisible(string topic, int queueId, bool visible)
         {
-            var requestData = _binarySerializer.Serialize(new DisableQueueRequest(topic, queueId));
-            var remotingRequest = new RemotingRequest((int)RequestCode.DisableQueue, requestData);
+            var requestData = _binarySerializer.Serialize(new SetQueueConsumerVisibleRequest(topic, queueId, visible));
+            var remotingRequest = new RemotingRequest((int)RequestCode.SetConsumerVisible, requestData);
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code != (int)ResponseCode.Success)
             {
-                throw new Exception(string.Format("DisableQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                throw new Exception(string.Format("SetQueueConsumerVisible failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
         public QueueMessage GetMessageDetail(string messageId)

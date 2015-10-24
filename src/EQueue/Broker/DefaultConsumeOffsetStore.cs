@@ -4,10 +4,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Serializing;
+using ECommon.Utilities;
 using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker
 {
@@ -62,7 +65,7 @@ namespace EQueue.Broker
             if (_groupConsumeOffsetsDict.TryGetValue(group, out queueOffsetDict))
             {
                 long offset;
-                var key = CreateKey(topic, queueId);
+                var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
                 if (queueOffsetDict.TryGetValue(key, out offset))
                 {
                     return offset;
@@ -72,7 +75,7 @@ namespace EQueue.Broker
         }
         public long GetMinConsumedOffset(string topic, int queueId)
         {
-            var key = CreateKey(topic, queueId);
+            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
             var minOffset = -1L;
 
             foreach (var queueOffsetDict in _groupConsumeOffsetsDict.Values)
@@ -99,8 +102,36 @@ namespace EQueue.Broker
             {
                 return new ConcurrentDictionary<string, long>();
             });
-            var key = CreateKey(topic, queueId);
+            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
             queueOffsetDict.AddOrUpdate(key, offset, (currentKey, oldOffset) => offset > oldOffset ? offset : oldOffset);
+        }
+        public void DeleteConsumeOffset(string queueKey)
+        {
+            foreach (var dict in _groupConsumeOffsetsDict.Values)
+            {
+                var keys = dict.Keys.Where(x => x == queueKey);
+                foreach (var key in keys)
+                {
+                    dict.Remove(key);
+                }
+            }
+        }
+        public IEnumerable<string> GetConsumeKeys()
+        {
+            var keyList = new List<string>();
+
+            foreach (var dict in _groupConsumeOffsetsDict.Values)
+            {
+                foreach (var key in dict.Keys)
+                {
+                    if (!keyList.Contains(key))
+                    {
+                        keyList.Add(key);
+                    }
+                }
+            }
+
+            return keyList;
         }
         public IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic)
         {
@@ -109,9 +140,9 @@ namespace EQueue.Broker
 
             foreach (var entry in entryList)
             {
-                foreach (var subEntry in entry.Value.Where(x => string.IsNullOrEmpty(topic) || x.Key.Split(new string[] { "-" }, StringSplitOptions.None)[0].Contains(topic)))
+                foreach (var subEntry in entry.Value.Where(x => string.IsNullOrEmpty(topic) || QueueKeyUtil.ParseQueueKey(x.Key)[0].Contains(topic)))
                 {
-                    var items = subEntry.Key.Split(new string[] { "-" }, StringSplitOptions.None);
+                    var items = QueueKeyUtil.ParseQueueKey(subEntry.Key);
                     topicConsumeInfoList.Add(new TopicConsumeInfo
                     {
                         ConsumerGroup = entry.Key,
@@ -125,10 +156,6 @@ namespace EQueue.Broker
             return topicConsumeInfoList;
         }
 
-        private string CreateKey(string topic, int queueId)
-        {
-            return string.Format("{0}-{1}", topic, queueId);
-        }
         private void CleanConsumeOffsets()
         {
             var path = BrokerController.Instance.Setting.FileStoreRootPath;
@@ -179,7 +206,7 @@ namespace EQueue.Broker
             {
                 try
                 {
-                    using (var stream = new FileStream(_consumeOffsetFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+                    using (var stream = new FileStream(_consumeOffsetFile, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
                     {
                         using (var writer = new StreamWriter(stream))
                         {

@@ -8,23 +8,23 @@
         /// <summary>队列个数
         /// </summary>
         public int QueueCount { get; set; }
-        /// <summary>未消费的总消息数
-        /// </summary>
-        public long UnConsumedQueueMessageCount { get; set; }
         /// <summary>消费者组个数
         /// </summary>
         public int ConsumerGroupCount { get; set; }
-        /// <summary>最大全局消息偏移量
+        /// <summary>消费者个数
         /// </summary>
-        public long CurrentMessageOffset { get; set; }
-        /// <summary>已持久化的最大全局消息偏移量
+        public int ConsumerCount { get; set; }
+        /// <summary>未消费消息总数
         /// </summary>
-        public long PersistedMessageOffset { get; set; }
-        /// <summary>未持久化消息数
+        public long TotalUnConsumedMessageCount { get; set; }
+        /// <summary>消息Chunk文件总数
         /// </summary>
-        public long UnPersistedMessageCount { get; set; }
-        /// <summary>最小全局消息偏移量
+        public int MessageChunkCount { get; set; }
+        /// <summary>消息最小Chunk号
         /// </summary>
-        public long MinMessageOffset { get; set; }
+        public int MessageMinChunkNum { get; set; }
+        /// <summary>消息最大Chunk号
+        /// </summary>
+        public int MessageMaxChunkNum { get; set; }
     }
 }

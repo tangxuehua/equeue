@@ -4,6 +4,7 @@ using ECommon.Scheduling;
 using EQueue.Broker.DeleteMessageStrategies;
 using EQueue.Broker.Storage;
 using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker
 {
@@ -85,12 +86,30 @@ namespace EQueue.Broker
             _chunkWriter.Write(record);
             return record;
         }
-        public byte[] GetMessage(long position)
+        public byte[] GetMessageBuffer(long position)
         {
             var record = _chunkReader.TryReadRecordBufferAt(position);
             if (record != null)
             {
                 return record.RecordBuffer;
+            }
+            return null;
+        }
+        public QueueMessage GetMessage(long position)
+        {
+            var buffer = GetMessageBuffer(position);
+            if (buffer != null)
+            {
+                var nextOffset = 0;
+                var messageLength = MessageUtils.DecodeInt(buffer, nextOffset, out nextOffset);
+                if (messageLength > 0)
+                {
+                    var message = new QueueMessage();
+                    var messageBytes = new byte[messageLength];
+                    Buffer.BlockCopy(buffer, nextOffset, messageBytes, 0, messageLength);
+                    message.ReadFrom(messageBytes);
+                    return message;
+                }
             }
             return null;
         }

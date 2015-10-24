@@ -3,12 +3,12 @@
 namespace EQueue.Protocols
 {
     [Serializable]
-    public class RemoveQueueRequest
+    public class DeleteQueueRequest
     {
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
 
-        public RemoveQueueRequest(string topic, int queueId)
+        public DeleteQueueRequest(string topic, int queueId)
         {
             Topic = topic;
             QueueId = queueId;

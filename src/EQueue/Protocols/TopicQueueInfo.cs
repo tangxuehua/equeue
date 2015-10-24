@@ -18,11 +18,14 @@ namespace EQueue.Protocols
         /// <summary>队列当前最小Offset
         /// </summary>
         public long QueueMinOffset { get; set; }
-        /// <summary>队列当前被所有消费者都消费了的最大Offset
+        /// <summary>队列当前被所有消费者都消费了的最小Offset
         /// </summary>
-        public long QueueMaxConsumedOffset { get; set; }
-        /// <summary>队列的状态
+        public long QueueMinConsumedOffset { get; set; }
+        /// <summary>对生产者是否可见
         /// </summary>
-        public QueueStatus Status { get; set; }
+        public bool ProducerVisible { get; set; }
+        /// <summary>对消费者是否可见
+        /// </summary>
+        public bool ConsumerVisible { get; set; }
     }
 }

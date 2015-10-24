@@ -1,62 +1,63 @@
 ﻿@model EQueue.AdminWeb.Models.BrokerStatisticInfoViewModel
 @{
-    ViewBag.Title = "Broker统计信息";
+    ViewBag.Title = "首页";
 }
+
+<style>
+    .col-sm-10 {
+        margin-top: 7px;
+    }
+
+</style>
 
 <div>
     <form class="form-horizontal" role="form">
         <div class="form-group">
-            <label class="col-sm-2 control-label">主题个数</label>
+            <label class="col-sm-2 control-label">主题个数：</label>
             <div class="col-sm-10">
-                @Html.TextBoxFor(m => m.TopicCount, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+                @Model.TopicCount
             </div>
         </div>
         <div class="form-group">
-            <label class="col-sm-2 control-label">队列个数</label>
+            <label class="col-sm-2 control-label">队列个数：</label>
             <div class="col-sm-10">
-                @Html.TextBoxFor(m => m.QueueCount, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+                @Model.QueueCount
             </div>
         </div>
         <div class="form-group">
-            <label class="col-sm-2 control-label">消费者组个数</label>
+            <label class="col-sm-2 control-label">消费者组个数：</label>
             <div class="col-sm-10">
-                @Html.TextBoxFor(m => m.ConsumerGroupCount, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+                @Model.ConsumerGroupCount
             </div>
         </div>
         <div class="form-group">
-            <label class="col-sm-2 control-label">内存总消息数</label>
+            <label class="col-sm-2 control-label">消费者个数：</label>
             <div class="col-sm-10">
-                @Html.TextBoxFor(m => m.InMemoryQueueMessageCount, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+                @Model.ConsumerCount
             </div>
         </div>
         <div class="form-group">
-            <label class="col-sm-2 control-label">未消费总消息数</label>
+            <label class="col-sm-2 control-label">未消费消息总数：</label>
             <div class="col-sm-10">
-                @Html.TextBoxFor(m => m.UnConsumedQueueMessageCount, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+                @Model.TotalUnConsumedMessageCount
             </div>
         </div>
         <div class="form-group">
-            <label class="col-sm-2 control-label">最大消息偏移量</label>
+            <label class="col-sm-2 control-label">消息Chunk总数：</label>
             <div class="col-sm-10">
-                @Html.TextBoxFor(m => m.CurrentMessageOffset, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+                @Model.MessageChunkCount
             </div>
         </div>
         <div class="form-group">
-            <label class="col-sm-2 control-label">已持久化消息偏移量</label>
+            <label class="col-sm-2 control-label">消息最大Chunk：</label>
             <div class="col-sm-10">
-                @Html.TextBoxFor(m => m.PersistedMessageOffset, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+                @Model.MessageMaxChunkNum
             </div>
         </div>
         <div class="form-group">
-            <label class="col-sm-2 control-label">未持久化消息数</label>
+            <label class="col-sm-2 control-label">消息最小Chunk：</label>
             <div class="col-sm-10">
-                @Html.TextBoxFor(m => m.UnPersistedMessageCount, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-sm-2 control-label">最小消息偏移量</label>
-            <div class="col-sm-10">
-                @Html.TextBoxFor(m => m.MinMessageOffset, new { @class = "form-control", @style = "display:inline-block", @disabled = "disabled" })
+                @Model.MessageMinChunkNum
             </div>
         </div>
     </form>

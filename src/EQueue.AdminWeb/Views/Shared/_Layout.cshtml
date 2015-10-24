@@ -4,9 +4,12 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQueue监控管理 - @ViewBag.Title</title>
-    <link type="text/css" rel="Stylesheet" href="@Url.Content("~/content/bootstrap.min.css")" />
+    <title>EQueue后台管理控制台 - @ViewBag.Title</title>
+    <link type="text/css" rel="Stylesheet" href="@Url.Content("~/content/bootstrap/css/bootstrap.min.css")" />
+    <link type="text/css" rel="Stylesheet" href="@Url.Content("~/content/bootstrap/css/bootstrap-theme.min.css")" />
     <link type="text/css" rel="Stylesheet" href="@Url.Content("~/content/site.css")" />
+    <script type="text/javascript" src="@Url.Content("~/content/jquery/jquery-1.10.2.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/content/bootstrap/js/bootstrap.min.js")"></script>
 </head>
 <body>
     <div class="navbar navbar-inverse navbar-fixed-top">
@@ -18,10 +21,9 @@
                     <span class="icon-bar"></span>
                 </button>
                 @Html.ActionLink("首页", "Index", "Home", null, new { @class = "navbar-brand" })
-                @Html.ActionLink("队列信息", "TopicInfo", "Home", null, new { @class = "navbar-brand" })
-                @Html.ActionLink("消费者查询", "ConsumerInfo", "Home", null, new { @class = "navbar-brand" })
-                @Html.ActionLink("消费进度查询", "TopicConsumeInfo", "Home", null, new { @class = "navbar-brand" })
-                @Html.ActionLink("消息查询", "Messages", "Home", null, new { @class = "navbar-brand" })
+                @Html.ActionLink("队列信息", "QueueInfo", "Home", null, new { @class = "navbar-brand" })
+                @Html.ActionLink("消费者列表", "ConsumerInfo", "Home", null, new { @class = "navbar-brand" })
+                @Html.ActionLink("消息查询", "Message", "Home", null, new { @class = "navbar-brand" })
             </div>
         </div>
     </div>

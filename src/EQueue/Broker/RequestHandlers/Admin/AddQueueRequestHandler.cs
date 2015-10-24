@@ -9,18 +9,18 @@ namespace EQueue.Broker.RequestHandlers.Admin
     public class AddQueueRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IQueueStore _queueService;
+        private IQueueStore _queueStore;
 
         public AddQueueRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _queueService = ObjectContainer.Resolve<IQueueStore>();
+            _queueStore = ObjectContainer.Resolve<IQueueStore>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var addQueueRequest = _binarySerializer.Deserialize<AddQueueRequest>(remotingRequest.Body);
-            _queueService.AddQueue(addQueueRequest.Topic);
+            _queueStore.AddQueue(addQueueRequest.Topic);
             return RemotingResponseFactory.CreateResponse(remotingRequest);
         }
     }

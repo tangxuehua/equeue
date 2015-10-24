@@ -15,7 +15,8 @@ namespace EQueue.Broker
         void Start();
         void Shutdown();
         MessageLogRecord StoreMessage(int queueId, long queueOffset, Message message);
-        byte[] GetMessage(long position);
+        byte[] GetMessageBuffer(long position);
+        QueueMessage GetMessage(long position);
         bool IsMessagePositionExist(long position);
         void UpdateMinConsumedMessagePosition(long minConsumedMessagePosition);
     }

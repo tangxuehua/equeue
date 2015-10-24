@@ -24,7 +24,7 @@ namespace EQueue.Broker.Storage
         public void WriteTo(long logPosition, BinaryWriter writer)
         {
             LogPosition = logPosition;
-            MessageId = MessageIdService.CreateMessageId(logPosition);
+            MessageId = MessageIdUtil.CreateMessageId(logPosition);
 
             //logPosition
             writer.Write(LogPosition);

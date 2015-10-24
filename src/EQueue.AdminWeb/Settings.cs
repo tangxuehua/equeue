@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using ECommon.Socketing;
-using ECommon.Utilities;
 
 namespace EQueue.AdminWeb
 {

@@ -40,5 +40,19 @@ namespace EQueue.Protocols
         {
             return !string.IsNullOrEmpty(MessageId);
         }
+
+        public override string ToString()
+        {
+            return string.Format("[Topic={0},QueueId={1},QueueOffset={2},MessageId={3},LogPosition={4},Code={5},CreatedTime={6},StoredTime={7},BodyLength={8}]",
+                Topic,
+                QueueId,
+                QueueOffset,
+                MessageId,
+                LogPosition,
+                Code,
+                CreatedTime,
+                StoredTime,
+                Body.Length);
+        }
     }
 }

@@ -11,13 +11,13 @@ namespace EQueue.Broker.RequestHandlers.Admin
     public class QueryTopicQueueInfoRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IQueueStore _queueService;
+        private IQueueStore _queueStore;
         private IConsumeOffsetStore _offsetStore;
 
         public QueryTopicQueueInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _queueService = ObjectContainer.Resolve<IQueueStore>();
+            _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
         }
 
@@ -25,11 +25,11 @@ namespace EQueue.Broker.RequestHandlers.Admin
         {
             var request = _binarySerializer.Deserialize<QueryTopicQueueInfoRequest>(remotingRequest.Body);
             var topicQueueInfoList = new List<TopicQueueInfo>();
-            var topicList = !string.IsNullOrEmpty(request.Topic) ? new List<string> { request.Topic } : _queueService.GetAllTopics().ToList();
+            var topicList = !string.IsNullOrEmpty(request.Topic) ? new List<string> { request.Topic } : _queueStore.GetAllTopics().ToList();
 
             foreach (var topic in topicList)
             {
-                var queues = _queueService.QueryQueues(topic).ToList();
+                var queues = _queueStore.QueryQueues(topic).ToList().OrderBy(x => x.Key);
                 foreach (var queue in queues)
                 {
                     var topicQueueInfo = new TopicQueueInfo();
@@ -37,8 +37,9 @@ namespace EQueue.Broker.RequestHandlers.Admin
                     topicQueueInfo.QueueId = queue.QueueId;
                     topicQueueInfo.QueueCurrentOffset = queue.NextOffset - 1;
                     topicQueueInfo.QueueMinOffset = queue.GetMinQueueOffset();
-                    topicQueueInfo.QueueMaxConsumedOffset = _offsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
-                    topicQueueInfo.Status = queue.Setting.Status;
+                    topicQueueInfo.QueueMinConsumedOffset = _offsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
+                    topicQueueInfo.ProducerVisible = queue.Setting.ProducerVisible;
+                    topicQueueInfo.ConsumerVisible = queue.Setting.ConsumerVisible;
                     topicQueueInfoList.Add(topicQueueInfo);
                 }
             }

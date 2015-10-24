@@ -490,7 +490,7 @@ namespace EQueue.Clients.Consumers
         {
             try
             {
-                var consumingQueues = _pullRequestDict.Values.ToList().Select(x => string.Format("{0}-{1}", x.MessageQueue.Topic, x.MessageQueue.QueueId)).ToList();
+                var consumingQueues = _pullRequestDict.Values.ToList().Select(x => QueueKeyUtil.CreateQueueKey(x.MessageQueue.Topic, x.MessageQueue.QueueId)).ToList();
                 _adminRemotingClient.InvokeOneway(new RemotingRequest(
                     (int)RequestCode.ConsumerHeartbeat,
                     _binarySerializer.Serialize(new ConsumerData(GetConsumerId(), GroupName, _subscriptionTopics, consumingQueues))));

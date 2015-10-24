@@ -12,7 +12,7 @@ namespace EQueue.Broker.RequestHandlers
     {
         private readonly SuspendedPullRequestManager _suspendedPullRequestManager;
         private readonly IMessageStore _messageStore;
-        private readonly IQueueStore _queueService;
+        private readonly IQueueStore _queueStore;
         private readonly ILogger _logger;
         private readonly object _syncObj = new object();
 
@@ -20,7 +20,7 @@ namespace EQueue.Broker.RequestHandlers
         {
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
-            _queueService = ObjectContainer.Resolve<IQueueStore>();
+            _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
@@ -29,7 +29,7 @@ namespace EQueue.Broker.RequestHandlers
             var request = MessageUtils.DecodeSendMessageRequest(remotingRequest.Body);
             var message = request.Message;
             var queueId = request.QueueId;
-            var queue = _queueService.GetQueue(message.Topic, queueId);
+            var queue = _queueStore.GetQueue(message.Topic, queueId);
             if (queue == null)
             {
                 throw new QueueNotExistException(message.Topic, queueId);

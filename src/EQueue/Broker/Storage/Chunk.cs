@@ -705,6 +705,12 @@ namespace EQueue.Broker.Storage
                     Flush();
                 }
 
+                if (_writerWorkItem != null)
+                {
+                    Helper.EatException(() => _writerWorkItem.Dispose());
+                    _writerWorkItem = null;
+                }
+
                 if (!_isMemoryChunk)
                 {
                     if (_cacheItems != null)

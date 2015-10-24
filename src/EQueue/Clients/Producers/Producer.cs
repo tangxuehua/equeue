@@ -212,7 +212,7 @@ namespace EQueue.Clients.Producers
             }
 
             var queueIds = Encoding.UTF8.GetString(remotingResponse.Body);
-            return queueIds.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x));
+            return queueIds.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x)).OrderBy(x => x);
         }
         private RemotingRequest BuildSendMessageRequest(Message message, int queueId)
         {

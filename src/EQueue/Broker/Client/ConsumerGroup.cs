@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
+using EQueue.Utils;
 
 namespace EQueue.Broker.Client
 {
@@ -143,7 +144,7 @@ namespace EQueue.Broker.Client
         }
         public bool IsConsumerExistForQueue(string topic, int queueId)
         {
-            var key = string.Format("{0}-{1}", topic, queueId);
+            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
             return _consumerConsumingQueueDict.Values.Any(x => x.Any(y => y == key));
         }
         public IEnumerable<string> GetConsumingQueue(string consumerId)

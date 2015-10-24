@@ -6,6 +6,7 @@ using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Serializing;
 using EQueue.Broker.Storage;
+using EQueue.Utils;
 
 namespace EQueue.Broker
 {
@@ -25,14 +26,16 @@ namespace EQueue.Broker
         public int QueueId { get; private set; }
         public long NextOffset { get { return _nextOffset; } }
         public QueueSetting Setting { get { return _setting; } }
+        public string Key { get; private set; }
 
         public Queue(string topic, int queueId)
         {
             Topic = topic;
             QueueId = queueId;
+            Key = QueueKeyUtil.CreateQueueKey(topic, queueId);
 
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
-            _chunkManager = new ChunkManager(string.Format("{0}-{1}", Topic, QueueId), BrokerController.Instance.Setting.QueueChunkConfig, Topic + @"\" + QueueId);
+            _chunkManager = new ChunkManager(Key, BrokerController.Instance.Setting.QueueChunkConfig, Topic + @"\" + QueueId);
             _chunkWriter = new ChunkWriter(_chunkManager);
             _chunkReader = new ChunkReader(_chunkManager, _chunkWriter);
             _queueSettingFile = Path.Combine(_chunkManager.ChunkPath, QueueSettingFileName);
@@ -48,8 +51,12 @@ namespace EQueue.Broker
             _setting = LoadQueueSetting();
             if (_setting == null)
             {
-                _setting = new QueueSetting { Status = QueueStatus.Normal };
+                _setting = new QueueSetting();
                 SaveQueueSetting();
+            }
+            if (_setting.IsDeleted)
+            {
+                return;
             }
             _chunkManager.Load(ReadMessageIndex);
             _chunkWriter.Open();
@@ -80,21 +87,25 @@ namespace EQueue.Broker
             }
             return record.MessageLogPosition - 1;
         }
-        public void Enable()
+        public void SetProducerVisible(bool visible)
         {
-            _setting.Status = QueueStatus.Normal;
+            _setting.ProducerVisible = visible;
             SaveQueueSetting();
         }
-        public void Disable()
+        public void SetConsumerVisible(bool visible)
         {
-            _setting.Status = QueueStatus.Disabled;
+            _setting.ConsumerVisible = visible;
             SaveQueueSetting();
         }
         public void Delete()
         {
+            _setting.IsDeleted = true;
+            SaveQueueSetting();
+
             Close();
             CleanChunks();
-            Directory.Delete(_chunkManager.ChunkPath);
+
+            Directory.Delete(_chunkManager.ChunkPath, true);
         }
         public long IncrementNextOffset()
         {
@@ -102,6 +113,10 @@ namespace EQueue.Broker
         }
         public long GetMinQueueOffset()
         {
+            if (_nextOffset == 0L)
+            {
+                return -1L;
+            }
             return _chunkManager.GetFirstChunk().ChunkHeader.ChunkDataStartPosition / _chunkManager.Config.ChunkDataUnitSize;
         }
         public void DeleteMessages(long minMessagePosition)
@@ -173,6 +188,15 @@ namespace EQueue.Broker
     }
     public class QueueSetting
     {
-        public QueueStatus Status;
+        public bool ProducerVisible;
+        public bool ConsumerVisible;
+        public bool IsDeleted;
+
+        public QueueSetting()
+        {
+            ProducerVisible = true;
+            ConsumerVisible = true;
+            IsDeleted = false;
+        }
     }
 }

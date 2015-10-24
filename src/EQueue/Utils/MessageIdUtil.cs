@@ -6,7 +6,7 @@ using EQueue.Broker;
 
 namespace EQueue.Utils
 {
-    public class MessageIdService
+    public class MessageIdUtil
     {
         private static byte[] _ipBytes;
         private static byte[] _portBytes;

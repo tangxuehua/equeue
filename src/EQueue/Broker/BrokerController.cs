@@ -34,6 +34,10 @@ namespace EQueue.Broker
         private int _isShuttingdown = 0;
 
         public BrokerSetting Setting { get; private set; }
+        public ConsumerManager ConsumerManager
+        {
+            get { return _consumerManager; }
+        }
         public static BrokerController Instance
         {
             get { return _instance; }
@@ -82,9 +86,9 @@ namespace EQueue.Broker
                 _consumeOffsetStore.Clean();
             }
 
+            _consumeOffsetStore.Start();
             _messageStore.Start();
             _queueStore.Start();
-            _consumeOffsetStore.Start();
             _consumerManager.Start();
             _suspendedPullRequestManager.Start();
             _consumerSocketRemotingServer.Start();
@@ -119,9 +123,7 @@ namespace EQueue.Broker
             var statisticInfo = new BrokerStatisticInfo();
             statisticInfo.TopicCount = _queueStore.GetAllTopics().Count();
             statisticInfo.QueueCount = _queueStore.GetAllQueueCount();
-            statisticInfo.CurrentMessagePosition = _messageStore.CurrentMessagePosition;
-            statisticInfo.MinMessageOffset = _messageStore.MinMessagePosition;
-            statisticInfo.MinConsumedMessagePosition = _queueStore.GetMinConusmedMessagePosition();
+            statisticInfo.TotalUnConsumedMessageCount = _queueStore.GetTotalUnConusmedMessageCount();
             statisticInfo.ConsumerGroupCount = _consumeOffsetStore.GetConsumerGroupCount();
             statisticInfo.ConsumerCount = _consumerManager.GetConsumerCount();
             statisticInfo.MessageChunkCount = _messageStore.ChunkCount;
@@ -147,10 +149,9 @@ namespace EQueue.Broker
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryTopicQueueInfo, new QueryTopicQueueInfoRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryConsumerInfo, new QueryConsumerInfoRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.AddQueue, new AddQueueRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.RemoveQueue, new RemoveQueueRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.EnableQueue, new EnableQueueRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.DisableQueue, new DisableQueueRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryTopicConsumeInfo, new QueryTopicConsumeInfoRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.DeleteQueue, new DeleteQueueRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SetProducerVisible, new SetQueueProducerVisibleRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SetConsumerVisible, new SetQueueConsumerVisibleRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetMessageDetail, new GetMessageDetailRequestHandler());
         }
 

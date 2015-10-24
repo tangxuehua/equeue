@@ -12,16 +12,17 @@ namespace EQueue.Broker
         Queue GetQueue(string topic, int queueId);
         int GetAllQueueCount();
         long GetMinConusmedMessagePosition();
+        long GetTotalUnConusmedMessageCount();
         bool IsTopicExist(string topic);
         bool IsQueueExist(string topic, int queueId);
         long GetQueueCurrentOffset(string topic, int queueId);
         long GetQueueMinOffset(string topic, int queueId);
         void AddQueue(string topic);
-        void RemoveQueue(string topic, int queueId);
-        void EnableQueue(string topic, int queueId);
-        void DisableQueue(string topic, int queueId);
+        void DeleteQueue(string topic, int queueId);
+        void SetProducerVisible(string topic, int queueId, bool visible);
+        void SetConsumerVisible(string topic, int queueId, bool visible);
         void CreateTopic(string topic, int initialQueueCount);
         IEnumerable<Queue> QueryQueues(string topic);
-        IEnumerable<Queue> GetQueues(string topic, QueueStatus? status = null, bool autoCreate = false);
+        IEnumerable<Queue> GetQueues(string topic, bool autoCreate = false);
     }
 }

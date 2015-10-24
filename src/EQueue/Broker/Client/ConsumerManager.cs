@@ -63,6 +63,18 @@ namespace EQueue.Broker.Client
             var group = GetConsumerGroup(consumerGroup);
             return group != null && group.IsConsumerActive(consumerId);
         }
+        public bool IsConsumerExistForQueue(string topic, int queueId)
+        {
+            var groups = GetAllConsumerGroups();
+            foreach (var group in groups)
+            {
+                if (group.IsConsumerExistForQueue(topic, queueId))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
         public IEnumerable<ConsumerGroup> QueryConsumerGroup(string groupName)
         {
             return _consumerGroupDict.Where(x => x.Key.Contains(groupName)).Select(x => x.Value);

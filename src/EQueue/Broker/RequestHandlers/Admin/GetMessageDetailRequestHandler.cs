@@ -20,16 +20,15 @@ namespace EQueue.Broker.RequestHandlers.Admin
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            return null;
-            //TODO
-            //var request = _binarySerializer.Deserialize<GetMessageDetailRequest>(remotingRequest.Body);
-            //var message = _messageStore.FindMessage(request.MessageOffset, request.MessageId);
-            //var messages = new List<QueueMessage>();
-            //if (message != null)
-            //{
-            //    messages.Add(message);
-            //}
-            //return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(messages));
+            var request = _binarySerializer.Deserialize<GetMessageDetailRequest>(remotingRequest.Body);
+            var messageInfo = MessageIdUtil.ParseMessageId(request.MessageId);
+            var message = _messageStore.GetMessage(messageInfo.MessagePosition);
+            var messages = new List<QueueMessage>();
+            if (message != null)
+            {
+                messages.Add(message);
+            }
+            return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(messages));
         }
     }
 }
