@@ -2,9 +2,37 @@
 @{
     ViewBag.Title = "队列信息";
 }
-
+<style>
+    .header-form {
+        display: inline-block;
+        float: left;
+    }
+    .next-form {
+        margin-left: 15px;
+    }
+</style>
 <div>
-    @using (Html.BeginForm("QueueInfo", "Home", new { }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
+    @using (Html.BeginForm("CreateTopic", "Home", new { }, FormMethod.Post, new { @class = "form-inline header-form", role = "form" }))
+    {
+        <div class="form-group">
+            <label class="sr-only" for="topic"></label>
+            <input id="topic" name="topic" type="text" class="form-control" placeholder="Topic" />
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="initialQueueCount"></label>
+            <input id="initialQueueCount" name="initialQueueCount" type="text" class="form-control" placeholder="InitialQueueCount" />
+        </div>
+        <button type="submit" class="btn btn-default">创建Topic</button>
+    }
+    @using (Html.BeginForm("DeleteTopic", "Home", new { }, FormMethod.Post, new { @class = "form-inline header-form next-form", role = "form" }))
+    {
+        <div class="form-group">
+            <label class="sr-only" for="topic"></label>
+            <input id="topic" name="topic" type="text" class="form-control" placeholder="Topic" />
+        </div>
+        <button type="submit" class="btn btn-default">删除Topic</button>
+    }
+    @using (Html.BeginForm("QueueInfo", "Home", new { }, FormMethod.Post, new { @class = "form-inline header-form next-form", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="Topic"></label>
@@ -31,7 +59,7 @@
                     最慢消费进度
                 </th>
                 <th width="10%" class="text-center vertical-center">
-                    未消费消息数
+                    消息堆积数
                 </th>
                 <th width="10%" class="text-center vertical-center">
                     是否允许发送

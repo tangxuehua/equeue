@@ -37,7 +37,7 @@
             </div>
         </div>
         <div class="form-group">
-            <label class="col-sm-2 control-label">未消费消息总数：</label>
+            <label class="col-sm-2 control-label">消息堆积总数：</label>
             <div class="col-sm-10">
                 @Model.TotalUnConsumedMessageCount
             </div>
@@ -61,16 +61,4 @@
             </div>
         </div>
     </form>
-    @using (Html.BeginForm("CreateTopic", "Home", new { }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
-    {
-        <div class="form-group">
-            <label class="sr-only" for="topic"></label>
-            <input id="topic" name="topic" type="text" class="form-control" placeholder="Topic" />
-        </div>
-        <div class="form-group">
-            <label class="sr-only" for="initialQueueCount"></label>
-            <input id="initialQueueCount" name="initialQueueCount" type="text" class="form-control" placeholder="InitialQueueCount" />
-        </div>
-        <button type="submit" class="btn btn-default">创建主题</button>
-    }
 </div>

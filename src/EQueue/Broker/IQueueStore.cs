@@ -22,6 +22,7 @@ namespace EQueue.Broker
         void SetProducerVisible(string topic, int queueId, bool visible);
         void SetConsumerVisible(string topic, int queueId, bool visible);
         void CreateTopic(string topic, int initialQueueCount);
+        void DeleteTopic(string topic);
         IEnumerable<Queue> QueryQueues(string topic);
         IEnumerable<Queue> GetQueues(string topic, bool autoCreate = false);
     }

@@ -20,5 +20,6 @@
         DeleteQueue = 1006,
         GetMessageDetail = 1007,
         CreateTopic = 1008,
+        DeleteTopic = 1009,
     }
 }

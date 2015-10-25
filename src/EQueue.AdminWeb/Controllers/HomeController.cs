@@ -28,9 +28,14 @@ namespace EQueue.AdminWeb.Controllers
                 MessageMinChunkNum = result.MessageMinChunkNum
             });
         }
-        public ActionResult CreateTopic(string topic, int initialQueueCount)
+        public ActionResult CreateTopic(string topic, int? initialQueueCount)
         {
-            _messageService.CreateTopic(topic, initialQueueCount);
+            _messageService.CreateTopic(topic, initialQueueCount ?? 4);
+            return RedirectToAction("QueueInfo");
+        }
+        public ActionResult DeleteTopic(string topic)
+        {
+            _messageService.DeleteTopic(topic);
             return RedirectToAction("QueueInfo");
         }
         public ActionResult QueueInfo(string topic)

@@ -157,6 +157,21 @@ namespace EQueue.Broker
                 }
             }
         }
+        public void DeleteTopic(string topic)
+        {
+            lock (this)
+            {
+                Ensure.NotNullOrEmpty(topic, "topic");
+
+                if (IsTopicExist(topic))
+                {
+                    throw new ArgumentException(string.Format("There still has queues under this topic '{0}', please delete all the qeueues first.", topic));
+                }
+
+                var topicPath = Path.Combine(BrokerController.Instance.Setting.QueueChunkConfig.BasePath, topic);
+                Directory.Delete(topicPath);
+            }
+        }
         public void AddQueue(string topic)
         {
             lock (this)

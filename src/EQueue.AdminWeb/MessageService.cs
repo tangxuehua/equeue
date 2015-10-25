@@ -48,6 +48,16 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("CreateTopic failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
+        public void DeleteTopic(string topic)
+        {
+            var requestData = _binarySerializer.Serialize(new DeleteTopicRequest(topic));
+            var remotingRequest = new RemotingRequest((int)RequestCode.DeleteTopic, requestData);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code != (int)ResponseCode.Success)
+            {
+                throw new Exception(string.Format("DeleteTopic failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+            }
+        }
         public IEnumerable<TopicQueueInfo> GetTopicQueueInfo(string topic)
         {
             var requestData = _binarySerializer.Serialize(new QueryTopicQueueInfoRequest(topic));
@@ -93,7 +103,7 @@ namespace EQueue.AdminWeb
             var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code != (int)ResponseCode.Success)
             {
-                throw new Exception(string.Format("RemoveQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                throw new Exception(string.Format("DeleteQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
         public void SetQueueProducerVisible(string topic, int queueId, bool visible)

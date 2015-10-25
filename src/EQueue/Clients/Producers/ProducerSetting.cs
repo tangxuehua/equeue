@@ -17,7 +17,7 @@ namespace EQueue.Clients.Producers
             BrokerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
             BrokerAdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
             SocketSetting = new SocketSetting();
-            UpdateTopicQueueCountInterval = 1000 * 5;
+            UpdateTopicQueueCountInterval = 1000;
         }
     }
 }

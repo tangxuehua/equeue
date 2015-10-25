@@ -33,10 +33,10 @@ namespace EQueue.Clients.Consumers
             SocketSetting = new SocketSetting();
             ConsumeThreadMaxCount = Environment.ProcessorCount * 2;
             DefaultTimeoutMilliseconds = 60 * 1000;
-            RebalanceInterval = 1000 * 5;
-            HeartbeatBrokerInterval = 1000 * 5;
-            UpdateTopicQueueCountInterval = 1000 * 5;
-            PersistConsumerOffsetInterval = 1000 * 5;
+            RebalanceInterval = 1000;
+            HeartbeatBrokerInterval = 1000;
+            UpdateTopicQueueCountInterval = 1000;
+            PersistConsumerOffsetInterval = 1000;
             PullThresholdForQueue = 100000;
             PullTimeDelayMillsWhenFlowControl = 3000;
             SuspendPullRequestMilliseconds = 60 * 1000;

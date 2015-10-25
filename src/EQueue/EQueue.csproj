@@ -66,6 +66,7 @@
     <Compile Include="Broker\IChunkReadStatisticService.cs" />
     <Compile Include="Broker\QueueLogRecord.cs" />
     <Compile Include="Broker\MessageLogRecord.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\DeleteTopicRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\CreateTopicRequestHandler.cs" />
     <Compile Include="Broker\IQueueStore.cs" />
     <Compile Include="Broker\DefaultQueueStore.cs" />
@@ -129,12 +130,13 @@
     <Compile Include="Clients\Consumers\MessageHandleMode.cs" />
     <Compile Include="Clients\Consumers\IAllocateMessageQueueStrategy.cs" />
     <Compile Include="Clients\Consumers\AverageAllocateMessageQueueStrategy.cs" />
-    <Compile Include="Clients\Consumers\ConsumerSettings.cs" />
+    <Compile Include="Clients\Consumers\ConsumerSetting.cs" />
     <Compile Include="Clients\Producers\Producer.cs" />
     <Compile Include="Clients\Producers\ProducerSetting.cs" />
     <Compile Include="Clients\Producers\QueueAverageSelector.cs" />
     <Compile Include="Clients\Producers\QueueHashSelector.cs" />
     <Compile Include="Configurations\ConfigurationExtensions.cs" />
+    <Compile Include="Protocols\DeleteTopicRequest.cs" />
     <Compile Include="Protocols\CreateTopicRequest.cs" />
     <Compile Include="Protocols\GetMessageDetailRequest.cs" />
     <Compile Include="Protocols\TopicConsumeInfo.cs" />
