@@ -63,7 +63,8 @@ namespace QuickStart.ProducerClient
             var messageCount = int.Parse(ConfigurationManager.AppSettings["MessageCount"]);
             var actions = new List<Action>();
             var payload = new byte[messageSize];
-            var message = new Message("topic1", 100, payload);
+            var topic = ConfigurationManager.AppSettings["Topic"];
+            var message = new Message(topic, 100, payload);
 
             for (var i = 0; i < clientCount; i++)
             {

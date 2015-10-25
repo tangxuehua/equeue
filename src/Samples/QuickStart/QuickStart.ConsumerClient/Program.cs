@@ -39,16 +39,13 @@ namespace QuickStart.ConsumerClient
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var consumerSetting = new ConsumerSetting
             {
-                HeartbeatBrokerInterval = 1000,
-                UpdateTopicQueueCountInterval = 1000,
-                RebalanceInterval = 1000,
                 ConsumeFromWhere = ConsumeFromWhere.FirstOffset
             };
             var messageHandler = new MessageHandler();
             for (var i = 1; i <= clientCount; i++)
             {
-                new Consumer("SampleGroup", consumerSetting)
-                    .Subscribe("topic1")
+                new Consumer(ConfigurationManager.AppSettings["ConsumerGroup"], consumerSetting)
+                    .Subscribe(ConfigurationManager.AppSettings["Topic"])
                     .SetMessageHandler(messageHandler)
                     .Start();
             }

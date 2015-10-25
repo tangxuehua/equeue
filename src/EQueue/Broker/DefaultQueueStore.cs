@@ -255,9 +255,9 @@ namespace EQueue.Broker
             }
             return null;
         }
-        public IEnumerable<Queue> QueryQueues(string topic)
+        public IEnumerable<Queue> QueryQueues(string topic = null)
         {
-            return _queueDict.Values.Where(x => x.Topic.Contains(topic) && !x.Setting.IsDeleted);
+            return _queueDict.Values.Where(x => (string.IsNullOrEmpty(topic) || x.Topic.Contains(topic)) && !x.Setting.IsDeleted);
         }
         public IEnumerable<Queue> GetQueues(string topic, bool autoCreate = false)
         {

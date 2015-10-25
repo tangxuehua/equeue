@@ -25,23 +25,19 @@ namespace EQueue.Broker.RequestHandlers.Admin
         {
             var request = _binarySerializer.Deserialize<QueryTopicQueueInfoRequest>(remotingRequest.Body);
             var topicQueueInfoList = new List<TopicQueueInfo>();
-            var topicList = !string.IsNullOrEmpty(request.Topic) ? new List<string> { request.Topic } : _queueStore.GetAllTopics().ToList();
+            var queues = _queueStore.QueryQueues(request.Topic).ToList().OrderBy(x => x.Topic).ThenBy(x => x.QueueId);
 
-            foreach (var topic in topicList)
+            foreach (var queue in queues)
             {
-                var queues = _queueStore.QueryQueues(topic).ToList().OrderBy(x => x.Key);
-                foreach (var queue in queues)
-                {
-                    var topicQueueInfo = new TopicQueueInfo();
-                    topicQueueInfo.Topic = queue.Topic;
-                    topicQueueInfo.QueueId = queue.QueueId;
-                    topicQueueInfo.QueueCurrentOffset = queue.NextOffset - 1;
-                    topicQueueInfo.QueueMinOffset = queue.GetMinQueueOffset();
-                    topicQueueInfo.QueueMinConsumedOffset = _offsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
-                    topicQueueInfo.ProducerVisible = queue.Setting.ProducerVisible;
-                    topicQueueInfo.ConsumerVisible = queue.Setting.ConsumerVisible;
-                    topicQueueInfoList.Add(topicQueueInfo);
-                }
+                var topicQueueInfo = new TopicQueueInfo();
+                topicQueueInfo.Topic = queue.Topic;
+                topicQueueInfo.QueueId = queue.QueueId;
+                topicQueueInfo.QueueCurrentOffset = queue.NextOffset - 1;
+                topicQueueInfo.QueueMinOffset = queue.GetMinQueueOffset();
+                topicQueueInfo.QueueMinConsumedOffset = _offsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
+                topicQueueInfo.ProducerVisible = queue.Setting.ProducerVisible;
+                topicQueueInfo.ConsumerVisible = queue.Setting.ConsumerVisible;
+                topicQueueInfoList.Add(topicQueueInfo);
             }
 
             return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(topicQueueInfoList));

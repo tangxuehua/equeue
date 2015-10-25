@@ -41,6 +41,10 @@ namespace EQueue.Broker.Client
                 consumerGroup.RemoveConsumer(consumerId);
             }
         }
+        public int GetConsumerGroupCount()
+        {
+            return _consumerGroupDict.Count;
+        }
         public IEnumerable<ConsumerGroup> GetAllConsumerGroups()
         {
             return _consumerGroupDict.Values.ToList();
