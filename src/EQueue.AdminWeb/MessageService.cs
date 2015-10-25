@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using ECommon.Remoting;
+using ECommon.Scheduling;
 using ECommon.Serializing;
 using EQueue.Protocols;
 
@@ -14,16 +15,25 @@ namespace EQueue.AdminWeb
     {
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
+        private readonly IScheduleService _scheduleService;
+        private readonly SendEmailService _sendEmailService;
+        private readonly int _unconsumedMessageWarnningThreshold;
+        private readonly int _checkUnconsumedMessageInterval;
 
-        public MessageService(IBinarySerializer binarySerializer)
+        public MessageService(IBinarySerializer binarySerializer, IScheduleService scheduleService, SendEmailService sendEmailService)
         {
             _remotingClient = new SocketRemotingClient(Settings.BrokerAddress);
             _binarySerializer = binarySerializer;
+            _scheduleService = scheduleService;
+            _unconsumedMessageWarnningThreshold = int.Parse(ConfigurationManager.AppSettings["unconsumedMessageWarnningThreshold"]);
+            _checkUnconsumedMessageInterval = int.Parse(ConfigurationManager.AppSettings["checkUnconsumedMessageInterval"]);
+            _sendEmailService = sendEmailService;
         }
 
         public void Start()
         {
             Task.Factory.StartNew(() => _remotingClient.Start());
+            _scheduleService.StartTask("CheckUnconsumedMessages", CheckUnconsumedMessages, 1000, _checkUnconsumedMessageInterval);
         }
         public BrokerStatisticInfo QueryBrokerStatisticInfo()
         {
@@ -138,6 +148,24 @@ namespace EQueue.AdminWeb
             else
             {
                 throw new Exception(string.Format("GetMessageDetail failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+            }
+        }
+
+        private void CheckUnconsumedMessages()
+        {
+            var remotingRequest = new RemotingRequest((int)RequestCode.QueryBrokerStatisticInfo, new byte[0]);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code == (int)ResponseCode.Success)
+            {
+                var statisticInfo = _binarySerializer.Deserialize<BrokerStatisticInfo>(remotingResponse.Body);
+                if (statisticInfo.TotalUnConsumedMessageCount >= _unconsumedMessageWarnningThreshold)
+                {
+                    _sendEmailService.SendTooManyMessageNotConsumedNotification(statisticInfo.TotalUnConsumedMessageCount);
+                }
+            }
+            else
+            {
+                throw new Exception(string.Format("QueryBrokerStatisticInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
     }
