@@ -12,7 +12,6 @@ using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Socketing;
-using ECommon.Utilities;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
 using EQueue.Protocols;
@@ -162,10 +161,10 @@ namespace QuickStart.ProducerClient
         static void PrintThroughput()
         {
             var totalSentCount = _sentCount;
-            var totalCountOfCurrentPeriod = totalSentCount - _previousSentCount;
+            var throughput = totalSentCount - _previousSentCount;
             _previousSentCount = totalSentCount;
 
-            _logger.InfoFormat("Send message mode: {0}, totalSent: {1}, throughput: {2}/s", _mode, totalSentCount, totalCountOfCurrentPeriod);
+            _logger.InfoFormat("Send message mode: {0}, totalSent: {1}, throughput: {2}/s", _mode, totalSentCount, throughput);
         }
 
         class ResponseHandler : IResponseHandler

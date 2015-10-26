@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Configuration;
-using System.Diagnostics;
 using System.Threading;
 using ECommon.Autofac;
 using ECommon.Components;
@@ -72,10 +71,10 @@ namespace QuickStart.ConsumerClient
             private void PrintThroughput()
             {
                 var totalHandledCount = _handledCount;
-                var totalCountOfCurrentPeriod = totalHandledCount - _previusHandledCount;
+                var throughput = totalHandledCount - _previusHandledCount;
                 _previusHandledCount = totalHandledCount;
 
-                _logger.InfoFormat("totalReceived: {0}, throughput: {1}/s", totalHandledCount, totalCountOfCurrentPeriod);
+                _logger.InfoFormat("totalReceived: {0}, throughput: {1}/s", totalHandledCount, throughput);
             }
         }
     }

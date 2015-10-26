@@ -18,7 +18,7 @@ namespace EQueue.Broker.Storage
 
         public void AppendData(byte[] buf, int offset, int len)
         {
-            WorkingStream.Write(buf, 0, len);
+            WorkingStream.Write(buf, offset, len);
         }
         public void FlushToDisk()
         {

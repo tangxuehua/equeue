@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Logging;
-using ECommon.Scheduling;
 using ECommon.Utilities;
 using EQueue.Broker.Storage.LogRecords;
 
@@ -116,6 +115,11 @@ namespace EQueue.Broker.Storage
             {
                 chunk.InitNew(chunkNumber);
             }
+            catch (OutOfMemoryException)
+            {
+                chunk.Dispose();
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.Error(string.Format("Chunk {0} create failed.", chunk), ex);
@@ -154,6 +158,11 @@ namespace EQueue.Broker.Storage
             try
             {
                 chunk.InitOngoing(readRecordFunc);
+            }
+            catch (OutOfMemoryException)
+            {
+                chunk.Dispose();
+                throw;
             }
             catch (Exception ex)
             {
@@ -267,7 +276,7 @@ namespace EQueue.Broker.Storage
 
                 InitializeReaderWorkItems();
 
-                if (!_isMemoryChunk)
+                if (!_isMemoryChunk && _chunkConfig.EnableCache)
                 {
                     var chunkSize = (ulong)GetChunkSize(_chunkHeader);
                     if (ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
@@ -377,7 +386,7 @@ namespace EQueue.Broker.Storage
 
             InitializeReaderWorkItems();
 
-            if (!_isMemoryChunk)
+            if (!_isMemoryChunk && _chunkConfig.EnableCache)
             {
                 var chunkSize = (ulong)GetChunkSize(_chunkHeader);
                 if (ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
@@ -413,7 +422,7 @@ namespace EQueue.Broker.Storage
         {
             lock (_cacheSyncObj)
             {
-                if (_isMemoryChunk || !_isCompleted || _memoryChunk != null)
+                if (!_chunkConfig.EnableCache || _isMemoryChunk || !_isCompleted || _memoryChunk != null)
                 {
                     _cachingChunk = 0;
                     return false;
@@ -449,7 +458,7 @@ namespace EQueue.Broker.Storage
         {
             lock (_cacheSyncObj)
             {
-                if (_isMemoryChunk || !_isCompleted || _memoryChunk == null)
+                if (!_chunkConfig.EnableCache || _isMemoryChunk || !_isCompleted || _memoryChunk == null)
                 {
                     return false;
                 }
@@ -510,7 +519,7 @@ namespace EQueue.Broker.Storage
                 }
             }
 
-            if (autoCache && !_isMemoryChunk && _isCompleted && Interlocked.CompareExchange(ref _cachingChunk, 1, 0) == 0)
+            if (_chunkConfig.EnableCache && autoCache && !_isMemoryChunk && _isCompleted && Interlocked.CompareExchange(ref _cachingChunk, 1, 0) == 0)
             {
                 Task.Factory.StartNew(() => TryCacheInMemory(true));
             }
@@ -629,22 +638,25 @@ namespace EQueue.Broker.Storage
 
             var position = ChunkHeader.ChunkDataStartPosition + writtenPosition;
 
-            if (_memoryChunk != null)
+            if (_chunkConfig.EnableCache)
             {
-                var result = _memoryChunk.TryAppend(record);
-                if (!result.Success)
+                if (_memoryChunk != null)
                 {
-                    throw new ChunkWriteException(this.ToString(), "Append record to file chunk success, but append to memory chunk failed as memory space not enough, this should not be happened.");
+                    var result = _memoryChunk.TryAppend(record);
+                    if (!result.Success)
+                    {
+                        throw new ChunkWriteException(this.ToString(), "Append record to file chunk success, but append to memory chunk failed as memory space not enough, this should not be happened.");
+                    }
+                    else if (result.Position != position)
+                    {
+                        throw new ChunkWriteException(this.ToString(), string.Format("Append record to file chunk success, and append to memory chunk success, but the position is not equal, memory chunk write position: {0}, file chunk write position: {1}.", result.Position, position));
+                    }
                 }
-                else if (result.Position != position)
+                else if (_cacheItems != null && recordBuffer != null)
                 {
-                    throw new ChunkWriteException(this.ToString(), string.Format("Append record to file chunk success, and append to memory chunk success, but the position is not equal, memory chunk write position: {0}, file chunk write position: {1}.", result.Position, position));
+                    var index = writtenPosition % _chunkConfig.ChunkLocalCacheSize;
+                    _cacheItems[index] = new CacheItem { RecordPosition = writtenPosition, RecordBuffer = recordBuffer };
                 }
-            }
-            else if (_cacheItems != null && recordBuffer != null)
-            {
-                var index = writtenPosition % _chunkConfig.ChunkLocalCacheSize;
-                _cacheItems[index] = new CacheItem { RecordPosition = writtenPosition, RecordBuffer = recordBuffer };
             }
 
             return RecordWriteResult.Successful(position);

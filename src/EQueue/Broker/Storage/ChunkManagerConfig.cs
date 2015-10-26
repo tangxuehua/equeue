@@ -11,10 +11,10 @@ namespace EQueue.Broker.Storage
         /// <summary>Chunk文件命名规则策略；
         /// </summary>
         public readonly IFileNamingStrategy FileNamingStrategy;
-        /// <summary>Chunk文件总数据大小，字节为单位，如果是固定大小，则设置为0；
+        /// <summary>Chunk文件大小，字节为单位，适用于文件内记录大小不固定的场景，如果是固定大小，则设置为0；
         /// </summary>
         public readonly int ChunkDataSize;
-        /// <summary>Chunk文件单个数据大小，字节为单位，适用于每个数据固定大小的场景；
+        /// <summary>Chunk文件单条数据大小，字节为单位，适用于每条数据固定大小的场景；
         /// </summary>
         public readonly int ChunkDataUnitSize;
         /// <summary>Chunk文件总数据数，适用于每个数据固定大小的场景；
@@ -26,6 +26,9 @@ namespace EQueue.Broker.Storage
         /// <summary>表示是否同步刷盘，如果选择同步刷盘，则消息会写完全写入磁盘后再返回给消息发送者；默认为false，即异步刷盘，每个FlushChunkIntervalMilliseconds刷一次磁盘；
         /// </summary>
         public readonly bool SyncFlush;
+        /// <summary>表示是否缓存Chunk，缓存Chunk可以提高消费速度；
+        /// </summary>
+        public readonly bool EnableCache;
         /// <summary>Chunk文件的BinaryReader的个数；
         /// </summary>
         public readonly int ChunkReaderCount;
@@ -69,6 +72,7 @@ namespace EQueue.Broker.Storage
                                int chunkDataUnitSize,
                                int chunkDataCount,
                                int flushChunkIntervalMilliseconds,
+                               bool enableCache,
                                bool syncFlush,
                                int chunkReaderCount,
                                int maxLogRecordSize,
@@ -107,6 +111,7 @@ namespace EQueue.Broker.Storage
             ChunkDataUnitSize = chunkDataUnitSize;
             ChunkDataCount = chunkDataCount;
             FlushChunkIntervalMilliseconds = flushChunkIntervalMilliseconds;
+            EnableCache = enableCache;
             SyncFlush = syncFlush;
             ChunkReaderCount = chunkReaderCount;
             MaxLogRecordSize = maxLogRecordSize;

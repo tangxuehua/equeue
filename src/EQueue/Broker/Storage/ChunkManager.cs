@@ -100,7 +100,7 @@ namespace EQueue.Broker.Storage
                     {
                         var file = files[i];
                         var chunk = Chunk.FromCompletedFile(file, this, _config);
-                        if (cachedChunkCount < _config.PreCacheChunkCount)
+                        if (_config.EnableCache && cachedChunkCount < _config.PreCacheChunkCount)
                         {
                             if (chunk.TryCacheInMemory(false))
                             {
@@ -113,7 +113,10 @@ namespace EQueue.Broker.Storage
                     AddChunk(Chunk.FromOngoingFile(lastFile, this, _config, readRecordFunc));
                 }
 
-                _scheduleService.StartTask(_uncacheChunkTaskName, () => UncacheChunks(), 1000, 1000);
+                if (_config.EnableCache)
+                {
+                    _scheduleService.StartTask(_uncacheChunkTaskName, () => UncacheChunks(), 1000, 1000);
+                }
             }
         }
         public int GetChunkCount()
@@ -198,6 +201,8 @@ namespace EQueue.Broker.Storage
         }
         public void TryCacheNextChunk(Chunk currentChunk)
         {
+            if (!_config.EnableCache) return;
+
             if (Interlocked.CompareExchange(ref _isCachingNextChunk, 1, 0) == 0)
             {
                 try
