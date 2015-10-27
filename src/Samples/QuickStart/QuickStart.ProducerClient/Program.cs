@@ -23,9 +23,11 @@ namespace QuickStart.ProducerClient
     {
         static long _previousSentCount = 0;
         static long _sentCount = 0;
+        static long _calculateCount = 0;
         static string _mode;
         static bool _hasError;
         static ILogger _logger;
+        static ILogger _throughputLogger;
         static IScheduleService _scheduleService;
 
         static void Main(string[] args)
@@ -49,6 +51,7 @@ namespace QuickStart.ProducerClient
                 .SetDefault<IQueueSelector, QueueAverageSelector>();
 
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
+            _throughputLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("throughput");
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
         }
         static void SendMessageTest()
@@ -163,8 +166,18 @@ namespace QuickStart.ProducerClient
             var totalSentCount = _sentCount;
             var throughput = totalSentCount - _previousSentCount;
             _previousSentCount = totalSentCount;
+            if (throughput > 0)
+            {
+                _calculateCount++;
+            }
 
-            _logger.InfoFormat("Send message mode: {0}, totalSent: {1}, throughput: {2}/s", _mode, totalSentCount, throughput);
+            var average = 0L;
+            if (_calculateCount > 0)
+            {
+                average = totalSentCount / _calculateCount;
+            }
+            _logger.InfoFormat("Send message mode: {0}, totalSent: {1}, throughput: {2}/s, average: {3}", _mode, totalSentCount, throughput, average);
+            _throughputLogger.Info(throughput);
         }
 
         class ResponseHandler : IResponseHandler

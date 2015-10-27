@@ -22,7 +22,6 @@ namespace QuickStart.ConsumerClient
             Console.ReadLine();
         }
 
-        static ILogger _logger;
         static void InitializeEQueue()
         {
             ECommonConfiguration
@@ -33,7 +32,6 @@ namespace QuickStart.ConsumerClient
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
                 .RegisterEQueueComponents();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create("Program");
 
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var consumerSetting = new ConsumerSetting
@@ -54,12 +52,17 @@ namespace QuickStart.ConsumerClient
         {
             private long _previusHandledCount;
             private long _handledCount;
+            private long _calculateCount = 0;
             private IScheduleService _scheduleService;
+            private ILogger _logger;
+            private ILogger _throughputLogger;
 
             public MessageHandler()
             {
                 _scheduleService = ObjectContainer.Resolve<IScheduleService>();
                 _scheduleService.StartTask("Program.PrintThroughput", PrintThroughput, 1000, 1000);
+                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
+                _throughputLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("throughput");
             }
 
             public void Handle(QueueMessage message, IMessageContext context)
@@ -73,8 +76,19 @@ namespace QuickStart.ConsumerClient
                 var totalHandledCount = _handledCount;
                 var throughput = totalHandledCount - _previusHandledCount;
                 _previusHandledCount = totalHandledCount;
+                if (throughput > 0)
+                {
+                    _calculateCount++;
+                }
 
-                _logger.InfoFormat("totalReceived: {0}, throughput: {1}/s", totalHandledCount, throughput);
+                var average = 0L;
+                if (_calculateCount > 0)
+                {
+                    average = totalHandledCount / _calculateCount;
+                }
+
+                _logger.InfoFormat("totalReceived: {0}, throughput: {1}/s, average: {2}", totalHandledCount, throughput, average);
+                _throughputLogger.Info(throughput);
             }
         }
     }
