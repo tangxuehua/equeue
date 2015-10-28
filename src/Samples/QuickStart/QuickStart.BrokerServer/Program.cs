@@ -18,6 +18,7 @@ namespace QuickStart.BrokerServer
                 ConfigurationManager.AppSettings["fileStoreRootPath"],
                 chunkCacheMaxPercent: 95,
                 messageChunkDataSize: int.Parse(ConfigurationManager.AppSettings["chunkSize"]) * 1024 * 1024,
+                chunkWriteBuffer: int.Parse(ConfigurationManager.AppSettings["chunkWriteBuffer"]) * 1024,
                 enableCache: bool.Parse(ConfigurationManager.AppSettings["enableCache"]))).Start();
             Console.ReadLine();
         }

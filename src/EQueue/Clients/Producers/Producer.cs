@@ -160,7 +160,7 @@ namespace EQueue.Clients.Producers
         }
         private IList<int> GetTopicQueueIds(string topic)
         {
-            var queueIds = _topicQueueIdsDict.GetOrAdd(topic, new List<int>());
+            var queueIds = _topicQueueIdsDict.GetOrAdd(topic, k => new List<int>());
             if (queueIds.IsEmpty())
             {
                 try
