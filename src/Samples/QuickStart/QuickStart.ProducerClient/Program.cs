@@ -58,8 +58,8 @@ namespace QuickStart.ProducerClient
         {
             _mode = ConfigurationManager.AppSettings["Mode"];
 
-            var serverAddress = ConfigurationManager.AppSettings["ServerAddress"];
-            var brokerAddress = string.IsNullOrEmpty(serverAddress) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(serverAddress);
+            var address = ConfigurationManager.AppSettings["BrokerAddress"];
+            var brokerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var messageSize = int.Parse(ConfigurationManager.AppSettings["MessageSize"]);
             var messageCount = int.Parse(ConfigurationManager.AppSettings["MessageCount"]);
@@ -70,7 +70,12 @@ namespace QuickStart.ProducerClient
 
             for (var i = 0; i < clientCount; i++)
             {
-                var producer = new Producer(new ProducerSetting { BrokerAddress = new IPEndPoint(brokerAddress, 5000) }).Start();
+                var setting = new ProducerSetting
+                {
+                    BrokerAddress = new IPEndPoint(brokerAddress, 5000),
+                    BrokerAdminAddress = new IPEndPoint(brokerAddress, 5002)
+                };
+                var producer = new Producer(setting).Start();
                 actions.Add(() => SendMessages(producer, _mode, messageCount, message));
             }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Net;
 using System.Threading;
 using ECommon.Autofac;
 using ECommon.Components;
@@ -7,6 +8,7 @@ using ECommon.JsonNet;
 using ECommon.Log4Net;
 using ECommon.Logging;
 using ECommon.Scheduling;
+using ECommon.Socketing;
 using EQueue.Clients.Consumers;
 using EQueue.Configurations;
 using EQueue.Protocols;
@@ -33,15 +35,19 @@ namespace QuickStart.ConsumerClient
                 .RegisterUnhandledExceptionHandler()
                 .RegisterEQueueComponents();
 
+            var address = ConfigurationManager.AppSettings["BrokerAddress"];
+            var brokerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
-            var consumerSetting = new ConsumerSetting
+            var setting = new ConsumerSetting
             {
-                ConsumeFromWhere = ConsumeFromWhere.FirstOffset
+                ConsumeFromWhere = ConsumeFromWhere.FirstOffset,
+                BrokerAddress = new IPEndPoint(brokerAddress, 5001),
+                BrokerAdminAddress = new IPEndPoint(brokerAddress, 5002)
             };
             var messageHandler = new MessageHandler();
             for (var i = 1; i <= clientCount; i++)
             {
-                new Consumer(ConfigurationManager.AppSettings["ConsumerGroup"], consumerSetting)
+                new Consumer(ConfigurationManager.AppSettings["ConsumerGroup"], setting)
                     .Subscribe(ConfigurationManager.AppSettings["Topic"])
                     .SetMessageHandler(messageHandler)
                     .Start();

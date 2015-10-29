@@ -61,7 +61,7 @@ namespace EQueue.Broker
         /// </summary>
         public ChunkManagerConfig QueueChunkConfig { get; set; }
 
-        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 256 * 1024 * 1024, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 4 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, bool enableCache = true)
+        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 256 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 4 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, bool enableCache = true)
         {
             ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
             ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
@@ -83,7 +83,7 @@ namespace EQueue.Broker
                 messageChunkDataSize,
                 0,
                 0,
-                100,
+                chunkFlushInterval,
                 enableCache,
                 syncFlush,
                 Environment.ProcessorCount * 2,
@@ -102,7 +102,7 @@ namespace EQueue.Broker
                 0,
                 8,
                 1000000,
-                100,
+                chunkFlushInterval,
                 enableCache,
                 syncFlush,
                 Environment.ProcessorCount * 2,
