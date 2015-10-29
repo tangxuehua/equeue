@@ -1,4 +1,5 @@
-﻿using ECommon.Components;
+﻿using System;
+using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using EQueue.Broker.Exceptions;
@@ -15,9 +16,11 @@ namespace EQueue.Broker.RequestHandlers
         private readonly IQueueStore _queueStore;
         private readonly ILogger _logger;
         private readonly object _syncObj = new object();
+        private readonly BrokerController _brokerController;
 
-        public SendMessageRequestHandler()
+        public SendMessageRequestHandler(BrokerController brokerController)
         {
+            _brokerController = brokerController;
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
@@ -26,6 +29,11 @@ namespace EQueue.Broker.RequestHandlers
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
+            if (remotingRequest.Body.Length > _brokerController.Setting.MessageMaxSize)
+            {
+                throw new Exception("Message size cannot exceed max message size:" + _brokerController.Setting.MessageMaxSize);
+            }
+
             var request = MessageUtils.DecodeSendMessageRequest(remotingRequest.Body);
             var message = request.Message;
             var queueId = request.QueueId;
@@ -47,7 +55,7 @@ namespace EQueue.Broker.RequestHandlers
             }
 
             //如果需要立即通知所有消费者有新消息，则立即通知
-            if (BrokerController.Instance.Setting.NotifyWhenMessageArrived)
+            if (_brokerController.Setting.NotifyWhenMessageArrived)
             {
                 _suspendedPullRequestManager.NotifyNewMessage(request.Message.Topic, result.QueueId, result.QueueOffset);
             }

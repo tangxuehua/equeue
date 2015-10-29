@@ -150,9 +150,15 @@ namespace EQueue.Clients.Consumers
 
                 var messageCount = pullRequest.ProcessQueue.GetMessageCount();
 
-                if (messageCount >= Setting.PullThresholdForQueue)
+                if (messageCount >= Setting.PullMessageFlowControlThreshold)
                 {
-                    Task.Factory.StartDelayedTask(Setting.PullTimeDelayMillsWhenFlowControl, () => SchedulePullRequest(pullRequest));
+                    var times = 1;
+                    if (Setting.PullMessageFlowControlThreshold > 0)
+                    {
+                        times = messageCount / Setting.PullMessageFlowControlThreshold;
+                    }
+
+                    Task.Factory.StartDelayedTask(Setting.PullDelayMillsecondsWhenFlowControl * times, () => SchedulePullRequest(pullRequest));
                     if ((_flowControlTimes++ % 100) == 0)
                     {
                         _logger.WarnFormat("Pull message flow control. pullRequest={0}, queueMessageCount={1}, flowControlTimes={2}", pullRequest, messageCount, _flowControlTimes);
@@ -542,7 +548,7 @@ namespace EQueue.Clients.Consumers
         {
             var queryConsumerRequest = _binarySerializer.Serialize(new QueryConsumerRequest(GroupName, topic));
             var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, queryConsumerRequest);
-            var remotingResponse = _adminRemotingClient.InvokeSync(remotingRequest, Setting.DefaultTimeoutMilliseconds);
+            var remotingResponse = _adminRemotingClient.InvokeSync(remotingRequest, 60000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -556,7 +562,7 @@ namespace EQueue.Clients.Consumers
         private IEnumerable<int> GetTopicQueueIdsFromServer(string topic)
         {
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForConsumer, Encoding.UTF8.GetBytes(topic));
-            var remotingResponse = _adminRemotingClient.InvokeSync(remotingRequest, Setting.DefaultTimeoutMilliseconds);
+            var remotingResponse = _adminRemotingClient.InvokeSync(remotingRequest, 60000);
             if (remotingResponse.Code == (int)ResponseCode.Success)
             {
                 var queueIds = Encoding.UTF8.GetString(remotingResponse.Body);
@@ -584,11 +590,11 @@ namespace EQueue.Clients.Consumers
         }
         private void StartBackgroundJobsInternal()
         {
-            _scheduleService.StartTask("RefreshTopicQueues", RefreshTopicQueues, Setting.UpdateTopicQueueCountInterval, Setting.UpdateTopicQueueCountInterval);
-            _scheduleService.StartTask("SendHeartbeat", SendHeartbeat, Setting.HeartbeatBrokerInterval, Setting.HeartbeatBrokerInterval);
-            _scheduleService.StartTask("Rebalance", Rebalance, Setting.RebalanceInterval, Setting.RebalanceInterval);
-            _scheduleService.StartTask("PersistConsumeOffset", PersistOffset, Setting.PersistConsumerOffsetInterval, Setting.PersistConsumerOffsetInterval);
-            _scheduleService.StartTask("RetryMessage", RetryMessage, Setting.RetryMessageInterval, Setting.RetryMessageInterval);
+            _scheduleService.StartTask("RefreshTopicQueues", RefreshTopicQueues, 1000, Setting.UpdateTopicQueueCountInterval);
+            _scheduleService.StartTask("SendHeartbeat", SendHeartbeat, 1000, Setting.HeartbeatBrokerInterval);
+            _scheduleService.StartTask("Rebalance", Rebalance, 1000, Setting.RebalanceInterval);
+            _scheduleService.StartTask("SendConsumerOffset", PersistOffset, 1000, Setting.SendConsumerOffsetInterval);
+            _scheduleService.StartTask("RetryMessage", RetryMessage, 1000, Setting.RetryMessageInterval);
 
             _executePullRequestWorker.Start();
         }
@@ -597,7 +603,7 @@ namespace EQueue.Clients.Consumers
             _scheduleService.StopTask("RefreshTopicQueues");
             _scheduleService.StopTask("SendHeartbeat");
             _scheduleService.StopTask("Rebalance");
-            _scheduleService.StopTask("PersistConsumeOffset");
+            _scheduleService.StopTask("SendConsumerOffset");
             _scheduleService.StopTask("RetryMessage");
 
             foreach (var pullRequest in _pullRequestDict.Values)

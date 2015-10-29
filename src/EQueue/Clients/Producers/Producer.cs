@@ -218,6 +218,10 @@ namespace EQueue.Clients.Producers
         {
             var request = new SendMessageRequest { Message = message, QueueId = queueId };
             var data = MessageUtils.EncodeSendMessageRequest(request);
+            if (data.Length > Setting.MessageMaxSize)
+            {
+                throw new Exception("Message size cannot exceed max message size:" + Setting.MessageMaxSize);
+            }
             return new RemotingRequest((int)RequestCode.SendMessage, data);
         }
         private void StartBackgroundJobs()

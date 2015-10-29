@@ -48,6 +48,9 @@ namespace EQueue.Broker
         /// <summary>一个Topic下最多允许的队列数，默认为64；
         /// </summary>
         public int TopicMaxQueueCount { get; set; }
+        /// <summary>消息最大允许的字节数，默认为4MB；
+        /// </summary>
+        public int MessageMaxSize { get; set; }
         /// <summary>EQueue存储文件的根目录
         /// </summary>
         public string FileStoreRootPath { get; set; }
@@ -61,7 +64,7 @@ namespace EQueue.Broker
         /// </summary>
         public ChunkManagerConfig QueueChunkConfig { get; set; }
 
-        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 256 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 4 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, bool enableCache = true)
+        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 256 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 5 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, bool enableCache = true)
         {
             ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
             ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
@@ -76,6 +79,7 @@ namespace EQueue.Broker
             AutoCreateTopic = true;
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;
+            MessageMaxSize = 1024 * 1024 * 4;
             FileStoreRootPath = chunkFileStoreRootPath;
             MessageChunkConfig = new ChunkManagerConfig(
                 Path.Combine(chunkFileStoreRootPath, @"message-chunks"),
