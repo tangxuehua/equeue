@@ -21,7 +21,7 @@ namespace EQueue.Configurations
             configuration.SetDefault<IConsumeOffsetStore, DefaultConsumeOffsetStore>();
             configuration.SetDefault<IQueueStore, DefaultQueueStore>();
             configuration.SetDefault<SuspendedPullRequestManager, SuspendedPullRequestManager>();
-            configuration.SetDefault<IChunkReadStatisticService, DefaultChunkReadStatisticService>();
+            configuration.SetDefault<IChunkStatisticService, DefaultChunkStatisticService>();
 
             return configuration;
         }

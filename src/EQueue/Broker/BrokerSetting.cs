@@ -95,6 +95,7 @@ namespace EQueue.Broker
                 1,
                 5,
                 300000,
+                true,
                 true);
             QueueChunkConfig = new ChunkManagerConfig(
                 Path.Combine(chunkFileStoreRootPath, @"queue-chunks"),
@@ -114,6 +115,7 @@ namespace EQueue.Broker
                 1,
                 5,
                 1000000,
+                false,
                 false);
         }
     }

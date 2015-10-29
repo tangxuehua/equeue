@@ -30,7 +30,7 @@ namespace EQueue.Broker
         private readonly SocketRemotingServer _adminSocketRemotingServer;
         private readonly SuspendedPullRequestManager _suspendedPullRequestManager;
         private readonly ConsoleEventHandlerService _service;
-        private readonly IChunkReadStatisticService _chunkReadStatisticService;
+        private readonly IChunkStatisticService _chunkReadStatisticService;
         private int _isShuttingdown = 0;
 
         public BrokerSetting Setting { get; private set; }
@@ -51,7 +51,7 @@ namespace EQueue.Broker
             _consumeOffsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
-            _chunkReadStatisticService = ObjectContainer.Resolve<IChunkReadStatisticService>();
+            _chunkReadStatisticService = ObjectContainer.Resolve<IChunkStatisticService>();
 
             _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.ProducerAddress, Setting.SocketSetting);
             _consumerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ConsumerRemotingServer", Setting.ConsumerAddress, Setting.SocketSetting);

@@ -58,12 +58,12 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Broker\DefaultChunkReadStatisticService.cs" />
+    <Compile Include="Broker\DefaultChunkStatisticService.cs" />
     <Compile Include="Broker\DefaultMessageStore.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByCountStrategy.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByTimeStrategy.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\IDeleteMessageStrategy.cs" />
-    <Compile Include="Broker\IChunkReadStatisticService.cs" />
+    <Compile Include="Broker\IChunkStatisticService.cs" />
     <Compile Include="Broker\QueueLogRecord.cs" />
     <Compile Include="Broker\MessageLogRecord.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\DeleteTopicRequestHandler.cs" />

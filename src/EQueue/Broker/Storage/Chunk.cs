@@ -17,7 +17,7 @@ namespace EQueue.Broker.Storage
         #region Private Variables
 
         private static readonly ILogger _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Chunk));
-        private static readonly IChunkReadStatisticService _consumeStatisticService = ObjectContainer.Resolve<IChunkReadStatisticService>();
+        private static readonly IChunkStatisticService _chunkStatisticService = ObjectContainer.Resolve<IChunkStatisticService>();
 
         private ChunkHeader _chunkHeader;
         private ChunkFooter _chunkFooter;
@@ -501,9 +501,9 @@ namespace EQueue.Broker.Storage
                                 string.Format("Cannot read a record from data position {0}. Something is seriously wrong in chunk {1}.",
                                               dataPosition, this));
                         }
-                        if (_chunkConfig.RegisterReadStatus)
+                        if (_chunkConfig.EnableChunkReadStatistic)
                         {
-                            _consumeStatisticService.AddCachedReadCount(ChunkHeader.ChunkNumber);
+                            _chunkStatisticService.AddCachedReadCount(ChunkHeader.ChunkNumber);
                         }
                         return record;
                     }
@@ -511,9 +511,9 @@ namespace EQueue.Broker.Storage
                 else if (_memoryChunk != null)
                 {
                     var record = _memoryChunk.TryReadAt<T>(dataPosition, readRecordFunc);
-                    if (record != null && _chunkConfig.RegisterReadStatus)
+                    if (record != null && _chunkConfig.EnableChunkReadStatistic)
                     {
-                        _consumeStatisticService.AddUnmanagedReadCount(ChunkHeader.ChunkNumber);
+                        _chunkStatisticService.AddUnmanagedReadCount(ChunkHeader.ChunkNumber);
                     }
                     return record;
                 }
@@ -540,9 +540,9 @@ namespace EQueue.Broker.Storage
                     var record = IsFixedDataSize() ?
                         TryReadFixedSizeForwardInternal(readerWorkItem, dataPosition, readRecordFunc) :
                         TryReadForwardInternal(readerWorkItem, dataPosition, readRecordFunc);
-                    if (!_isMemoryChunk && _chunkConfig.RegisterReadStatus)
+                    if (!_isMemoryChunk && _chunkConfig.EnableChunkReadStatistic)
                     {
-                        _consumeStatisticService.AddFileReadCount(ChunkHeader.ChunkNumber);
+                        _chunkStatisticService.AddFileReadCount(ChunkHeader.ChunkNumber);
                     }
                     return record;
                 }
@@ -657,6 +657,11 @@ namespace EQueue.Broker.Storage
                     var index = writtenPosition % _chunkConfig.ChunkLocalCacheSize;
                     _cacheItems[index] = new CacheItem { RecordPosition = writtenPosition, RecordBuffer = recordBuffer };
                 }
+            }
+
+            if (!_isMemoryChunk && _chunkConfig.EnableChunkWriteStatistic)
+            {
+                _chunkStatisticService.AddWriteBytes(ChunkHeader.ChunkNumber, (int)bufferStream.Length);
             }
 
             return RecordWriteResult.Successful(position);
