@@ -33,7 +33,10 @@ namespace EQueue.AdminWeb
         public void Start()
         {
             Task.Factory.StartNew(() => _remotingClient.Start());
-            _scheduleService.StartTask("CheckUnconsumedMessages", CheckUnconsumedMessages, 1000, _checkUnconsumedMessageInterval);
+            if (bool.Parse(ConfigurationManager.AppSettings["enableMonitor"]))
+            {
+                _scheduleService.StartTask("CheckUnconsumedMessages", CheckUnconsumedMessages, 1000, _checkUnconsumedMessageInterval);
+            }
         }
         public BrokerStatisticInfo QueryBrokerStatisticInfo()
         {

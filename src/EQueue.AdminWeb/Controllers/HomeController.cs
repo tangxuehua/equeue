@@ -4,6 +4,7 @@ using EQueue.AdminWeb.Models;
 
 namespace EQueue.AdminWeb.Controllers
 {
+    [HandleError]
     public class HomeController : Controller
     {
         private MessageService _messageService;
