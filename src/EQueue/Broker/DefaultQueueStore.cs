@@ -113,7 +113,8 @@ namespace EQueue.Broker
 
             if (queue != null && minConsumedQueueOffset >= 0)
             {
-                return queue.GetMessagePosition(minConsumedQueueOffset, false);
+                int tagCode;
+                return queue.GetMessagePosition(minConsumedQueueOffset, out tagCode, false);
             }
 
             return -1L;

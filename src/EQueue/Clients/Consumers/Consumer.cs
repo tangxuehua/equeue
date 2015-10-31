@@ -14,6 +14,7 @@ using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
+using ECommon.Utilities;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -27,7 +28,7 @@ namespace EQueue.Clients.Consumers
         private readonly SocketRemotingClient _remotingClient;
         private readonly SocketRemotingClient _adminRemotingClient;
         private readonly IBinarySerializer _binarySerializer;
-        private readonly List<string> _subscriptionTopics;
+        private readonly IDictionary<string, HashSet<string>> _subscriptionTopics;
         private readonly TaskFactory _taskFactory;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict;
         private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict;
@@ -38,7 +39,6 @@ namespace EQueue.Clients.Consumers
         private readonly Worker _executePullRequestWorker;
         private readonly ILogger _logger;
         private IMessageHandler _messageHandler;
-        private long _flowControlTimes;
         private bool _stoped;
 
         #endregion
@@ -47,7 +47,7 @@ namespace EQueue.Clients.Consumers
 
         public ConsumerSetting Setting { get; private set; }
         public string GroupName { get; private set; }
-        public IEnumerable<string> SubscriptionTopics
+        public IDictionary<string, HashSet<string>> SubscriptionTopics
         {
             get { return _subscriptionTopics; }
         }
@@ -67,7 +67,7 @@ namespace EQueue.Clients.Consumers
             Setting = setting ?? new ConsumerSetting();
 
             _lockObject = new object();
-            _subscriptionTopics = new List<string>();
+            _subscriptionTopics = new Dictionary<string, HashSet<string>>();
             _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
             _pullRequestQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
             _pullRequestDict = new ConcurrentDictionary<string, PullRequest>();
@@ -113,11 +113,22 @@ namespace EQueue.Clients.Consumers
             _logger.Info("Consumer shutdown.");
             return this;
         }
-        public Consumer Subscribe(string topic)
+        public Consumer Subscribe(string topic, params string[] tags)
         {
-            if (!_subscriptionTopics.Contains(topic))
+            if (!_subscriptionTopics.ContainsKey(topic))
             {
-                _subscriptionTopics.Add(topic);
+                _subscriptionTopics.Add(topic, tags == null ? new HashSet<string>() : new HashSet<string>(tags));
+            }
+            else
+            {
+                var tagSet = _subscriptionTopics[topic];
+                if (tags != null)
+                {
+                    foreach (var tag in tags)
+                    {
+                        tagSet.Add(tag);
+                    }
+                }
             }
             return this;
         }
@@ -149,20 +160,16 @@ namespace EQueue.Clients.Consumers
                 if (pullRequest.ProcessQueue.IsDropped) return;
 
                 var messageCount = pullRequest.ProcessQueue.GetMessageCount();
+                var flowControlThreshold = Setting.PullMessageFlowControlThreshold;
 
-                if (messageCount >= Setting.PullMessageFlowControlThreshold)
+                if (flowControlThreshold > 0 && messageCount >= flowControlThreshold)
                 {
-                    var times = 1;
-                    if (Setting.PullMessageFlowControlThreshold > 0)
-                    {
-                        times = messageCount / Setting.PullMessageFlowControlThreshold;
-                    }
-
-                    Task.Factory.StartDelayedTask(Setting.PullDelayMillsecondsWhenFlowControl * times, () => SchedulePullRequest(pullRequest));
-                    if ((_flowControlTimes++ % 100) == 0)
-                    {
-                        _logger.WarnFormat("Pull message flow control. pullRequest={0}, queueMessageCount={1}, flowControlTimes={2}", pullRequest, messageCount, _flowControlTimes);
-                    }
+                    var milliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(
+                        messageCount,
+                        flowControlThreshold,
+                        Setting.PullMessageFlowControlStepPercent,
+                        Setting.PullMessageFlowControlStepWaitMilliseconds);
+                    Task.Factory.StartDelayedTask(milliseconds, () => SchedulePullRequest(pullRequest));
                     return;
                 }
 
@@ -171,6 +178,7 @@ namespace EQueue.Clients.Consumers
                     ConsumerId = GetConsumerId(),
                     ConsumerGroup = GroupName,
                     MessageQueue = pullRequest.MessageQueue,
+                    Tags = string.Join("|", pullRequest.Tags),
                     QueueOffset = pullRequest.NextConsumeOffset,
                     PullMessageBatchSize = Setting.PullMessageBatchSize,
                     SuspendPullRequestMilliseconds = Setting.SuspendPullRequestMilliseconds,
@@ -250,8 +258,9 @@ namespace EQueue.Clients.Consumers
                 var messages = DecodeMessages(pullRequest, remotingResponse.Body);
                 if (messages.Count() > 0)
                 {
-                    pullRequest.ProcessQueue.AddMessages(messages);
-                    foreach (var message in messages)
+                    var filterMessages = messages.Where(x => IsQueueMessageMatchTag(x, pullRequest.Tags));
+                    pullRequest.ProcessQueue.AddMessages(filterMessages);
+                    foreach (var message in filterMessages)
                     {
                         _taskFactory.StartNew(HandleMessage, new ConsumingMessage(message, pullRequest.ProcessQueue));
                     }
@@ -283,6 +292,21 @@ namespace EQueue.Clients.Consumers
 
             //Schedule the next pull request.
             SchedulePullRequest(pullRequest);
+        }
+        private bool IsQueueMessageMatchTag(QueueMessage message, HashSet<string> tags)
+        {
+            if (tags == null || tags.Count == 0)
+            {
+                return true;
+            }
+            foreach (var tag in tags)
+            {
+                if (tag == "*" || tag == message.Tag)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
         private IEnumerable<QueueMessage> DecodeMessages(PullRequest pullRequest, byte[] buffer)
         {
@@ -372,12 +396,12 @@ namespace EQueue.Clients.Consumers
                 }
             }
         }
-        private void RebalanceClustering(string subscriptionTopic)
+        private void RebalanceClustering(KeyValuePair<string, HashSet<string>> subscriptionTopic)
         {
             IList<MessageQueue> messageQueues;
-            if (_topicQueuesDict.TryGetValue(subscriptionTopic, out messageQueues))
+            if (_topicQueuesDict.TryGetValue(subscriptionTopic.Key, out messageQueues))
             {
-                var consumerIdList = QueryGroupConsumers(subscriptionTopic).ToList();
+                var consumerIdList = QueryGroupConsumers(subscriptionTopic.Key).ToList();
                 consumerIdList.Sort();
 
                 var messageQueueList = messageQueues.ToList();
@@ -399,11 +423,11 @@ namespace EQueue.Clients.Consumers
                 UpdatePullRequestDict(subscriptionTopic, allocatedMessageQueues.ToList());
             }
         }
-        private void UpdatePullRequestDict(string topic, IList<MessageQueue> messageQueues)
+        private void UpdatePullRequestDict(KeyValuePair<string, HashSet<string>> subscriptionTopic, IList<MessageQueue> messageQueues)
         {
             // Check message queues to remove
             var toRemovePullRequestKeys = new List<string>();
-            foreach (var pullRequest in _pullRequestDict.Values.Where(x => x.MessageQueue.Topic == topic))
+            foreach (var pullRequest in _pullRequestDict.Values.Where(x => x.MessageQueue.Topic == subscriptionTopic.Key))
             {
                 var key = pullRequest.MessageQueue.ToString();
                 if (!messageQueues.Any(x => x.ToString() == key))
@@ -429,11 +453,11 @@ namespace EQueue.Clients.Consumers
                 PullRequest pullRequest;
                 if (!_pullRequestDict.TryGetValue(key, out pullRequest))
                 {
-                    var request = new PullRequest(GetConsumerId(), GroupName, messageQueue, -1);
+                    var request = new PullRequest(GetConsumerId(), GroupName, messageQueue, -1, subscriptionTopic.Value);
                     if (_pullRequestDict.TryAdd(key, request))
                     {
                         SchedulePullRequest(request);
-                        _logger.InfoFormat("Added pull request, group: {0}, topic: {1}, queueId: {2}", GroupName, request.MessageQueue.Topic, request.MessageQueue.QueueId);
+                        _logger.InfoFormat("Added pull request, group: {0}, topic: {1}, queueId: {2}, tags: {3}", GroupName, request.MessageQueue.Topic, request.MessageQueue.QueueId, string.Join("|", request.Tags));
                     }
                 }
             }
@@ -499,7 +523,7 @@ namespace EQueue.Clients.Consumers
                 var consumingQueues = _pullRequestDict.Values.ToList().Select(x => QueueKeyUtil.CreateQueueKey(x.MessageQueue.Topic, x.MessageQueue.QueueId)).ToList();
                 _adminRemotingClient.InvokeOneway(new RemotingRequest(
                     (int)RequestCode.ConsumerHeartbeat,
-                    _binarySerializer.Serialize(new ConsumerData(GetConsumerId(), GroupName, _subscriptionTopics, consumingQueues))));
+                    _binarySerializer.Serialize(new ConsumerData(GetConsumerId(), GroupName, _subscriptionTopics.Keys, consumingQueues))));
             }
             catch (Exception ex)
             {
@@ -511,7 +535,7 @@ namespace EQueue.Clients.Consumers
         }
         private void RefreshTopicQueues()
         {
-            foreach (var topic in SubscriptionTopics)
+            foreach (var topic in SubscriptionTopics.Keys)
             {
                 UpdateTopicQueues(topic);
             }

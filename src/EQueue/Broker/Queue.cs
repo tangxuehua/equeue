@@ -73,18 +73,22 @@ namespace EQueue.Broker
             _chunkWriter.Close();
             _chunkManager.Close();
         }
-        public void AddMessage(long messagePosition)
+        public void AddMessage(long messagePosition, string messageTag)
         {
-            _chunkWriter.Write(new QueueLogRecord(messagePosition + 1));
+            _chunkWriter.Write(new QueueLogRecord(messagePosition + 1, messageTag.GetHashcode2()));
         }
-        public long GetMessagePosition(long queueOffset, bool autoCache = true)
+        public long GetMessagePosition(long queueOffset, out int tagCode, bool autoCache = true)
         {
+            tagCode = 0;
+
             var position = queueOffset * _chunkManager.Config.ChunkDataUnitSize;
             var record = _chunkReader.TryReadAt(position, ReadMessageIndex, autoCache);
             if (record == null)
             {
                 return -1L;
             }
+
+            tagCode = record.TagCode;
             return record.MessageLogPosition - 1;
         }
         public void SetProducerVisible(bool visible)

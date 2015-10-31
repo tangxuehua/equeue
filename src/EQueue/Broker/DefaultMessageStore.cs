@@ -82,7 +82,8 @@ namespace EQueue.Broker
                 queueId,
                 queueOffset,
                 message.CreatedTime,
-                DateTime.Now);
+                DateTime.Now,
+                message.Tag);
             _chunkWriter.Write(record);
             return record;
         }

@@ -5,7 +5,6 @@ using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
-using ECommon.Serializing;
 using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.Storage;
@@ -37,6 +36,7 @@ namespace EQueue.Broker.RequestHandlers
         {
             var request = DeserializePullMessageRequest(remotingRequest.Body);
             var topic = request.MessageQueue.Topic;
+            var tags = request.Tags;
             var queueId = request.MessageQueue.QueueId;
             var pullOffset = request.QueueOffset;
 
@@ -48,7 +48,7 @@ namespace EQueue.Broker.RequestHandlers
             }
 
             //尝试拉取消息
-            var pullResult = PullMessages(topic, queueId, pullOffset, request.PullMessageBatchSize);
+            var pullResult = PullMessages(topic, tags, queueId, pullOffset, request.PullMessageBatchSize);
 
             //处理消息拉取结果
             if (pullResult.Status == PullStatus.Found)
@@ -87,7 +87,7 @@ namespace EQueue.Broker.RequestHandlers
             }
         }
 
-        private PullMessageResult PullMessages(string topic, int queueId, long pullOffset, int maxPullSize)
+        private PullMessageResult PullMessages(string topic, string tags, int queueId, long pullOffset, int maxPullSize)
         {
             //先找到队列
             var queue = _queueStore.GetQueue(topic, queueId);
@@ -108,11 +108,12 @@ namespace EQueue.Broker.RequestHandlers
             while (queueOffset <= queueCurrentOffset && messages.Count < maxPullSize)
             {
                 long messagePosition = -1;
+                int tagCode;
 
                 //先获取消息的位置
                 try
                 {
-                    messagePosition = queue.GetMessagePosition(queueOffset);
+                    messagePosition = queue.GetMessagePosition(queueOffset, out tagCode);
                 }
                 catch (ChunkNotExistException ex)
                 {
@@ -137,7 +138,23 @@ namespace EQueue.Broker.RequestHandlers
                     {
                         break;
                     }
-                    messages.Add(message);
+
+                    if (string.IsNullOrEmpty(tags) || tags == "*")
+                    {
+                        messages.Add(message);
+                    }
+                    else
+                    {
+                        var tagList = tags.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var tag in tagList)
+                        {
+                            if (tag == "*" || tag.GetHashcode2() == tagCode)
+                            {
+                                messages.Add(message);
+                                break;
+                            }
+                        }
+                    }
 
                     queueOffset++;
                 }
@@ -193,7 +210,7 @@ namespace EQueue.Broker.RequestHandlers
                     Status = PullStatus.NoNewMessage
                 };
             }
-            //如果当前的pullOffset对应的Message的Chunk文件不存在，则需要重新计算将下一个pullOffset
+            //如果当前的pullOffset对应的Message的Chunk文件不存在，则需要重新计算下一个pullOffset
             else if (messageChunkNotExistException != null)
             {
                 var nextPullOffset = CalculateNextPullOffset(queue, pullOffset, queueCurrentOffset);
@@ -221,7 +238,8 @@ namespace EQueue.Broker.RequestHandlers
             var queueOffset = pullOffset + 1;
             while (queueOffset <= queueCurrentOffset)
             {
-                var messagePosition = queue.GetMessagePosition(queueOffset);
+                int tagCode;
+                var messagePosition = queue.GetMessagePosition(queueOffset, out tagCode);
                 if (_messageStore.IsMessagePositionExist(messagePosition))
                 {
                     return queueOffset;
@@ -241,7 +259,7 @@ namespace EQueue.Broker.RequestHandlers
             var topic = pullMessageRequest.MessageQueue.Topic;
             var queueId = pullMessageRequest.MessageQueue.QueueId;
             var pullOffset = pullMessageRequest.QueueOffset;
-            var pullResult = PullMessages(topic, queueId, pullOffset, pullMessageRequest.PullMessageBatchSize);
+            var pullResult = PullMessages(topic, pullMessageRequest.Tags, queueId, pullOffset, pullMessageRequest.PullMessageBatchSize);
             var remotingRequest = pullRequest.RemotingRequest;
 
             if (pullResult.Status == PullStatus.Found)

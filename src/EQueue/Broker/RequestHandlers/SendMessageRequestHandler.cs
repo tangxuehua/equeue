@@ -49,9 +49,9 @@ namespace EQueue.Broker.RequestHandlers
             {
                 var queueOffset = queue.NextOffset;
                 var messageRecord = _messageStore.StoreMessage(queueId, queueOffset, message);
-                queue.AddMessage(messageRecord.LogPosition);
+                queue.AddMessage(messageRecord.LogPosition, message.Tag);
                 queue.IncrementNextOffset();
-                result = new MessageStoreResult(messageRecord.MessageId, message.Code, message.Topic, queueId, queueOffset);
+                result = new MessageStoreResult(messageRecord.MessageId, message.Code, message.Topic, queueId, queueOffset, message.Tag);
             }
 
             //如果需要立即通知所有消费者有新消息，则立即通知

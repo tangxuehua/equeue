@@ -37,16 +37,26 @@ namespace EQueue.Clients.Consumers
         /// <summary>向Broker发送消费进度的间隔，默认为1s；
         /// </summary>
         public int SendConsumerOffsetInterval { get; set; }
-        /// <summary>从Broker拉取消息时，开始流控的阀值，默认为10W；即当当前拉取到本地的消息数到达10W时，将开始做流控，减慢拉取速度；
+        /// <summary>从Broker拉取消息时，开始流控的阀值，默认为1000；即当前拉取到本地未消费的消息数到达1000时，将开始做流控，减慢拉取速度；
         /// </summary>
         public int PullMessageFlowControlThreshold { get; set; }
-        /// <summary>从Broker拉取消息启动流控时，延迟的时间单位，默认为3s；即当前拉取一次后，下次会3s后再拉取，依次来减慢拉取速度；
+        /// <summary>当拉取消息开始流控时，需要逐渐增加流控时间的步长百分比，默认为1%；
         /// <remarks>
-        /// 假设PullMessageFlowControlThreshold设置为10W，那当当前Consumer本地未消费的消息数在[10W,20W)时，每次拉取消息停顿3s；
-        /// 如果在[20W,30W)时，则停顿6s，以此类推；即规律是当前堆积的消息数除以PullMessageFlowControlThreshold作为要停顿的时间的倍数；
+        /// 假设当前本地拉取且并未消费的消息数超过阀值时，需要逐渐增加流控时间；具体增加多少时间取决于
+        /// PullMessageFlowControlStepPercent以及PullMessageFlowControlStepWaitMilliseconds属性的配置值；
+        /// 举个例子，假设流控阀值为1000，步长百分比为1%，每个步长等待时间为1ms；
+        /// 然后，假如当前拉取到本地未消费的消息数为1200，
+        /// 则超出阀值的消息数是：1200 - 1000 = 200，
+        /// 步长为：1000 * 1% = 10；
+        /// 然后，200 / 10 = 20，即当前超出的消息数是步长的20倍；
+        /// 所以，最后需要等待的时间为20 * 1ms = 20ms;
         /// </remarks>
         /// </summary>
-        public int PullDelayMillsecondsWhenFlowControl { get; set; }
+        public int PullMessageFlowControlStepPercent { get; set; }
+        /// <summary>当拉取消息开始流控时，每个步长需要等待的时间，默认为1ms；
+        /// </summary>
+        public int PullMessageFlowControlStepWaitMilliseconds { get; set; }
+
         /// <summary>拉取消息TCP长轮训的周期，默认为60s；
         /// </summary>
         public int SuspendPullRequestMilliseconds { get; set; }
@@ -73,8 +83,9 @@ namespace EQueue.Clients.Consumers
             HeartbeatBrokerInterval = 1000;
             UpdateTopicQueueCountInterval = 1000;
             SendConsumerOffsetInterval = 1000;
-            PullMessageFlowControlThreshold = 100000;
-            PullDelayMillsecondsWhenFlowControl = 3000;
+            PullMessageFlowControlThreshold = 1000;
+            PullMessageFlowControlStepPercent = 1;
+            PullMessageFlowControlStepWaitMilliseconds = 1;
             SuspendPullRequestMilliseconds = 60 * 1000;
             PullRequestTimeoutMilliseconds = 70 * 1000;
             RetryMessageInterval = 100;

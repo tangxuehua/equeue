@@ -10,6 +10,8 @@ namespace EQueue.Broker.Storage
     [Serializable]
     public class MessageLogRecord : QueueMessage, ILogRecord
     {
+        private static readonly byte[] EmptyBytes = new byte[0];
+
         public MessageLogRecord() { }
         public MessageLogRecord(
             string topic,
@@ -18,8 +20,9 @@ namespace EQueue.Broker.Storage
             int queueId,
             long queueOffset,
             DateTime createdTime,
-            DateTime storedTime)
-            : base(null, topic, code, body, queueId, queueOffset, createdTime, storedTime) { }
+            DateTime storedTime,
+            string tag)
+            : base(null, topic, code, body, queueId, queueOffset, createdTime, storedTime, tag) { }
 
         public void WriteTo(long logPosition, BinaryWriter writer)
         {
@@ -38,6 +41,15 @@ namespace EQueue.Broker.Storage
             var topicBytes = Encoding.UTF8.GetBytes(Topic);
             writer.Write(topicBytes.Length);
             writer.Write(topicBytes);
+
+            //tag
+            var tagBytes = EmptyBytes;
+            if (!string.IsNullOrEmpty(Tag))
+            {
+                tagBytes = Encoding.UTF8.GetBytes(Tag);
+            }
+            writer.Write(tagBytes.Length);
+            writer.Write(tagBytes);
 
             //code
             writer.Write(Code);
