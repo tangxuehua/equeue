@@ -11,7 +11,7 @@ namespace EQueue.Broker
         int MinChunkNum { get; }
         int MaxChunkNum { get; }
 
-        int Load();
+        void Load();
         void Start();
         void Shutdown();
         MessageLogRecord StoreMessage(int queueId, long queueOffset, Message message);

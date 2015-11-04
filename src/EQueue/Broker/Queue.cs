@@ -16,10 +16,10 @@ namespace EQueue.Broker
         private readonly ChunkWriter _chunkWriter;
         private readonly ChunkReader _chunkReader;
         private readonly ChunkManager _chunkManager;
-        private long _nextOffset = 0;
         private readonly IJsonSerializer _jsonSerializer;
-        private QueueSetting _setting;
         private readonly string _queueSettingFile;
+        private QueueSetting _setting;
+        private long _nextOffset = 0;
         private ILogger _logger;
 
         public string Topic { get; private set; }
@@ -42,10 +42,6 @@ namespace EQueue.Broker
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(this.GetType().FullName);
         }
 
-        public void CleanChunks()
-        {
-            _chunkManager.Clean();
-        }
         public void Load()
         {
             _setting = LoadQueueSetting();
@@ -107,7 +103,6 @@ namespace EQueue.Broker
             SaveQueueSetting();
 
             Close();
-            CleanChunks();
 
             Directory.Delete(_chunkManager.ChunkPath, true);
         }
@@ -181,7 +176,7 @@ namespace EQueue.Broker
             {
                 Directory.CreateDirectory(_chunkManager.ChunkPath);
             }
-            using (var stream = new FileStream(_queueSettingFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+            using (var stream = new FileStream(_queueSettingFile, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
                 using (var writer = new StreamWriter(stream))
                 {

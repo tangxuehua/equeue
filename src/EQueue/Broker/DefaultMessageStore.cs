@@ -16,7 +16,7 @@ namespace EQueue.Broker
         private readonly IDeleteMessageStrategy _deleteMessageStragegy;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
-        private long _minConsumedMessagePosition;
+        private long _minConsumedMessagePosition = -1;
 
         public long MinMessagePosition
         {
@@ -52,24 +52,22 @@ namespace EQueue.Broker
             _logger = loggerFactory.Create(GetType().FullName);
         }
 
-        public int Load()
+        public void Load()
         {
             _chunkManager = new ChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig);
             _chunkWriter = new ChunkWriter(_chunkManager);
             _chunkReader = new ChunkReader(_chunkManager, _chunkWriter);
 
             _chunkManager.Load(ReadMessage);
-
-            return _chunkManager.GetAllChunks().Count;
         }
         public void Start()
         {
             _chunkWriter.Open();
-            _scheduleService.StartTask(string.Format("{0}.DeleteMessages", this.GetType().Name), DeleteMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteMessagesInterval);
+            _scheduleService.StartTask("DeleteMessages", DeleteMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteMessagesInterval);
         }
         public void Shutdown()
         {
-            _scheduleService.StopTask(string.Format("{0}.DeleteMessages", this.GetType().Name));
+            _scheduleService.StopTask("DeleteMessages");
             _chunkWriter.Close();
             _chunkManager.Close();
         }

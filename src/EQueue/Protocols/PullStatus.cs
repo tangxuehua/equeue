@@ -6,6 +6,7 @@
         NoNewMessage = 2,
         NextOffsetReset = 3,
         Ignored = 4,
-        QueueNotExist = 5
+        QueueNotExist = 5,
+        BrokerIsCleaning = 6
     }
 }

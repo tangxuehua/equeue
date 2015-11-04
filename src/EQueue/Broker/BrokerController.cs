@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -24,19 +25,24 @@ namespace EQueue.Broker
         private readonly IQueueStore _queueStore;
         private readonly IMessageStore _messageStore;
         private readonly IConsumeOffsetStore _consumeOffsetStore;
+        private readonly SuspendedPullRequestManager _suspendedPullRequestManager;
         private readonly ConsumerManager _consumerManager;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
         private readonly SocketRemotingServer _adminSocketRemotingServer;
-        private readonly SuspendedPullRequestManager _suspendedPullRequestManager;
         private readonly ConsoleEventHandlerService _service;
         private readonly IChunkStatisticService _chunkReadStatisticService;
         private int _isShuttingdown = 0;
+        private int _isCleaning = 0;
 
         public BrokerSetting Setting { get; private set; }
         public ConsumerManager ConsumerManager
         {
             get { return _consumerManager; }
+        }
+        public bool IsCleaning
+        {
+            get { return _isCleaning == 1; }
         }
         public static BrokerController Instance
         {
@@ -74,16 +80,71 @@ namespace EQueue.Broker
             _instance = new BrokerController(setting);
             return _instance;
         }
+        public BrokerController Clean()
+        {
+            var watch = Stopwatch.StartNew();
+            _logger.InfoFormat("Broker clean starting...");
+
+            if (Interlocked.CompareExchange(ref _isCleaning, 1, 0) == 0)
+            {
+                try
+                {
+                    //首先关闭所有组件
+                    _queueStore.Shutdown();
+                    _consumeOffsetStore.Shutdown();
+                    _messageStore.Shutdown();
+                    _suspendedPullRequestManager.Clean();
+
+                    //再删除Broker的整个存储目录以及目录下的所有文件
+                    if (Directory.Exists(Setting.FileStoreRootPath))
+                    {
+                        Directory.Delete(Setting.FileStoreRootPath, true);
+                    }
+
+                    //再重新加载和启动所有组件
+                    _messageStore.Load();
+                    _queueStore.Load();
+
+                    _consumeOffsetStore.Start();
+                    _messageStore.Start();
+                    _queueStore.Start();
+
+                    Interlocked.Exchange(ref _isCleaning, 0);
+                    _logger.InfoFormat("Broker clean success, timeSpent:{0}ms, producer:[{1}], consumer:[{2}], admin:[{3}]", watch.ElapsedMilliseconds, Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorFormat("Broker clean failed.", ex);
+                    throw;
+                }
+            }
+
+            return this;
+        }
         public BrokerController Start()
         {
             var watch = Stopwatch.StartNew();
             _logger.InfoFormat("Broker starting...");
 
-            var messageChunkCount = _messageStore.Load();
-            if (messageChunkCount == 0)
+            _messageStore.Load();
+            _queueStore.Load();
+
+            if (_messageStore.ChunkCount == 0 || _queueStore.GetAllQueueCount() == 0)
             {
-                _queueStore.Clean();
-                _consumeOffsetStore.Clean();
+                _logger.InfoFormat("The message store or queue store is empty, try to clear all the broker store files.");
+
+                _messageStore.Shutdown();
+                _queueStore.Shutdown();
+
+                if (Directory.Exists(Setting.FileStoreRootPath))
+                {
+                    Directory.Delete(Setting.FileStoreRootPath, true);
+                }
+
+                _logger.InfoFormat("All the broker store files clear success.");
+
+                _messageStore.Load();
+                _queueStore.Load();
             }
 
             _consumeOffsetStore.Start();
@@ -95,6 +156,9 @@ namespace EQueue.Broker
             _producerSocketRemotingServer.Start();
             _adminSocketRemotingServer.Start();
             _chunkReadStatisticService.Start();
+
+            RemoveNotExistQueueConsumeOffsets();
+
             Interlocked.Exchange(ref _isShuttingdown, 0);
             _logger.InfoFormat("Broker started, timeSpent:{0}ms, producer:[{1}], consumer:[{2}], admin:[{3}]", watch.ElapsedMilliseconds, Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
             return this;
@@ -132,6 +196,17 @@ namespace EQueue.Broker
             return statisticInfo;
         }
 
+        private void RemoveNotExistQueueConsumeOffsets()
+        {
+            var consumeKeys = _consumeOffsetStore.GetConsumeKeys();
+            foreach (var consumeKey in consumeKeys)
+            {
+                if (!_queueStore.IsQueueExist(consumeKey))
+                {
+                    _consumeOffsetStore.DeleteConsumeOffset(consumeKey);
+                }
+            }
+        }
         private void RegisterRequestHandlers()
         {
             _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler(this));

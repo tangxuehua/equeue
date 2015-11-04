@@ -5,7 +5,7 @@ namespace EQueue.Broker
 {
     public interface IQueueStore
     {
-        void Clean();
+        void Load();
         void Start();
         void Shutdown();
         IEnumerable<string> GetAllTopics();
@@ -14,6 +14,7 @@ namespace EQueue.Broker
         long GetMinConusmedMessagePosition();
         long GetTotalUnConusmedMessageCount();
         bool IsTopicExist(string topic);
+        bool IsQueueExist(string queueKey);
         bool IsQueueExist(string topic, int queueId);
         long GetQueueCurrentOffset(string topic, int queueId);
         long GetQueueMinOffset(string topic, int queueId);

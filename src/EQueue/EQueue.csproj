@@ -39,9 +39,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ECommon, Version=1.5.4.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ECommon, Version=1.5.5.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\ECommon.1.5.4\lib\net45\ECommon.dll</HintPath>
+      <HintPath>..\packages\ECommon.1.5.5\lib\net45\ECommon.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
@@ -56,6 +56,7 @@
     <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByCountStrategy.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByTimeStrategy.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\IDeleteMessageStrategy.cs" />
+    <Compile Include="Broker\Exceptions\BrokerCleanningException.cs" />
     <Compile Include="Broker\IChunkStatisticService.cs" />
     <Compile Include="Broker\QueueLogRecord.cs" />
     <Compile Include="Broker\MessageLogRecord.cs" />
@@ -67,7 +68,7 @@
     <Compile Include="Broker\RequestHandlers\Admin\SetQueueConsumerVisibleRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\GetMessageDetailRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\QueryBrokerStatisticInfoRequestHandler.cs" />
-    <Compile Include="Broker\RequestHandlers\Admin\QueryConsumerRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\QueryConsumerRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\DeleteQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetTopicQueueIdsForProducerRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\AddQueueRequestHandler.cs" />

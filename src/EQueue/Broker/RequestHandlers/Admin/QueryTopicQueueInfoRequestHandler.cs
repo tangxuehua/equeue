@@ -3,6 +3,7 @@ using System.Linq;
 using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
+using EQueue.Broker.Exceptions;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -23,6 +24,11 @@ namespace EQueue.Broker.RequestHandlers.Admin
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
+            if (BrokerController.Instance.IsCleaning)
+            {
+                throw new BrokerCleanningException();
+            }
+
             var request = _binarySerializer.Deserialize<QueryTopicQueueInfoRequest>(remotingRequest.Body);
             var topicQueueInfoList = new List<TopicQueueInfo>();
             var queues = _queueStore.QueryQueues(request.Topic).ToList().OrderBy(x => x.Topic).ThenBy(x => x.QueueId);

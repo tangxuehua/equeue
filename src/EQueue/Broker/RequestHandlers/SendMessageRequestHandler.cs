@@ -34,6 +34,11 @@ namespace EQueue.Broker.RequestHandlers
                 throw new Exception("Message size cannot exceed max message size:" + _brokerController.Setting.MessageMaxSize);
             }
 
+            if (BrokerController.Instance.IsCleaning)
+            {
+                throw new BrokerCleanningException();
+            }
+
             var request = MessageUtils.DecodeSendMessageRequest(remotingRequest.Body);
             var message = request.Message;
             var queueId = request.QueueId;

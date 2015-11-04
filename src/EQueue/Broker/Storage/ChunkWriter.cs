@@ -34,6 +34,8 @@ namespace EQueue.Broker.Storage
             {
                 _scheduleService.StartTask(_flushTaskName, Flush, 1000, _chunkManager.Config.FlushChunkIntervalMilliseconds);
             }
+
+            _isClosed = false;
         }
         public long Write(ILogRecord record)
         {
@@ -87,6 +89,7 @@ namespace EQueue.Broker.Storage
             lock (_lockObj)
             {
                 _scheduleService.StopTask(_flushTaskName);
+                _currentChunk = null;
                 _isClosed = true;
             }
         }
@@ -95,7 +98,7 @@ namespace EQueue.Broker.Storage
             lock (_lockObj)
             {
                 if (_isClosed) return;
-                if (_currentChunk.IsCompleted) return;
+                if (_currentChunk == null || _currentChunk.IsCompleted) return;
 
                 _currentChunk.Flush();
             }

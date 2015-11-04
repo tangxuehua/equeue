@@ -18,6 +18,11 @@ namespace EQueue.Broker.RequestHandlers
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
+            if (BrokerController.Instance.IsCleaning)
+            {
+                return null;
+            }
+
             var request = _binarySerializer.Deserialize<UpdateQueueOffsetRequest>(remotingRequest.Body);
             _offsetStore.UpdateConsumeOffset(
                 request.MessageQueue.Topic,

@@ -34,10 +34,6 @@ namespace EQueue.Broker
             _persistConsumeOffsetTaskName = string.Format("{0}.PersistConsumeOffsetInfo", this.GetType().Name);
         }
 
-        public void Clean()
-        {
-            CleanConsumeOffsets();
-        }
         public void Start()
         {
             var path = BrokerController.Instance.Setting.FileStoreRootPath;
@@ -115,6 +111,7 @@ namespace EQueue.Broker
                     dict.Remove(key);
                 }
             }
+            PersistConsumeOffsetInfo();
         }
         public IEnumerable<string> GetConsumeKeys()
         {
@@ -156,24 +153,6 @@ namespace EQueue.Broker
             return topicConsumeInfoList;
         }
 
-        private void CleanConsumeOffsets()
-        {
-            var path = BrokerController.Instance.Setting.FileStoreRootPath;
-            if (!Directory.Exists(path))
-            {
-                return;
-            }
-
-            _consumeOffsetFile = Path.Combine(path, ConsumeOffsetFileName);
-
-            if (File.Exists(_consumeOffsetFile))
-            {
-                File.SetAttributes(_consumeOffsetFile, FileAttributes.Normal);
-                File.Delete(_consumeOffsetFile);
-            }
-
-            _groupConsumeOffsetsDict.Clear();
-        }
         private void LoadConsumeOffsetInfo()
         {
             using (var stream = new FileStream(_consumeOffsetFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))

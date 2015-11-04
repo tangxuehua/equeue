@@ -5,7 +5,6 @@ namespace EQueue.Broker
 {
     public interface IConsumeOffsetStore
     {
-        void Clean();
         void Start();
         void Shutdown();
         int GetConsumerGroupCount();

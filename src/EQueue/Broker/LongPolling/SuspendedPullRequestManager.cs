@@ -42,6 +42,18 @@ namespace EQueue.Broker.LongPolling
             });
         }
 
+        public void Clean()
+        {
+            var keys = _queueRequestDict.Keys.ToList();
+            foreach (var key in keys)
+            {
+                PullRequest request;
+                if (_queueRequestDict.TryRemove(key, out request))
+                {
+                    _taskFactory.StartNew(() => request.NoNewMessageAction(request));
+                }
+            }
+        }
         public void SuspendPullRequest(PullRequest pullRequest)
         {
             var pullMessageRequest = pullRequest.PullMessageRequest;

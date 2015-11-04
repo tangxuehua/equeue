@@ -5,10 +5,11 @@ using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Broker.Client;
+using EQueue.Broker.Exceptions;
 using EQueue.Protocols;
 using EQueue.Utils;
 
-namespace EQueue.Broker.RequestHandlers.Admin
+namespace EQueue.Broker.RequestHandlers
 {
     public class QueryConsumerRequestHandler : IRequestHandler
     {
@@ -23,6 +24,11 @@ namespace EQueue.Broker.RequestHandlers.Admin
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
+            if (BrokerController.Instance.IsCleaning)
+            {
+                return RemotingResponseFactory.CreateResponse(remotingRequest, Encoding.UTF8.GetBytes(string.Empty));
+            }
+
             var request = _binarySerializer.Deserialize<QueryConsumerRequest>(remotingRequest.Body);
             var consumerGroup = _consumerManager.GetConsumerGroup(request.GroupName);
             var consumerIdList = new List<string>();

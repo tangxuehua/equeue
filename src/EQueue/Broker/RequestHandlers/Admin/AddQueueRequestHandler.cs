@@ -1,6 +1,7 @@
 ﻿using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
+using EQueue.Broker.Exceptions;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -19,6 +20,10 @@ namespace EQueue.Broker.RequestHandlers.Admin
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
+            if (BrokerController.Instance.IsCleaning)
+            {
+                throw new BrokerCleanningException();
+            }
             var addQueueRequest = _binarySerializer.Deserialize<AddQueueRequest>(remotingRequest.Body);
             _queueStore.AddQueue(addQueueRequest.Topic);
             return RemotingResponseFactory.CreateResponse(remotingRequest);

@@ -16,7 +16,7 @@ namespace EQueue.Broker.Storage
     public class ChunkManager : IDisposable
     {
         private static readonly ILogger _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(ChunkManager));
-        private readonly object _chunksLocker = new object();
+        private readonly object _lockObj = new object();
         private readonly ChunkManagerConfig _config;
         private readonly IDictionary<int, Chunk> _chunks;
         private readonly string _chunkPath;
@@ -50,35 +50,9 @@ namespace EQueue.Broker.Storage
             _uncacheChunkTaskName = string.Format("{0}.{1}.UncacheChunks", Name, this.GetType().Name);
         }
 
-        public void Clean()
-        {
-            lock (_chunksLocker)
-            {
-                if (!Directory.Exists(_chunkPath))
-                {
-                    return;
-                }
-
-                var tempFiles = _config.FileNamingStrategy.GetTempFiles(_chunkPath);
-                foreach (var file in tempFiles)
-                {
-                    File.SetAttributes(file, FileAttributes.Normal);
-                    File.Delete(file);
-                }
-
-                var files = _config.FileNamingStrategy.GetChunkFiles(_chunkPath);
-                foreach (var file in files)
-                {
-                    File.SetAttributes(file, FileAttributes.Normal);
-                    File.Delete(file);
-                }
-
-                _chunks.Clear();
-            }
-        }
         public void Load<T>(Func<byte[], T> readRecordFunc) where T : ILogRecord
         {
-            lock (_chunksLocker)
+            lock (_lockObj)
             {
                 if (!Directory.Exists(_chunkPath))
                 {
@@ -129,7 +103,7 @@ namespace EQueue.Broker.Storage
         }
         public Chunk AddNewChunk()
         {
-            lock (_chunksLocker)
+            lock (_lockObj)
             {
                 var chunkNumber = _nextChunkNumber;
                 var chunkFileName = _config.FileNamingStrategy.GetFileNameFor(_chunkPath, chunkNumber);
@@ -142,7 +116,7 @@ namespace EQueue.Broker.Storage
         }
         public Chunk GetFirstChunk()
         {
-            lock (_chunksLocker)
+            lock (_lockObj)
             {
                 if (_chunks.Count == 0)
                 {
@@ -154,7 +128,7 @@ namespace EQueue.Broker.Storage
         }
         public Chunk GetLastChunk()
         {
-            lock (_chunksLocker)
+            lock (_lockObj)
             {
                 if (_chunks.Count == 0)
                 {
@@ -182,7 +156,7 @@ namespace EQueue.Broker.Storage
         }
         public bool RemoveChunk(Chunk chunk)
         {
-            lock (_chunksLocker)
+            lock (_lockObj)
             {
                 if (_chunks.Remove(chunk.ChunkHeader.ChunkNumber))
                 {
@@ -227,7 +201,7 @@ namespace EQueue.Broker.Storage
         }
         public void Close()
         {
-            lock (_chunksLocker)
+            lock (_lockObj)
             {
                 _scheduleService.StopTask(_uncacheChunkTaskName);
 

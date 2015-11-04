@@ -34,6 +34,11 @@ namespace EQueue.Broker.RequestHandlers
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
+            if (BrokerController.Instance.IsCleaning)
+            {
+                return BuildBrokerIsCleaningResponse(remotingRequest);
+            }
+
             var request = DeserializePullMessageRequest(remotingRequest.Body);
             var topic = request.MessageQueue.Topic;
             var tags = request.Tags;
@@ -75,6 +80,7 @@ namespace EQueue.Broker.RequestHandlers
                         request.SuspendPullRequestMilliseconds,
                         ExecutePullRequest,
                         ExecutePullRequest,
+                        ExecuteNoNewMessagePullRequest,
                         ExecuteReplacedPullRequest);
                     _suspendedPullRequestManager.SuspendPullRequest(pullRequest);
                     return null;
@@ -287,6 +293,14 @@ namespace EQueue.Broker.RequestHandlers
             }
             SendRemotingResponse(pullRequest, BuildIgnoredResponse(pullRequest.RemotingRequest));
         }
+        private void ExecuteNoNewMessagePullRequest(PullRequest pullRequest)
+        {
+            if (!IsPullRequestValid(pullRequest))
+            {
+                return;
+            }
+            SendRemotingResponse(pullRequest, BuildNoNewMessageResponse(pullRequest.RemotingRequest));
+        }
         private bool IsPullRequestValid(PullRequest pullRequest)
         {
             try
@@ -313,6 +327,10 @@ namespace EQueue.Broker.RequestHandlers
         private RemotingResponse BuildQueueNotExistResponse(RemotingRequest remotingRequest)
         {
             return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.QueueNotExist);
+        }
+        private RemotingResponse BuildBrokerIsCleaningResponse(RemotingRequest remotingRequest)
+        {
+            return RemotingResponseFactory.CreateResponse(remotingRequest, (short)PullStatus.BrokerIsCleaning);
         }
         private RemotingResponse BuildFoundResponse(RemotingRequest remotingRequest, IEnumerable<byte[]> messages)
         {

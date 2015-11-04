@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Extensions;
@@ -288,6 +289,10 @@ namespace EQueue.Clients.Consumers
                     _logger.DebugFormat("Pull request was ignored, pullRequest:{0}", pullRequest);
                 }
                 return;
+            }
+            else if (remotingResponse.Code == (short)PullStatus.BrokerIsCleaning)
+            {
+                Thread.Sleep(5000);
             }
 
             //Schedule the next pull request.

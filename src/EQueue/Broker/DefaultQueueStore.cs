@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
@@ -20,6 +19,7 @@ namespace EQueue.Broker
         private readonly IConsumeOffsetStore _consumeOffsetStore;
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
+        private readonly object _lockObj = new object();
         private int _isUpdatingMinConsumedMessagePosition;
         private int _isDeletingQueueMessage;
 
@@ -32,21 +32,20 @@ namespace EQueue.Broker
             _logger = loggerFactory.Create(GetType().FullName);
         }
 
-        public void Clean()
+        public void Load()
         {
-            CleanQueueChunks();
+            LoadQueues();
         }
         public void Start()
         {
-            LoadQueues();
-            CleanQueueConsumeOffsets();
-            _scheduleService.StartTask(string.Format("{0}.UpdateMinConsumedMessagePosition", this.GetType().Name), UpdateMinConsumedMessagePosition, 1000 * 5, 1000 * 5);
-            _scheduleService.StartTask(string.Format("{0}.DeleteQueueMessages", this.GetType().Name), DeleteQueueMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteQueueMessagesInterval);
+            _scheduleService.StartTask("UpdateMinConsumedMessagePosition", UpdateMinConsumedMessagePosition, 1000 * 5, 1000 * 5);
+            _scheduleService.StartTask("DeleteQueueMessages", DeleteQueueMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteQueueMessagesInterval);
         }
         public void Shutdown()
         {
             CloseQueues();
-            _scheduleService.StopTask(string.Format("{0}.DeleteMessages", this.GetType().Name));
+            _scheduleService.StopTask("UpdateMinConsumedMessagePosition");
+            _scheduleService.StopTask("DeleteQueueMessages");
         }
         public IEnumerable<string> GetAllTopics()
         {
@@ -59,6 +58,10 @@ namespace EQueue.Broker
         public bool IsTopicExist(string topic)
         {
             return _queueDict.Values.Any(x => x.Topic.ToLower() == topic.ToLower());
+        }
+        public bool IsQueueExist(string queueKey)
+        {
+            return GetQueue(queueKey) != null;
         }
         public bool IsQueueExist(string topic, int queueId)
         {
@@ -138,7 +141,7 @@ namespace EQueue.Broker
         }
         public void CreateTopic(string topic, int initialQueueCount)
         {
-            lock (this)
+            lock (_lockObj)
             {
                 Ensure.NotNullOrEmpty(topic, "topic");
                 Ensure.Positive(initialQueueCount, "initialQueueCount");
@@ -160,7 +163,7 @@ namespace EQueue.Broker
         }
         public void DeleteTopic(string topic)
         {
-            lock (this)
+            lock (_lockObj)
             {
                 Ensure.NotNullOrEmpty(topic, "topic");
 
@@ -175,7 +178,7 @@ namespace EQueue.Broker
         }
         public void AddQueue(string topic)
         {
-            lock (this)
+            lock (_lockObj)
             {
                 Ensure.NotNullOrEmpty(topic, "topic");
                 var queues = _queueDict.Values.Where(x => x.Topic == topic);
@@ -192,7 +195,7 @@ namespace EQueue.Broker
         }
         public void SetProducerVisible(string topic, int queueId, bool visible)
         {
-            lock (this)
+            lock (_lockObj)
             {
                 var queue = GetQueue(topic, queueId);
                 if (queue != null)
@@ -203,7 +206,7 @@ namespace EQueue.Broker
         }
         public void SetConsumerVisible(string topic, int queueId, bool visible)
         {
-            lock (this)
+            lock (_lockObj)
             {
                 var queue = GetQueue(topic, queueId);
                 if (queue != null)
@@ -214,7 +217,7 @@ namespace EQueue.Broker
         }
         public void DeleteQueue(string topic, int queueId)
         {
-            lock (this)
+            lock (_lockObj)
             {
                 var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
                 Queue queue;
@@ -244,17 +247,17 @@ namespace EQueue.Broker
 
                 //最后将队列从字典中移除
                 _queueDict.Remove(key);
+
+                //如果当前Broker上一个队列都没有了，则清空整个Broker下的所有文件
+                if (_queueDict.IsEmpty)
+                {
+                    BrokerController.Instance.Clean();
+                }
             }
         }
         public Queue GetQueue(string topic, int queueId)
         {
-            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
-            Queue queue;
-            if (_queueDict.TryGetValue(key, out queue) && !queue.Setting.IsDeleted)
-            {
-                return queue;
-            }
-            return null;
+            return GetQueue(QueueKeyUtil.CreateQueueKey(topic, queueId));
         }
         public IEnumerable<Queue> QueryQueues(string topic = null)
         {
@@ -262,7 +265,7 @@ namespace EQueue.Broker
         }
         public IEnumerable<Queue> GetQueues(string topic, bool autoCreate = false)
         {
-            lock (this)
+            lock (_lockObj)
             {
                 var queues = _queueDict.Values.Where(x => x.Topic == topic);
                 if (queues.IsEmpty() && autoCreate)
@@ -274,31 +277,14 @@ namespace EQueue.Broker
             }
         }
 
-        private void CleanQueueChunks()
+        private Queue GetQueue(string key)
         {
-            var chunkConfig = BrokerController.Instance.Setting.QueueChunkConfig;
-            if (!Directory.Exists(chunkConfig.BasePath))
+            Queue queue;
+            if (_queueDict.TryGetValue(key, out queue) && !queue.Setting.IsDeleted)
             {
-                return;
+                return queue;
             }
-            var topicPathList = Directory
-                            .EnumerateDirectories(chunkConfig.BasePath, "*", SearchOption.TopDirectoryOnly)
-                            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
-                            .ToArray();
-            foreach (var topicPath in topicPathList)
-            {
-                var queuePathList = Directory
-                            .EnumerateDirectories(topicPath, "*", SearchOption.TopDirectoryOnly)
-                            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
-                            .ToArray();
-                foreach (var queuePath in queuePathList)
-                {
-                    var items = queuePath.Split('\\');
-                    var queueId = int.Parse(items[items.Length - 1]);
-                    var topic = items[items.Length - 2];
-                    new Queue(topic, queueId).CleanChunks();
-                }
-            }
+            return null;
         }
         private void LoadQueues()
         {
@@ -353,17 +339,6 @@ namespace EQueue.Broker
                 }
             }
             _queueDict.Clear();
-        }
-        private void CleanQueueConsumeOffsets()
-        {
-            var consumeKeys = _consumeOffsetStore.GetConsumeKeys();
-            foreach (var consumeKey in consumeKeys)
-            {
-                if (!_queueDict.ContainsKey(consumeKey))
-                {
-                    _consumeOffsetStore.DeleteConsumeOffset(consumeKey);
-                }
-            }
         }
         private void UpdateMinConsumedMessagePosition()
         {

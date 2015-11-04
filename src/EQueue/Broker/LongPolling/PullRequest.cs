@@ -13,6 +13,7 @@ namespace EQueue.Broker.LongPolling
         public long SuspendMilliseconds { get; private set; }
         public Action<PullRequest> NewMessageArrivedAction { get; private set; }
         public Action<PullRequest> TimeoutAction { get; private set; }
+        public Action<PullRequest> NoNewMessageAction { get; private set; }
         public Action<PullRequest> ReplacedAction { get; private set; }
 
         public PullRequest(
@@ -23,6 +24,7 @@ namespace EQueue.Broker.LongPolling
             long suspendMilliseconds,
             Action<PullRequest> newMessageArrivedAction,
             Action<PullRequest> timeoutAction,
+            Action<PullRequest> noNewMessageAction,
             Action<PullRequest> replacedAction)
         {
             RemotingRequest = remotingRequest;
@@ -32,6 +34,7 @@ namespace EQueue.Broker.LongPolling
             SuspendMilliseconds = suspendMilliseconds;
             NewMessageArrivedAction = newMessageArrivedAction;
             TimeoutAction = timeoutAction;
+            NoNewMessageAction = noNewMessageAction;
             ReplacedAction = replacedAction;
         }
 
