@@ -128,6 +128,11 @@ namespace EQueue.Broker.Storage
             ChunkLocalCacheSize = chunkLocalCacheSize;
             EnableChunkWriteStatistic = enableChunkWriteStatistic;
             EnableChunkReadStatistic = enableChunkReadStatistic;
+
+            if (GetChunkDataSize() > 1024 * 1024 * 1024)
+            {
+                throw new ArgumentException("Chunk data size cannot bigger than 1G");
+            }
         }
 
         public int GetChunkDataSize()
