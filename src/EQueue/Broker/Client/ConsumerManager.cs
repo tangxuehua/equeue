@@ -20,12 +20,12 @@ namespace EQueue.Broker.Client
         public void Start()
         {
             _consumerGroupDict.Clear();
-            _scheduleService.StartTask("ConsumerManager.ScanNotActiveConsumer", ScanNotActiveConsumer, 1000, 1000);
+            _scheduleService.StartTask("ScanNotActiveConsumer", ScanNotActiveConsumer, 1000, 1000);
         }
         public void Shutdown()
         {
             _consumerGroupDict.Clear();
-            _scheduleService.StopTask("ConsumerManager.ScanNotActiveConsumer");
+            _scheduleService.StopTask("ScanNotActiveConsumer");
         }
         public void RegisterConsumer(string groupName, string consumerId, IEnumerable<string> subscriptionTopics, IEnumerable<string> consumingQueues)
         {

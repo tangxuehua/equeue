@@ -164,7 +164,7 @@ namespace QuickStart.ProducerClient
 
         static void StartPrintThroughputTask()
         {
-            _scheduleService.StartTask("Program.PrintThroughput", PrintThroughput, 1000, 1000);
+            _scheduleService.StartTask("PrintThroughput", PrintThroughput, 1000, 1000);
         }
         static void PrintThroughput()
         {

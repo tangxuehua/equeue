@@ -20,7 +20,6 @@ namespace EQueue.Broker.LongPolling
         private readonly IScheduleService _scheduleService;
         private readonly IQueueStore _queueStore;
         private readonly ILogger _logger;
-        private readonly string _checkBlockingPullRequestTaskName;
         private readonly TaskFactory _taskFactory;
         private readonly Worker _notifyMessageArrivedWorker;
 
@@ -33,8 +32,7 @@ namespace EQueue.Broker.LongPolling
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _notifyQueue = new BlockingCollection<NotifyItem>(new ConcurrentQueue<NotifyItem>());
             _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Environment.ProcessorCount));
-            _checkBlockingPullRequestTaskName = string.Format("{0}.CheckBlockingPullRequest", this.GetType().Name);
-            _notifyMessageArrivedWorker = new Worker(string.Format("{0}.NotifyMessageArrived", this.GetType().Name), () =>
+            _notifyMessageArrivedWorker = new Worker("NotifyMessageArrived", () =>
             {
                 var notifyItem = _notifyQueue.Take();
                 if (notifyItem == null) return;
@@ -99,11 +97,11 @@ namespace EQueue.Broker.LongPolling
 
         private void StartCheckBlockingPullRequestTask()
         {
-            _scheduleService.StartTask(_checkBlockingPullRequestTaskName, CheckBlockingPullRequest, 1000 * 5, BrokerController.Instance.Setting.CheckBlockingPullRequestMilliseconds);
+            _scheduleService.StartTask("CheckBlockingPullRequest", CheckBlockingPullRequest, 1000 * 5, BrokerController.Instance.Setting.CheckBlockingPullRequestMilliseconds);
         }
         private void StopCheckBlockingPullRequestTask()
         {
-            _scheduleService.StopTask(_checkBlockingPullRequestTaskName);
+            _scheduleService.StopTask("CheckBlockingPullRequest");
         }
         private void StartNotifyMessageArrivedWorker()
         {

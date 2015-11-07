@@ -41,6 +41,7 @@ namespace QuickStart.ConsumerClient
             var setting = new ConsumerSetting
             {
                 ConsumeFromWhere = ConsumeFromWhere.FirstOffset,
+                MessageHandleMode = MessageHandleMode.Parallel,
                 BrokerAddress = new IPEndPoint(brokerAddress, 5001),
                 BrokerAdminAddress = new IPEndPoint(brokerAddress, 5002)
             };
@@ -66,7 +67,7 @@ namespace QuickStart.ConsumerClient
             public MessageHandler()
             {
                 _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-                _scheduleService.StartTask("Program.PrintThroughput", PrintThroughput, 1000, 1000);
+                _scheduleService.StartTask("PrintThroughput", PrintThroughput, 1000, 1000);
                 _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
                 _throughputLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("throughput");
             }

@@ -13,7 +13,6 @@ namespace EQueue.Broker.Storage
         private readonly IScheduleService _scheduleService;
         private readonly object _lockObj = new object();
         private bool _isClosed = false;
-        private readonly string _flushTaskName;
 
         private Chunk _currentChunk;
 
@@ -23,7 +22,6 @@ namespace EQueue.Broker.Storage
 
             _chunkManager = chunkManager;
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _flushTaskName = string.Format("{0}-FlushChunk", _chunkManager.Name);
         }
 
         public void Open()
@@ -32,7 +30,7 @@ namespace EQueue.Broker.Storage
 
             if (!_chunkManager.Config.SyncFlush)
             {
-                _scheduleService.StartTask(_flushTaskName, Flush, 1000, _chunkManager.Config.FlushChunkIntervalMilliseconds);
+                _scheduleService.StartTask("FlushChunk", Flush, 1000, _chunkManager.Config.FlushChunkIntervalMilliseconds);
             }
 
             _isClosed = false;
@@ -88,7 +86,7 @@ namespace EQueue.Broker.Storage
         {
             lock (_lockObj)
             {
-                _scheduleService.StopTask(_flushTaskName);
+                _scheduleService.StopTask("FlushChunk");
                 _currentChunk = null;
                 _isClosed = true;
             }

@@ -30,15 +30,16 @@ namespace EQueue.Clients.Consumers
         private readonly SocketRemotingClient _adminRemotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly IDictionary<string, HashSet<string>> _subscriptionTopics;
-        private readonly TaskFactory _taskFactory;
+        private readonly TaskFactory _pullMessageTaskFactory;
+        private readonly TaskFactory _consumeMessageTaskFactory;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict;
         private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict;
-        private readonly BlockingCollection<PullRequest> _pullRequestQueue;
         private readonly BlockingCollection<ConsumingMessage> _messageRetryQueue;
         private readonly IScheduleService _scheduleService;
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
-        private readonly Worker _executePullRequestWorker;
         private readonly ILogger _logger;
+        private readonly BlockingCollection<ConsumingMessage> _consumingMessageQueue;
+        private readonly Worker _consumeMessageWorker;
         private IMessageHandler _messageHandler;
         private bool _stoped;
 
@@ -70,19 +71,24 @@ namespace EQueue.Clients.Consumers
             _lockObject = new object();
             _subscriptionTopics = new Dictionary<string, HashSet<string>>();
             _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
-            _pullRequestQueue = new BlockingCollection<PullRequest>(new ConcurrentQueue<PullRequest>());
             _pullRequestDict = new ConcurrentDictionary<string, PullRequest>();
-            _messageRetryQueue = new BlockingCollection<ConsumingMessage>(new ConcurrentQueue<ConsumingMessage>());
-            _taskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Setting.ConsumeThreadMaxCount));
+            _pullMessageTaskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Setting.PullMessageThreadPoolSize));
+            _consumeMessageTaskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Setting.ConsumeMessageThreadPoolSize));
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.SocketSetting, Setting.LocalAddress);
             _adminRemotingClient = new SocketRemotingClient(Setting.BrokerAdminAddress, Setting.SocketSetting, Setting.LocalAdminAddress);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
-            _executePullRequestWorker = new Worker("ExecutePullRequest", ExecutePullRequest);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
 
             _remotingClient.RegisterConnectionEventListener(new ConnectionEventListener(this));
+
+            if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+            {
+                _consumingMessageQueue = new BlockingCollection<ConsumingMessage>();
+                _consumeMessageWorker = new Worker("ConsumeMessage", () => HandleMessage(_consumingMessageQueue.Take()));
+            }
+            _messageRetryQueue = new BlockingCollection<ConsumingMessage>();
         }
 
         #endregion
@@ -101,6 +107,11 @@ namespace EQueue.Clients.Consumers
         public Consumer Start()
         {
             _stoped = false;
+            if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+            {
+                _consumeMessageWorker.Start();
+            }
+            _scheduleService.StartTask("RetryMessage", RetryMessage, 1000, Setting.RetryMessageInterval);
             _remotingClient.Start();
             _adminRemotingClient.Start();
             _logger.InfoFormat("Consumer started, group: {0}.", GroupName);
@@ -111,6 +122,11 @@ namespace EQueue.Clients.Consumers
             _stoped = true;
             _remotingClient.Shutdown();
             _adminRemotingClient.Shutdown();
+            if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+            {
+                _consumeMessageWorker.Stop();
+            }
+            _scheduleService.StopTask("RetryMessage");
             _logger.Info("Consumer shutdown.");
             return this;
         }
@@ -142,16 +158,18 @@ namespace EQueue.Clients.Consumers
 
         #region Private Methods
 
-        private void ExecutePullRequest()
+        private void SchedulePullRequest(PullRequest pullRequest)
         {
-            var pullRequest = _pullRequestQueue.Take();
-
+            _pullMessageTaskFactory.StartNew(ExecutePullRequest, pullRequest);
+        }
+        private void ExecutePullRequest(object parameter)
+        {
             if (_stoped) return;
 
-            if (pullRequest != null)
-            {
-                PullMessage(pullRequest);
-            }
+            var pullRequest = parameter as PullRequest;
+            if (pullRequest == null) return;
+
+            PullMessage(pullRequest);
         }
         private void PullMessage(PullRequest pullRequest)
         {
@@ -263,7 +281,15 @@ namespace EQueue.Clients.Consumers
                     pullRequest.ProcessQueue.AddMessages(filterMessages);
                     foreach (var message in filterMessages)
                     {
-                        _taskFactory.StartNew(HandleMessage, new ConsumingMessage(message, pullRequest.ProcessQueue));
+                        var consumingMessage = new ConsumingMessage(message, pullRequest.ProcessQueue);
+                        if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+                        {
+                            _consumingMessageQueue.Add(consumingMessage);
+                        }
+                        else
+                        {
+                            _consumeMessageTaskFactory.StartNew(HandleMessage, consumingMessage);
+                        }
                     }
                     pullRequest.NextConsumeOffset = messages.Last().QueueOffset + 1;
                 }
@@ -352,13 +378,14 @@ namespace EQueue.Clients.Consumers
 
             return messages;
         }
-        private void SchedulePullRequest(PullRequest pullRequest)
-        {
-            _pullRequestQueue.Add(pullRequest);
-        }
+
         private void RetryMessage()
         {
-            HandleMessage(_messageRetryQueue.Take());
+            ConsumingMessage message;
+            if (_messageRetryQueue.TryTake(out message))
+            {
+                HandleMessage(message);
+            }
         }
         private void HandleMessage(object parameter)
         {
@@ -374,14 +401,14 @@ namespace EQueue.Clients.Consumers
             catch (Exception ex)
             {
                 //TODO，目前，对于消费失败（遇到异常）的消息，我们先记录错误日志，然后将该消息放入本地内存的重试队列；
-                //放入重试队列后，会定期对该消息进行重试，重试队列中的消息会每隔1s被取出一个来重试。
+                //放入重试队列后，会定期对该消息进行重试，重试队列中的消息会定时被取出一个来重试。
                 //通过这样的设计，可以确保消费有异常的消息不会被认为消费已成功，也就是说不会从ProcessQueue中移除；
                 //但不影响该消息的后续消息的消费，该消息的后续消息仍然能够被消费，但是ProcessQueue的消费位置，即滑动门不会向前移动了；
                 //因为只要该消息一直消费遇到异常，那就意味着该消息所对应的queueOffset不能被认为已消费；
                 //而我们发送到broker的是当前最小的已被成功消费的queueOffset，所以broker上记录的当前queue的消费位置（消费进度）不会往前移动，
                 //直到当前失败的消息消费成功为止。所以，如果我们重启了消费者服务器，那下一次开始消费的消费位置还是从当前失败的位置开始，
-                //即便当前失败的消息的后续消息之前已经被消费过了；所以应用需要对每个消息的消费都要支持幂等，不过enode对所有的command和event的处理都支持幂等；
-                //以后，我们会在broker上支持重试队列，然后我们可以将消费失败的消息发回到broker上的重试队列，发回到broker上的重试队列成功后，
+                //即便当前失败的消息的后续消息之前已经被消费过了；所以应用需要对每个消息的消费都要支持幂等；
+                //未来，我们会在broker上支持重试队列，然后我们可以将消费失败的消息发回到broker上的重试队列，发回到broker上的重试队列成功后，
                 //就可以让当前queue的消费位置往前移动了。
                 LogMessageHandlingException(consumingMessage, ex);
                 _messageRetryQueue.Add(consumingMessage);
@@ -474,10 +501,12 @@ namespace EQueue.Clients.Consumers
         private void LogMessageHandlingException(ConsumingMessage consumingMessage, Exception exception)
         {
             _logger.Error(string.Format(
-                "Message handling has exception, message info:[topic={0}, queueId={1}, queueOffset={2}, storedTime={3}, group={4}]",
+                "Message handling has exception, message info:[messageId:{0}, topic:{1}, queueId:{2}, queueOffset:{3}, createdTime:{4}, storedTime:{5}, consumerGroup:{6}]",
+                consumingMessage.Message.MessageId,
                 consumingMessage.Message.Topic,
                 consumingMessage.Message.QueueId,
                 consumingMessage.Message.QueueOffset,
+                consumingMessage.Message.CreatedTime,
                 consumingMessage.Message.StoredTime,
                 GroupName), exception);
         }
@@ -606,57 +635,29 @@ namespace EQueue.Clients.Consumers
         {
             lock (_lockObject)
             {
-                StopBackgroundJobsInternal();
-                StartBackgroundJobsInternal();
+                _scheduleService.StartTask("RefreshTopicQueues", RefreshTopicQueues, 1000, Setting.UpdateTopicQueueCountInterval);
+                _scheduleService.StartTask("SendHeartbeat", SendHeartbeat, 1000, Setting.HeartbeatBrokerInterval);
+                _scheduleService.StartTask("Rebalance", Rebalance, 1000, Setting.RebalanceInterval);
+                _scheduleService.StartTask("PersistOffset", PersistOffset, 1000, Setting.SendConsumerOffsetInterval);
             }
         }
         private void StopBackgroundJobs()
         {
             lock (_lockObject)
             {
-                StopBackgroundJobsInternal();
+                _scheduleService.StopTask("RefreshTopicQueues");
+                _scheduleService.StopTask("SendHeartbeat");
+                _scheduleService.StopTask("Rebalance");
+                _scheduleService.StopTask("PersistOffset");
+
+                foreach (var pullRequest in _pullRequestDict.Values)
+                {
+                    pullRequest.ProcessQueue.IsDropped = true;
+                }
+
+                _pullRequestDict.Clear();
+                _topicQueuesDict.Clear();
             }
-        }
-        private void StartBackgroundJobsInternal()
-        {
-            _scheduleService.StartTask("RefreshTopicQueues", RefreshTopicQueues, 1000, Setting.UpdateTopicQueueCountInterval);
-            _scheduleService.StartTask("SendHeartbeat", SendHeartbeat, 1000, Setting.HeartbeatBrokerInterval);
-            _scheduleService.StartTask("Rebalance", Rebalance, 1000, Setting.RebalanceInterval);
-            _scheduleService.StartTask("SendConsumerOffset", PersistOffset, 1000, Setting.SendConsumerOffsetInterval);
-            _scheduleService.StartTask("RetryMessage", RetryMessage, 1000, Setting.RetryMessageInterval);
-
-            _executePullRequestWorker.Start();
-        }
-        private void StopBackgroundJobsInternal()
-        {
-            _scheduleService.StopTask("RefreshTopicQueues");
-            _scheduleService.StopTask("SendHeartbeat");
-            _scheduleService.StopTask("Rebalance");
-            _scheduleService.StopTask("SendConsumerOffset");
-            _scheduleService.StopTask("RetryMessage");
-
-            foreach (var pullRequest in _pullRequestDict.Values)
-            {
-                pullRequest.ProcessQueue.IsDropped = true;
-            }
-
-            _executePullRequestWorker.Stop();
-
-            if (_pullRequestQueue.Count == 0)
-            {
-                _pullRequestQueue.Add(null);
-            }
-            if (_messageRetryQueue.Count == 0)
-            {
-                _messageRetryQueue.Add(null);
-            }
-
-            Clear();
-        }
-        private void Clear()
-        {
-            _pullRequestDict.Clear();
-            _topicQueuesDict.Clear();
         }
         private static bool IsIntCollectionChanged(IList<int> first, IList<int> second)
         {

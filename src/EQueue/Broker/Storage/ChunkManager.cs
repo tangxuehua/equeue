@@ -21,7 +21,6 @@ namespace EQueue.Broker.Storage
         private readonly IDictionary<int, Chunk> _chunks;
         private readonly string _chunkPath;
         private readonly IScheduleService _scheduleService;
-        private readonly string _uncacheChunkTaskName;
         private int _nextChunkNumber;
         private int _uncachingChunks;
         private int _isCachingNextChunk;
@@ -47,7 +46,6 @@ namespace EQueue.Broker.Storage
             }
             _chunks = new ConcurrentDictionary<int, Chunk>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _uncacheChunkTaskName = string.Format("{0}.{1}.UncacheChunks", Name, this.GetType().Name);
         }
 
         public void Load<T>(Func<byte[], T> readRecordFunc) where T : ILogRecord
@@ -89,7 +87,7 @@ namespace EQueue.Broker.Storage
 
                 if (_config.EnableCache)
                 {
-                    _scheduleService.StartTask(_uncacheChunkTaskName, () => UncacheChunks(), 1000, 1000);
+                    _scheduleService.StartTask("UncacheChunks", () => UncacheChunks(), 1000, 1000);
                 }
             }
         }
@@ -203,7 +201,7 @@ namespace EQueue.Broker.Storage
         {
             lock (_lockObj)
             {
-                _scheduleService.StopTask(_uncacheChunkTaskName);
+                _scheduleService.StopTask("UncacheChunks");
 
                 foreach (var chunk in _chunks.Values)
                 {

@@ -23,7 +23,7 @@ namespace EQueue.Broker.RequestHandlers
             }
 
             var topic = Encoding.UTF8.GetString(remotingRequest.Body);
-            var queueIds = _queueStore.GetQueues(topic).Where(x => x.Setting.ConsumerVisible).Select(x => x.QueueId).ToList();
+            var queueIds = _queueStore.GetQueues(topic, BrokerController.Instance.Setting.AutoCreateTopic).Where(x => x.Setting.ConsumerVisible).Select(x => x.QueueId).ToList();
             var data = Encoding.UTF8.GetBytes(string.Join(",", queueIds));
             return RemotingResponseFactory.CreateResponse(remotingRequest, data);
         }

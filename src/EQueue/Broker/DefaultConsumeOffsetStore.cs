@@ -20,7 +20,6 @@ namespace EQueue.Broker
         private readonly IScheduleService _scheduleService;
         private readonly IJsonSerializer _jsonSerializer;
         private readonly ILogger _logger;
-        private readonly string _persistConsumeOffsetTaskName;
         private string _consumeOffsetFile;
         private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupConsumeOffsetsDict;
         private int _isPersistingOffsets;
@@ -31,7 +30,6 @@ namespace EQueue.Broker
             _scheduleService = scheduleService;
             _jsonSerializer = jsonSerializer;
             _logger = loggerFactory.Create(GetType().FullName);
-            _persistConsumeOffsetTaskName = string.Format("{0}.PersistConsumeOffsetInfo", this.GetType().Name);
         }
 
         public void Start()
@@ -44,12 +42,12 @@ namespace EQueue.Broker
             _consumeOffsetFile = Path.Combine(path, ConsumeOffsetFileName);
 
             LoadConsumeOffsetInfo();
-            _scheduleService.StartTask(_persistConsumeOffsetTaskName, PersistConsumeOffsetInfo, 1000 * 5,  BrokerController.Instance.Setting.PersistConsumeOffsetInterval);
+            _scheduleService.StartTask("PersistConsumeOffsetInfo", PersistConsumeOffsetInfo, 1000 * 5, BrokerController.Instance.Setting.PersistConsumeOffsetInterval);
         }
         public void Shutdown()
         {
             PersistConsumeOffsetInfo();
-            _scheduleService.StopTask(_persistConsumeOffsetTaskName);
+            _scheduleService.StopTask("PersistConsumeOffsetInfo");
         }
         public int GetConsumerGroupCount()
         {
