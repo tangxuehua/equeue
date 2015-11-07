@@ -17,7 +17,7 @@ namespace EQueue.Broker
         /// <summary>Producer，Consumer对Broker发送的发消息和拉消息除外的其他内部请求，以及后台管理控制台发送的查询请求使用的端口号，默认为5002
         /// </summary>
         public IPEndPoint AdminAddress { get; set; }
-        /// <summary>消息到达时是否立即通知相关的PullRequest，默认为false；
+        /// <summary>消息到达时是否立即通知相关的PullRequest，默认为true；
         /// <remarks>
         /// 如果希望当前场景消息吞吐量不大且要求消息消费的实时性更高，可以考虑设置为true；设置为false时，最多在<see cref="CheckBlockingPullRequestMilliseconds"/>
         /// 的时间后，PullRequest会被通知到有新消息；也就是说，设置为false时，消息最多延迟<see cref="CheckBlockingPullRequestMilliseconds"/>。
@@ -53,7 +53,7 @@ namespace EQueue.Broker
         public int MessageMaxSize { get; set; }
         /// <summary>EQueue存储文件的根目录
         /// </summary>
-        public string FileStoreRootPath { get; set; }
+        public string FileStoreRootPath { get; private set; }
         /// <summary>TCP通行层设置
         /// </summary>
         public SocketSetting SocketSetting { get; set; }
@@ -64,13 +64,13 @@ namespace EQueue.Broker
         /// </summary>
         public ChunkManagerConfig QueueChunkConfig { get; set; }
 
-        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 256 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 5 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, bool enableCache = true)
+        public BrokerSetting(string chunkFileStoreRootPath = @"d:\equeue-store", int messageChunkDataSize = 256 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 5 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, bool enableCache = true)
         {
             ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
             ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
             AdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
 
-            NotifyWhenMessageArrived = false;
+            NotifyWhenMessageArrived = true;
             DeleteMessagesInterval = 1000 * 10;
             DeleteQueueMessagesInterval = 1000 * 10;
             PersistConsumeOffsetInterval = 1000 * 1;
