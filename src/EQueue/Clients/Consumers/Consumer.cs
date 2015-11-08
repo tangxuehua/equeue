@@ -30,8 +30,6 @@ namespace EQueue.Clients.Consumers
         private readonly SocketRemotingClient _adminRemotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly IDictionary<string, HashSet<string>> _subscriptionTopics;
-        private readonly TaskFactory _pullMessageTaskFactory;
-        private readonly TaskFactory _consumeMessageTaskFactory;
         private readonly ConcurrentDictionary<string, IList<MessageQueue>> _topicQueuesDict;
         private readonly ConcurrentDictionary<string, PullRequest> _pullRequestDict;
         private readonly BlockingCollection<ConsumingMessage> _messageRetryQueue;
@@ -72,8 +70,6 @@ namespace EQueue.Clients.Consumers
             _subscriptionTopics = new Dictionary<string, HashSet<string>>();
             _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
             _pullRequestDict = new ConcurrentDictionary<string, PullRequest>();
-            _pullMessageTaskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Setting.PullMessageThreadPoolSize));
-            _consumeMessageTaskFactory = new TaskFactory(new LimitedConcurrencyLevelTaskScheduler(Setting.ConsumeMessageThreadPoolSize));
             _remotingClient = new SocketRemotingClient(Setting.BrokerAddress, Setting.SocketSetting, Setting.LocalAddress);
             _adminRemotingClient = new SocketRemotingClient(Setting.BrokerAdminAddress, Setting.SocketSetting, Setting.LocalAdminAddress);
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
@@ -160,7 +156,7 @@ namespace EQueue.Clients.Consumers
 
         private void SchedulePullRequest(PullRequest pullRequest)
         {
-            _pullMessageTaskFactory.StartNew(ExecutePullRequest, pullRequest);
+            Task.Factory.StartNew(ExecutePullRequest, pullRequest);
         }
         private void ExecutePullRequest(object parameter)
         {
@@ -288,7 +284,7 @@ namespace EQueue.Clients.Consumers
                         }
                         else
                         {
-                            _consumeMessageTaskFactory.StartNew(HandleMessage, consumingMessage);
+                            Task.Factory.StartNew(HandleMessage, consumingMessage);
                         }
                     }
                     pullRequest.NextConsumeOffset = messages.Last().QueueOffset + 1;

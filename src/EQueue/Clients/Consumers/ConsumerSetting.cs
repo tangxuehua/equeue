@@ -22,12 +22,6 @@ namespace EQueue.Clients.Consumers
         /// <summary>Socket通信层相关的设置；
         /// </summary>
         public SocketSetting SocketSetting { get; set; }
-        /// <summary>从Broker拉取消息所使用的线程池大小，默认为当前服务器的CPU核数的4倍；
-        /// </summary>
-        public int PullMessageThreadPoolSize { get; set; }
-        /// <summary>消费消息所使用的线程池大小，默认为当前服务器的CPU核数的4倍；只有当当前的消费模式设置为多线程并行消费时，该配置才有效；
-        /// </summary>
-        public int ConsumeMessageThreadPoolSize { get; set; }
         /// <summary>消费者负载均衡的间隔，默认为1s；
         /// </summary>
         public int RebalanceInterval { get; set; }
@@ -88,8 +82,6 @@ namespace EQueue.Clients.Consumers
             BrokerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
             BrokerAdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
             SocketSetting = new SocketSetting();
-            PullMessageThreadPoolSize = Environment.ProcessorCount * 4;
-            ConsumeMessageThreadPoolSize = Environment.ProcessorCount * 4;
             RebalanceInterval = 1000;
             HeartbeatBrokerInterval = 1000;
             UpdateTopicQueueCountInterval = 1000;
