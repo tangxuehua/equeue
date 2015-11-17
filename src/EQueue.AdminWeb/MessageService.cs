@@ -13,6 +13,7 @@ namespace EQueue.AdminWeb
 {
     public class MessageService
     {
+        private readonly byte[] EmptyBytes = new byte[0];
         private readonly SocketRemotingClient _remotingClient;
         private readonly IBinarySerializer _binarySerializer;
         private readonly IScheduleService _scheduleService;
@@ -82,7 +83,21 @@ namespace EQueue.AdminWeb
             }
             else
             {
-                throw new Exception(string.Format("QueryTopicQueueInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                throw new Exception(string.Format("GetTopicQueueInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+            }
+        }
+        public IEnumerable<string> GetProducerInfo()
+        {
+            var remotingRequest = new RemotingRequest((int)RequestCode.QueryProducerInfo, EmptyBytes);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 10000);
+            if (remotingResponse.Code == (int)ResponseCode.Success)
+            {
+                var producerIds = Encoding.UTF8.GetString(remotingResponse.Body);
+                return producerIds.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+            }
+            else
+            {
+                throw new Exception(string.Format("GetProducerInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
         public IEnumerable<ConsumerInfo> GetConsumerInfo(string group, string topic)
@@ -96,7 +111,7 @@ namespace EQueue.AdminWeb
             }
             else
             {
-                throw new Exception(string.Format("QueryConsumerInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                throw new Exception(string.Format("GetConsumerInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
         public void AddQueue(string topic)

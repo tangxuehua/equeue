@@ -4,6 +4,7 @@ using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
+using ECommon.Socketing;
 
 namespace EQueue.Broker.Client
 {
@@ -27,10 +28,10 @@ namespace EQueue.Broker.Client
             _consumerGroupDict.Clear();
             _scheduleService.StopTask("ScanNotActiveConsumer");
         }
-        public void RegisterConsumer(string groupName, string consumerId, IEnumerable<string> subscriptionTopics, IEnumerable<string> consumingQueues)
+        public void RegisterConsumer(string groupName, string consumerId, IEnumerable<string> subscriptionTopics, IEnumerable<string> consumingQueues, ITcpConnection connection)
         {
             var consumerGroup = _consumerGroupDict.GetOrAdd(groupName, key => new ConsumerGroup(key));
-            consumerGroup.Register(consumerId);
+            consumerGroup.Register(consumerId, connection);
             consumerGroup.UpdateConsumerSubscriptionTopics(consumerId, subscriptionTopics);
             consumerGroup.UpdateConsumerConsumingQueues(consumerId, consumingQueues);
         }

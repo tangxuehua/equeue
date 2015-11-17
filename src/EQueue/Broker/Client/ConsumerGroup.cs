@@ -4,17 +4,18 @@ using System.Collections.Generic;
 using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
+using ECommon.Socketing;
 using EQueue.Utils;
 
 namespace EQueue.Broker.Client
 {
     public class ConsumerGroup
     {
-        private string _groupName;
-        private ConcurrentDictionary<string, ConsumerHeartbeatInfo> _consumerDict = new ConcurrentDictionary<string, ConsumerHeartbeatInfo>();
-        private ConcurrentDictionary<string, IEnumerable<string>> _consumerSubscriptionTopicDict = new ConcurrentDictionary<string, IEnumerable<string>>();
-        private ConcurrentDictionary<string, IEnumerable<string>> _consumerConsumingQueueDict = new ConcurrentDictionary<string, IEnumerable<string>>();
-        private ILogger _logger;
+        private readonly string _groupName;
+        private readonly ConcurrentDictionary<string, ConsumerHeartbeatInfo> _consumerDict = new ConcurrentDictionary<string, ConsumerHeartbeatInfo>();
+        private readonly ConcurrentDictionary<string, IEnumerable<string>> _consumerSubscriptionTopicDict = new ConcurrentDictionary<string, IEnumerable<string>>();
+        private readonly ConcurrentDictionary<string, IEnumerable<string>> _consumerConsumingQueueDict = new ConcurrentDictionary<string, IEnumerable<string>>();
+        private readonly ILogger _logger;
 
         public string GroupName { get { return _groupName; } }
 
@@ -24,12 +25,12 @@ namespace EQueue.Broker.Client
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
-        public void Register(string consumerId)
+        public void Register(string consumerId, ITcpConnection connection)
         {
             var consumerHeartbeatInfo = _consumerDict.GetOrAdd(consumerId, key =>
             {
                 _logger.InfoFormat("Consumer registered to group: {0}, consumerId: {1}", _groupName, consumerId);
-                return new ConsumerHeartbeatInfo(key);
+                return new ConsumerHeartbeatInfo(key, connection);
             });
             consumerHeartbeatInfo.LastHeartbeatTime = DateTime.Now;
         }
@@ -103,6 +104,15 @@ namespace EQueue.Broker.Client
             ConsumerHeartbeatInfo consumerHeartbeatInfo;
             if (_consumerDict.TryRemove(consumerId, out consumerHeartbeatInfo))
             {
+                try
+                {
+                    consumerHeartbeatInfo.Connection.Close();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(string.Format("Close tcp connection for consumer client failed, consumerId: {0}", consumerId), ex);
+                }
+
                 IEnumerable<string> subscriptionTopics;
                 if (!_consumerSubscriptionTopicDict.TryRemove(consumerHeartbeatInfo.ConsumerId, out subscriptionTopics))
                 {

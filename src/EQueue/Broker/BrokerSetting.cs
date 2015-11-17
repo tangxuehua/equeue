@@ -36,6 +36,9 @@ namespace EQueue.Broker
         /// <summary>扫描PullRequest对应的队列是否有新消息的时间间隔，默认为1s；
         /// </summary>
         public int CheckBlockingPullRequestMilliseconds { get; set; }
+        /// <summary>判断生产者者不在线的超时时间，默认为30s；即如果一个生产者30s不发送心跳到Broker，则认为不在线；Broker自动会关闭该生产者的连接并从生产者列表中移除；
+        /// </summary>
+        public int ProducerExpiredTimeout { get; set; }
         /// <summary>判断消费者不在线的超时时间，默认为30s；即如果一个消费者30s不发送心跳到Broker，则认为不在线；Broker自动会关闭该消费者的连接并从消费者列表中移除；
         /// </summary>
         public int ConsumerExpiredTimeout { get; set; }
@@ -75,6 +78,7 @@ namespace EQueue.Broker
             DeleteQueueMessagesInterval = 1000 * 10;
             PersistConsumeOffsetInterval = 1000 * 1;
             CheckBlockingPullRequestMilliseconds = 1000 * 1;
+            ProducerExpiredTimeout = 1000 * 30;
             ConsumerExpiredTimeout = 1000 * 30;
             AutoCreateTopic = true;
             TopicDefaultQueueCount = 4;

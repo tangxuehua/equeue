@@ -77,7 +77,7 @@ namespace EQueue.Clients.Consumers
             _allocateMessageQueueStragegy = ObjectContainer.Resolve<IAllocateMessageQueueStrategy>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
 
-            _remotingClient.RegisterConnectionEventListener(new ConnectionEventListener(this));
+            _adminRemotingClient.RegisterConnectionEventListener(new ConnectionEventListener(this));
 
             if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
             {
@@ -540,7 +540,7 @@ namespace EQueue.Clients.Consumers
             }
             catch (Exception ex)
             {
-                if (_remotingClient.IsConnected)
+                if (_adminRemotingClient.IsConnected)
                 {
                     _logger.Error(string.Format("PersistOffset has exception, group: {0}, topic: {1}, queueId: {2}", GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId), ex);
                 }
@@ -551,13 +551,13 @@ namespace EQueue.Clients.Consumers
             try
             {
                 var consumingQueues = _pullRequestDict.Values.ToList().Select(x => QueueKeyUtil.CreateQueueKey(x.MessageQueue.Topic, x.MessageQueue.QueueId)).ToList();
-                _adminRemotingClient.InvokeOneway(new RemotingRequest(
+                _remotingClient.InvokeOneway(new RemotingRequest(
                     (int)RequestCode.ConsumerHeartbeat,
                     _binarySerializer.Serialize(new ConsumerData(GetConsumerId(), GroupName, _subscriptionTopics.Keys, consumingQueues))));
             }
             catch (Exception ex)
             {
-                if (_adminRemotingClient.IsConnected)
+                if (_remotingClient.IsConnected)
                 {
                     _logger.Error(string.Format("SendHeartbeat remoting request to broker has exception, group: {0}", GroupName), ex);
                 }

@@ -22,6 +22,7 @@ namespace EQueue.AdminWeb.Controllers
                 TopicCount = result.TopicCount,
                 QueueCount = result.QueueCount,
                 ConsumerGroupCount = result.ConsumerGroupCount,
+                ProducerCount = result.ProducerCount,
                 ConsumerCount = result.ConsumerCount,
                 TotalUnConsumedMessageCount = result.TotalUnConsumedMessageCount,
                 MessageChunkCount = result.MessageChunkCount,
@@ -46,6 +47,14 @@ namespace EQueue.AdminWeb.Controllers
             {
                 Topic = topic,
                 TopicQueueInfos = topicQueueInfos
+            });
+        }
+        public ActionResult ProducerInfo(string group, string topic)
+        {
+            var producerIds = _messageService.GetProducerInfo();
+            return View(new ProducerViewModel
+            {
+                ProducerIds = producerIds
             });
         }
         public ActionResult ConsumerInfo(string group, string topic)

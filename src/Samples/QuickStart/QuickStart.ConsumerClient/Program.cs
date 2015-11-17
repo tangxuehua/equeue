@@ -62,14 +62,12 @@ namespace QuickStart.ConsumerClient
             private long _calculateCount = 0;
             private IScheduleService _scheduleService;
             private ILogger _logger;
-            private ILogger _throughputLogger;
 
             public MessageHandler()
             {
                 _scheduleService = ObjectContainer.Resolve<IScheduleService>();
                 _scheduleService.StartTask("PrintThroughput", PrintThroughput, 1000, 1000);
                 _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
-                _throughputLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("throughput");
             }
 
             public void Handle(QueueMessage message, IMessageContext context)
@@ -95,7 +93,6 @@ namespace QuickStart.ConsumerClient
                 }
 
                 _logger.InfoFormat("totalReceived: {0}, throughput: {1}/s, average: {2}", totalHandledCount, throughput, average);
-                _throughputLogger.Info(throughput);
             }
         }
     }

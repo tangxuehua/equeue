@@ -51,6 +51,7 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Broker\Client\ProducerManager.cs" />
     <Compile Include="Broker\DefaultChunkStatisticService.cs" />
     <Compile Include="Broker\DefaultMessageStore.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByCountStrategy.cs" />
@@ -64,10 +65,12 @@
     <Compile Include="Broker\RequestHandlers\Admin\CreateTopicRequestHandler.cs" />
     <Compile Include="Broker\IQueueStore.cs" />
     <Compile Include="Broker\DefaultQueueStore.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\QueryProducerInfoRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\SetQueueProducerVisibleRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\SetQueueConsumerVisibleRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\GetMessageDetailRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\QueryBrokerStatisticInfoRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\ProducerHeartbeatRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\QueryConsumerRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\DeleteQueueRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetTopicQueueIdsForProducerRequestHandler.cs" />

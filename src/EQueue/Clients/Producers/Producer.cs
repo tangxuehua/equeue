@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,6 +20,8 @@ namespace EQueue.Clients.Producers
 {
     public class Producer
     {
+        private readonly object _lockObject = new object();
+        private readonly byte[] EmptyBytes = new byte[0];
         private readonly ConcurrentDictionary<string, IList<int>> _topicQueueIdsDict;
         private readonly IScheduleService _scheduleService;
         private readonly SocketRemotingClient _remotingClient;
@@ -40,7 +43,7 @@ namespace EQueue.Clients.Producers
             _queueSelector = ObjectContainer.Resolve<IQueueSelector>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
 
-            _remotingClient.RegisterConnectionEventListener(new ConnectionEventListener(this));
+            _adminRemotingClient.RegisterConnectionEventListener(new ConnectionEventListener(this));
         }
 
         public Producer RegisterConnectionEventListener(IConnectionEventListener listener)
@@ -149,6 +152,24 @@ namespace EQueue.Clients.Producers
             }
         }
 
+        private string GetProducerId()
+        {
+            return ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
+        }
+        private void SendHeartbeat()
+        {
+            try
+            {
+                _remotingClient.InvokeOneway(new RemotingRequest((int)RequestCode.ProducerHeartbeat, Encoding.UTF8.GetBytes(GetProducerId())));
+            }
+            catch (Exception ex)
+            {
+                if (_remotingClient.IsConnected)
+                {
+                    _logger.Error("SendHeartbeat remoting request to broker has exception.", ex);
+                }
+            }
+        }
         private int GetAvailableQueueId(Message message, string routingKey)
         {
             var queueIds = GetTopicQueueIds(message.Topic);
@@ -226,13 +247,21 @@ namespace EQueue.Clients.Producers
         }
         private void StartBackgroundJobs()
         {
-            _topicQueueIdsDict.Clear();
-            _scheduleService.StartTask("RefreshTopicQueueCount", RefreshTopicQueueCount, 1000, Setting.UpdateTopicQueueCountInterval);
+            lock (_lockObject)
+            {
+                _topicQueueIdsDict.Clear();
+                _scheduleService.StartTask("RefreshTopicQueueCount", RefreshTopicQueueCount, 1000, Setting.UpdateTopicQueueCountInterval);
+                _scheduleService.StartTask("SendHeartbeat", SendHeartbeat, 1000, Setting.HeartbeatBrokerInterval);
+            }
         }
         private void StopBackgroundJobs()
         {
-            _scheduleService.StopTask("RefreshTopicQueueCount");
-            _topicQueueIdsDict.Clear();
+            lock (_lockObject)
+            {
+                _scheduleService.StopTask("RefreshTopicQueueCount");
+                _scheduleService.StopTask("SendHeartbeat");
+                _topicQueueIdsDict.Clear();
+            }
         }
         private bool IsIntCollectionChanged(IList<int> first, IList<int> second)
         {

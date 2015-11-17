@@ -11,6 +11,9 @@ namespace EQueue.Protocols
         /// <summary>队列个数
         /// </summary>
         public int QueueCount { get; set; }
+        /// <summary>生产者个数
+        /// </summary>
+        public int ProducerCount { get; set; }
         /// <summary>消费者组个数
         /// </summary>
         public int ConsumerGroupCount { get; set; }

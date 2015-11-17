@@ -150,6 +150,7 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Models\BrokerStatisticInfoViewModel.cs" />
+    <Compile Include="Models\ProducerViewModel.cs" />
     <Compile Include="Models\MessageViewModel.cs" />
     <Compile Include="Models\ConsumerViewModel.cs" />
     <Compile Include="Models\TopicQueueViewModel.cs" />
@@ -190,6 +191,7 @@
     <Content Include="Views\Shared\_Layout.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Home\ConsumerInfo.cshtml" />
+    <Content Include="Views\Home\ProducerInfo.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EQueue\EQueue.csproj">

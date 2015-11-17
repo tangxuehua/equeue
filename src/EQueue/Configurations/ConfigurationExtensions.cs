@@ -17,6 +17,7 @@ namespace EQueue.Configurations
             configuration.SetDefault<IQueueSelector, QueueHashSelector>();
             configuration.SetDefault<IMessageStore, DefaultMessageStore>();
             configuration.SetDefault<IQueueStore, DefaultQueueStore>();
+            configuration.SetDefault<ProducerManager, ProducerManager>();
             configuration.SetDefault<ConsumerManager, ConsumerManager>();
             configuration.SetDefault<IConsumeOffsetStore, DefaultConsumeOffsetStore>();
             configuration.SetDefault<IQueueStore, DefaultQueueStore>();

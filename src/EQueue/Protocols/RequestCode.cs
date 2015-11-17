@@ -21,5 +21,6 @@
         GetMessageDetail = 1007,
         CreateTopic = 1008,
         DeleteTopic = 1009,
+        QueryProducerInfo = 1010,
     }
 }

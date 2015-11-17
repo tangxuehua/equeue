@@ -26,6 +26,7 @@ namespace EQueue.Broker
         private readonly IMessageStore _messageStore;
         private readonly IConsumeOffsetStore _consumeOffsetStore;
         private readonly SuspendedPullRequestManager _suspendedPullRequestManager;
+        private readonly ProducerManager _producerManager;
         private readonly ConsumerManager _consumerManager;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
@@ -36,6 +37,10 @@ namespace EQueue.Broker
         private int _isCleaning = 0;
 
         public BrokerSetting Setting { get; private set; }
+        public ProducerManager ProducerManager
+        {
+            get { return _producerManager; }
+        }
         public ConsumerManager ConsumerManager
         {
             get { return _consumerManager; }
@@ -52,6 +57,7 @@ namespace EQueue.Broker
         private BrokerController(BrokerSetting setting)
         {
             Setting = setting ?? new BrokerSetting();
+            _producerManager = ObjectContainer.Resolve<ProducerManager>();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _consumeOffsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
@@ -64,6 +70,7 @@ namespace EQueue.Broker
             _adminSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.AdminRemotingServer", Setting.AdminAddress, Setting.SocketSetting);
 
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+            _producerSocketRemotingServer.RegisterConnectionEventListener(new ProducerConnectionEventListener(this));
             _consumerSocketRemotingServer.RegisterConnectionEventListener(new ConsumerConnectionEventListener(this));
             RegisterRequestHandlers();
 
@@ -150,6 +157,7 @@ namespace EQueue.Broker
             _consumeOffsetStore.Start();
             _messageStore.Start();
             _queueStore.Start();
+            _producerManager.Start();
             _consumerManager.Start();
             _suspendedPullRequestManager.Start();
             _consumerSocketRemotingServer.Start();
@@ -172,6 +180,7 @@ namespace EQueue.Broker
                 _producerSocketRemotingServer.Shutdown();
                 _consumerSocketRemotingServer.Shutdown();
                 _adminSocketRemotingServer.Shutdown();
+                _producerManager.Shutdown();
                 _consumerManager.Shutdown();
                 _suspendedPullRequestManager.Shutdown();
                 _messageStore.Shutdown();
@@ -189,6 +198,7 @@ namespace EQueue.Broker
             statisticInfo.QueueCount = _queueStore.GetAllQueueCount();
             statisticInfo.TotalUnConsumedMessageCount = _queueStore.GetTotalUnConusmedMessageCount();
             statisticInfo.ConsumerGroupCount = _consumerManager.GetConsumerGroupCount();
+            statisticInfo.ProducerCount = _producerManager.GetProducerCount();
             statisticInfo.ConsumerCount = _consumerManager.GetConsumerCount();
             statisticInfo.MessageChunkCount = _messageStore.ChunkCount;
             statisticInfo.MessageMinChunkNum = _messageStore.MinChunkNum;
@@ -209,20 +219,22 @@ namespace EQueue.Broker
         }
         private void RegisterRequestHandlers()
         {
+            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ProducerHeartbeat, new ProducerHeartbeatRequestHandler(this));
             _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler(this));
 
+            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.PullMessage, new PullMessageRequestHandler());
 
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueIdsForProducer, new GetTopicQueueIdsForProducerRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueIdsForConsumer, new GetTopicQueueIdsForConsumerRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryGroupConsumer, new QueryConsumerRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.UpdateQueueOffsetRequest, new UpdateQueueOffsetRequestHandler());
 
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryBrokerStatisticInfo, new QueryBrokerStatisticInfoRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.CreateTopic, new CreateTopicRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.DeleteTopic, new DeleteTopicRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryTopicQueueInfo, new QueryTopicQueueInfoRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryProducerInfo, new QueryProducerInfoRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryConsumerInfo, new QueryConsumerInfoRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.AddQueue, new AddQueueRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.DeleteQueue, new DeleteQueueRequestHandler());
@@ -231,6 +243,24 @@ namespace EQueue.Broker
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetMessageDetail, new GetMessageDetailRequestHandler());
         }
 
+        class ProducerConnectionEventListener : IConnectionEventListener
+        {
+            private BrokerController _brokerController;
+
+            public ProducerConnectionEventListener(BrokerController brokerController)
+            {
+                _brokerController = brokerController;
+            }
+
+            public void OnConnectionAccepted(ITcpConnection connection) { }
+            public void OnConnectionEstablished(ITcpConnection connection) { }
+            public void OnConnectionFailed(SocketError socketError) { }
+            public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
+            {
+                var producerId = ClientIdFactory.CreateClientId(connection.RemotingEndPoint as IPEndPoint);
+                _brokerController._producerManager.RemoveProducer(producerId);
+            }
+        }
         class ConsumerConnectionEventListener : IConnectionEventListener
         {
             private BrokerController _brokerController;

@@ -23,6 +23,9 @@ namespace EQueue.Clients.Producers
         /// <summary>从Broker获取最新队列信息的间隔，默认为1s；
         /// </summary>
         public int UpdateTopicQueueCountInterval { get; set; }
+        /// <summary>向Broker发送心跳的间隔，默认为1s；
+        /// </summary>
+        public int HeartbeatBrokerInterval { get; set; }
         /// <summary>消息最大允许的字节数，默认为4MB；
         /// </summary>
         public int MessageMaxSize { get; set; }
@@ -33,6 +36,7 @@ namespace EQueue.Clients.Producers
             BrokerAdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
             SocketSetting = new SocketSetting();
             UpdateTopicQueueCountInterval = 1000;
+            HeartbeatBrokerInterval = 1000;
             MessageMaxSize = 1024 * 1024 * 4;
         }
     }
