@@ -50,6 +50,15 @@ namespace EQueue.Broker.LongPolling
                 }
             }
         }
+        public void RemovePullRequest(string consumerGroup, string topic, int queueId)
+        {
+            var key = BuildKey(topic, queueId, consumerGroup);
+            PullRequest request;
+            if (_queueRequestDict.TryRemove(key, out request))
+            {
+                Task.Factory.StartNew(() => request.NoNewMessageAction(request));
+            }
+        }
         public void SuspendPullRequest(PullRequest pullRequest)
         {
             var pullMessageRequest = pullRequest.PullMessageRequest;

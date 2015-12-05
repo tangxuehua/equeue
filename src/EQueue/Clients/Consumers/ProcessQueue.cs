@@ -7,6 +7,7 @@ namespace EQueue.Clients.Consumers
 {
     public class ProcessQueue
     {
+        private readonly object _lockObj = new object();
         private readonly SortedDictionary<long, QueueMessage> _messageDict = new SortedDictionary<long, QueueMessage>();
         private long _consumedQueueOffset = -1L;
         private long _previousConsumedQueueOffset = -1L;
@@ -15,9 +16,20 @@ namespace EQueue.Clients.Consumers
 
         public bool IsDropped { get; set; }
 
+        public void Reset()
+        {
+            lock (_lockObj)
+            {
+                _messageDict.Clear();
+                _consumedQueueOffset = -1L;
+                _previousConsumedQueueOffset = -1L;
+                _maxQueueOffset = -1;
+                _messageCount = 0;
+            }
+        }
         public bool TryUpdatePreviousConsumedQueueOffset(long current)
         {
-            if (current > _previousConsumedQueueOffset)
+            if (current != _previousConsumedQueueOffset)
             {
                 _previousConsumedQueueOffset = current;
                 return true;
@@ -26,7 +38,7 @@ namespace EQueue.Clients.Consumers
         }
         public void AddMessages(IEnumerable<QueueMessage> messages)
         {
-            lock (this)
+            lock (_lockObj)
             {
                 foreach (var message in messages)
                 {
@@ -49,7 +61,7 @@ namespace EQueue.Clients.Consumers
         }
         public void RemoveMessage(QueueMessage message)
         {
-            lock (this)
+            lock (_lockObj)
             {
                 if (_messageDict.Remove(message.QueueOffset))
                 {

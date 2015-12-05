@@ -295,6 +295,7 @@ namespace EQueue.Clients.Consumers
                 var newOffset = BitConverter.ToInt64(remotingResponse.Body, 0);
                 var oldOffset = pullRequest.NextConsumeOffset;
                 pullRequest.NextConsumeOffset = newOffset;
+                pullRequest.ProcessQueue.Reset();
                 _logger.InfoFormat("Reset queue next consume offset. topic:{0}, queueId:{1}, old offset:{2}, new offset:{3}", pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, oldOffset, newOffset);
             }
             else if (remotingResponse.Code == (short)PullStatus.NoNewMessage)

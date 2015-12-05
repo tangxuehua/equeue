@@ -46,9 +46,15 @@ namespace EQueue.Broker.RequestHandlers
             var pullOffset = request.QueueOffset;
 
             //如果消费者第一次过来拉取消息，则计算下一个应该拉取的位置，并返回给消费者
+            var nextConsumeOffset = 0L;
             if (pullOffset < 0)
             {
-                var nextConsumeOffset = GetNextConsumeOffset(topic, queueId, request.ConsumerGroup, request.ConsumeFromWhere);
+                nextConsumeOffset = GetNextConsumeOffset(topic, queueId, request.ConsumerGroup, request.ConsumeFromWhere);
+                return BuildNextOffsetResetResponse(remotingRequest, nextConsumeOffset);
+            }
+            //如果用户人工指定了下次要拉取的位置，则返回该位置给消费者并清除该指定的位置
+            else if (_offsetStore.TryFetchNextConsumeOffset(topic, queueId, request.ConsumerGroup, out nextConsumeOffset))
+            {
                 return BuildNextOffsetResetResponse(remotingRequest, nextConsumeOffset);
             }
 

@@ -22,11 +22,13 @@ namespace EQueue.Broker
         private readonly ILogger _logger;
         private string _consumeOffsetFile;
         private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupConsumeOffsetsDict;
+        private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupNextConsumeOffsetsDict;
         private int _isPersistingOffsets;
 
         public DefaultConsumeOffsetStore(IScheduleService scheduleService, IJsonSerializer jsonSerializer, ILoggerFactory loggerFactory)
         {
             _groupConsumeOffsetsDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
+            _groupNextConsumeOffsetsDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
             _scheduleService = scheduleService;
             _jsonSerializer = jsonSerializer;
             _logger = loggerFactory.Create(GetType().FullName);
@@ -97,7 +99,7 @@ namespace EQueue.Broker
                 return new ConcurrentDictionary<string, long>();
             });
             var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
-            queueOffsetDict.AddOrUpdate(key, offset, (currentKey, oldOffset) => offset > oldOffset ? offset : oldOffset);
+            queueOffsetDict[key] = offset;
         }
         public void DeleteConsumeOffset(string queueKey)
         {
@@ -149,6 +151,31 @@ namespace EQueue.Broker
             }
 
             return topicConsumeInfoList;
+        }
+        public void SetConsumeNextOffset(string topic, int queueId, string group, long nextOffset)
+        {
+            var queueOffsetDict = _groupNextConsumeOffsetsDict.GetOrAdd(group, k =>
+            {
+                return new ConcurrentDictionary<string, long>();
+            });
+            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+            queueOffsetDict[key] = nextOffset;
+        }
+        public bool TryFetchNextConsumeOffset(string topic, int queueId, string group, out long nextOffset)
+        {
+            nextOffset = 0L;
+            ConcurrentDictionary<string, long> queueOffsetDict;
+            if (_groupNextConsumeOffsetsDict.TryGetValue(group, out queueOffsetDict))
+            {
+                long offset;
+                var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+                if (queueOffsetDict.TryRemove(key, out offset))
+                {
+                    nextOffset = offset;
+                    return true;
+                }
+            }
+            return false;
         }
 
         private void LoadConsumeOffsetInfo()

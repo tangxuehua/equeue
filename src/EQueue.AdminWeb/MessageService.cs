@@ -168,6 +168,20 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("GetMessageDetail failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
+        public void SetQueueNextConsumeOffset(string consumerGroup, string topic, int queueId, long nextOffset)
+        {
+            if (nextOffset < 0)
+            {
+                throw new ArgumentException("nextOffset cannot be small than zero.");
+            }
+            var requestData = _binarySerializer.Serialize(new SetQueueNextConsumeOffsetRequest(consumerGroup, topic, queueId, nextOffset));
+            var remotingRequest = new RemotingRequest((int)RequestCode.SetQueueNextConsumeOffset, requestData);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code != (int)ResponseCode.Success)
+            {
+                throw new Exception(string.Format("SetQueueNextConsumeOffset failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+            }
+        }
 
         private void CheckUnconsumedMessages()
         {

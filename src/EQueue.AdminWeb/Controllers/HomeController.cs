@@ -108,5 +108,22 @@ namespace EQueue.AdminWeb.Controllers
             _messageService.SetQueueConsumerVisible(topic, queueId, visible);
             return RedirectToAction("QueueInfo");
         }
+        [HttpGet]
+        public ActionResult SetQueueNextConsumeOffset(string consumerGroup, string topic, int queueId)
+        {
+            var model = new SetQueueNextConsumeOffsetViewModel
+            {
+                ConsumerGroup = consumerGroup,
+                Topic = topic,
+                QueueId = queueId
+            };
+            return View(model);
+        }
+        [HttpPost]
+        public ActionResult SetQueueNextConsumeOffset(string consumerGroup, string topic, int queueId, long nextOffset)
+        {
+            _messageService.SetQueueNextConsumeOffset(consumerGroup, topic, queueId, nextOffset);
+            return RedirectToAction("ConsumerInfo");
+        }
     }
 }

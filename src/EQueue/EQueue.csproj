@@ -90,6 +90,7 @@
     <Compile Include="Broker\RequestHandlers\ConsumerHeartbeatRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\PullMessageRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\GetTopicQueueIdsForConsumerRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\SetQueueNextConsumeOffsetRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\UpdateQueueOffsetRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\SendMessageRequestHandler.cs" />
     <Compile Include="Broker\Queue.cs" />
@@ -163,6 +164,7 @@
     <Compile Include="Protocols\ResponseCode.cs" />
     <Compile Include="Protocols\MessageStoreResult.cs" />
     <Compile Include="Protocols\QueryConsumerRequest.cs" />
+    <Compile Include="Protocols\SetQueueNextConsumeOffsetRequest.cs" />
     <Compile Include="Protocols\UpdateQueueOffsetRequest.cs" />
     <Compile Include="Utils\ConsoleEventHandlerService.cs" />
     <Compile Include="Utils\QueueKeyUtil.cs" />

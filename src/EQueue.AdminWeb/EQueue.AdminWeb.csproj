@@ -24,6 +24,7 @@
     <RestorePackages>true</RestorePackages>
     <WebGreaseLibPath>..\packages\WebGrease.1.5.2\lib</WebGreaseLibPath>
     <TargetFrameworkProfile />
+    <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -149,6 +150,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\SetQueueNextConsumeOffsetViewModel.cs" />
     <Compile Include="Models\BrokerStatisticInfoViewModel.cs" />
     <Compile Include="Models\ProducerViewModel.cs" />
     <Compile Include="Models\MessageViewModel.cs" />
@@ -160,6 +162,8 @@
     <Compile Include="Settings.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\angularjs\angular.min.js" />
+    <Content Include="Content\bootbox\bootbox.js" />
     <Content Include="Content\bootstrap.css" />
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\bootstrap\css\bootstrap-theme.css" />
@@ -169,8 +173,15 @@
     <Content Include="Content\bootstrap\fonts\glyphicons-halflings-regular.svg" />
     <Content Include="Content\bootstrap\js\bootstrap.js" />
     <Content Include="Content\bootstrap\js\bootstrap.min.js" />
+    <Content Include="Content\angularjs\angular.min.js.map" />
     <None Include="Content\jquery\jquery-1.10.2.intellisense.js" />
+    <Content Include="Content\controllers\login-controller.js" />
+    <Content Include="Content\controllers\post-controller.js" />
+    <Content Include="Content\controllers\post-detail-controller.js" />
+    <Content Include="Content\controllers\register-controller.js" />
+    <Content Include="Content\controllers\section-controller.js" />
     <Content Include="Content\jquery\jquery-1.10.2.min.js" />
+    <Content Include="Content\js\site.js" />
     <Content Include="favicon.ico" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="Global.asax" />
@@ -192,6 +203,7 @@
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Home\ConsumerInfo.cshtml" />
     <Content Include="Views\Home\ProducerInfo.cshtml" />
+    <Content Include="Views\Home\SetQueueNextConsumeOffset.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EQueue\EQueue.csproj">
