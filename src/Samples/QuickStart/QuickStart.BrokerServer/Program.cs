@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Configuration;
-using ECommon.Autofac;
-using ECommon.JsonNet;
-using ECommon.Log4Net;
+using ECommon.Configurations;
 using EQueue.Broker;
 using EQueue.Configurations;
 using ECommonConfiguration = ECommon.Configurations.Configuration;

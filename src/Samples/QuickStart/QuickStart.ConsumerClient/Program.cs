@@ -2,10 +2,8 @@
 using System.Configuration;
 using System.Net;
 using System.Threading;
-using ECommon.Autofac;
 using ECommon.Components;
-using ECommon.JsonNet;
-using ECommon.Log4Net;
+using ECommon.Configurations;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Socketing;

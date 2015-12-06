@@ -7,7 +7,6 @@ using Autofac.Integration.Mvc;
 using ECommon.Autofac;
 using ECommon.Components;
 using ECommon.Configurations;
-using ECommon.JsonNet;
 using ECommon.Log4Net;
 
 namespace EQueue.AdminWeb
