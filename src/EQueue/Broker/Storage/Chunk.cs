@@ -412,6 +412,8 @@ namespace EQueue.Broker.Storage
             }
 
             _lastActiveTime = DateTime.Now;
+
+            _logger.InfoFormat("Ongoing chunk {0} initialized, _dataPosition: {1}", this, _dataPosition);
         }
 
         #endregion
