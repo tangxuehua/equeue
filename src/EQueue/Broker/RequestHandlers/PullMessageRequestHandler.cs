@@ -178,8 +178,16 @@ namespace EQueue.Broker.RequestHandlers
                 }
                 catch (ChunkReadException ex)
                 {
+                    //遇到这种异常，说明某个消息在队列(queue chunk)中存在，但在message chunk中不存在；
+                    //出现这种现象的原因是由于，默认情况下，message chunk, queue chunk都是异步持久化的，默认定时100ms刷盘一次；
+                    //所以，当broker正好在被关闭的时刻，假如queue chunk刷盘成功了，而对应的消息在message chunk中还未来得及刷盘，那就意味着这部分消息就丢失了；
+                    //那当broker下次重启后，丢失的那些消息就找不到了，无法被消费；所以当Consumer拉取这些消息时，就会抛这个异常；
+                    //这种情况下，重试拉取已经没有意义，故我们能做的是记录错误日志，记录下来哪个topic下的哪个queue的哪个位置的消息找不到了；这样我们就知道哪些消息丢失了；
+                    //然后我们继续拉取该队列的后续的消息。
+                    //如果大家希望避免这种问题，如果你的业务场景消息量不大或者使用了SSD硬盘，则建议你使用同步算盘的方式，这样可以确保消息不丢，
+                    //大家通过配置ChunkManagerConfig.SyncFlush=true来实现；
                     _logger.Error(string.Format("Message chunk read failed, topic: {0}, queueId: {1}, queueOffset: {2}", topic, queueId, queueOffset), ex);
-                    throw;
+                    queueOffset++;
                 }
             }
 

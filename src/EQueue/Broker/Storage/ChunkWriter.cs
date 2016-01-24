@@ -86,6 +86,10 @@ namespace EQueue.Broker.Storage
         {
             lock (_lockObj)
             {
+                if (_currentChunk != null)
+                {
+                    _currentChunk.Flush();
+                }
                 _scheduleService.StopTask("FlushChunk");
                 _currentChunk = null;
                 _isClosed = true;
