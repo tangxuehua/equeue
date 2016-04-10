@@ -80,10 +80,6 @@ namespace EQueue.Broker
 
         public static BrokerController Create(BrokerSetting setting = null)
         {
-            if (_instance != null)
-            {
-                throw new NotSupportedException("Broker controller cannot be create twice.");
-            }
             _instance = new BrokerController(setting);
             return _instance;
         }
