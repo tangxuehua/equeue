@@ -105,7 +105,7 @@ namespace EQueue.Broker
                 var unmanagedReadStatus = UpdateReadStatus(_unmanagedReadDict);
                 var fileReadStatus = UpdateReadStatus(_fileReadDict);
                 var cachedReadStatus = UpdateReadStatus(_cachedReadDict);
-                _logger.DebugFormat("maxChunk:#{0}, write:{1}, unmanagedRead:{2}, cachedRead:{3}, fileRead:{4}", _messageStore.MaxChunkNum, bytesWriteStatus, unmanagedReadStatus, cachedReadStatus, fileReadStatus);
+                _logger.DebugFormat("maxChunk:#{0}, write:{1}, unmanagedCacheRead:{2}, localCacheRead:{3}, fileRead:{4}", _messageStore.MaxChunkNum, bytesWriteStatus, unmanagedReadStatus, cachedReadStatus, fileReadStatus);
             }
         }
         private string UpdateWriteStatus(ConcurrentDictionary<int, BytesInfo> dict)

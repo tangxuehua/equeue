@@ -276,22 +276,29 @@ namespace EQueue.Broker.Storage
 
                 InitializeReaderWorkItems();
 
-                if (!_isMemoryChunk && _chunkConfig.EnableCache)
+                if (!_isMemoryChunk)
                 {
-                    var chunkSize = (ulong)GetChunkSize(_chunkHeader);
-                    if (ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
+                    if (_chunkConfig.EnableCache)
                     {
-                        try
+                        var chunkSize = (ulong)GetChunkSize(_chunkHeader);
+                        if (ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
                         {
-                            _memoryChunk = Chunk.CreateNew(_filename, chunkNumber, _chunkManager, _chunkConfig, true);
+                            try
+                            {
+                                _memoryChunk = CreateNew(_filename, chunkNumber, _chunkManager, _chunkConfig, true);
+                            }
+                            catch (OutOfMemoryException)
+                            {
+                                _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(string.Format("Failed to cache new chunk {0}", this), ex);
+                                _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
+                            }
                         }
-                        catch (OutOfMemoryException)
+                        else
                         {
-                            _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.Error(string.Format("Failed to cache new chunk {0}", this), ex);
                             _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
                         }
                     }
@@ -386,22 +393,29 @@ namespace EQueue.Broker.Storage
 
             InitializeReaderWorkItems();
 
-            if (!_isMemoryChunk && _chunkConfig.EnableCache)
+            if (!_isMemoryChunk)
             {
-                var chunkSize = (ulong)GetChunkSize(_chunkHeader);
-                if (ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
+                if (_chunkConfig.EnableCache)
                 {
-                    try
+                    var chunkSize = (ulong)GetChunkSize(_chunkHeader);
+                    if (ChunkUtil.IsMemoryEnoughToCacheChunk(chunkSize, (uint)_chunkConfig.ChunkCacheMaxPercent))
                     {
-                        _memoryChunk = Chunk.FromOngoingFile<T>(_filename, _chunkManager, _chunkConfig, readRecordFunc, true);
+                        try
+                        {
+                            _memoryChunk = Chunk.FromOngoingFile<T>(_filename, _chunkManager, _chunkConfig, readRecordFunc, true);
+                        }
+                        catch (OutOfMemoryException)
+                        {
+                            _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(string.Format("Failed to cache ongoing chunk {0}", this), ex);
+                            _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
+                        }
                     }
-                    catch (OutOfMemoryException)
+                    else
                     {
-                        _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(string.Format("Failed to cache ongoing chunk {0}", this), ex);
                         _cacheItems = new CacheItem[_chunkConfig.ChunkLocalCacheSize];
                     }
                 }
@@ -440,7 +454,7 @@ namespace EQueue.Broker.Storage
                     {
                         return false;
                     }
-                    _memoryChunk = Chunk.FromCompletedFile(_filename, _chunkManager, _chunkConfig, true);
+                    _memoryChunk = FromCompletedFile(_filename, _chunkManager, _chunkConfig, true);
                     if (shouldCacheNextChunk)
                     {
                         Task.Factory.StartNew(() => _chunkManager.TryCacheNextChunk(this));
@@ -515,7 +529,7 @@ namespace EQueue.Broker.Storage
                 }
                 else if (_memoryChunk != null)
                 {
-                    var record = _memoryChunk.TryReadAt<T>(dataPosition, readRecordFunc);
+                    var record = _memoryChunk.TryReadAt(dataPosition, readRecordFunc);
                     if (record != null && _chunkConfig.EnableChunkReadStatistic)
                     {
                         _chunkStatisticService.AddUnmanagedReadCount(ChunkHeader.ChunkNumber);
@@ -662,6 +676,11 @@ namespace EQueue.Broker.Storage
                     var index = writtenPosition % _chunkConfig.ChunkLocalCacheSize;
                     _cacheItems[index] = new CacheItem { RecordPosition = writtenPosition, RecordBuffer = recordBuffer };
                 }
+            }
+            else if (_cacheItems != null && recordBuffer != null)
+            {
+                var index = writtenPosition % _chunkConfig.ChunkLocalCacheSize;
+                _cacheItems[index] = new CacheItem { RecordPosition = writtenPosition, RecordBuffer = recordBuffer };
             }
 
             if (!_isMemoryChunk && _chunkConfig.EnableChunkWriteStatistic)
