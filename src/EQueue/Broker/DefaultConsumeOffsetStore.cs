@@ -17,10 +17,12 @@ namespace EQueue.Broker
     public class DefaultConsumeOffsetStore : IConsumeOffsetStore
     {
         private const string ConsumeOffsetFileName = "consume-offsets.json";
+        private const string ConsumeOffsetBackupFileName = "consume-offsets-backup.json";
         private readonly IScheduleService _scheduleService;
         private readonly IJsonSerializer _jsonSerializer;
         private readonly ILogger _logger;
         private string _consumeOffsetFile;
+        private string _consumeOffsetBackupFile;
         private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupConsumeOffsetsDict;
         private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupNextConsumeOffsetsDict;
         private int _isPersistingOffsets;
@@ -42,6 +44,7 @@ namespace EQueue.Broker
                 Directory.CreateDirectory(path);
             }
             _consumeOffsetFile = Path.Combine(path, ConsumeOffsetFileName);
+            _consumeOffsetBackupFile = Path.Combine(path, ConsumeOffsetBackupFileName);
 
             LoadConsumeOffsetInfo();
             _scheduleService.StartTask("PersistConsumeOffsetInfo", PersistConsumeOffsetInfo, 1000 * 5, BrokerController.Instance.Setting.PersistConsumeOffsetInterval);
@@ -180,7 +183,18 @@ namespace EQueue.Broker
 
         private void LoadConsumeOffsetInfo()
         {
-            using (var stream = new FileStream(_consumeOffsetFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+            try
+            {
+                LoadConsumeOffsetInfo(_consumeOffsetFile);
+            }
+            catch
+            {
+                LoadConsumeOffsetInfo(_consumeOffsetBackupFile);
+            }
+        }
+        private void LoadConsumeOffsetInfo(string file)
+        {
+            using (var stream = new FileStream(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
                 using (var reader = new StreamReader(stream))
                 {
@@ -193,7 +207,7 @@ namespace EQueue.Broker
                         }
                         catch (Exception ex)
                         {
-                            _logger.Error("Load consume offsets has exception.", ex);
+                            _logger.Error("Deserialize consume offsets failed, file:" + file, ex);
                             throw;
                         }
                     }
@@ -208,6 +222,7 @@ namespace EQueue.Broker
         {
             if (Interlocked.CompareExchange(ref _isPersistingOffsets, 1, 0) == 0)
             {
+                var success = false;
                 try
                 {
                     using (var stream = new FileStream(_consumeOffsetFile, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
@@ -216,8 +231,10 @@ namespace EQueue.Broker
                         {
                             var json = _jsonSerializer.Serialize(_groupConsumeOffsetsDict);
                             writer.Write(json);
+                            writer.Flush();
                         }
                     }
+                    success = true;
                 }
                 catch (Exception ex)
                 {
@@ -226,6 +243,10 @@ namespace EQueue.Broker
                 finally
                 {
                     Interlocked.Exchange(ref _isPersistingOffsets, 0);
+                    if (success)
+                    {
+                        File.Copy(_consumeOffsetFile, _consumeOffsetBackupFile, true);
+                    }
                 }
             }
         }
