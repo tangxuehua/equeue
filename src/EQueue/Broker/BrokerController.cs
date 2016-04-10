@@ -270,11 +270,7 @@ namespace EQueue.Broker
             public void OnConnectionAccepted(ITcpConnection connection) { }
             public void OnConnectionEstablished(ITcpConnection connection) { }
             public void OnConnectionFailed(SocketError socketError) { }
-            public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
-            {
-                var consumerId = ClientIdFactory.CreateClientId(connection.RemotingEndPoint as IPEndPoint);
-                _brokerController._consumerManager.RemoveConsumer(consumerId);
-            }
+            public void OnConnectionClosed(ITcpConnection connection, SocketError socketError) { }
         }
     }
 }
