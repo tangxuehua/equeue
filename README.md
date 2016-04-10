@@ -1,1 +1,4 @@
-EQueue is a distributed high performance mq written by c#.
+equeue
+======
+
+a high performance distributed mq written by c#.
