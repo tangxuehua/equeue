@@ -18,7 +18,11 @@ namespace QuickStart.BrokerServer
                 chunkFlushInterval: int.Parse(ConfigurationManager.AppSettings["flushInterval"]),
                 messageChunkDataSize: int.Parse(ConfigurationManager.AppSettings["chunkSize"]) * 1024 * 1024,
                 chunkWriteBuffer: int.Parse(ConfigurationManager.AppSettings["chunkWriteBuffer"]) * 1024,
-                enableCache: bool.Parse(ConfigurationManager.AppSettings["enableCache"])) { NotifyWhenMessageArrived = false }).Start();
+                enableCache: bool.Parse(ConfigurationManager.AppSettings["enableCache"]),
+                chunkCacheMinPercent: int.Parse(ConfigurationManager.AppSettings["chunkCacheMinPercent"]))
+            {
+                NotifyWhenMessageArrived = false
+            }).Start();
             Console.ReadLine();
         }
 
