@@ -220,6 +220,10 @@ namespace EQueue.Broker
         }
         private void PersistConsumeOffsetInfo()
         {
+            if (string.IsNullOrEmpty(_consumeOffsetFile))
+            {
+                return;
+            }
             if (Interlocked.CompareExchange(ref _isPersistingOffsets, 1, 0) == 0)
             {
                 var success = false;
