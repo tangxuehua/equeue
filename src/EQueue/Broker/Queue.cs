@@ -10,7 +10,13 @@ using EQueue.Utils;
 
 namespace EQueue.Broker
 {
-    public class Queue
+    public interface IQueue
+    {
+        int QueueId { get; }
+        long NextOffset { get; }
+        long IncrementNextOffset();
+    }
+    public class Queue : IQueue
     {
         private const string QueueSettingFileName = "queue.setting";
         private readonly ChunkWriter _chunkWriter;

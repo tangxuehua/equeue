@@ -186,6 +186,7 @@
     <Compile Include="Protocols\QueryConsumerRequest.cs" />
     <Compile Include="Protocols\SetQueueNextConsumeOffsetRequest.cs" />
     <Compile Include="Protocols\UpdateQueueOffsetRequest.cs" />
+    <Compile Include="Utils\BufferQueue.cs" />
     <Compile Include="Utils\ConsoleEventHandlerService.cs" />
     <Compile Include="Utils\QueueKeyUtil.cs" />
     <Compile Include="Utils\MessageIdUtil.cs" />

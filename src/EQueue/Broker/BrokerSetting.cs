@@ -57,6 +57,9 @@ namespace EQueue.Broker
         /// <summary>消息最大允许的字节数，默认为4MB；
         /// </summary>
         public int MessageMaxSize { get; set; }
+        /// <summary>消息写入缓冲队列限流阈值，默认为20000；
+        /// </summary>
+        public int MessageWriteQueueThreshold { get; set; }
         /// <summary>EQueue存储文件的根目录
         /// </summary>
         public string FileStoreRootPath { get; private set; }
@@ -88,6 +91,7 @@ namespace EQueue.Broker
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;
             MessageMaxSize = 1024 * 1024 * 4;
+            MessageWriteQueueThreshold = 2 * 10000;
             FileStoreRootPath = chunkFileStoreRootPath;
             MessageChunkConfig = new ChunkManagerConfig(
                 Path.Combine(chunkFileStoreRootPath, @"message-chunks"),

@@ -33,6 +33,7 @@ namespace EQueue.Broker
         private readonly SocketRemotingServer _adminSocketRemotingServer;
         private readonly ConsoleEventHandlerService _service;
         private readonly IChunkStatisticService _chunkReadStatisticService;
+        private SendMessageRequestHandler _sendMessageRequestHandler;
         private int _isShuttingdown = 0;
         private int _isCleaning = 0;
 
@@ -150,6 +151,7 @@ namespace EQueue.Broker
                 _queueStore.Load();
             }
 
+            _sendMessageRequestHandler.Start();
             _consumeOffsetStore.Start();
             _messageStore.Start();
             _queueStore.Start();
@@ -183,6 +185,7 @@ namespace EQueue.Broker
                 _consumeOffsetStore.Shutdown();
                 _queueStore.Shutdown();
                 _chunkReadStatisticService.Shutdown();
+                _sendMessageRequestHandler.Shutdown();
                 _logger.InfoFormat("Broker shutdown success, timeSpent:{0}ms", watch.ElapsedMilliseconds);
             }
             return this;
@@ -215,8 +218,9 @@ namespace EQueue.Broker
         }
         private void RegisterRequestHandlers()
         {
+            _sendMessageRequestHandler = new SendMessageRequestHandler(this);
             _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ProducerHeartbeat, new ProducerHeartbeatRequestHandler(this));
-            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler(this));
+            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, _sendMessageRequestHandler);
 
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
             _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.PullMessage, new PullMessageRequestHandler());

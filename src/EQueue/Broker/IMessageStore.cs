@@ -1,4 +1,5 @@
-﻿using EQueue.Broker.Storage;
+﻿using System;
+using EQueue.Broker.Storage;
 using EQueue.Protocols;
 
 namespace EQueue.Broker
@@ -14,7 +15,7 @@ namespace EQueue.Broker
         void Load();
         void Start();
         void Shutdown();
-        MessageLogRecord StoreMessage(int queueId, long queueOffset, Message message);
+        void StoreMessageAsync(IQueue queue, Message message, Action<MessageLogRecord, object> callback, object parameter);
         byte[] GetMessageBuffer(long position);
         QueueMessage GetMessage(long position);
         bool IsMessagePositionExist(long position);

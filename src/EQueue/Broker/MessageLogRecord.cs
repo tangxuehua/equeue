@@ -11,6 +11,8 @@ namespace EQueue.Broker.Storage
     public class MessageLogRecord : QueueMessage, ILogRecord
     {
         private static readonly byte[] EmptyBytes = new byte[0];
+        private readonly Action<MessageLogRecord, object> _callback;
+        private readonly object _parameter;
 
         public MessageLogRecord() { }
         public MessageLogRecord(
@@ -21,8 +23,12 @@ namespace EQueue.Broker.Storage
             long queueOffset,
             DateTime createdTime,
             DateTime storedTime,
-            string tag)
-            : base(null, topic, code, body, queueId, queueOffset, createdTime, storedTime, tag) { }
+            string tag, Action<MessageLogRecord, object> callback, object parameter)
+            : base(null, topic, code, body, queueId, queueOffset, createdTime, storedTime, tag)
+        {
+            _callback = callback;
+            _parameter = parameter;
+        }
 
         public void WriteTo(long logPosition, BinaryWriter writer)
         {
@@ -69,6 +75,13 @@ namespace EQueue.Broker.Storage
 
             //storedTime
             writer.Write(StoredTime.Ticks);
+        }
+        public void OnPersisted()
+        {
+            if (_callback != null)
+            {
+                _callback(this, _parameter);
+            }
         }
     }
 }

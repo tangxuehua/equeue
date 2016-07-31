@@ -357,7 +357,7 @@ namespace EQueue.Broker.Storage
 
                 if (_dataPosition > 0)
                 {
-                    using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 8192, FileOptions.None))
+                    using (var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 8192, FileOptions.SequentialScan))
                     {
                         fileStream.Seek(ChunkHeader.Size, SeekOrigin.Begin);
                         var buffer = new byte[65536];

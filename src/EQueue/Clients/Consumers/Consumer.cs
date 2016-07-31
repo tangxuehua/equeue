@@ -177,7 +177,7 @@ namespace EQueue.Clients.Consumers
                 var messageCount = pullRequest.ProcessQueue.GetMessageCount();
                 var flowControlThreshold = Setting.PullMessageFlowControlThreshold;
 
-                if (flowControlThreshold > 0 && messageCount >= flowControlThreshold)
+                if (messageCount > flowControlThreshold)
                 {
                     var milliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(
                         messageCount,
