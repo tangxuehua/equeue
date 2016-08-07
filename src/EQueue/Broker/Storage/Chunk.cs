@@ -549,9 +549,7 @@ namespace EQueue.Broker.Storage
                 var currentDataPosition = DataPosition;
                 if (dataPosition >= currentDataPosition)
                 {
-                    throw new ChunkReadException(
-                        string.Format("Cannot read record after the max data position, data position: {0}, max data position: {1}, chunk: {2}",
-                                      dataPosition, currentDataPosition, this));
+                    return null;
                 }
 
                 try

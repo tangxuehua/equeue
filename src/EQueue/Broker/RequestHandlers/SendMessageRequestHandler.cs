@@ -30,7 +30,7 @@ namespace EQueue.Broker.RequestHandlers
             _notifyWhenMessageArrived = _brokerController.Setting.NotifyWhenMessageArrived;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             var messageWriteQueueThreshold = brokerController.Setting.MessageWriteQueueThreshold;
-            _bufferQueue = new BufferQueue<StoreContext>("QueueBufferQueue", messageWriteQueueThreshold, AddQueueMessage, _logger);
+            _bufferQueue = new BufferQueue<StoreContext>("QueueBufferQueue", messageWriteQueueThreshold, OnQueueMessageCompleted, _logger);
         }
 
         public void Start()
@@ -65,6 +65,7 @@ namespace EQueue.Broker.RequestHandlers
             _messageStore.StoreMessageAsync(queue, message, (record, parameter) =>
             {
                 var storeContext = parameter as StoreContext;
+                storeContext.Queue.AddMessage(record.LogPosition, record.Tag);
                 storeContext.MessageLogRecord = record;
                 _bufferQueue.EnqueueMessage(storeContext);
             }, new StoreContext
@@ -78,9 +79,8 @@ namespace EQueue.Broker.RequestHandlers
             return null;
         }
 
-        private void AddQueueMessage(StoreContext storeContext)
+        private void OnQueueMessageCompleted(StoreContext storeContext)
         {
-            storeContext.Queue.AddMessage(storeContext.MessageLogRecord.LogPosition, storeContext.MessageLogRecord.Tag);
             storeContext.OnComplete();
         }
         class StoreContext

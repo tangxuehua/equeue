@@ -222,14 +222,6 @@ namespace EQueue.Broker.RequestHandlers
                     NextBeginOffset = queueCurrentOffset + 1
                 };
             }
-            //如果正好等于queueMaxOffset+1，属于正常情况，表示当前队列没有新消息，告诉客户端没有新消息即可
-            else if (pullOffset == queueCurrentOffset + 1)
-            {
-                return new PullMessageResult
-                {
-                    Status = PullStatus.NoNewMessage
-                };
-            }
             //如果当前的pullOffset对应的Message的Chunk文件不存在，则需要重新计算下一个pullOffset
             else if (messageChunkNotExistException != null)
             {
