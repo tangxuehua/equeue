@@ -42,7 +42,7 @@ namespace EQueue.Broker
         /// <summary>判断消费者心跳的超时时间，默认为30s；即如果一个消费者30s不发送心跳到Broker，则认为不在线；Broker自动会关闭该消费者的连接并从消费者列表中移除；
         /// </summary>
         public int ConsumerExpiredTimeout { get; set; }
-        /// <summary>当消费者的链接断开时，是否需要立即将消费者从消费者列表中移除；如果为True，则消费者链接断开时立即移除；否则，会等到消费者心跳的超时时间到达后才会移除该消费者。默认为False
+        /// <summary>当消费者的链接断开时，是否需要立即将消费者从消费者列表中移除；如果为True，则消费者链接断开时立即移除；否则，会等到消费者心跳的超时时间到达后才会移除该消费者。默认为True
         /// </summary>
         public bool RemoveConsumerWhenDisconnect { get; set; }
         /// <summary>是否自动创建Topic，默认为true；线上环境建议设置为false，Topic应该总是由后台管理控制台来创建；
@@ -86,7 +86,7 @@ namespace EQueue.Broker
             CheckBlockingPullRequestMilliseconds = 1000 * 1;
             ProducerExpiredTimeout = 1000 * 30;
             ConsumerExpiredTimeout = 1000 * 30;
-            RemoveConsumerWhenDisconnect = false;
+            RemoveConsumerWhenDisconnect = true;
             AutoCreateTopic = true;
             TopicDefaultQueueCount = 4;
             TopicMaxQueueCount = 64;
