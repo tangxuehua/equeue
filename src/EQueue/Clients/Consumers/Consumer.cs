@@ -274,10 +274,10 @@ namespace EQueue.Clients.Consumers
                 if (messages.Count() > 0)
                 {
                     var filterMessages = messages.Where(x => IsQueueMessageMatchTag(x, pullRequest.Tags));
-                    pullRequest.ProcessQueue.AddMessages(filterMessages);
-                    foreach (var message in filterMessages)
+                    var consumingMessages = filterMessages.Select(x => new ConsumingMessage(x, pullRequest.ProcessQueue)).ToList();
+                    pullRequest.ProcessQueue.AddMessages(consumingMessages);
+                    foreach (var consumingMessage in consumingMessages)
                     {
-                        var consumingMessage = new ConsumingMessage(message, pullRequest.ProcessQueue);
                         if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
                         {
                             _consumingMessageQueue.Add(consumingMessage);
@@ -295,22 +295,16 @@ namespace EQueue.Clients.Consumers
                 var newOffset = BitConverter.ToInt64(remotingResponse.Body, 0);
                 var oldOffset = pullRequest.NextConsumeOffset;
                 pullRequest.NextConsumeOffset = newOffset;
-                pullRequest.ProcessQueue.Reset();
+                pullRequest.ProcessQueue.MarkAllConsumingMessageIgnored();
                 _logger.InfoFormat("Reset queue next consume offset. topic:{0}, queueId:{1}, old offset:{2}, new offset:{3}", pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, oldOffset, newOffset);
             }
             else if (remotingResponse.Code == (short)PullStatus.NoNewMessage)
             {
-                if (_logger.IsDebugEnabled)
-                {
-                    _logger.DebugFormat("No new message found, pullRequest:{0}", pullRequest);
-                }
+                //No new message to consume.
             }
             else if (remotingResponse.Code == (short)PullStatus.Ignored)
             {
-                if (_logger.IsDebugEnabled)
-                {
-                    _logger.DebugFormat("Pull request was ignored, pullRequest:{0}", pullRequest);
-                }
+                _logger.InfoFormat("Pull request was ignored, pullRequest:{0}", pullRequest);
                 return;
             }
             else if (remotingResponse.Code == (short)PullStatus.BrokerIsCleaning)
@@ -390,6 +384,11 @@ namespace EQueue.Clients.Consumers
             if (_stoped) return;
             if (consumingMessage == null) return;
             if (consumingMessage.ProcessQueue.IsDropped) return;
+            if (consumingMessage.IsIgnored)
+            {
+                RemoveHandledMessage(consumingMessage);
+                return;
+            }
 
             try
             {
@@ -493,7 +492,7 @@ namespace EQueue.Clients.Consumers
         }
         private void RemoveHandledMessage(ConsumingMessage consumedMessage)
         {
-            consumedMessage.ProcessQueue.RemoveMessage(consumedMessage.Message);
+            consumedMessage.ProcessQueue.RemoveMessage(consumedMessage);
         }
         private void LogMessageHandlingException(ConsumingMessage consumingMessage, Exception exception)
         {
@@ -529,21 +528,18 @@ namespace EQueue.Clients.Consumers
                     var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, consumedQueueOffset);
                     var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
                     _adminRemotingClient.InvokeOneway(remotingRequest);
-                    if (_logger.IsDebugEnabled)
-                    {
-                        _logger.DebugFormat("Sent queue consume offset to broker. group: {0}, topic: {1}, queueId: {2}, offset: {3}",
-                            GroupName,
-                            pullRequest.MessageQueue.Topic,
-                            pullRequest.MessageQueue.QueueId,
-                            consumedQueueOffset);
-                    }
+                    _logger.InfoFormat("Sent consumeOffset to broker, [group:{0}, topic:{1}, queueId:{2}, offset:{3}]",
+                        GroupName,
+                        pullRequest.MessageQueue.Topic,
+                        pullRequest.MessageQueue.QueueId,
+                        consumedQueueOffset);
                 }
             }
             catch (Exception ex)
             {
                 if (_adminRemotingClient.IsConnected)
                 {
-                    _logger.Error(string.Format("PersistOffset has exception, group: {0}, topic: {1}, queueId: {2}", GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId), ex);
+                    _logger.Error(string.Format("Send consumeOffset to broker has exception, [group:{0}, topic:{1}, queueId:{2}]", GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId), ex);
                 }
             }
         }
