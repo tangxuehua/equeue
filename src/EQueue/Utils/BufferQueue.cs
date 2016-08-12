@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using ECommon.Logging;
@@ -8,24 +9,22 @@ namespace EQueue.Utils
 {
     public class BufferQueue<TMessage>
     {
-        private readonly object _lockObj = new object();
         private int _requestsWriteThreshold;
-        private Queue<TMessage> _inputQueue;
-        private Queue<TMessage> _processQueue;
+        private ConcurrentQueue<TMessage> _inputQueue;
+        private ConcurrentQueue<TMessage> _processQueue;
         private SpinWait _spinWait = default(SpinWait);
         private Worker _messageWorker;
         private Action<TMessage> _handleMessageAction;
         private readonly string _name;
         private readonly ILogger _logger;
-        private volatile int _inputQueueSize;
 
         public BufferQueue(string name, int requestsWriteThreshold, Action<TMessage> handleMessageAction, ILogger logger)
         {
             _name = name;
             _requestsWriteThreshold = requestsWriteThreshold;
             _handleMessageAction = handleMessageAction;
-            _inputQueue = new Queue<TMessage>();
-            _processQueue = new Queue<TMessage>();
+            _inputQueue = new ConcurrentQueue<TMessage>();
+            _processQueue = new ConcurrentQueue<TMessage>();
             _messageWorker = new Worker(name + ".ProcessMessages", ProcessMessages);
             _logger = logger;
         }
@@ -40,13 +39,9 @@ namespace EQueue.Utils
         }
         public void EnqueueMessage(TMessage message)
         {
-            lock (_lockObj)
-            {
-                _inputQueue.Enqueue(message);
-                _inputQueueSize = _inputQueue.Count;
-            }
+            _inputQueue.Enqueue(message);
 
-            if (_inputQueueSize >= _requestsWriteThreshold)
+            if (_inputQueue.Count >= _requestsWriteThreshold)
             {
                 Thread.Sleep(1);
             }
@@ -54,16 +49,15 @@ namespace EQueue.Utils
 
         private void ProcessMessages()
         {
-            if (_processQueue.Count == 0 && _inputQueueSize > 0)
+            if (_processQueue.Count == 0 && _inputQueue.Count > 0)
             {
                 SwapInputQueue();
             }
             if (_processQueue.Count > 0)
             {
-                var count = _processQueue.Count;
-                while (_processQueue.Count > 0)
+                TMessage message;
+                while (_processQueue.TryDequeue(out message))
                 {
-                    var message = _processQueue.Dequeue();
                     try
                     {
                         _handleMessageAction(message);
