@@ -12,17 +12,21 @@ namespace QuickStart.BrokerServer
         static void Main(string[] args)
         {
             InitializeEQueue();
-            BrokerController.Create(new BrokerSetting(
+            var setting = new BrokerSetting(
                 ConfigurationManager.AppSettings["fileStoreRootPath"],
                 chunkCacheMaxPercent: 95,
                 chunkFlushInterval: int.Parse(ConfigurationManager.AppSettings["flushInterval"]),
                 messageChunkDataSize: int.Parse(ConfigurationManager.AppSettings["chunkSize"]) * 1024 * 1024,
                 chunkWriteBuffer: int.Parse(ConfigurationManager.AppSettings["chunkWriteBuffer"]) * 1024,
                 enableCache: bool.Parse(ConfigurationManager.AppSettings["enableCache"]),
-                chunkCacheMinPercent: int.Parse(ConfigurationManager.AppSettings["chunkCacheMinPercent"]))
+                chunkCacheMinPercent: int.Parse(ConfigurationManager.AppSettings["chunkCacheMinPercent"]),
+                messageChunkLocalCacheSize: 30 * 10000,
+                queueChunkLocalCacheSize: 10000)
             {
-                NotifyWhenMessageArrived = false
-            }).Start();
+                NotifyWhenMessageArrived = false,
+                MessageWriteQueueThreshold = 20000
+            };
+            BrokerController.Create(setting).Start();
             Console.ReadLine();
         }
 
