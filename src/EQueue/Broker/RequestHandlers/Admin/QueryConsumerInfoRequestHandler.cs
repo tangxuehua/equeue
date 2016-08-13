@@ -34,28 +34,29 @@ namespace EQueue.Broker.RequestHandlers.Admin
 
             var request = _binarySerializer.Deserialize<QueryConsumerInfoRequest>(remotingRequest.Body);
             var consumerInfoList = new List<ConsumerInfo>();
+            var consumerGroups = default(IEnumerable<ConsumerGroup>);
+            var allConsumerGroupNames = _offsetStore.GetAllConsumerGroupNames();
 
             if (!string.IsNullOrEmpty(request.GroupName))
             {
-                var consumerGroups = _consumerManager.QueryConsumerGroup(request.GroupName);
-                foreach (var consumerGroup in consumerGroups)
-                {
-                    foreach (var topicConsumeInfo in GetConsumerInfoForGroup(consumerGroup, request.Topic))
-                    {
-                        consumerInfoList.Add(topicConsumeInfo);
-                    }
-                }
+                consumerGroups = _consumerManager.QueryConsumerGroup(request.GroupName);
             }
             else
             {
-                var consumerGroups = _consumerManager.GetAllConsumerGroups();
-                foreach (var consumerGroup in consumerGroups)
-                {
-                    foreach (var topicConsumeInfo in GetConsumerInfoForGroup(consumerGroup, request.Topic))
-                    {
-                        consumerInfoList.Add(topicConsumeInfo);
-                    }
-                }
+                consumerGroups = _consumerManager.GetAllConsumerGroups();
+            }
+
+            var notEmptyConsumerGroups = _consumerManager.GetAllConsumerGroups().Where(x => x.GetConsumerCount() > 0);
+            var emptyConsumerGroups = allConsumerGroupNames.Where(x => notEmptyConsumerGroups.Count() == 0 || !notEmptyConsumerGroups.Any(y => y.GroupName == x));
+
+            foreach (var groupName in emptyConsumerGroups)
+            {
+                consumerInfoList.Add(BuildConsumerInfoForEmptyGroup(groupName));
+            }
+        
+            foreach (var consumerGroup in consumerGroups)
+            {
+                consumerInfoList.AddRange(GetConsumerInfoForGroup(consumerGroup, request.Topic));
             }
 
             return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(consumerInfoList));
@@ -111,6 +112,15 @@ namespace EQueue.Broker.RequestHandlers.Admin
             });
 
             return consumerInfoList;
+        }
+        private ConsumerInfo BuildConsumerInfoForEmptyGroup(string group)
+        {
+            var consumerInfo = new ConsumerInfo();
+            consumerInfo.ConsumerGroup = group;
+            consumerInfo.QueueId = -1;
+            consumerInfo.QueueCurrentOffset = -1L;
+            consumerInfo.ConsumedOffset = -1L;
+            return consumerInfo;
         }
         private ConsumerInfo BuildConsumerInfo(string group, string consumerId, string topic, int queueId)
         {

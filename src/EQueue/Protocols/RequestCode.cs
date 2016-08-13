@@ -22,6 +22,7 @@
         CreateTopic = 1008,
         DeleteTopic = 1009,
         QueryProducerInfo = 1010,
-        SetQueueNextConsumeOffset = 1011
+        SetQueueNextConsumeOffset = 1011,
+        DeleteConsumerGroup = 1012
     }
 }

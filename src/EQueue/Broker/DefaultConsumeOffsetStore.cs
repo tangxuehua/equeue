@@ -58,6 +58,15 @@ namespace EQueue.Broker
         {
             return _groupConsumeOffsetsDict.Count;
         }
+        public IEnumerable<string> GetAllConsumerGroupNames()
+        {
+            return _groupConsumeOffsetsDict.Keys.ToList();
+        }
+        public bool DeleteConsumerGroup(string group)
+        {
+            ConcurrentDictionary<string, long> queueOffsetDict;
+            return _groupConsumeOffsetsDict.TryRemove(group, out queueOffsetDict);
+        }
         public long GetConsumeOffset(string topic, int queueId, string group)
         {
             ConcurrentDictionary<string, long> queueOffsetDict;

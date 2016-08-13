@@ -37,10 +37,13 @@ namespace EQueue.Clients.Consumers
         }
         public void MarkAllConsumingMessageIgnored()
         {
-            var existingConsumingMessages = _messageDict.Values.ToList();
-            foreach (var consumingMessage in existingConsumingMessages)
+            lock (_lockObj)
             {
-                consumingMessage.IsIgnored = true;
+                var existingConsumingMessages = _messageDict.Values.ToList();
+                foreach (var consumingMessage in existingConsumingMessages)
+                {
+                    consumingMessage.IsIgnored = true;
+                }
             }
         }
         public void AddMessages(IEnumerable<ConsumingMessage> consumingMessages)

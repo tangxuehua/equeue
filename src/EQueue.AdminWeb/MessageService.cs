@@ -182,6 +182,20 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("SetQueueNextConsumeOffset failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
+        public void DeleteConsumerGroup(string consumerGroup)
+        {
+            if (string.IsNullOrEmpty(consumerGroup))
+            {
+                throw new ArgumentException("consumerGroup cannot be null or empty.");
+            }
+            var requestData = _binarySerializer.Serialize(new DeleteConsumerGroupRequest(consumerGroup));
+            var remotingRequest = new RemotingRequest((int)RequestCode.DeleteConsumerGroup, requestData);
+            var remotingResponse = _remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code != (int)ResponseCode.Success)
+            {
+                throw new Exception(string.Format("DeleteConsumerGroup failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+            }
+        }
 
         private void CheckUnconsumedMessages()
         {

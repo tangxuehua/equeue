@@ -76,9 +76,18 @@
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
-                                <li>
-                                    @Html.ActionLink("设置队列消费进度", "SetQueueNextConsumeOffset", new { consumerGroup = item.ConsumerGroup, topic = item.Topic, queueId = item.QueueId })
-                                </li>
+                                @if (!string.IsNullOrEmpty(item.ConsumerId))
+                                {
+                                    <li>
+                                        @Html.ActionLink("设置队列消费进度", "SetQueueNextConsumeOffset", new { consumerGroup = item.ConsumerGroup, topic = item.Topic, queueId = item.QueueId })
+                                    </li>
+                                }
+                                @if (string.IsNullOrEmpty(item.ConsumerId))
+                                {
+                                    <li>
+                                        @Html.ActionLink("删除消费者分组", "DeleteConsumerGroup", new { consumerGroup = item.ConsumerGroup })
+                                    </li>
+                                }
                             </ul>
                         </div>
                     </td>

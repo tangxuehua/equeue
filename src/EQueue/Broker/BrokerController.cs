@@ -242,6 +242,7 @@ namespace EQueue.Broker
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SetConsumerVisible, new SetQueueConsumerVisibleRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetMessageDetail, new GetMessageDetailRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SetQueueNextConsumeOffset, new SetQueueNextConsumeOffsetRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.DeleteConsumerGroup, new DeleteConsumerGroupRequestHandler());
         }
 
         class ProducerConnectionEventListener : IConnectionEventListener

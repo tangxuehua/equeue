@@ -125,5 +125,10 @@ namespace EQueue.AdminWeb.Controllers
             _messageService.SetQueueNextConsumeOffset(consumerGroup, topic, queueId, nextOffset);
             return RedirectToAction("ConsumerInfo");
         }
+        public ActionResult DeleteConsumerGroup(string consumerGroup)
+        {
+            _messageService.DeleteConsumerGroup(consumerGroup);
+            return RedirectToAction("ConsumerInfo");
+        }
     }
 }

@@ -65,7 +65,7 @@ namespace EQueue.Clients.Consumers
         /// <summary>一次从Broker拉取的消息的最大数量，默认为32个；
         /// </summary>
         public int PullMessageBatchSize { get; set; }
-        /// <summary>消费者启动时，针对当前要消费的队列，如果Broker上之前没有保存过任何该队列的消费进度（一般是该消费者第一次启动），则通过该选项指定要从队列的什么位置开始消费；可以从队列的第一个消息开始消费，也可以从最后一个消息之后的后续的新消息开始消费；
+        /// <summary>消费者启动时，针对当前要消费的队列，如果Broker上之前没有保存过任何该队列的消费进度（消费者第一次启动），则通过该选项指定要从队列的什么位置开始消费；可以从队列的第一个消息开始消费，也可以从最后一个消息之后的后续的新消息开始消费；默认为LastOffset
         /// </summary>
         public ConsumeFromWhere ConsumeFromWhere { get; set; }
         /// <summary>消息消费的模式，支持并行消费和顺序消费两种方式，默认为并行消费；

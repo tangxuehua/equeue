@@ -293,10 +293,7 @@ namespace EQueue.Clients.Consumers
             else if (remotingResponse.Code == (short)PullStatus.NextOffsetReset)
             {
                 var newOffset = BitConverter.ToInt64(remotingResponse.Body, 0);
-                var oldOffset = pullRequest.NextConsumeOffset;
-                pullRequest.NextConsumeOffset = newOffset;
-                pullRequest.ProcessQueue.MarkAllConsumingMessageIgnored();
-                _logger.InfoFormat("Reset queue next consume offset. topic:{0}, queueId:{1}, old offset:{2}, new offset:{3}", pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, oldOffset, newOffset);
+                ResetNextConsumeOffset(pullRequest, newOffset);
             }
             else if (remotingResponse.Code == (short)PullStatus.NoNewMessage)
             {
@@ -540,6 +537,29 @@ namespace EQueue.Clients.Consumers
                 if (_adminRemotingClient.IsConnected)
                 {
                     _logger.Error(string.Format("Send consumeOffset to broker has exception, [group:{0}, topic:{1}, queueId:{2}]", GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId), ex);
+                }
+            }
+        }
+        private void ResetNextConsumeOffset(PullRequest pullRequest, long newOffset)
+        {
+            try
+            {
+                var oldOffset = pullRequest.NextConsumeOffset;
+                pullRequest.NextConsumeOffset = newOffset;
+                pullRequest.ProcessQueue.MarkAllConsumingMessageIgnored();
+                pullRequest.ProcessQueue.Reset();
+
+                var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, newOffset - 1);
+                var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
+                _adminRemotingClient.InvokeOneway(remotingRequest);
+
+                _logger.InfoFormat("Reset queue next consume offset, [topic:{0}, queueId:{1}, oldOffset:{2}, newOffset:{3}]", pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId, oldOffset, newOffset);
+            }
+            catch (Exception ex)
+            {
+                if (_adminRemotingClient.IsConnected)
+                {
+                    _logger.Error(string.Format("ResetNextConsumeOffset has exception, pullRequest: {0}, newOffset: {1}", pullRequest, newOffset), ex);
                 }
             }
         }

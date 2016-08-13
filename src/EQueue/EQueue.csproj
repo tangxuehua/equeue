@@ -85,6 +85,7 @@
     <Compile Include="Broker\RequestHandlers\Admin\CreateTopicRequestHandler.cs" />
     <Compile Include="Broker\IQueueStore.cs" />
     <Compile Include="Broker\DefaultQueueStore.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\DeleteConsumerGroupRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\QueryProducerInfoRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\SetQueueProducerVisibleRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\SetQueueConsumerVisibleRequestHandler.cs" />
@@ -157,6 +158,7 @@
     <Compile Include="Protocols\DeleteTopicRequest.cs" />
     <Compile Include="Protocols\CreateTopicRequest.cs" />
     <Compile Include="Protocols\GetMessageDetailRequest.cs" />
+    <Compile Include="Protocols\DeleteConsumerGroupRequest.cs" />
     <Compile Include="Protocols\TopicConsumeInfo.cs" />
     <Compile Include="Protocols\SetQueueProducerVisibleRequest.cs" />
     <Compile Include="Protocols\SetQueueConsumerVisibleRequest.cs" />
