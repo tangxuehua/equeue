@@ -38,6 +38,11 @@ namespace EQueue.Broker
 
         public void Start()
         {
+            if (BrokerController.Instance.Setting.IsMessageStoreMemoryMode)
+            {
+                return;
+            }
+
             var path = BrokerController.Instance.Setting.FileStoreRootPath;
             if (!Directory.Exists(path))
             {
@@ -51,6 +56,10 @@ namespace EQueue.Broker
         }
         public void Shutdown()
         {
+            if (BrokerController.Instance.Setting.IsMessageStoreMemoryMode)
+            {
+                return;
+            }
             PersistConsumeOffsetInfo();
             _scheduleService.StopTask("PersistConsumeOffsetInfo");
         }

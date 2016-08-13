@@ -54,7 +54,7 @@ namespace EQueue.Broker
         /// <summary>创建Topic时，默认创建的队列数，默认为4；
         /// </summary>
         public int TopicDefaultQueueCount { get; set; }
-        /// <summary>一个Topic下最多允许的队列数，默认为64；
+        /// <summary>一个Topic下最多允许的队列数，默认为256；
         /// </summary>
         public int TopicMaxQueueCount { get; set; }
         /// <summary>消息最大允许的字节数，默认为4MB；
@@ -63,6 +63,9 @@ namespace EQueue.Broker
         /// <summary>消息写入缓冲队列限流阈值，默认为20000；
         /// </summary>
         public int MessageWriteQueueThreshold { get; set; }
+        /// <summary>表示是否在内存模式下运行，内存模式下消息都不存储到文件，仅保存在内存；默认为False；
+        /// </summary>
+        public bool IsMessageStoreMemoryMode { get; set; }
         /// <summary>EQueue存储文件的根目录
         /// </summary>
         public string FileStoreRootPath { get; private set; }
@@ -76,7 +79,7 @@ namespace EQueue.Broker
         /// </summary>
         public ChunkManagerConfig QueueChunkConfig { get; set; }
 
-        public BrokerSetting(string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 1024 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 5 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, bool enableCache = true, int messageChunkLocalCacheSize = 300000, int queueChunkLocalCacheSize = 10000)
+        public BrokerSetting(bool isMessageStoreMemoryMode = false, string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 1024 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 5 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, bool enableCache = true, int messageChunkLocalCacheSize = 300000, int queueChunkLocalCacheSize = 10000)
         {
             ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
             ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
@@ -93,9 +96,10 @@ namespace EQueue.Broker
             RemoveConsumerWhenDisconnect = true;
             AutoCreateTopic = true;
             TopicDefaultQueueCount = 4;
-            TopicMaxQueueCount = 64;
+            TopicMaxQueueCount = 256;
             MessageMaxSize = 1024 * 1024 * 4;
             MessageWriteQueueThreshold = 2 * 10000;
+            IsMessageStoreMemoryMode = isMessageStoreMemoryMode;
             FileStoreRootPath = chunkFileStoreRootPath;
             MessageChunkConfig = new ChunkManagerConfig(
                 Path.Combine(chunkFileStoreRootPath, @"message-chunks"),
@@ -106,7 +110,7 @@ namespace EQueue.Broker
                 chunkFlushInterval,
                 enableCache,
                 syncFlush,
-                Environment.ProcessorCount * 2,
+                Environment.ProcessorCount * 8,
                 maxLogRecordSize,
                 chunkWriteBuffer,
                 chunkReadBuffer,

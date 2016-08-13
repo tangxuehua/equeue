@@ -71,11 +71,17 @@ namespace EQueue.Broker
 
         public void Start()
         {
-            _scheduleService.StartTask("LogChunkStatisticStatus", LogChunkStatisticStatus, 1000, 1000);
+            if (!BrokerController.Instance.Setting.IsMessageStoreMemoryMode)
+            {
+                _scheduleService.StartTask("LogChunkStatisticStatus", LogChunkStatisticStatus, 1000, 1000);
+            }
         }
         public void Shutdown()
         {
-            _scheduleService.StopTask("LogChunkStatisticStatus");
+            if (!BrokerController.Instance.Setting.IsMessageStoreMemoryMode)
+            {
+                _scheduleService.StopTask("LogChunkStatisticStatus");
+            }
         }
 
         private CountInfo GetDefaultCountInfo(int chunkNum)

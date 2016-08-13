@@ -172,8 +172,11 @@ namespace EQueue.Broker
                     throw new ArgumentException(string.Format("There still has queues under this topic '{0}', please delete all the qeueues first.", topic));
                 }
 
-                var topicPath = Path.Combine(BrokerController.Instance.Setting.QueueChunkConfig.BasePath, topic);
-                Directory.Delete(topicPath);
+                if (!BrokerController.Instance.Setting.IsMessageStoreMemoryMode)
+                {
+                    var topicPath = Path.Combine(BrokerController.Instance.Setting.QueueChunkConfig.BasePath, topic);
+                    Directory.Delete(topicPath);
+                }
             }
         }
         public void AddQueue(string topic)
@@ -289,6 +292,11 @@ namespace EQueue.Broker
         private void LoadQueues()
         {
             _queueDict.Clear();
+
+            if (BrokerController.Instance.Setting.IsMessageStoreMemoryMode)
+            {
+                return;
+            }
 
             var chunkConfig = BrokerController.Instance.Setting.QueueChunkConfig;
             if (!Directory.Exists(chunkConfig.BasePath))

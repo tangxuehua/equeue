@@ -41,7 +41,7 @@ namespace EQueue.MessageStorePerfTests
                 .RegisterUnhandledExceptionHandler()
                 .RegisterEQueueComponents();
 
-            BrokerController.Create(new BrokerSetting(ConfigurationManager.AppSettings["fileStoreRootPath"], enableCache: false));
+            BrokerController.Create(new BrokerSetting(false, ConfigurationManager.AppSettings["fileStoreRootPath"], enableCache: false));
 
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();

@@ -56,9 +56,8 @@ namespace EQueue.Broker
 
         public void Load()
         {
-            var messageWriteQueueThreshold = BrokerController.Instance.Setting.MessageWriteQueueThreshold;
-            _bufferQueue = new BufferQueue<MessageLogRecord>("MessageBufferQueue", messageWriteQueueThreshold, PersistMessages, _logger);
-            _chunkManager = new ChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig);
+            _bufferQueue = new BufferQueue<MessageLogRecord>("MessageBufferQueue", BrokerController.Instance.Setting.MessageWriteQueueThreshold, PersistMessages, _logger);
+            _chunkManager = new ChunkManager(this.GetType().Name, BrokerController.Instance.Setting.MessageChunkConfig, BrokerController.Instance.Setting.IsMessageStoreMemoryMode);
             _chunkWriter = new ChunkWriter(_chunkManager);
             _chunkReader = new ChunkReader(_chunkManager, _chunkWriter);
 

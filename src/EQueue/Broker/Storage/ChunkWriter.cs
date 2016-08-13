@@ -28,7 +28,7 @@ namespace EQueue.Broker.Storage
         {
             _currentChunk = _chunkManager.GetLastChunk();
 
-            if (!_chunkManager.Config.SyncFlush)
+            if (!_chunkManager.IsMemoryMode && !_chunkManager.Config.SyncFlush)
             {
                 _scheduleService.StartTask("FlushChunk", Flush, 1000, _chunkManager.Config.FlushChunkIntervalMilliseconds);
             }
@@ -73,7 +73,7 @@ namespace EQueue.Broker.Storage
                 }
 
                 //如果需要同步刷盘，则立即同步刷盘
-                if (_chunkManager.Config.SyncFlush)
+                if (!_chunkManager.IsMemoryMode && _chunkManager.Config.SyncFlush)
                 {
                     _currentChunk.Flush();
                 }
@@ -86,11 +86,14 @@ namespace EQueue.Broker.Storage
         {
             lock (_lockObj)
             {
-                if (_currentChunk != null)
+                if (!_chunkManager.IsMemoryMode && _currentChunk != null)
                 {
                     _currentChunk.Flush();
                 }
-                _scheduleService.StopTask("FlushChunk");
+                if (!_chunkManager.IsMemoryMode && !_chunkManager.Config.SyncFlush)
+                {
+                    _scheduleService.StopTask("FlushChunk");
+                }
                 _currentChunk = null;
                 _isClosed = true;
             }

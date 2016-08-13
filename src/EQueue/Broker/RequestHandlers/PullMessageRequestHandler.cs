@@ -172,7 +172,6 @@ namespace EQueue.Broker.RequestHandlers
                 }
                 catch (ChunkNotExistException ex)
                 {
-                    _logger.Error(string.Format("Message chunk not exist, topic: {0}, queueId: {1}, queueOffset: {2}", topic, queueId, queueOffset), ex);
                     messageChunkNotExistException = ex;
                     break;
                 }

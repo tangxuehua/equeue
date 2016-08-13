@@ -41,7 +41,7 @@ namespace EQueue.Broker
             Key = QueueKeyUtil.CreateQueueKey(topic, queueId);
 
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
-            _chunkManager = new ChunkManager(Key, BrokerController.Instance.Setting.QueueChunkConfig, Topic + @"\" + QueueId);
+            _chunkManager = new ChunkManager(Key, BrokerController.Instance.Setting.QueueChunkConfig, BrokerController.Instance.Setting.IsMessageStoreMemoryMode, Topic + @"\" + QueueId);
             _chunkWriter = new ChunkWriter(_chunkManager);
             _chunkReader = new ChunkReader(_chunkManager, _chunkWriter);
             _queueSettingFile = Path.Combine(_chunkManager.ChunkPath, QueueSettingFileName);
@@ -110,7 +110,10 @@ namespace EQueue.Broker
 
             Close();
 
-            Directory.Delete(_chunkManager.ChunkPath, true);
+            if (!_chunkManager.IsMemoryMode)
+            {
+                Directory.Delete(_chunkManager.ChunkPath, true);
+            }
         }
         public long IncrementNextOffset()
         {
@@ -159,6 +162,10 @@ namespace EQueue.Broker
         }
         private QueueSetting LoadQueueSetting()
         {
+            if (_chunkManager.IsMemoryMode)
+            {
+                return null;
+            }
             if (!Directory.Exists(_chunkManager.ChunkPath))
             {
                 Directory.CreateDirectory(_chunkManager.ChunkPath);
@@ -178,6 +185,10 @@ namespace EQueue.Broker
         }
         private void SaveQueueSetting()
         {
+            if (_chunkManager.IsMemoryMode)
+            {
+                return;
+            }
             if (!Directory.Exists(_chunkManager.ChunkPath))
             {
                 Directory.CreateDirectory(_chunkManager.ChunkPath);

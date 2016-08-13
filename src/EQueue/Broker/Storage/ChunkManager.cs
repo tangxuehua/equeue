@@ -21,6 +21,7 @@ namespace EQueue.Broker.Storage
         private readonly IDictionary<int, Chunk> _chunks;
         private readonly string _chunkPath;
         private readonly IScheduleService _scheduleService;
+        private readonly bool _isMemoryMode;
         private int _nextChunkNumber;
         private int _uncachingChunks;
         private int _isCachingNextChunk;
@@ -28,14 +29,16 @@ namespace EQueue.Broker.Storage
         public string Name { get; private set; }
         public ChunkManagerConfig Config { get { return _config; } }
         public string ChunkPath { get { return _chunkPath; } }
+        public bool IsMemoryMode { get { return _isMemoryMode; } }
 
-        public ChunkManager(string name, ChunkManagerConfig config, string relativePath = null)
+        public ChunkManager(string name, ChunkManagerConfig config, bool isMemoryMode, string relativePath = null)
         {
             Ensure.NotNull(name, "name");
             Ensure.NotNull(config, "config");
 
             Name = name;
             _config = config;
+            _isMemoryMode = isMemoryMode;
             if (string.IsNullOrEmpty(relativePath))
             {
                 _chunkPath = _config.BasePath;
@@ -50,6 +53,8 @@ namespace EQueue.Broker.Storage
 
         public void Load<T>(Func<byte[], T> readRecordFunc) where T : ILogRecord
         {
+            if (_isMemoryMode) return;
+
             lock (_lockObj)
             {
                 if (!Directory.Exists(_chunkPath))
@@ -71,7 +76,7 @@ namespace EQueue.Broker.Storage
                     for (var i = files.Length - 2; i >= 0; i--)
                     {
                         var file = files[i];
-                        var chunk = Chunk.FromCompletedFile(file, this, _config);
+                        var chunk = Chunk.FromCompletedFile(file, this, _config, _isMemoryMode);
                         if (_config.EnableCache && cachedChunkCount < _config.PreCacheChunkCount)
                         {
                             if (chunk.TryCacheInMemory(false))
@@ -82,7 +87,7 @@ namespace EQueue.Broker.Storage
                         AddChunk(chunk);
                     }
                     var lastFile = files[files.Length - 1];
-                    AddChunk(Chunk.FromOngoingFile(lastFile, this, _config, readRecordFunc));
+                    AddChunk(Chunk.FromOngoingFile(lastFile, this, _config, readRecordFunc, _isMemoryMode));
                 }
 
                 if (_config.EnableCache)
@@ -105,7 +110,7 @@ namespace EQueue.Broker.Storage
             {
                 var chunkNumber = _nextChunkNumber;
                 var chunkFileName = _config.FileNamingStrategy.GetFileNameFor(_chunkPath, chunkNumber);
-                var chunk = Chunk.CreateNew(chunkFileName, chunkNumber, this, _config);
+                var chunk = Chunk.CreateNew(chunkFileName, chunkNumber, this, _config, _isMemoryMode);
 
                 AddChunk(chunk);
 

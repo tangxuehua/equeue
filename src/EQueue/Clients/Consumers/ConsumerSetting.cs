@@ -34,7 +34,7 @@ namespace EQueue.Clients.Consumers
         /// <summary>向Broker发送消息消费进度的间隔，默认为1s；
         /// </summary>
         public int SendConsumerOffsetInterval { get; set; }
-        /// <summary>从Broker拉取消息时，开始流控的阀值，默认为1000；即当前拉取到本地未消费的消息数到达1000时，将开始做流控，减慢拉取速度；
+        /// <summary>从Broker拉取消息时，开始流控的阀值，默认为10000；即当前拉取到本地未消费的消息数到达10000时，将开始做流控，减慢拉取速度；
         /// </summary>
         public int PullMessageFlowControlThreshold { get; set; }
         /// <summary>当拉取消息开始流控时，需要逐渐增加流控时间的步长百分比，默认为1%；
@@ -62,7 +62,7 @@ namespace EQueue.Clients.Consumers
         /// <summary>重试处理出现异常（失败）的消息的时间间隔，一次重试一个处理失败的消息，默认为1000毫秒；
         /// </summary>
         public int RetryMessageInterval { get; set; }
-        /// <summary>一次从Broker拉取的消息的最大数量，默认为32个；
+        /// <summary>一次从Broker拉取的消息的最大数量，默认为64个；
         /// </summary>
         public int PullMessageBatchSize { get; set; }
         /// <summary>消费者启动时，针对当前要消费的队列，如果Broker上之前没有保存过任何该队列的消费进度（消费者第一次启动），则通过该选项指定要从队列的什么位置开始消费；可以从队列的第一个消息开始消费，也可以从最后一个消息之后的后续的新消息开始消费；默认为LastOffset
@@ -86,13 +86,13 @@ namespace EQueue.Clients.Consumers
             HeartbeatBrokerInterval = 1000;
             UpdateTopicQueueCountInterval = 1000;
             SendConsumerOffsetInterval = 1000;
-            PullMessageFlowControlThreshold = 1000;
+            PullMessageFlowControlThreshold = 10000;
             PullMessageFlowControlStepPercent = 1;
             PullMessageFlowControlStepWaitMilliseconds = 1;
             SuspendPullRequestMilliseconds = 60 * 1000;
             PullRequestTimeoutMilliseconds = 70 * 1000;
             RetryMessageInterval = 1000;
-            PullMessageBatchSize = 32;
+            PullMessageBatchSize = 64;
             ConsumeFromWhere = ConsumeFromWhere.LastOffset;
             MessageHandleMode = MessageHandleMode.Parallel;
         }
