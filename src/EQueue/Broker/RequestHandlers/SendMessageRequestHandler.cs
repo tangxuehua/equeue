@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
@@ -20,6 +21,7 @@ namespace EQueue.Broker.RequestHandlers
         private readonly BrokerController _brokerController;
         private readonly bool _notifyWhenMessageArrived;
         private readonly BufferQueue<StoreContext> _bufferQueue;
+        private const string SendMessageFailedText = "Send message failed.";
 
         public SendMessageRequestHandler(BrokerController brokerController)
         {
@@ -93,21 +95,29 @@ namespace EQueue.Broker.RequestHandlers
 
             public void OnComplete()
             {
-                var result = new MessageStoreResult(
-                    MessageLogRecord.MessageId,
-                    MessageLogRecord.Code,
-                    MessageLogRecord.Topic,
-                    MessageLogRecord.QueueId,
-                    MessageLogRecord.QueueOffset,
-                    MessageLogRecord.Tag);
-                var data = MessageUtils.EncodeMessageStoreResult(result);
-                var response = RemotingResponseFactory.CreateResponse(RemotingRequest, data);
-
-                RequestHandlerContext.SendRemotingResponse(response);
-
-                if (SendMessageRequestHandler._notifyWhenMessageArrived)
+                if (MessageLogRecord.LogPosition >= 0 && !string.IsNullOrEmpty(MessageLogRecord.MessageId))
                 {
-                    SendMessageRequestHandler._suspendedPullRequestManager.NotifyNewMessage(MessageLogRecord.Topic, result.QueueId, result.QueueOffset);
+                    var result = new MessageStoreResult(
+                        MessageLogRecord.MessageId,
+                        MessageLogRecord.Code,
+                        MessageLogRecord.Topic,
+                        MessageLogRecord.QueueId,
+                        MessageLogRecord.QueueOffset,
+                        MessageLogRecord.Tag);
+                    var data = MessageUtils.EncodeMessageStoreResult(result);
+                    var response = RemotingResponseFactory.CreateResponse(RemotingRequest, data);
+
+                    RequestHandlerContext.SendRemotingResponse(response);
+
+                    if (SendMessageRequestHandler._notifyWhenMessageArrived)
+                    {
+                        SendMessageRequestHandler._suspendedPullRequestManager.NotifyNewMessage(MessageLogRecord.Topic, result.QueueId, result.QueueOffset);
+                    }
+                }
+                else
+                {
+                    var response = RemotingResponseFactory.CreateResponse(RemotingRequest, ResponseCode.Failed, Encoding.UTF8.GetBytes(SendMessageFailedText));
+                    RequestHandlerContext.SendRemotingResponse(response);
                 }
             }
         }

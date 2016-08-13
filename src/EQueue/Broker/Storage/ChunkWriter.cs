@@ -15,7 +15,6 @@ namespace EQueue.Broker.Storage
         private bool _isClosed = false;
 
         private Chunk _currentChunk;
-        private int _closedChunkNumber;
 
         public ChunkWriter(ChunkManager chunkManager)
         {
@@ -42,7 +41,7 @@ namespace EQueue.Broker.Storage
             {
                 if (_isClosed)
                 {
-                    throw new ChunkWriteException(string.Format("#{0}", _closedChunkNumber), "Chunk writer is closed.");
+                    return -1L;
                 }
 
                 //如果当前文件已经写完，则需要新建文件
@@ -95,11 +94,7 @@ namespace EQueue.Broker.Storage
                 {
                     _scheduleService.StopTask("FlushChunk");
                 }
-                if (_currentChunk != null)
-                {
-                    _closedChunkNumber = _currentChunk.ChunkHeader.ChunkNumber;
-                    _currentChunk = null;
-                }
+                _currentChunk = null;
                 _isClosed = true;
             }
         }
