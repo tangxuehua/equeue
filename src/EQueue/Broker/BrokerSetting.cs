@@ -30,6 +30,9 @@ namespace EQueue.Broker
         /// <summary>删除符合删除条件的队列中的消息索引的定时间隔；一定是消息先被删除后，该消息索引才会从队列中删除；默认为10秒钟；
         /// </summary>
         public int DeleteQueueMessagesInterval { get; set; }
+        /// <summary>表示删除消息文件时，是否需要忽略未消费过的消息，也就是说一满足删除策略条件，就直接删除，不关心这些消息是否还没消费过；默认值未True；
+        /// </summary>
+        public bool DeleteMessageIgnoreUnConsumed { get; set; }
         /// <summary>持久化消息消费进度的间隔，默认为1s；
         /// </summary>
         public int PersistConsumeOffsetInterval { get; set; }
@@ -82,6 +85,7 @@ namespace EQueue.Broker
             NotifyWhenMessageArrived = true;
             DeleteMessagesInterval = 1000 * 10;
             DeleteQueueMessagesInterval = 1000 * 10;
+            DeleteMessageIgnoreUnConsumed = true;
             PersistConsumeOffsetInterval = 1000 * 1;
             CheckBlockingPullRequestMilliseconds = 1000 * 1;
             ProducerExpiredTimeout = 1000 * 30;

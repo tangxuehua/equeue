@@ -28,7 +28,7 @@ namespace EQueue.Broker.DeleteMessageStrategies
             var chunks = new List<Chunk>();
             var allCompletedChunks = chunkManager
                 .GetAllChunks()
-                .Where(x => x.IsCompleted && x.ChunkHeader.ChunkDataEndPosition <= maxMessagePosition)
+                .Where(x => x.IsCompleted && CheckMessageConsumeOffset(x, maxMessagePosition))
                 .OrderBy(x => x.ChunkHeader.ChunkNumber);
 
             foreach (var chunk in allCompletedChunks)
@@ -42,6 +42,15 @@ namespace EQueue.Broker.DeleteMessageStrategies
             }
 
             return chunks;
+        }
+
+        private bool CheckMessageConsumeOffset(Chunk currentChunk, long maxMessagePosition)
+        {
+            if (BrokerController.Instance.Setting.DeleteMessageIgnoreUnConsumed)
+            {
+                return true;
+            }
+            return currentChunk.ChunkHeader.ChunkDataEndPosition <= maxMessagePosition;
         }
     }
 }
