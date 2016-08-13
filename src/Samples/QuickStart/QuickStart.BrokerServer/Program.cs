@@ -13,6 +13,7 @@ namespace QuickStart.BrokerServer
         {
             InitializeEQueue();
             var setting = new BrokerSetting(
+                false,
                 ConfigurationManager.AppSettings["fileStoreRootPath"],
                 chunkCacheMaxPercent: 95,
                 chunkFlushInterval: int.Parse(ConfigurationManager.AppSettings["flushInterval"]),
