@@ -95,8 +95,11 @@ namespace EQueue.Broker.Storage
                 {
                     _scheduleService.StopTask("FlushChunk");
                 }
-                _closedChunkNumber = _currentChunk.ChunkHeader.ChunkNumber;
-                _currentChunk = null;
+                if (_currentChunk != null)
+                {
+                    _closedChunkNumber = _currentChunk.ChunkHeader.ChunkNumber;
+                    _currentChunk = null;
+                }
                 _isClosed = true;
             }
         }
