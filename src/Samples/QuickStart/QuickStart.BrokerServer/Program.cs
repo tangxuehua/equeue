@@ -24,7 +24,8 @@ namespace QuickStart.BrokerServer
                 messageChunkLocalCacheSize: 30 * 10000,
                 queueChunkLocalCacheSize: 10000)
             {
-                NotifyWhenMessageArrived = false
+                NotifyWhenMessageArrived = false,
+                MessageWriteQueueThreshold = int.Parse(ConfigurationManager.AppSettings["messageWriteQueueThreshold"])
             };
             BrokerController.Create(setting).Start();
             Console.ReadLine();
