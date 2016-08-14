@@ -96,9 +96,13 @@
                         {
                             @(item.QueueCurrentOffset - item.QueueMinConsumedOffset)
                         }
-                        else
+                        else if (item.QueueCurrentOffset >= 0 && item.QueueMinOffset >= 0)
                         {
                             @(item.QueueCurrentOffset - item.QueueMinOffset + 1)
+                        }
+                        else
+                        {
+                            @Html.Raw("0")
                         }
                     </td>
                     <td class="text-center vertical-center">
