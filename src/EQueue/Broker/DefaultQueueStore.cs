@@ -57,7 +57,7 @@ namespace EQueue.Broker
         }
         public bool IsTopicExist(string topic)
         {
-            return _queueDict.Values.Any(x => x.Topic.ToLower() == topic.ToLower());
+            return _queueDict.Values.Any(x => x.Topic == topic);
         }
         public bool IsQueueExist(string queueKey)
         {
@@ -167,15 +167,23 @@ namespace EQueue.Broker
             {
                 Ensure.NotNullOrEmpty(topic, "topic");
 
-                if (IsTopicExist(topic))
+                var queues = _queueDict.Values.Where(x => x.Topic == topic).OrderBy(x => x.QueueId);
+                foreach (var queue in queues)
                 {
-                    throw new ArgumentException(string.Format("There still has queues under this topic '{0}', please delete all the qeueues first.", topic));
+                    CheckQueueAllowToDelete(queue);
+                }
+                foreach (var queue in queues)
+                {
+                    DeleteQueue(queue.Topic, queue.QueueId);
                 }
 
                 if (!BrokerController.Instance.Setting.IsMessageStoreMemoryMode)
                 {
                     var topicPath = Path.Combine(BrokerController.Instance.Setting.QueueChunkConfig.BasePath, topic);
-                    Directory.Delete(topicPath);
+                    if (Directory.Exists(topicPath))
+                    {
+                        Directory.Delete(topicPath);
+                    }
                 }
             }
         }
@@ -229,18 +237,8 @@ namespace EQueue.Broker
                     return;
                 }
 
-                //检查队列对Producer或Consumer是否可见，如果可见是不允许删除的
-                if (queue.Setting.ProducerVisible || queue.Setting.ConsumerVisible)
-                {
-                    throw new Exception("Queue is visible to producer or consumer, cannot be delete.");
-                }
-                //检查是否有未消费完的消息
-                var minConsumedOffset = _consumeOffsetStore.GetMinConsumedOffset(topic, queueId);
-                var queueCurrentOffset = queue.NextOffset - 1;
-                if (minConsumedOffset < queueCurrentOffset)
-                {
-                    throw new Exception(string.Format("Queue is not allowed to delete as there are messages haven't been consumed, not consumed messageCount: {0}", queueCurrentOffset - minConsumedOffset));
-                }
+                //检查队列是否可删除
+                CheckQueueAllowToDelete(queue);
 
                 //删除队列的消费进度信息
                 _consumeOffsetStore.DeleteConsumeOffset(queue.Key);
@@ -280,6 +278,21 @@ namespace EQueue.Broker
             }
         }
 
+        private void CheckQueueAllowToDelete(Queue queue)
+        {
+            //检查队列对Producer或Consumer是否可见，如果可见是不允许删除的
+            if (queue.Setting.ProducerVisible || queue.Setting.ConsumerVisible)
+            {
+                throw new Exception(string.Format("Queue[topic:{0},queueId:{1}] is visible to producer or consumer, cannot be delete.", queue.Topic, queue.QueueId));
+            }
+            //检查是否有未消费完的消息
+            var minConsumedOffset = _consumeOffsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
+            var queueCurrentOffset = queue.NextOffset - 1;
+            if (minConsumedOffset < queueCurrentOffset)
+            {
+                throw new Exception(string.Format("Queue[topic:{0},queueId:{1}] is not allowed to delete as there are messages haven't been consumed, not consumed messageCount: {2}", queue.Topic, queue.QueueId, queueCurrentOffset - minConsumedOffset));
+            }
+        }
         private Queue GetQueue(string key)
         {
             Queue queue;

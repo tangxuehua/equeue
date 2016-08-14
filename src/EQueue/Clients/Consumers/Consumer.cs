@@ -525,11 +525,14 @@ namespace EQueue.Clients.Consumers
                     var request = new UpdateQueueOffsetRequest(GroupName, pullRequest.MessageQueue, consumedQueueOffset);
                     var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
                     _adminRemotingClient.InvokeOneway(remotingRequest);
-                    _logger.InfoFormat("Sent consumeOffset to broker, [group:{0}, topic:{1}, queueId:{2}, offset:{3}]",
-                        GroupName,
-                        pullRequest.MessageQueue.Topic,
-                        pullRequest.MessageQueue.QueueId,
-                        consumedQueueOffset);
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.DebugFormat("Sent consumeOffset to broker, [group:{0}, topic:{1}, queueId:{2}, offset:{3}]",
+                            GroupName,
+                            pullRequest.MessageQueue.Topic,
+                            pullRequest.MessageQueue.QueueId,
+                            consumedQueueOffset);
+                    }
                 }
             }
             catch (Exception ex)
