@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Serializing;
 using EQueue.Broker.Storage;
@@ -77,7 +76,7 @@ namespace EQueue.Broker
         }
         public void AddMessage(long messagePosition, string messageTag)
         {
-            _chunkWriter.Write(new QueueLogRecord(messagePosition + 1, messageTag.GetHashcode2()));
+            _chunkWriter.Write(new QueueLogRecord(messagePosition + 1, messageTag.GetStringHashcode()));
         }
         public long GetMessagePosition(long queueOffset, out int tagCode, bool autoCache = true)
         {

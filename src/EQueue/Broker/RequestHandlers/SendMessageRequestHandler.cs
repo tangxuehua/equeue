@@ -3,6 +3,7 @@ using System.Text;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
+using ECommon.Utilities;
 using EQueue.Broker.Exceptions;
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.Storage;

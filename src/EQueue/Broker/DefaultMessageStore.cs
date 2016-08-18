@@ -1,6 +1,7 @@
 ﻿using System;
 using ECommon.Logging;
 using ECommon.Scheduling;
+using ECommon.Utilities;
 using EQueue.Broker.DeleteMessageStrategies;
 using EQueue.Broker.Storage;
 using EQueue.Protocols;

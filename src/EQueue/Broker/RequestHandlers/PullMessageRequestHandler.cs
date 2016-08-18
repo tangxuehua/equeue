@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
 using EQueue.Broker.Client;
@@ -160,7 +161,7 @@ namespace EQueue.Broker.RequestHandlers
                         var tagList = tags.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
                         foreach (var tag in tagList)
                         {
-                            if (tag == "*" || tag.GetHashcode2() == tagCode)
+                            if (tag == "*" || tag.GetStringHashcode() == tagCode)
                             {
                                 messages.Add(message);
                                 break;

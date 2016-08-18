@@ -196,7 +196,7 @@ namespace EQueue.Broker
             statisticInfo.TopicCount = _queueStore.GetAllTopics().Count();
             statisticInfo.QueueCount = _queueStore.GetAllQueueCount();
             statisticInfo.TotalUnConsumedMessageCount = _queueStore.GetTotalUnConusmedMessageCount();
-            statisticInfo.ConsumerGroupCount = _consumerManager.GetConsumerGroupCount();
+            statisticInfo.ConsumerGroupCount = _consumeOffsetStore.GetConsumerGroupCount();
             statisticInfo.ProducerCount = _producerManager.GetProducerCount();
             statisticInfo.ConsumerCount = _consumerManager.GetConsumerCount();
             statisticInfo.MessageChunkCount = _messageStore.ChunkCount;
