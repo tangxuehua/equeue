@@ -28,12 +28,15 @@ namespace EQueue.Clients.Producers
         private readonly SocketRemotingClient _adminRemotingClient;
         private readonly IQueueSelector _queueSelector;
         private readonly ILogger _logger;
+        private bool _started;
 
+        public string Name { get; private set; }
         public ProducerSetting Setting { get; private set; }
 
-        public Producer() : this(null) { }
-        public Producer(ProducerSetting setting)
+        public Producer(string name = null) : this(null, name) { }
+        public Producer(ProducerSetting setting = null, string name = null)
         {
+            Name = name;
             Setting = setting ?? new ProducerSetting();
 
             _topicQueueIdsDict = new ConcurrentDictionary<string, IList<int>>();
@@ -60,6 +63,7 @@ namespace EQueue.Clients.Producers
         {
             _remotingClient.Start();
             _adminRemotingClient.Start();
+            _started = true;
             _logger.InfoFormat("Producer started, local address: {0}", _remotingClient.LocalEndPoint);
             return this;
         }
@@ -72,6 +76,7 @@ namespace EQueue.Clients.Producers
         }
         public SendResult Send(Message message, string routingKey, int timeoutMilliseconds = 120000)
         {
+            EnsureRemotingClientStatus();
             var sendResult = SendAsync(message, routingKey, timeoutMilliseconds).WaitResult<SendResult>(timeoutMilliseconds + 1000);
             if (sendResult == null)
             {
@@ -82,7 +87,7 @@ namespace EQueue.Clients.Producers
         public async Task<SendResult> SendAsync(Message message, string routingKey, int timeoutMilliseconds = 120000)
         {
             Ensure.NotNull(message, "message");
-
+            EnsureRemotingClientStatus();
             var queueId = GetAvailableQueueId(message, routingKey);
             if (queueId < 0)
             {
@@ -109,7 +114,7 @@ namespace EQueue.Clients.Producers
         public void SendWithCallback(Message message, string routingKey)
         {
             Ensure.NotNull(message, "message");
-
+            EnsureRemotingClientStatus();
             var queueId = GetAvailableQueueId(message, routingKey);
             if (queueId < 0)
             {
@@ -122,7 +127,7 @@ namespace EQueue.Clients.Producers
         public void SendOneway(Message message, string routingKey)
         {
             Ensure.NotNull(message, "message");
-
+            EnsureRemotingClientStatus();
             var queueId = GetAvailableQueueId(message, routingKey);
             if (queueId < 0)
             {
@@ -154,7 +159,15 @@ namespace EQueue.Clients.Producers
 
         private string GetProducerId()
         {
-            return ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
+            if (string.IsNullOrWhiteSpace(Name))
+            {
+                return ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
+            }
+            else
+            {
+                var ipSuffix = ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
+                return string.Format("{0}_{1}", Name, ipSuffix);
+            }
         }
         private void SendHeartbeat()
         {
@@ -225,6 +238,7 @@ namespace EQueue.Clients.Producers
         }
         private IEnumerable<int> GetTopicQueueIdsFromServer(string topic)
         {
+            EnsureRemotingClientStatus();
             var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicQueueIdsForProducer, Encoding.UTF8.GetBytes(topic));
             var remotingResponse = _adminRemotingClient.InvokeSync(remotingRequest, 60000);
             if (remotingResponse.Code != ResponseCode.Success)
@@ -277,6 +291,17 @@ namespace EQueue.Clients.Producers
                 }
             }
             return false;
+        }
+        private void EnsureRemotingClientStatus()
+        {
+            if (!_started)
+            {
+                throw new Exception("Producer is not started, please start it first.");
+            }
+            if (!_remotingClient.IsConnected)
+            {
+                throw new Exception("The remoting client is not connected to remoting server, please check the network.");
+            }
         }
 
         class ConnectionEventListener : IConnectionEventListener
