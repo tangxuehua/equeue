@@ -22,6 +22,12 @@ namespace EQueue.Clients.Consumers
         /// <summary>Socket通信层相关的设置；
         /// </summary>
         public SocketSetting SocketSetting { get; set; }
+        /// <summary>表示框架是否需要自动PullMessage、HandleMessage、Commit Consume Offset；默认值为True；
+        /// </summary>
+        public bool AutoPull { get; set; }
+        /// <summary>当要自己拉取消息时，Consumer内部拉取消息到本地缓存的缓存队列的大小，默认为100000
+        /// </summary>
+        public int ManualPullLocalMessageQueueMaxSize { get; set; }
         /// <summary>消费者负载均衡的间隔，默认为1s；
         /// </summary>
         public int RebalanceInterval { get; set; }
@@ -95,6 +101,8 @@ namespace EQueue.Clients.Consumers
             PullMessageBatchSize = 64;
             ConsumeFromWhere = ConsumeFromWhere.LastOffset;
             MessageHandleMode = MessageHandleMode.Parallel;
+            AutoPull = true;
+            AutoPullLocalMessageQueueMaxSize = 10 * 10000;
         }
     }
 }

@@ -13,8 +13,6 @@ namespace EQueue.Clients.Consumers
         private long _maxQueueOffset = -1;
         private int _messageCount = 0;
 
-        public bool IsDropped { get; set; }
-
         public void Reset()
         {
             lock (_lockObj)
