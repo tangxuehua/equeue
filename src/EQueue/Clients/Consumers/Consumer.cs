@@ -99,6 +99,10 @@ namespace EQueue.Clients.Consumers
 
         #region Public Methods
 
+        public string GetConsumerId()
+        {
+            return ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
+        }
         public Consumer SetMessageHandler(IMessageHandler messageHandler)
         {
             if (messageHandler == null)
@@ -801,10 +805,6 @@ namespace EQueue.Clients.Consumers
                 PullMessageRequest.WriteToStream(request, stream);
                 return stream.ToArray();
             }
-        }
-        private string GetConsumerId()
-        {
-            return ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
         }
 
         #endregion
