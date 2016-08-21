@@ -682,10 +682,10 @@ namespace EQueue.Clients.Consumers
         {
             try
             {
-                var consumingQueues = _pullRequestDict.Values.ToList().Select(x => QueueKeyUtil.CreateQueueKey(x.MessageQueue.Topic, x.MessageQueue.QueueId)).ToList();
+                var messageQueues = _pullRequestDict.Values.ToList().Select(x => x.MessageQueue).ToList();
                 _remotingClient.InvokeOneway(new RemotingRequest(
                     (int)RequestCode.ConsumerHeartbeat,
-                    _binarySerializer.Serialize(new ConsumerData(GetConsumerId(), GroupName, _subscriptionTopics.Keys, consumingQueues))));
+                    _binarySerializer.Serialize(new ConsumerHeartbeatData(GetConsumerId(), GroupName, _subscriptionTopics.Keys, messageQueues))));
             }
             catch (Exception ex)
             {

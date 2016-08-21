@@ -8,13 +8,14 @@ using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Utilities;
+using EQueue.Protocols;
 using EQueue.Utils;
 
 namespace EQueue.Broker
 {
     public class DefaultQueueStore : IQueueStore
     {
-        private readonly ConcurrentDictionary<string, Queue> _queueDict;
+        private readonly ConcurrentDictionary<QueueKey, Queue> _queueDict;
         private readonly IMessageStore _messageStore;
         private readonly IConsumeOffsetStore _consumeOffsetStore;
         private readonly IScheduleService _scheduleService;
@@ -25,7 +26,7 @@ namespace EQueue.Broker
 
         public DefaultQueueStore(IMessageStore messageStore, IConsumeOffsetStore consumeOffsetStore, IScheduleService scheduleService, ILoggerFactory loggerFactory)
         {
-            _queueDict = new ConcurrentDictionary<string, Queue>();
+            _queueDict = new ConcurrentDictionary<QueueKey, Queue>();
             _messageStore = messageStore;
             _consumeOffsetStore = consumeOffsetStore;
             _scheduleService = scheduleService;
@@ -59,7 +60,7 @@ namespace EQueue.Broker
         {
             return _queueDict.Values.Any(x => x.Topic == topic);
         }
-        public bool IsQueueExist(string queueKey)
+        public bool IsQueueExist(QueueKey queueKey)
         {
             return GetQueue(queueKey) != null;
         }
@@ -69,7 +70,7 @@ namespace EQueue.Broker
         }
         public long GetQueueCurrentOffset(string topic, int queueId)
         {
-            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+            var key = new QueueKey(topic, queueId);
             Queue queue;
             if (_queueDict.TryGetValue(key, out queue))
             {
@@ -79,7 +80,7 @@ namespace EQueue.Broker
         }
         public long GetQueueMinOffset(string topic, int queueId)
         {
-            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+            var key = new QueueKey(topic, queueId);
             Queue queue;
             if (_queueDict.TryGetValue(key, out queue))
             {
@@ -230,7 +231,7 @@ namespace EQueue.Broker
         {
             lock (_lockObj)
             {
-                var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+                var key = new QueueKey(topic, queueId);
                 Queue queue;
                 if (!_queueDict.TryGetValue(key, out queue))
                 {
@@ -258,7 +259,7 @@ namespace EQueue.Broker
         }
         public Queue GetQueue(string topic, int queueId)
         {
-            return GetQueue(QueueKeyUtil.CreateQueueKey(topic, queueId));
+            return GetQueue(new QueueKey(topic, queueId));
         }
         public IEnumerable<Queue> QueryQueues(string topic = null)
         {
@@ -293,7 +294,7 @@ namespace EQueue.Broker
                 throw new Exception(string.Format("Queue[topic:{0},queueId:{1}] is not allowed to delete as there are messages haven't been consumed, not consumed messageCount: {2}", queue.Topic, queue.QueueId, queueCurrentOffset - minConsumedOffset));
             }
         }
-        private Queue GetQueue(string key)
+        private Queue GetQueue(QueueKey key)
         {
             Queue queue;
             if (_queueDict.TryGetValue(key, out queue) && !queue.Setting.IsDeleted)
@@ -343,7 +344,7 @@ namespace EQueue.Broker
             {
                 return;
             }
-            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+            var key = new QueueKey(topic, queueId);
             _queueDict.TryAdd(key, queue);
         }
         private void CloseQueues()

@@ -23,14 +23,14 @@ namespace EQueue.Broker
         private readonly ILogger _logger;
         private string _consumeOffsetFile;
         private string _consumeOffsetBackupFile;
-        private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupConsumeOffsetsDict;
-        private ConcurrentDictionary<string, ConcurrentDictionary<string, long>> _groupNextConsumeOffsetsDict;
+        private ConcurrentDictionary<string, ConcurrentDictionary<QueueKey, long>> _groupConsumeOffsetsDict;
+        private ConcurrentDictionary<string, ConcurrentDictionary<QueueKey, long>> _groupNextConsumeOffsetsDict;
         private int _isPersistingOffsets;
 
         public DefaultConsumeOffsetStore(IScheduleService scheduleService, IJsonSerializer jsonSerializer, ILoggerFactory loggerFactory)
         {
-            _groupConsumeOffsetsDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
-            _groupNextConsumeOffsetsDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
+            _groupConsumeOffsetsDict = new ConcurrentDictionary<string, ConcurrentDictionary<QueueKey, long>>();
+            _groupNextConsumeOffsetsDict = new ConcurrentDictionary<string, ConcurrentDictionary<QueueKey, long>>();
             _scheduleService = scheduleService;
             _jsonSerializer = jsonSerializer;
             _logger = loggerFactory.Create(GetType().FullName);
@@ -73,16 +73,16 @@ namespace EQueue.Broker
         }
         public bool DeleteConsumerGroup(string group)
         {
-            ConcurrentDictionary<string, long> queueOffsetDict;
+            ConcurrentDictionary<QueueKey, long> queueOffsetDict;
             return _groupConsumeOffsetsDict.TryRemove(group, out queueOffsetDict);
         }
         public long GetConsumeOffset(string topic, int queueId, string group)
         {
-            ConcurrentDictionary<string, long> queueOffsetDict;
+            ConcurrentDictionary<QueueKey, long> queueOffsetDict;
             if (_groupConsumeOffsetsDict.TryGetValue(group, out queueOffsetDict))
             {
                 long offset;
-                var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+                var key = new QueueKey(topic, queueId);
                 if (queueOffsetDict.TryGetValue(key, out offset))
                 {
                     return offset;
@@ -92,7 +92,7 @@ namespace EQueue.Broker
         }
         public long GetMinConsumedOffset(string topic, int queueId)
         {
-            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+            var key = new QueueKey(topic, queueId);
             var minOffset = -1L;
 
             foreach (var queueOffsetDict in _groupConsumeOffsetsDict.Values)
@@ -117,12 +117,12 @@ namespace EQueue.Broker
         {
             var queueOffsetDict = _groupConsumeOffsetsDict.GetOrAdd(group, k =>
             {
-                return new ConcurrentDictionary<string, long>();
+                return new ConcurrentDictionary<QueueKey, long>();
             });
-            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+            var key = new QueueKey(topic, queueId);
             queueOffsetDict[key] = offset;
         }
-        public void DeleteConsumeOffset(string queueKey)
+        public void DeleteConsumeOffset(QueueKey queueKey)
         {
             foreach (var dict in _groupConsumeOffsetsDict.Values)
             {
@@ -134,9 +134,9 @@ namespace EQueue.Broker
             }
             PersistConsumeOffsetInfo();
         }
-        public IEnumerable<string> GetConsumeKeys()
+        public IEnumerable<QueueKey> GetConsumeKeys()
         {
-            var keyList = new List<string>();
+            var keyList = new List<QueueKey>();
 
             foreach (var dict in _groupConsumeOffsetsDict.Values)
             {
@@ -158,14 +158,14 @@ namespace EQueue.Broker
 
             foreach (var entry in entryList)
             {
-                foreach (var subEntry in entry.Value.Where(x => string.IsNullOrEmpty(topic) || QueueKeyUtil.ParseQueueKey(x.Key)[0].Contains(topic)))
+                foreach (var subEntry in entry.Value.Where(x => string.IsNullOrEmpty(topic) || x.Key.Topic.Contains(topic)))
                 {
-                    var items = QueueKeyUtil.ParseQueueKey(subEntry.Key);
+                    var queueKey = subEntry.Key;
                     topicConsumeInfoList.Add(new TopicConsumeInfo
                     {
                         ConsumerGroup = entry.Key,
-                        Topic = items[0],
-                        QueueId = int.Parse(items[1]),
+                        Topic = queueKey.Topic,
+                        QueueId = queueKey.QueueId,
                         ConsumedOffset = subEntry.Value
                     });
                 }
@@ -177,19 +177,19 @@ namespace EQueue.Broker
         {
             var queueOffsetDict = _groupNextConsumeOffsetsDict.GetOrAdd(group, k =>
             {
-                return new ConcurrentDictionary<string, long>();
+                return new ConcurrentDictionary<QueueKey, long>();
             });
-            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+            var key = new QueueKey(topic, queueId);
             queueOffsetDict[key] = nextOffset;
         }
         public bool TryFetchNextConsumeOffset(string topic, int queueId, string group, out long nextOffset)
         {
             nextOffset = 0L;
-            ConcurrentDictionary<string, long> queueOffsetDict;
+            ConcurrentDictionary<QueueKey, long> queueOffsetDict;
             if (_groupNextConsumeOffsetsDict.TryGetValue(group, out queueOffsetDict))
             {
                 long offset;
-                var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+                var key = new QueueKey(topic, queueId);
                 if (queueOffsetDict.TryRemove(key, out offset))
                 {
                     nextOffset = offset;
@@ -221,7 +221,8 @@ namespace EQueue.Broker
                     {
                         try
                         {
-                            _groupConsumeOffsetsDict = _jsonSerializer.Deserialize<ConcurrentDictionary<string, ConcurrentDictionary<string, long>>>(json);
+                            var dict = _jsonSerializer.Deserialize<ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<int, long>>>>(json);
+                            _groupConsumeOffsetsDict = ConvertDictFrom(dict);
                         }
                         catch (Exception ex)
                         {
@@ -231,7 +232,7 @@ namespace EQueue.Broker
                     }
                     else
                     {
-                        _groupConsumeOffsetsDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, long>>();
+                        _groupConsumeOffsetsDict = new ConcurrentDictionary<string, ConcurrentDictionary<QueueKey, long>>();
                     }
                 }
             }
@@ -251,7 +252,8 @@ namespace EQueue.Broker
                     {
                         using (var writer = new StreamWriter(stream))
                         {
-                            var json = _jsonSerializer.Serialize(_groupConsumeOffsetsDict);
+                            var toDict = ConvertDictTo(_groupConsumeOffsetsDict);
+                            var json = _jsonSerializer.Serialize(toDict);
                             writer.Write(json);
                             writer.Flush();
                         }
@@ -271,6 +273,51 @@ namespace EQueue.Broker
                     }
                 }
             }
+        }
+        private ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<int, long>>> ConvertDictTo(ConcurrentDictionary<string, ConcurrentDictionary<QueueKey, long>> source)
+        {
+            var toDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<int, long>>>();
+
+            foreach (var entry1 in source)
+            {
+                var key1 = entry1.Key;
+                var dict = toDict.GetOrAdd(key1, x => new ConcurrentDictionary<string, ConcurrentDictionary<int, long>>());
+
+                foreach (var entry2 in entry1.Value)
+                {
+                    var topic = entry2.Key.Topic;
+                    var queueId = entry2.Key.QueueId;
+                    var offset = entry2.Value;
+                    var dict2 = dict.GetOrAdd(topic, x => new ConcurrentDictionary<int, long>());
+                    dict2.TryAdd(queueId, offset);
+                }
+            }
+
+            return toDict;
+        }
+        private ConcurrentDictionary<string, ConcurrentDictionary<QueueKey, long>> ConvertDictFrom(ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<int, long>>> source)
+        {
+            var toDict = new ConcurrentDictionary<string, ConcurrentDictionary<QueueKey, long>>();
+
+            foreach (var entry1 in source)
+            {
+                var key1 = entry1.Key;
+                var dict = toDict.GetOrAdd(key1, x => new ConcurrentDictionary<QueueKey, long>());
+
+                foreach (var entry2 in entry1.Value)
+                {
+                    var topic = entry2.Key;
+                    foreach (var entry3 in entry2.Value)
+                    {
+                        var queueId = entry3.Key;
+                        var offset = entry3.Value;
+                        var queueKey = new QueueKey(topic, queueId);
+                        dict.TryAdd(queueKey, offset);
+                    }
+                }
+            }
+
+            return toDict;
         }
     }
 }

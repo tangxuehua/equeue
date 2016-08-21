@@ -155,6 +155,8 @@
     <Compile Include="Protocols\CreateTopicRequest.cs" />
     <Compile Include="Protocols\GetMessageDetailRequest.cs" />
     <Compile Include="Protocols\DeleteConsumerGroupRequest.cs" />
+    <Compile Include="Protocols\MessageQueue.cs" />
+    <Compile Include="Protocols\QueueKey.cs" />
     <Compile Include="Protocols\TopicConsumeInfo.cs" />
     <Compile Include="Protocols\SetQueueProducerVisibleRequest.cs" />
     <Compile Include="Protocols\SetQueueConsumerVisibleRequest.cs" />
@@ -167,9 +169,8 @@
     <Compile Include="Protocols\QueueConsumedOffset.cs" />
     <Compile Include="Protocols\TopicQueueInfo.cs" />
     <Compile Include="Protocols\QueueMessage.cs" />
-    <Compile Include="Protocols\ConsumerData.cs" />
+    <Compile Include="Protocols\ConsumerHeartbeatData.cs" />
     <Compile Include="Protocols\Message.cs" />
-    <Compile Include="Protocols\MessageQueue.cs" />
     <Compile Include="Clients\Consumers\ProcessQueue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Clients\Consumers\PullRequest.cs" />
@@ -185,7 +186,6 @@
     <Compile Include="Protocols\SetQueueNextConsumeOffsetRequest.cs" />
     <Compile Include="Protocols\UpdateQueueOffsetRequest.cs" />
     <Compile Include="Utils\ConsoleEventHandlerService.cs" />
-    <Compile Include="Utils\QueueKeyUtil.cs" />
     <Compile Include="Utils\MessageIdUtil.cs" />
     <Compile Include="Utils\MessageUtils.cs" />
     <Compile Include="Utils\RemotingResponseFactory.cs" />

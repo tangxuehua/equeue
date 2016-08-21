@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using EQueue.Broker.Storage;
+using EQueue.Protocols;
 
 namespace EQueue.Broker
 {
@@ -14,7 +15,7 @@ namespace EQueue.Broker
         long GetMinConusmedMessagePosition();
         long GetTotalUnConusmedMessageCount();
         bool IsTopicExist(string topic);
-        bool IsQueueExist(string queueKey);
+        bool IsQueueExist(QueueKey queueKey);
         bool IsQueueExist(string topic, int queueId);
         long GetQueueCurrentOffset(string topic, int queueId);
         long GetQueueMinOffset(string topic, int queueId);
