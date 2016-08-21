@@ -102,7 +102,7 @@ namespace EQueue.Clients.Consumers
             ConsumeFromWhere = ConsumeFromWhere.LastOffset;
             MessageHandleMode = MessageHandleMode.Parallel;
             AutoPull = true;
-            AutoPullLocalMessageQueueMaxSize = 10 * 10000;
+            ManualPullLocalMessageQueueMaxSize = 10 * 10000;
         }
     }
 }
