@@ -73,7 +73,7 @@ namespace EQueue.Broker.RequestHandlers.Admin
                 var consumingQueues = consumerGroup.GetConsumingQueue(consumerId);
                 foreach (var consumingQueue in consumingQueues)
                 {
-                    var items = consumingQueue.Split('-');
+                    var items = QueueKeyUtil.ParseQueueKey(consumingQueue);
                     var topic = items[0];
                     var queueId = int.Parse(items[1]);
                     if (string.IsNullOrEmpty(currentTopic) || topic.Contains(currentTopic))

@@ -6,11 +6,11 @@ namespace EQueue.Utils
     {
         public static string CreateQueueKey(string topic, int queueId)
         {
-            return string.Format("{0}-{1}", topic, queueId);
+            return string.Format("{0}@{1}", topic, queueId);
         }
         public static string[] ParseQueueKey(string queueKey)
         {
-            return queueKey.Split(new string[] { "-" }, StringSplitOptions.None);
+            return queueKey.Split(new string[] { "@" }, StringSplitOptions.None);
         }
     }
 }
