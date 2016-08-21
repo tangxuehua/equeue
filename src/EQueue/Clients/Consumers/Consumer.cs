@@ -49,6 +49,7 @@ namespace EQueue.Clients.Consumers
 
         public ConsumerSetting Setting { get; private set; }
         public string GroupName { get; private set; }
+        public string ConsumerName { get; private set; }
         public IDictionary<string, HashSet<string>> SubscriptionTopics
         {
             get { return _subscriptionTopics; }
@@ -58,8 +59,8 @@ namespace EQueue.Clients.Consumers
 
         #region Constructors
 
-        public Consumer(string groupName) : this(groupName, new ConsumerSetting()) { }
-        public Consumer(string groupName, ConsumerSetting setting)
+        public Consumer(string groupName, string consumerName = null) : this(groupName, new ConsumerSetting(), consumerName) { }
+        public Consumer(string groupName, ConsumerSetting setting, string consumerName = null)
         {
             if (groupName == null)
             {
@@ -67,6 +68,7 @@ namespace EQueue.Clients.Consumers
             }
             GroupName = groupName;
             Setting = setting ?? new ConsumerSetting();
+            ConsumerName = consumerName;
 
             _subscriptionTopics = new Dictionary<string, HashSet<string>>();
             _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
@@ -101,7 +103,15 @@ namespace EQueue.Clients.Consumers
 
         public string GetConsumerId()
         {
-            return ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
+            if (string.IsNullOrWhiteSpace(ConsumerName))
+            {
+                return ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
+            }
+            else
+            {
+                var ipSuffix = ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
+                return string.Format("{0}_{1}", ConsumerName, ipSuffix);
+            }
         }
         public Consumer SetMessageHandler(IMessageHandler messageHandler)
         {
