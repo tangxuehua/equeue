@@ -137,6 +137,9 @@
     <Compile Include="Clients\Consumers\ConsumingMessage.cs" />
     <Compile Include="Clients\Consumers\MessageContext.cs" />
     <Compile Include="Clients\Consumers\IMessageContext.cs" />
+    <Compile Include="NameServer\RouteInfoManager.cs" />
+    <Compile Include="Protocols\TopicRouteInfo.cs" />
+    <Compile Include="Protocols\BrokerRole.cs" />
     <Compile Include="Protocols\ConsumeFromWhere.cs" />
     <Compile Include="Clients\Producers\IQueueSelector.cs" />
     <Compile Include="Broker\IMessageStore.cs" />
