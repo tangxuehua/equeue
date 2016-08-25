@@ -73,12 +73,9 @@ namespace EQueue.Broker.RequestHandlers.Admin
                 var consumingQueues = consumerGroup.GetConsumingQueue(consumerId);
                 foreach (var consumingQueue in consumingQueues)
                 {
-                    var items = consumingQueue.Split('-');
-                    var topic = items[0];
-                    var queueId = int.Parse(items[1]);
-                    if (string.IsNullOrEmpty(currentTopic) || topic.Contains(currentTopic))
+                    if (string.IsNullOrEmpty(currentTopic) || consumingQueue.Topic.Contains(currentTopic))
                     {
-                        consumerInfoList.Add(BuildConsumerInfo(consumerGroup.GroupName, consumerId, topic, queueId));
+                        consumerInfoList.Add(BuildConsumerInfo(consumerGroup.GroupName, consumerId, consumingQueue.Topic, consumingQueue.QueueId));
                     }
                 }
             }

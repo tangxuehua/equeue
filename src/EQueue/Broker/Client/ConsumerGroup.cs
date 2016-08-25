@@ -5,6 +5,7 @@ using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Socketing;
+using EQueue.Protocols;
 using EQueue.Utils;
 
 namespace EQueue.Broker.Client
@@ -14,7 +15,7 @@ namespace EQueue.Broker.Client
         private readonly string _groupName;
         private readonly ConcurrentDictionary<string, ConsumerHeartbeatInfo> _consumerDict = new ConcurrentDictionary<string, ConsumerHeartbeatInfo>();
         private readonly ConcurrentDictionary<string, IEnumerable<string>> _consumerSubscriptionTopicDict = new ConcurrentDictionary<string, IEnumerable<string>>();
-        private readonly ConcurrentDictionary<string, IEnumerable<string>> _consumerConsumingQueueDict = new ConcurrentDictionary<string, IEnumerable<string>>();
+        private readonly ConcurrentDictionary<string, IEnumerable<QueueKey>> _consumerConsumingQueueDict = new ConcurrentDictionary<string, IEnumerable<QueueKey>>();
         private readonly ILogger _logger;
 
         public string GroupName { get { return _groupName; } }
@@ -63,11 +64,13 @@ namespace EQueue.Broker.Client
                 _logger.InfoFormat("Consumer subscription topics changed. groupName:{0}, consumerId:{1}, old:{2}, new:{3}", _groupName, consumerId, string.Join("|", oldSubscriptionTopics), string.Join("|", newSubscriptionTopics));
             }
         }
-        public void UpdateConsumerConsumingQueues(string consumerId, IEnumerable<string> consumingQueues)
+        public void UpdateConsumerConsumingQueues(string consumerId, IEnumerable<MessageQueue> consumingMessageQueues)
         {
             var consumingQueueChanged = false;
-            IEnumerable<string> oldConsumingQueues = new List<string>();
-            IEnumerable<string> newConsumingQueues = new List<string>();
+            IEnumerable<QueueKey> oldConsumingQueues = new List<QueueKey>();
+            IEnumerable<QueueKey> newConsumingQueues = new List<QueueKey>();
+
+            var consumingQueues = consumingMessageQueues.Select(x => new QueueKey(x.Topic, x.QueueId)).ToList();
 
             _consumerConsumingQueueDict.AddOrUpdate(consumerId,
             key =>
@@ -81,7 +84,7 @@ namespace EQueue.Broker.Client
             },
             (key, old) =>
             {
-                if (IsStringCollectionChanged(old.ToList(), consumingQueues.ToList()))
+                if (IsStringCollectionChanged(old.Select(x => x.ToString()).ToList(), consumingQueues.Select(x => x.ToString()).ToList()))
                 {
                     consumingQueueChanged = true;
                     oldConsumingQueues = old;
@@ -118,10 +121,10 @@ namespace EQueue.Broker.Client
                 {
                     subscriptionTopics = new List<string>();
                 }
-                IEnumerable<string> consumingQueues;
+                IEnumerable<QueueKey> consumingQueues;
                 if (!_consumerConsumingQueueDict.TryRemove(consumerHeartbeatInfo.ConsumerId, out consumingQueues))
                 {
-                    consumingQueues = new List<string>();
+                    consumingQueues = new List<QueueKey>();
                 }
                 _logger.InfoFormat("Consumer removed from group: {0}, heartbeatInfo: {1}, subscriptionTopics: {2}, consumingQueues: {3}", _groupName, consumerHeartbeatInfo, string.Join("|", subscriptionTopics), string.Join("|", consumingQueues));
             }
@@ -154,17 +157,17 @@ namespace EQueue.Broker.Client
         }
         public bool IsConsumerExistForQueue(string topic, int queueId)
         {
-            var key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+            var key = new QueueKey(topic, queueId);
             return _consumerConsumingQueueDict.Values.Any(x => x.Any(y => y == key));
         }
-        public IEnumerable<string> GetConsumingQueue(string consumerId)
+        public IEnumerable<QueueKey> GetConsumingQueue(string consumerId)
         {
-            IEnumerable<string> consumingQueues;
+            IEnumerable<QueueKey> consumingQueues;
             if (_consumerConsumingQueueDict.TryGetValue(consumerId, out consumingQueues))
             {
                 return consumingQueues;
             }
-            return new List<string>();
+            return new List<QueueKey>();
         }
 
         private bool IsStringCollectionChanged(IList<string> original, IList<string> current)

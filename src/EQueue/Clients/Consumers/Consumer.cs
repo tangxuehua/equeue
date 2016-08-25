@@ -25,7 +25,8 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Members
 
-        private readonly object _lockObject;
+        private readonly object _lockObject = new object();
+        private readonly object _pullLockObj = new object();
         private readonly SocketRemotingClient _remotingClient;
         private readonly SocketRemotingClient _adminRemotingClient;
         private readonly IBinarySerializer _binarySerializer;
@@ -37,6 +38,7 @@ namespace EQueue.Clients.Consumers
         private readonly IAllocateMessageQueueStrategy _allocateMessageQueueStragegy;
         private readonly ILogger _logger;
         private readonly BlockingCollection<ConsumingMessage> _consumingMessageQueue;
+        private readonly BlockingCollection<QueueMessage> _pulledMessageQueue;
         private readonly Worker _consumeMessageWorker;
         private IMessageHandler _messageHandler;
         private bool _stoped;
@@ -47,6 +49,7 @@ namespace EQueue.Clients.Consumers
 
         public ConsumerSetting Setting { get; private set; }
         public string GroupName { get; private set; }
+        public string ConsumerName { get; private set; }
         public IDictionary<string, HashSet<string>> SubscriptionTopics
         {
             get { return _subscriptionTopics; }
@@ -56,8 +59,8 @@ namespace EQueue.Clients.Consumers
 
         #region Constructors
 
-        public Consumer(string groupName) : this(groupName, new ConsumerSetting()) { }
-        public Consumer(string groupName, ConsumerSetting setting)
+        public Consumer(string groupName, string consumerName = null) : this(groupName, new ConsumerSetting(), consumerName) { }
+        public Consumer(string groupName, ConsumerSetting setting, string consumerName = null)
         {
             if (groupName == null)
             {
@@ -65,8 +68,8 @@ namespace EQueue.Clients.Consumers
             }
             GroupName = groupName;
             Setting = setting ?? new ConsumerSetting();
+            ConsumerName = consumerName;
 
-            _lockObject = new object();
             _subscriptionTopics = new Dictionary<string, HashSet<string>>();
             _topicQueuesDict = new ConcurrentDictionary<string, IList<MessageQueue>>();
             _pullRequestDict = new ConcurrentDictionary<string, PullRequest>();
@@ -79,18 +82,37 @@ namespace EQueue.Clients.Consumers
 
             _adminRemotingClient.RegisterConnectionEventListener(new ConnectionEventListener(this));
 
-            if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+            if (Setting.AutoPull)
             {
-                _consumingMessageQueue = new BlockingCollection<ConsumingMessage>();
-                _consumeMessageWorker = new Worker("ConsumeMessage", () => HandleMessage(_consumingMessageQueue.Take()));
+                if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+                {
+                    _consumingMessageQueue = new BlockingCollection<ConsumingMessage>();
+                    _consumeMessageWorker = new Worker("ConsumeMessage", () => HandleMessage(_consumingMessageQueue.Take()));
+                }
+                _messageRetryQueue = new BlockingCollection<ConsumingMessage>();
             }
-            _messageRetryQueue = new BlockingCollection<ConsumingMessage>();
+            else
+            {
+                _pulledMessageQueue = new BlockingCollection<QueueMessage>();
+            }
         }
 
         #endregion
 
         #region Public Methods
 
+        public string GetConsumerId()
+        {
+            if (string.IsNullOrWhiteSpace(ConsumerName))
+            {
+                return ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
+            }
+            else
+            {
+                var ipSuffix = ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
+                return string.Format("{0}_{1}", ConsumerName, ipSuffix);
+            }
+        }
         public Consumer SetMessageHandler(IMessageHandler messageHandler)
         {
             if (messageHandler == null)
@@ -103,11 +125,15 @@ namespace EQueue.Clients.Consumers
         public Consumer Start()
         {
             _stoped = false;
-            if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+
+            if (Setting.AutoPull)
             {
-                _consumeMessageWorker.Start();
+                if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+                {
+                    _consumeMessageWorker.Start();
+                }
+                _scheduleService.StartTask("RetryMessage", RetryMessage, 1000, Setting.RetryMessageInterval);
             }
-            _scheduleService.StartTask("RetryMessage", RetryMessage, 1000, Setting.RetryMessageInterval);
             _remotingClient.Start();
             _adminRemotingClient.Start();
             _logger.InfoFormat("Consumer started, group: {0}.", GroupName);
@@ -118,11 +144,15 @@ namespace EQueue.Clients.Consumers
             _stoped = true;
             _remotingClient.Shutdown();
             _adminRemotingClient.Shutdown();
-            if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+
+            if (Setting.AutoPull)
             {
-                _consumeMessageWorker.Stop();
+                if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+                {
+                    _consumeMessageWorker.Stop();
+                }
+                _scheduleService.StopTask("RetryMessage");
             }
-            _scheduleService.StopTask("RetryMessage");
             _logger.Info("Consumer shutdown.");
             return this;
         }
@@ -149,6 +179,63 @@ namespace EQueue.Clients.Consumers
         {
             return _pullRequestDict.Values.Select(x => x.MessageQueue);
         }
+        public IEnumerable<QueueMessage> PullMessages(int maxCount, int timeoutMilliseconds, CancellationToken cancellation)
+        {
+            var totalMessages = new List<QueueMessage>();
+            var timeoutCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellation, new CancellationTokenSource(timeoutMilliseconds).Token);
+
+            lock (_pullLockObj)
+            {
+                //需要继续取消息的条件：
+                //1. timeout超时时间未到；
+                //2. 取到消息数未到达maxCount；
+                //3. 消息池中还有消息，或者虽然没消息，但是获取到的消息数也是零；
+                while (!timeoutCancellationTokenSource.IsCancellationRequested
+                    && totalMessages.Count < maxCount
+                    && (_pulledMessageQueue.Count > 0 || totalMessages.Count == 0))
+                {
+                    try
+                    {
+                        totalMessages.Add(_pulledMessageQueue.Take(timeoutCancellationTokenSource.Token));
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            return totalMessages;
+        }
+        public void CommitConsumeOffset(string topic, int queueId, long consumeOffset)
+        {
+            if (consumeOffset < 0)
+            {
+                throw new ArgumentOutOfRangeException("Invalid consumeOffset: " + consumeOffset);
+            }
+            try
+            {
+                var messageQueue = new MessageQueue(topic, queueId);
+                var request = new UpdateQueueOffsetRequest(GroupName, messageQueue, consumeOffset);
+                var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
+                _adminRemotingClient.InvokeOneway(remotingRequest);
+                if (_logger.IsDebugEnabled)
+                {
+                    _logger.DebugFormat("Sent consumeOffset to broker, [group:{0}, topic:{1}, queueId:{2}, offset:{3}]",
+                        GroupName,
+                        messageQueue.Topic,
+                        messageQueue.QueueId,
+                        consumeOffset);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (_adminRemotingClient.IsConnected)
+                {
+                    _logger.Error(string.Format("Send consumeOffset to broker has exception, [group:{0}, topic:{1}, queueId:{2}]", GroupName, topic, queueId), ex);
+                }
+            }
+        }
 
         #endregion
 
@@ -172,10 +259,21 @@ namespace EQueue.Clients.Consumers
             try
             {
                 if (_stoped) return;
-                if (pullRequest.ProcessQueue.IsDropped) return;
+                if (pullRequest.IsDropped) return;
 
-                var messageCount = pullRequest.ProcessQueue.GetMessageCount();
-                var flowControlThreshold = Setting.PullMessageFlowControlThreshold;
+                var messageCount = 0;
+                var flowControlThreshold = 0;
+
+                if (Setting.AutoPull)
+                {
+                    messageCount = pullRequest.ProcessQueue.GetMessageCount();
+                    flowControlThreshold = Setting.PullMessageFlowControlThreshold;
+                }
+                else
+                {
+                    messageCount = _pulledMessageQueue.Count;
+                    flowControlThreshold = Setting.ManualPullLocalMessageQueueMaxSize;
+                }
 
                 if (messageCount > flowControlThreshold)
                 {
@@ -208,7 +306,7 @@ namespace EQueue.Clients.Consumers
                     try
                     {
                         if (_stoped) return;
-                        if (pullRequest.ProcessQueue.IsDropped) return;
+                        if (pullRequest.IsDropped) return;
 
                         if (pullTask.Exception != null)
                         {
@@ -217,12 +315,39 @@ namespace EQueue.Clients.Consumers
                             return;
                         }
 
-                        ProcessPullResponse(pullRequest, pullTask.Result);
+                        ProcessPullResponse(pullRequest, pullTask.Result, pulledMessages =>
+                        {
+                            var filterMessages = pulledMessages.Where(x => IsQueueMessageMatchTag(x, pullRequest.Tags));
+                            var consumingMessages = filterMessages.Select(x => new ConsumingMessage(x, pullRequest)).ToList();
+
+                            if (Setting.AutoPull)
+                            {
+                                pullRequest.ProcessQueue.AddMessages(consumingMessages);
+                                foreach (var consumingMessage in consumingMessages)
+                                {
+                                    if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
+                                    {
+                                        _consumingMessageQueue.Add(consumingMessage);
+                                    }
+                                    else
+                                    {
+                                        Task.Factory.StartNew(HandleMessage, consumingMessage);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                foreach (var consumingMessage in consumingMessages)
+                                {
+                                    _pulledMessageQueue.Add(consumingMessage.Message);
+                                }
+                            }
+                        });
                     }
                     catch (Exception ex)
                     {
                         if (_stoped) return;
-                        if (pullRequest.ProcessQueue.IsDropped) return;
+                        if (pullRequest.IsDropped) return;
                         if (_remotingClient.IsConnected)
                         {
                             string remotingResponseBodyLength;
@@ -243,7 +368,7 @@ namespace EQueue.Clients.Consumers
             catch (Exception ex)
             {
                 if (_stoped) return;
-                if (pullRequest.ProcessQueue.IsDropped) return;
+                if (pullRequest.IsDropped) return;
 
                 if (_remotingClient.IsConnected)
                 {
@@ -252,7 +377,7 @@ namespace EQueue.Clients.Consumers
                 SchedulePullRequest(pullRequest);
             }
         }
-        private void ProcessPullResponse(PullRequest pullRequest, RemotingResponse remotingResponse)
+        private void ProcessPullResponse(PullRequest pullRequest, RemotingResponse remotingResponse, Action<IEnumerable<QueueMessage>> handlePulledMessageAction)
         {
             if (remotingResponse == null)
             {
@@ -273,20 +398,7 @@ namespace EQueue.Clients.Consumers
                 var messages = DecodeMessages(pullRequest, remotingResponse.Body);
                 if (messages.Count() > 0)
                 {
-                    var filterMessages = messages.Where(x => IsQueueMessageMatchTag(x, pullRequest.Tags));
-                    var consumingMessages = filterMessages.Select(x => new ConsumingMessage(x, pullRequest.ProcessQueue)).ToList();
-                    pullRequest.ProcessQueue.AddMessages(consumingMessages);
-                    foreach (var consumingMessage in consumingMessages)
-                    {
-                        if (Setting.MessageHandleMode == MessageHandleMode.Sequential)
-                        {
-                            _consumingMessageQueue.Add(consumingMessage);
-                        }
-                        else
-                        {
-                            Task.Factory.StartNew(HandleMessage, consumingMessage);
-                        }
-                    }
+                    handlePulledMessageAction(messages);
                     pullRequest.NextConsumeOffset = messages.Last().QueueOffset + 1;
                 }
             }
@@ -380,7 +492,7 @@ namespace EQueue.Clients.Consumers
             var consumingMessage = parameter as ConsumingMessage;
             if (_stoped) return;
             if (consumingMessage == null) return;
-            if (consumingMessage.ProcessQueue.IsDropped) return;
+            if (consumingMessage.PullRequest.IsDropped) return;
             if (consumingMessage.IsIgnored)
             {
                 RemoveHandledMessage(consumingMessage);
@@ -465,7 +577,7 @@ namespace EQueue.Clients.Consumers
                 PullRequest pullRequest;
                 if (_pullRequestDict.TryRemove(pullRequestKey, out pullRequest))
                 {
-                    pullRequest.ProcessQueue.IsDropped = true;
+                    pullRequest.IsDropped = true;
                     PersistOffset(pullRequest);
                     _logger.InfoFormat("Dropped pull request, group: {0}, topic: {1}, queueId: {2}", GroupName, pullRequest.MessageQueue.Topic, pullRequest.MessageQueue.QueueId);
                 }
@@ -489,7 +601,7 @@ namespace EQueue.Clients.Consumers
         }
         private void RemoveHandledMessage(ConsumingMessage consumedMessage)
         {
-            consumedMessage.ProcessQueue.RemoveMessage(consumedMessage);
+            consumedMessage.PullRequest.ProcessQueue.RemoveMessage(consumedMessage);
         }
         private void LogMessageHandlingException(ConsumingMessage consumingMessage, Exception exception)
         {
@@ -570,10 +682,10 @@ namespace EQueue.Clients.Consumers
         {
             try
             {
-                var consumingQueues = _pullRequestDict.Values.ToList().Select(x => QueueKeyUtil.CreateQueueKey(x.MessageQueue.Topic, x.MessageQueue.QueueId)).ToList();
+                var messageQueues = _pullRequestDict.Values.ToList().Select(x => x.MessageQueue).ToList();
                 _remotingClient.InvokeOneway(new RemotingRequest(
                     (int)RequestCode.ConsumerHeartbeat,
-                    _binarySerializer.Serialize(new ConsumerData(GetConsumerId(), GroupName, _subscriptionTopics.Keys, consumingQueues))));
+                    _binarySerializer.Serialize(new ConsumerHeartbeatData(GetConsumerId(), GroupName, _subscriptionTopics.Keys, messageQueues))));
             }
             catch (Exception ex)
             {
@@ -654,7 +766,10 @@ namespace EQueue.Clients.Consumers
                 _scheduleService.StartTask("RefreshTopicQueues", RefreshTopicQueues, 1000, Setting.UpdateTopicQueueCountInterval);
                 _scheduleService.StartTask("SendHeartbeat", SendHeartbeat, 1000, Setting.HeartbeatBrokerInterval);
                 _scheduleService.StartTask("Rebalance", Rebalance, 1000, Setting.RebalanceInterval);
-                _scheduleService.StartTask("PersistOffset", PersistOffset, 1000, Setting.SendConsumerOffsetInterval);
+                if (Setting.AutoPull)
+                {
+                    _scheduleService.StartTask("PersistOffset", PersistOffset, 1000, Setting.SendConsumerOffsetInterval);
+                }
             }
         }
         private void StopBackgroundJobs()
@@ -664,11 +779,14 @@ namespace EQueue.Clients.Consumers
                 _scheduleService.StopTask("RefreshTopicQueues");
                 _scheduleService.StopTask("SendHeartbeat");
                 _scheduleService.StopTask("Rebalance");
-                _scheduleService.StopTask("PersistOffset");
+                if (Setting.AutoPull)
+                {
+                    _scheduleService.StopTask("PersistOffset");
+                }
 
                 foreach (var pullRequest in _pullRequestDict.Values)
                 {
-                    pullRequest.ProcessQueue.IsDropped = true;
+                    pullRequest.IsDropped = true;
                 }
 
                 _pullRequestDict.Clear();
@@ -697,10 +815,6 @@ namespace EQueue.Clients.Consumers
                 PullMessageRequest.WriteToStream(request, stream);
                 return stream.ToArray();
             }
-        }
-        private string GetConsumerId()
-        {
-            return ClientIdFactory.CreateClientId(_remotingClient.LocalEndPoint as IPEndPoint);
         }
 
         #endregion

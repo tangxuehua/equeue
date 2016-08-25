@@ -9,6 +9,7 @@ namespace EQueue.Protocols
         public string BrokerName { get; private set; }
         public int QueueId { get; private set; }
 
+        public MessageQueue() { }
         public MessageQueue(string topic, string brokerName, int queueId)
         {
             Topic = topic;

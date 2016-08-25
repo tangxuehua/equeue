@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -39,27 +39,22 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Autofac, Version=3.5.0.0, Culture=neutral, PublicKeyToken=17863af14b0044da, processorArchitecture=MSIL">
+    <Reference Include="Autofac">
       <HintPath>..\packages\Autofac.3.5.2\lib\net40\Autofac.dll</HintPath>
-      <Private>True</Private>
     </Reference>
-    <Reference Include="Dapper, Version=1.40.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Dapper.1.42\lib\net45\Dapper.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Dapper">
+      <HintPath>..\packages\Dapper.1.50.2\lib\net45\Dapper.dll</HintPath>
     </Reference>
-    <Reference Include="ECommon, Version=2.0.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\ECommon.2.0.4\lib\net45\ECommon.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="ECommon">
+      <HintPath>..\packages\ECommon.2.1.0\lib\net45\ECommon.dll</HintPath>
     </Reference>
-    <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
-      <HintPath>..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="log4net">
+      <HintPath>..\packages\log4net.2.0.5\lib\net45-full\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
-    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -158,6 +153,8 @@
     <Compile Include="Protocols\CreateTopicRequest.cs" />
     <Compile Include="Protocols\GetMessageDetailRequest.cs" />
     <Compile Include="Protocols\DeleteConsumerGroupRequest.cs" />
+    <Compile Include="Protocols\MessageQueue.cs" />
+    <Compile Include="Protocols\QueueKey.cs" />
     <Compile Include="Protocols\TopicConsumeInfo.cs" />
     <Compile Include="Protocols\SetQueueProducerVisibleRequest.cs" />
     <Compile Include="Protocols\SetQueueConsumerVisibleRequest.cs" />
@@ -170,9 +167,8 @@
     <Compile Include="Protocols\QueueConsumedOffset.cs" />
     <Compile Include="Protocols\TopicQueueInfo.cs" />
     <Compile Include="Protocols\QueueMessage.cs" />
-    <Compile Include="Protocols\ConsumerData.cs" />
+    <Compile Include="Protocols\ConsumerHeartbeatData.cs" />
     <Compile Include="Protocols\Message.cs" />
-    <Compile Include="Protocols\MessageQueue.cs" />
     <Compile Include="Clients\Consumers\ProcessQueue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Clients\Consumers\PullRequest.cs" />
@@ -188,14 +184,15 @@
     <Compile Include="Protocols\SetQueueNextConsumeOffsetRequest.cs" />
     <Compile Include="Protocols\UpdateQueueOffsetRequest.cs" />
     <Compile Include="Utils\ConsoleEventHandlerService.cs" />
-    <Compile Include="Utils\QueueKeyUtil.cs" />
     <Compile Include="Utils\MessageIdUtil.cs" />
     <Compile Include="Utils\MessageUtils.cs" />
     <Compile Include="Utils\RemotingResponseFactory.cs" />
     <Compile Include="Utils\ClientIdFactory.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

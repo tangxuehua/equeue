@@ -13,6 +13,7 @@ namespace EQueue.Clients.Consumers
         public long NextConsumeOffset { get; set; }
         public DateTime PullStartTime { get; set; }
         public HashSet<string> Tags { get; set; }
+        public bool IsDropped { get; set; }
 
         public PullRequest(string consumerId, string groupName, MessageQueue messageQueue, long nextConsumeOffset, HashSet<string> tags)
         {
@@ -26,7 +27,7 @@ namespace EQueue.Clients.Consumers
 
         public override string ToString()
         {
-            return string.Format("[ConsumerId={0}, Group={1}, MessageQueue={2}, NextConsumeOffset={3}, Tags={4}]", ConsumerId, GroupName, MessageQueue, NextConsumeOffset, string.Join("|", Tags));
+            return string.Format("[ConsumerId={0}, Group={1}, MessageQueue={2}, NextConsumeOffset={3}, Tags={4}, IsDropped={5}]", ConsumerId, GroupName, MessageQueue, NextConsumeOffset, string.Join("|", Tags), IsDropped);
         }
     }
 }

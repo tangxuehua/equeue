@@ -5,6 +5,7 @@ using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Serializing;
 using EQueue.Broker.Storage;
+using EQueue.Protocols;
 using EQueue.Utils;
 
 namespace EQueue.Broker
@@ -31,16 +32,16 @@ namespace EQueue.Broker
         public int QueueId { get; private set; }
         public long NextOffset { get { return _nextOffset; } }
         public QueueSetting Setting { get { return _setting; } }
-        public string Key { get; private set; }
+        public QueueKey Key { get; private set; }
 
         public Queue(string topic, int queueId)
         {
             Topic = topic;
             QueueId = queueId;
-            Key = QueueKeyUtil.CreateQueueKey(topic, queueId);
+            Key = new QueueKey(topic, queueId);
 
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
-            _chunkManager = new ChunkManager(Key, BrokerController.Instance.Setting.QueueChunkConfig, BrokerController.Instance.Setting.IsMessageStoreMemoryMode, Topic + @"\" + QueueId);
+            _chunkManager = new ChunkManager(Key.ToString(), BrokerController.Instance.Setting.QueueChunkConfig, BrokerController.Instance.Setting.IsMessageStoreMemoryMode, Topic + @"\" + QueueId);
             _chunkWriter = new ChunkWriter(_chunkManager);
             _chunkReader = new ChunkReader(_chunkManager, _chunkWriter);
             _queueSettingFile = Path.Combine(_chunkManager.ChunkPath, QueueSettingFileName);

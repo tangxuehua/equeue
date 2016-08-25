@@ -19,7 +19,7 @@ namespace EQueue.Broker.RequestHandlers
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var consumerData = _binarySerializer.Deserialize<ConsumerData>(remotingRequest.Body);
+            var consumerData = _binarySerializer.Deserialize<ConsumerHeartbeatData>(remotingRequest.Body);
             _consumerManager.RegisterConsumer(consumerData.GroupName, consumerData.ConsumerId, consumerData.SubscriptionTopics, consumerData.ConsumingQueues, context.Connection);
             return null;
         }
