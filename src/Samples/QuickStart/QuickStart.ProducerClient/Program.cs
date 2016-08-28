@@ -22,7 +22,6 @@ namespace QuickStart.ProducerClient
     {
         static long _previousSentCount = 0;
         static long _sentCount = 0;
-        static double _totalTime;
         static long _calculateCount = 0;
         static string _mode;
         static bool _hasError;
