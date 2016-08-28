@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Text;
-using System.Threading;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
-using ECommon.Scheduling;
 using ECommon.Utilities;
 using EQueue.Broker.Exceptions;
 using EQueue.Broker.LongPolling;
@@ -26,14 +24,6 @@ namespace EQueue.Broker.RequestHandlers
         private readonly bool _notifyWhenMessageArrived;
         private readonly BufferQueue<StoreContext> _bufferQueue;
         private const string SendMessageFailedText = "Send message failed.";
-        private readonly IScheduleService _scheduleService;
-        private long _totalCount0;
-        private long _totalCount1;
-        private long _totalCount2;
-        private long _rt0TotalTime;
-        private double _rt1TotalTime;
-        private double _rt2TotalTime;
-        private double _rt3TotalTime;
 
         public SendMessageRequestHandler(BrokerController brokerController)
         {
@@ -46,17 +36,8 @@ namespace EQueue.Broker.RequestHandlers
             _sendRTLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("SendRT");
             var messageWriteQueueThreshold = brokerController.Setting.MessageWriteQueueThreshold;
             _bufferQueue = new BufferQueue<StoreContext>("QueueBufferQueue", messageWriteQueueThreshold, OnQueueMessageCompleted, _logger);
-            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
         }
 
-        public void Start()
-        {
-            _scheduleService.StartTask("PrintSendRT", PrintSendRT, 1000, 1000);
-        }
-        public void Shutdown()
-        {
-            _scheduleService.StopTask("PrintSendRT");
-        }
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             if (remotingRequest.Body.Length > _brokerController.Setting.MessageMaxSize)
@@ -78,18 +59,8 @@ namespace EQueue.Broker.RequestHandlers
                 throw new QueueNotExistException(message.Topic, queueId);
             }
 
-            var t0 = (long)((DateTime.Now - message.CreatedTime).TotalMilliseconds * 1000);
-            Interlocked.Increment(ref _totalCount0);
-            Interlocked.Add(ref _rt0TotalTime, t0);
-
             _messageStore.StoreMessageAsync(queue, message, (record, parameter) =>
             {
-                _totalCount1++;
-                var current = DateTime.Now;
-                var t1 = (current - record.CreatedTime).TotalMilliseconds;
-                var t2 = (current - record.StoredTime).TotalMilliseconds;
-                _rt1TotalTime += t1;
-                _rt2TotalTime += t2;
                 var storeContext = parameter as StoreContext;
                 storeContext.Queue.AddMessage(record.LogPosition, record.Tag);
                 storeContext.MessageLogRecord = record;
@@ -105,20 +76,6 @@ namespace EQueue.Broker.RequestHandlers
             return null;
         }
 
-        private void PrintSendRT()
-        {
-            if (_sendRTLogger != null)
-            {
-                if (_totalCount0 > 0 && _totalCount1 > 0 && _totalCount2 > 0)
-                {
-                    _sendRTLogger.DebugFormat("rt0: {0}, rt1: {1}, rt2: {2}, rt3: {3}",
-                        (double)_rt0TotalTime / _totalCount0 / 1000,
-                        _rt1TotalTime / _totalCount1,
-                        _rt2TotalTime / _totalCount1,
-                        _rt3TotalTime / _totalCount2);
-                }
-            }
-        }
         private void OnQueueMessageCompleted(StoreContext storeContext)
         {
             storeContext.OnComplete();
@@ -148,9 +105,6 @@ namespace EQueue.Broker.RequestHandlers
                     var response = RemotingResponseFactory.CreateResponse(RemotingRequest, data);
 
                     RequestHandlerContext.SendRemotingResponse(response);
-
-                    SendMessageRequestHandler._totalCount2++;
-                    SendMessageRequestHandler._rt3TotalTime += (DateTime.Now - result.CreatedTime).TotalMilliseconds;
 
                     if (SendMessageRequestHandler._notifyWhenMessageArrived)
                     {

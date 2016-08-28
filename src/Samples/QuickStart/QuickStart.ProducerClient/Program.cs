@@ -13,6 +13,7 @@ using ECommon.Socketing;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
 using EQueue.Protocols;
+using EQueue.Utils;
 using ECommonConfiguration = ECommon.Configurations.Configuration;
 
 namespace QuickStart.ProducerClient
@@ -27,6 +28,7 @@ namespace QuickStart.ProducerClient
         static bool _hasError;
         static ILogger _logger;
         static IScheduleService _scheduleService;
+        static IRTStatisticService _rtStatisticService;
 
         static void Main(string[] args)
         {
@@ -50,6 +52,7 @@ namespace QuickStart.ProducerClient
 
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
+            _rtStatisticService = ObjectContainer.Resolve<IRTStatisticService>();
         }
         static void SendMessageTest()
         {
@@ -89,6 +92,7 @@ namespace QuickStart.ProducerClient
                 {
                     var message = new Message(topic, 100, payload);
                     producer.SendOneway(message, index.ToString());
+                    _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
                     Interlocked.Increment(ref _sentCount);
                 };
             }
@@ -102,7 +106,7 @@ namespace QuickStart.ProducerClient
                     {
                         throw new Exception(result.ErrorMessage);
                     }
-                    _totalTime += (DateTime.Now - message.CreatedTime).TotalMilliseconds;
+                    _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
                     Interlocked.Increment(ref _sentCount);
                 };
             }
@@ -131,8 +135,7 @@ namespace QuickStart.ProducerClient
                             _logger.ErrorFormat("Send message failed, errorMessage: {0}", t.Result.ErrorMessage);
                             return;
                         }
-
-                        _totalTime += (DateTime.Now - message.CreatedTime).TotalMilliseconds;
+                        _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
                         Interlocked.Increment(ref _sentCount);
                     });
                 };
@@ -189,14 +192,7 @@ namespace QuickStart.ProducerClient
             {
                 average = totalSentCount / _calculateCount;
             }
-            if (_mode != "Oneway")
-            {
-                _logger.InfoFormat("Send message mode: {0}, totalSent: {1}, throughput: {2}/s, average: {3}, rt: {4}", _mode, totalSentCount, throughput, average, _totalTime / totalSentCount);
-            }
-            else
-            {
-                _logger.InfoFormat("Send message mode: {0}, totalSent: {1}, throughput: {2}/s, average: {3}", _mode, totalSentCount, throughput, average);
-            }
+            _logger.InfoFormat("Send message mode: {0}, totalSent: {1}, throughput: {2}/s, average: {3}, rt: {4:F3}ms", _mode, totalSentCount, throughput, average, _rtStatisticService.ResetAndGetRTStatisticInfo());
         }
 
         class ResponseHandler : IResponseHandler
@@ -210,8 +206,8 @@ namespace QuickStart.ProducerClient
                     _logger.Error(sendResult.ErrorMessage);
                     return;
                 }
-                _totalTime += (DateTime.Now - sendResult.MessageStoreResult.CreatedTime).TotalMilliseconds;
                 Interlocked.Increment(ref _sentCount);
+                _rtStatisticService.AddRT((DateTime.Now - sendResult.MessageStoreResult.CreatedTime).TotalMilliseconds);
             }
         }
     }

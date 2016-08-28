@@ -10,6 +10,7 @@ using ECommon.Socketing;
 using EQueue.Clients.Consumers;
 using EQueue.Configurations;
 using EQueue.Protocols;
+using EQueue.Utils;
 using ECommonConfiguration = ECommon.Configurations.Configuration;
 
 namespace QuickStart.ConsumerClient
@@ -59,6 +60,7 @@ namespace QuickStart.ConsumerClient
             private long _handledCount;
             private long _calculateCount = 0;
             private IScheduleService _scheduleService;
+            private IRTStatisticService _rtStatisticService;
             private ILogger _logger;
 
             public MessageHandler()
@@ -66,11 +68,13 @@ namespace QuickStart.ConsumerClient
                 _scheduleService = ObjectContainer.Resolve<IScheduleService>();
                 _scheduleService.StartTask("PrintThroughput", PrintThroughput, 1000, 1000);
                 _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
+                _rtStatisticService = ObjectContainer.Resolve<IRTStatisticService>();
             }
 
             public void Handle(QueueMessage message, IMessageContext context)
             {
                 Interlocked.Increment(ref _handledCount);
+                _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
                 context.OnMessageHandled(message);
             }
 
@@ -90,7 +94,7 @@ namespace QuickStart.ConsumerClient
                     average = totalHandledCount / _calculateCount;
                 }
 
-                _logger.InfoFormat("totalReceived: {0}, throughput: {1}/s, average: {2}", totalHandledCount, throughput, average);
+                _logger.InfoFormat("totalReceived: {0}, throughput: {1}/s, average: {2}, delay: {3:F3}ms", totalHandledCount, throughput, average, _rtStatisticService.ResetAndGetRTStatisticInfo());
             }
         }
     }

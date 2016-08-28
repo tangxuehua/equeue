@@ -5,6 +5,7 @@ using EQueue.Broker.DeleteMessageStrategies;
 using EQueue.Broker.LongPolling;
 using EQueue.Clients.Consumers;
 using EQueue.Clients.Producers;
+using EQueue.Utils;
 
 namespace EQueue.Configurations
 {
@@ -23,6 +24,7 @@ namespace EQueue.Configurations
             configuration.SetDefault<IQueueStore, DefaultQueueStore>();
             configuration.SetDefault<SuspendedPullRequestManager, SuspendedPullRequestManager>();
             configuration.SetDefault<IChunkStatisticService, DefaultChunkStatisticService>();
+            configuration.SetDefault<IRTStatisticService, DefaultRTStatisticService>();
 
             return configuration;
         }
