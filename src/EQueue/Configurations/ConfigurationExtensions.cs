@@ -1,4 +1,5 @@
-﻿using ECommon.Configurations;
+﻿using ECommon.Components;
+using ECommon.Configurations;
 using EQueue.Broker;
 using EQueue.Broker.Client;
 using EQueue.Broker.DeleteMessageStrategies;
@@ -24,7 +25,7 @@ namespace EQueue.Configurations
             configuration.SetDefault<IQueueStore, DefaultQueueStore>();
             configuration.SetDefault<SuspendedPullRequestManager, SuspendedPullRequestManager>();
             configuration.SetDefault<IChunkStatisticService, DefaultChunkStatisticService>();
-            configuration.SetDefault<IRTStatisticService, DefaultRTStatisticService>();
+            configuration.SetDefault<IRTStatisticService, DefaultRTStatisticService>(life: LifeStyle.Transient);
 
             return configuration;
         }
