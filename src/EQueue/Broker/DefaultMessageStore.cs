@@ -68,11 +68,9 @@ namespace EQueue.Broker
         {
             _chunkWriter.Open();
             _scheduleService.StartTask("DeleteMessages", DeleteMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteMessagesInterval);
-            _bufferQueue.Start();
         }
         public void Shutdown()
         {
-            _bufferQueue.Stop();
             _scheduleService.StopTask("DeleteMessages");
             _chunkWriter.Close();
             _chunkManager.Close();

@@ -123,6 +123,11 @@ namespace EQueue.Utils
             }
             var tagLengthBytes = BitConverter.GetBytes(tagBytes.Length);
 
+            //createdTimeTicks
+            var createdTimeTicksBytes = BitConverter.GetBytes(result.CreatedTime.Ticks);
+            //storedTimeTicks
+            var storedTimeTicksBytes = BitConverter.GetBytes(result.StoredTime.Ticks);
+
             return Combine(
                 messageCodeBytes,
                 queueIdBytes,
@@ -132,7 +137,9 @@ namespace EQueue.Utils
                 topicLengthBytes,
                 topicBytes,
                 tagLengthBytes,
-                tagBytes);
+                tagBytes,
+                createdTimeTicksBytes,
+                storedTimeTicksBytes);
         }
         public static MessageStoreResult DecodeMessageStoreResult(byte[] buffer)
         {
@@ -142,6 +149,8 @@ namespace EQueue.Utils
             var messageIdLengthBytes = new byte[4];
             var topicLengthBytes = new byte[4];
             var tagLengthBytes = new byte[4];
+            var createdTimeTicksBytes = new byte[8];
+            var storedTimeTicksBytes = new byte[8];
             var srcOffset = 0;
 
             //messageCode
@@ -183,12 +192,24 @@ namespace EQueue.Utils
             Buffer.BlockCopy(buffer, srcOffset, tagBytes, 0, tagLength);
             srcOffset += tagLength;
 
+            //createdTime
+            Buffer.BlockCopy(buffer, srcOffset, createdTimeTicksBytes, 0, 8);
+            srcOffset += 8;
+
+            //storedTime
+            Buffer.BlockCopy(buffer, srcOffset, storedTimeTicksBytes, 0, 8);
+            srcOffset += 8;
+
             var messageId = Encoding.UTF8.GetString(messageIdBytes);
             var code = BitConverter.ToInt32(messageCodeBytes, 0);
             var topic = Encoding.UTF8.GetString(topicBytes);
             var tag = Encoding.UTF8.GetString(tagBytes);
             var queueId = BitConverter.ToInt32(queueIdBytes, 0);
             var queueOffset = BitConverter.ToInt64(queueOffsetBytes, 0);
+            var createdTimeTicks = BitConverter.ToInt64(createdTimeTicksBytes, 0);
+            var createdTime = new DateTime(createdTimeTicks);
+            var storedTimeTicks = BitConverter.ToInt64(storedTimeTicksBytes, 0);
+            var storedTime = new DateTime(storedTimeTicks);
 
             return new MessageStoreResult(
                 messageId,
@@ -196,6 +217,8 @@ namespace EQueue.Utils
                 topic,
                 queueId,
                 queueOffset,
+                createdTime,
+                storedTime,
                 tag);
         }
 
