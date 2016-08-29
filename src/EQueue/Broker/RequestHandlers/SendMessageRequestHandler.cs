@@ -18,6 +18,7 @@ namespace EQueue.Broker.RequestHandlers
         private readonly IMessageStore _messageStore;
         private readonly IQueueStore _queueStore;
         private readonly ILogger _logger;
+        private readonly ILogger _sendRTLogger;
         private readonly object _syncObj = new object();
         private readonly BrokerController _brokerController;
         private readonly bool _notifyWhenMessageArrived;
@@ -32,18 +33,11 @@ namespace EQueue.Broker.RequestHandlers
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
             _notifyWhenMessageArrived = _brokerController.Setting.NotifyWhenMessageArrived;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+            _sendRTLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("SendRT");
             var messageWriteQueueThreshold = brokerController.Setting.MessageWriteQueueThreshold;
             _bufferQueue = new BufferQueue<StoreContext>("QueueBufferQueue", messageWriteQueueThreshold, OnQueueMessageCompleted, _logger);
         }
 
-        public void Start()
-        {
-            _bufferQueue.Start();
-        }
-        public void Shutdown()
-        {
-            _bufferQueue.Stop();
-        }
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             if (remotingRequest.Body.Length > _brokerController.Setting.MessageMaxSize)
@@ -104,6 +98,8 @@ namespace EQueue.Broker.RequestHandlers
                         MessageLogRecord.Topic,
                         MessageLogRecord.QueueId,
                         MessageLogRecord.QueueOffset,
+                        MessageLogRecord.CreatedTime,
+                        MessageLogRecord.StoredTime,
                         MessageLogRecord.Tag);
                     var data = MessageUtils.EncodeMessageStoreResult(result);
                     var response = RemotingResponseFactory.CreateResponse(RemotingRequest, data);

@@ -21,10 +21,11 @@ namespace QuickStart.BrokerServer
                 chunkWriteBuffer: int.Parse(ConfigurationManager.AppSettings["chunkWriteBuffer"]) * 1024,
                 enableCache: bool.Parse(ConfigurationManager.AppSettings["enableCache"]),
                 chunkCacheMinPercent: int.Parse(ConfigurationManager.AppSettings["chunkCacheMinPercent"]),
+                syncFlush: bool.Parse(ConfigurationManager.AppSettings["syncFlush"]),
                 messageChunkLocalCacheSize: 30 * 10000,
                 queueChunkLocalCacheSize: 10000)
             {
-                NotifyWhenMessageArrived = false,
+                NotifyWhenMessageArrived = bool.Parse(ConfigurationManager.AppSettings["notifyWhenMessageArrived"]),
                 MessageWriteQueueThreshold = int.Parse(ConfigurationManager.AppSettings["messageWriteQueueThreshold"])
             };
             BrokerController.Create(setting).Start();

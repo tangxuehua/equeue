@@ -13,6 +13,7 @@ using ECommon.Socketing;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
 using EQueue.Protocols;
+using EQueue.Utils;
 using ECommonConfiguration = ECommon.Configurations.Configuration;
 
 namespace QuickStart.ProducerClient
@@ -26,6 +27,7 @@ namespace QuickStart.ProducerClient
         static bool _hasError;
         static ILogger _logger;
         static IScheduleService _scheduleService;
+        static IRTStatisticService _rtStatisticService;
 
         static void Main(string[] args)
         {
@@ -49,6 +51,7 @@ namespace QuickStart.ProducerClient
 
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
+            _rtStatisticService = ObjectContainer.Resolve<IRTStatisticService>();
         }
         static void SendMessageTest()
         {
@@ -62,7 +65,6 @@ namespace QuickStart.ProducerClient
             var actions = new List<Action>();
             var payload = new byte[messageSize];
             var topic = ConfigurationManager.AppSettings["Topic"];
-            var message = new Message(topic, 100, payload);
 
             for (var i = 0; i < clientCount; i++)
             {
@@ -72,12 +74,12 @@ namespace QuickStart.ProducerClient
                     BrokerAdminAddress = new IPEndPoint(brokerAddress, 5002)
                 };
                 var producer = new Producer(setting).Start();
-                actions.Add(() => SendMessages(producer, _mode, messageCount, message));
+                actions.Add(() => SendMessages(producer, _mode, messageCount, topic, payload));
             }
 
             Task.Factory.StartNew(() => Parallel.Invoke(actions.ToArray()));
         }
-        static void SendMessages(Producer producer, string mode, int messageCount, Message message)
+        static void SendMessages(Producer producer, string mode, int messageCount, string topic, byte[] payload)
         {
             _logger.Info("----Send message starting----");
 
@@ -87,7 +89,9 @@ namespace QuickStart.ProducerClient
             {
                 sendAction = index =>
                 {
+                    var message = new Message(topic, 100, payload);
                     producer.SendOneway(message, index.ToString());
+                    _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
                     Interlocked.Increment(ref _sentCount);
                 };
             }
@@ -95,44 +99,54 @@ namespace QuickStart.ProducerClient
             {
                 sendAction = index =>
                 {
+                    var message = new Message(topic, 100, payload);
                     var result = producer.Send(message, index.ToString());
                     if (result.SendStatus != SendStatus.Success)
                     {
                         throw new Exception(result.ErrorMessage);
                     }
+                    _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
                     Interlocked.Increment(ref _sentCount);
                 };
             }
             else if (_mode == "Async")
             {
-                sendAction = index => producer.SendAsync(message, index.ToString()).ContinueWith(t =>
+                sendAction = index =>
                 {
-                    if (t.Exception != null)
+                    var message = new Message(topic, 100, payload);
+                    producer.SendAsync(message, index.ToString()).ContinueWith(t =>
                     {
-                        _hasError = true;
-                        _logger.ErrorFormat("Send message has exception, errorMessage: {0}", t.Exception.GetBaseException().Message);
-                        return;
-                    }
-                    if (t.Result == null)
-                    {
-                        _hasError = true;
-                        _logger.Error("Send message timeout.");
-                        return;
-                    }
-                    if (t.Result.SendStatus != SendStatus.Success)
-                    {
-                        _hasError = true;
-                        _logger.ErrorFormat("Send message failed, errorMessage: {0}", t.Result.ErrorMessage);
-                        return;
-                    }
-
-                    Interlocked.Increment(ref _sentCount);
-                });
+                        if (t.Exception != null)
+                        {
+                            _hasError = true;
+                            _logger.ErrorFormat("Send message has exception, errorMessage: {0}", t.Exception.GetBaseException().Message);
+                            return;
+                        }
+                        if (t.Result == null)
+                        {
+                            _hasError = true;
+                            _logger.Error("Send message timeout.");
+                            return;
+                        }
+                        if (t.Result.SendStatus != SendStatus.Success)
+                        {
+                            _hasError = true;
+                            _logger.ErrorFormat("Send message failed, errorMessage: {0}", t.Result.ErrorMessage);
+                            return;
+                        }
+                        _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
+                        Interlocked.Increment(ref _sentCount);
+                    });
+                };
             }
             else if (_mode == "Callback")
             {
                 producer.RegisterResponseHandler(new ResponseHandler());
-                sendAction = index => producer.SendWithCallback(message, index.ToString());
+                sendAction = index =>
+                {
+                    var message = new Message(topic, 100, payload);
+                    producer.SendWithCallback(message, index.ToString());
+                };
             }
 
             Task.Factory.StartNew(() =>
@@ -177,7 +191,7 @@ namespace QuickStart.ProducerClient
             {
                 average = totalSentCount / _calculateCount;
             }
-            _logger.InfoFormat("Send message mode: {0}, totalSent: {1}, throughput: {2}/s, average: {3}", _mode, totalSentCount, throughput, average);
+            _logger.InfoFormat("Send message mode: {0}, totalSent: {1}, throughput: {2}/s, average: {3}, rt: {4:F3}ms", _mode, totalSentCount, throughput, average, _rtStatisticService.ResetAndGetRTStatisticInfo());
         }
 
         class ResponseHandler : IResponseHandler
@@ -191,8 +205,8 @@ namespace QuickStart.ProducerClient
                     _logger.Error(sendResult.ErrorMessage);
                     return;
                 }
-
                 Interlocked.Increment(ref _sentCount);
+                _rtStatisticService.AddRT((DateTime.Now - sendResult.MessageStoreResult.CreatedTime).TotalMilliseconds);
             }
         }
     }

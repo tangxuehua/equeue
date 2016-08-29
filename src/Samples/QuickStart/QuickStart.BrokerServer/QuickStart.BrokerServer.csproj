@@ -47,7 +47,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="ECommon">
-      <HintPath>..\..\..\packages\ECommon.2.1.0\lib\net45\ECommon.dll</HintPath>
+      <HintPath>..\..\..\packages\ECommon.2.1.1\lib\net45\ECommon.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="log4net">
