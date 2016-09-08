@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
 using System.Threading;
@@ -34,15 +35,16 @@ namespace QuickStart.ConsumerClient
                 .RegisterUnhandledExceptionHandler()
                 .RegisterEQueueComponents();
 
-            var address = ConfigurationManager.AppSettings["BrokerAddress"];
-            var brokerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
+            var clusterName = ConfigurationManager.AppSettings["ClusterName"];
+            var address = ConfigurationManager.AppSettings["NameServerAddress"];
+            var nameServerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var setting = new ConsumerSetting
             {
+                ClusterName = clusterName,
                 ConsumeFromWhere = ConsumeFromWhere.FirstOffset,
                 MessageHandleMode = MessageHandleMode.Parallel,
-                BrokerAddress = new IPEndPoint(brokerAddress, 5001),
-                BrokerAdminAddress = new IPEndPoint(brokerAddress, 5002)
+                NameServerList = new List<IPEndPoint> { new IPEndPoint(nameServerAddress, 9493) }
             };
             var messageHandler = new MessageHandler();
             for (var i = 1; i <= clientCount; i++)

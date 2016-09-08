@@ -43,8 +43,9 @@
     <Reference Include="Dapper">
       <HintPath>..\..\..\packages\Dapper.1.50.2\lib\net45\Dapper.dll</HintPath>
     </Reference>
-    <Reference Include="ECommon">
-      <HintPath>..\..\..\packages\ECommon.2.1.1\lib\net45\ECommon.dll</HintPath>
+    <Reference Include="ECommon, Version=2.1.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\ECommon.2.1.3\lib\net45\ECommon.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="log4net">
       <HintPath>..\..\..\packages\log4net.2.0.5\lib\net40-full\log4net.dll</HintPath>

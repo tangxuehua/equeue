@@ -1,5 +1,4 @@
 ﻿using System;
-using EQueue.Protocols;
 
 namespace EQueue.Protocols
 {

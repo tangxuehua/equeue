@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Configuration;
+using System.Net;
 using ECommon.Configurations;
+using ECommon.Socketing;
 using EQueue.Broker;
 using EQueue.Configurations;
+using EQueue.Protocols;
+using EQueue.Utils;
 using ECommonConfiguration = ECommon.Configurations.Configuration;
 
 namespace QuickStart.BrokerServer
@@ -28,6 +32,11 @@ namespace QuickStart.BrokerServer
                 NotifyWhenMessageArrived = bool.Parse(ConfigurationManager.AppSettings["notifyWhenMessageArrived"]),
                 MessageWriteQueueThreshold = int.Parse(ConfigurationManager.AppSettings["messageWriteQueueThreshold"])
             };
+            setting.BrokerInfo.BrokerName = ConfigurationManager.AppSettings["brokerName"];
+            setting.BrokerInfo.GroupName = ConfigurationManager.AppSettings["groupName"];
+            setting.BrokerInfo.ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), int.Parse(ConfigurationManager.AppSettings["producerPort"])).ToAddress();
+            setting.BrokerInfo.ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), int.Parse(ConfigurationManager.AppSettings["consumerPort"])).ToAddress();
+            setting.BrokerInfo.AdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), int.Parse(ConfigurationManager.AppSettings["adminPort"])).ToAddress();
             BrokerController.Create(setting).Start();
             Console.ReadLine();
         }

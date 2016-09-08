@@ -6,11 +6,11 @@ namespace EQueue.Clients.Producers
 {
     public class QueueHashSelector : IQueueSelector
     {
-        public int SelectQueueId(IList<int> availableQueueIds, Message message, string routingKey)
+        public MessageQueue SelectMessageQueue(IList<MessageQueue> availableMessageQueues, Message message, string routingKey)
         {
-            if (availableQueueIds.Count == 0)
+            if (availableMessageQueues.Count == 0)
             {
-                return -1;
+                return null;
             }
             unchecked
             {
@@ -23,7 +23,7 @@ namespace EQueue.Clients.Producers
                 {
                     hash = Math.Abs(hash);
                 }
-                return availableQueueIds[(int)(hash % availableQueueIds.Count)];
+                return availableMessageQueues[hash % availableMessageQueues.Count];
             }
         }
     }

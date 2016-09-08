@@ -1250,7 +1250,7 @@ namespace EQueue.Broker.Storage
 
         public override string ToString()
         {
-            return string.Format("({0})", _filename);
+            return string.Format("({0}-#{1})", _chunkManager.Name, _chunkHeader.ChunkNumber);
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace EQueue.Protocols
@@ -22,6 +21,7 @@ namespace EQueue.Protocols
             {
                 writer.Write(request.ConsumerId);
                 writer.Write(request.ConsumerGroup);
+                writer.Write(request.MessageQueue.BrokerName);
                 writer.Write(request.MessageQueue.Topic);
                 writer.Write(request.MessageQueue.QueueId);
                 writer.Write(request.Tags);
@@ -38,7 +38,7 @@ namespace EQueue.Protocols
                 var request = new PullMessageRequest();
                 request.ConsumerId = reader.ReadString();
                 request.ConsumerGroup = reader.ReadString();
-                request.MessageQueue = new MessageQueue(reader.ReadString(), reader.ReadInt32());
+                request.MessageQueue = new MessageQueue(reader.ReadString(), reader.ReadString(), reader.ReadInt32());
                 request.Tags = reader.ReadString();
                 request.QueueOffset = reader.ReadInt64();
                 request.PullMessageBatchSize = reader.ReadInt32();

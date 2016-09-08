@@ -1,18 +1,23 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
+using ECommon.Scheduling;
+using ECommon.Serializing;
 using ECommon.Socketing;
 using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.RequestHandlers;
 using EQueue.Broker.RequestHandlers.Admin;
+using EQueue.Clients;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -25,6 +30,8 @@ namespace EQueue.Broker
         private readonly IQueueStore _queueStore;
         private readonly IMessageStore _messageStore;
         private readonly IConsumeOffsetStore _consumeOffsetStore;
+        private readonly IBinarySerializer _binarySerializer;
+        private readonly IScheduleService _scheduleService;
         private readonly SuspendedPullRequestManager _suspendedPullRequestManager;
         private readonly ProducerManager _producerManager;
         private readonly ConsumerManager _consumerManager;
@@ -33,6 +40,7 @@ namespace EQueue.Broker
         private readonly SocketRemotingServer _adminSocketRemotingServer;
         private readonly ConsoleEventHandlerService _service;
         private readonly IChunkStatisticService _chunkReadStatisticService;
+        private readonly IList<SocketRemotingClient> _nameServerRemotingClientList;
         private int _isShuttingdown = 0;
         private int _isCleaning = 0;
 
@@ -57,17 +65,26 @@ namespace EQueue.Broker
         private BrokerController(BrokerSetting setting)
         {
             Setting = setting ?? new BrokerSetting();
+
+            Setting.BrokerInfo.Valid();
+            if (Setting.NameServerList == null || Setting.NameServerList.Count() == 0)
+            {
+                throw new ArgumentException("NameServerList is empty.");
+            }
+
             _producerManager = ObjectContainer.Resolve<ProducerManager>();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _consumeOffsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
+            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
             _chunkReadStatisticService = ObjectContainer.Resolve<IChunkStatisticService>();
 
-            _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.ProducerAddress, Setting.SocketSetting);
-            _consumerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ConsumerRemotingServer", Setting.ConsumerAddress, Setting.SocketSetting);
-            _adminSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.AdminRemotingServer", Setting.AdminAddress, Setting.SocketSetting);
+            _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.BrokerInfo.ProducerAddress.ToEndPoint(), Setting.SocketSetting);
+            _consumerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ConsumerRemotingServer", Setting.BrokerInfo.ConsumerAddress.ToEndPoint(), Setting.SocketSetting);
+            _adminSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.AdminRemotingServer", Setting.BrokerInfo.AdminAddress.ToEndPoint(), Setting.SocketSetting);
 
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _producerSocketRemotingServer.RegisterConnectionEventListener(new ProducerConnectionEventListener(this));
@@ -76,6 +93,7 @@ namespace EQueue.Broker
 
             _service = new ConsoleEventHandlerService();
             _service.RegisterClosingEventHandler(eventCode => { Shutdown(); });
+            _nameServerRemotingClientList = CreateRemotingClientList();
         }
 
         public static BrokerController Create(BrokerSetting setting = null)
@@ -113,7 +131,7 @@ namespace EQueue.Broker
                     _queueStore.Start();
 
                     Interlocked.Exchange(ref _isCleaning, 0);
-                    _logger.InfoFormat("Broker clean success, timeSpent:{0}ms, producer:[{1}], consumer:[{2}], admin:[{3}]", watch.ElapsedMilliseconds, Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
+                    _logger.InfoFormat("Broker clean success, timeSpent:{0}ms, producer:[{1}], consumer:[{2}], admin:[{3}]", watch.ElapsedMilliseconds, Setting.BrokerInfo.ProducerAddress, Setting.BrokerInfo.ConsumerAddress, Setting.BrokerInfo.AdminAddress);
                 }
                 catch (Exception ex)
                 {
@@ -162,9 +180,12 @@ namespace EQueue.Broker
             _chunkReadStatisticService.Start();
 
             RemoveNotExistQueueConsumeOffsets();
+            StartAllNameServerClients();
+            RegisterBrokerToAllNameServers();
+            _scheduleService.StartTask("RegisterBrokerToAllNameServers", RegisterBrokerToAllNameServers, 1000, Setting.RegisterBrokerToNameServerInterval);
 
             Interlocked.Exchange(ref _isShuttingdown, 0);
-            _logger.InfoFormat("Broker started, timeSpent:{0}ms, producer:[{1}], consumer:[{2}], admin:[{3}]", watch.ElapsedMilliseconds, Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
+            _logger.InfoFormat("Broker started, timeSpent:{0}ms, producer:[{1}], consumer:[{2}], admin:[{3}]", watch.ElapsedMilliseconds, Setting.BrokerInfo.ProducerAddress, Setting.BrokerInfo.ConsumerAddress, Setting.BrokerInfo.AdminAddress);
             return this;
         }
         public BrokerController Shutdown()
@@ -172,7 +193,10 @@ namespace EQueue.Broker
             if (Interlocked.CompareExchange(ref _isShuttingdown, 1, 0) == 0)
             {
                 var watch = Stopwatch.StartNew();
-                _logger.InfoFormat("Broker starting to shutdown, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.ProducerAddress, Setting.ConsumerAddress, Setting.AdminAddress);
+                _logger.InfoFormat("Broker starting to shutdown, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.BrokerInfo.ProducerAddress, Setting.BrokerInfo.ConsumerAddress, Setting.BrokerInfo.AdminAddress);
+                _scheduleService.StopTask("RegisterBrokerToAllNameServers");
+                UnregisterBrokerToAllNameServers();
+                StopAllNameServerClients();
                 _producerSocketRemotingServer.Shutdown();
                 _consumerSocketRemotingServer.Shutdown();
                 _adminSocketRemotingServer.Shutdown();
@@ -240,6 +264,107 @@ namespace EQueue.Broker
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SetQueueNextConsumeOffset, new SetQueueNextConsumeOffsetRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.DeleteConsumerGroup, new DeleteConsumerGroupRequestHandler());
         }
+        private IDictionary<string, IList<QueueInfo>> GetTopicRouteInfo()
+        {
+            var topicRouteInfo = new Dictionary<string, IList<QueueInfo>>();
+
+            var groupList = _queueStore.GetAllQueues().GroupBy(x => x.Topic);
+            foreach (var group in groupList)
+            {
+                topicRouteInfo.Add(group.Key, group.Select(x => new QueueInfo
+                {
+                    QueueId = x.QueueId,
+                    ProducerVisible = x.Setting.ProducerVisible,
+                    ConsumerVisible = x.Setting.ConsumerVisible
+                }).ToList());
+            }
+
+            return topicRouteInfo;
+        }
+        private void StartAllNameServerClients()
+        {
+            foreach (var nameServerRemotingClient in _nameServerRemotingClientList)
+            {
+                nameServerRemotingClient.Start();
+            }
+        }
+        private void StopAllNameServerClients()
+        {
+            foreach (var nameServerRemotingClient in _nameServerRemotingClientList)
+            {
+                nameServerRemotingClient.Shutdown();
+            }
+        }
+        private void RegisterBrokerToAllNameServers()
+        {
+            var topicRouteInfo = GetTopicRouteInfo();
+            var request = new BrokerRegistrationRequest
+            {
+                BrokerInfo = Setting.BrokerInfo,
+                QueueInfoDict = topicRouteInfo
+            };
+            foreach (var remotingClient in _nameServerRemotingClientList)
+            {
+                RegisterBrokerToNameServer(request, remotingClient);
+            }
+        }
+        private void UnregisterBrokerToAllNameServers()
+        {
+            var request = new BrokerUnRegistrationRequest
+            {
+                BrokerInfo = Setting.BrokerInfo
+            };
+            foreach (var remotingClient in _nameServerRemotingClientList)
+            {
+                UnregisterBrokerToNameServer(request, remotingClient);
+            }
+        }
+        private void RegisterBrokerToNameServer(BrokerRegistrationRequest request, SocketRemotingClient remotingClient)
+        {
+            var nameServerAddress = remotingClient.ServerEndPoint.ToAddress();
+            try
+            {
+                var data = _binarySerializer.Serialize(request);
+                var remotingRequest = new RemotingRequest((int)RequestCode.RegisterBroker, data);
+                var remotingResponse = remotingClient.InvokeSync(remotingRequest, 5 * 1000);
+                if (remotingResponse.Code != ResponseCode.Success)
+                {
+                    _logger.Error(string.Format("Register broker to name server failed, brokerInfo: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.BrokerInfo, nameServerAddress, remotingResponse.Code, Encoding.UTF8.GetString(remotingResponse.Body)));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(string.Format("Register broker to name server has exception, brokerInfo: {0}, nameServerAddress: {1}", request.BrokerInfo, nameServerAddress), ex);
+            }
+        }
+        private void UnregisterBrokerToNameServer(BrokerUnRegistrationRequest request, SocketRemotingClient remotingClient)
+        {
+            var nameServerAddress = remotingClient.ServerEndPoint.ToAddress();
+            try
+            {
+                var data = _binarySerializer.Serialize(request);
+                var remotingRequest = new RemotingRequest((int)RequestCode.UnregisterBroker, data);
+                var remotingResponse = remotingClient.InvokeSync(remotingRequest, 5 * 1000);
+                if (remotingResponse.Code != ResponseCode.Success)
+                {
+                    _logger.Error(string.Format("Unregister broker from name server failed, brokerInfo: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.BrokerInfo, nameServerAddress, remotingResponse.Code, Encoding.UTF8.GetString(remotingResponse.Body)));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(string.Format("Unregister broker from name server has exception, brokerInfo: {0}, nameServerAddress: {1}", request.BrokerInfo, nameServerAddress), ex);
+            }
+        }
+        private IList<SocketRemotingClient> CreateRemotingClientList()
+        {
+            var remotingClientList = new List<SocketRemotingClient>();
+            foreach (var endpoint in Setting.NameServerList)
+            {
+                var remotingClient = new SocketRemotingClient(endpoint, Setting.SocketSetting);
+                remotingClientList.Add(remotingClient);
+            }
+            return remotingClientList;
+        }
 
         class ProducerConnectionEventListener : IConnectionEventListener
         {
@@ -255,7 +380,7 @@ namespace EQueue.Broker
             public void OnConnectionFailed(SocketError socketError) { }
             public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
             {
-                var producerId = ClientIdFactory.CreateClientId(connection.RemotingEndPoint as IPEndPoint);
+                var producerId = connection.RemotingEndPoint.ToAddress();
                 _brokerController._producerManager.RemoveProducer(producerId);
             }
         }
@@ -273,7 +398,7 @@ namespace EQueue.Broker
             public void OnConnectionFailed(SocketError socketError) { }
             public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
             {
-                var consumerId = ClientIdFactory.CreateClientId(connection.RemotingEndPoint as IPEndPoint);
+                var consumerId = connection.RemotingEndPoint.ToAddress();
                 if (_brokerController.Setting.RemoveConsumerWhenDisconnect)
                 {
                     _brokerController._consumerManager.RemoveConsumer(consumerId);

@@ -8,13 +8,13 @@ namespace EQueue.Clients.Producers
     {
         private long _index;
 
-        public int SelectQueueId(IList<int> availableQueueIds, Message message, string routingKey)
+        public MessageQueue SelectMessageQueue(IList<MessageQueue> availableMessageQueues, Message message, string routingKey)
         {
-            if (availableQueueIds.Count == 0)
+            if (availableMessageQueues.Count == 0)
             {
-                return -1;
+                return null;
             }
-            return availableQueueIds[(int)(Interlocked.Increment(ref _index) % availableQueueIds.Count)];
+            return availableMessageQueues[(int)(Interlocked.Increment(ref _index) % availableMessageQueues.Count)];
         }
     }
 }

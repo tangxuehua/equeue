@@ -23,6 +23,10 @@
         DeleteTopic = 1009,
         QueryProducerInfo = 1010,
         SetQueueNextConsumeOffset = 1011,
-        DeleteConsumerGroup = 1012
+        DeleteConsumerGroup = 1012,
+        RegisterBroker = 1013,
+        UnregisterBroker = 1014,
+        GetTopicRouteInfo = 1015,
+        GetClusterBrokers = 1016
     }
 }

@@ -1,83 +1,269 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using ECommon.Components;
+using ECommon.Logging;
+using ECommon.Scheduling;
+using ECommon.Serializing;
 using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.NameServer
 {
     public class RouteInfoManager
     {
-        private readonly ConcurrentDictionary<string /*brokerName*/, ConcurrentDictionary<string /*brokerAddress*/, int /*brokerRole*/>> _brokerInfoDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, int>>();
-        private readonly ConcurrentDictionary<string /*topic*/, ConcurrentDictionary<string /*brokerName*/, IList<int> /*queueId list*/>> _topicRouteInfoDict = new ConcurrentDictionary<string, ConcurrentDictionary<string, IList<int>>>();
+        #region Private Variables
+
+        private readonly ConcurrentDictionary<string /*clusterName*/, Cluster> _routingInfoDict;
         private readonly object _lockObj = new object();
+        private readonly IScheduleService _scheduleService;
+        private readonly NameServerController _nameServerController;
+        private readonly ILogger _logger;
+        private readonly IJsonSerializer _jsonSerializer;
 
-        public void RegisterController(string brokerName, string brokerAddress, BrokerRole brokerRole, IDictionary<string, int> queueDict)
+        #endregion
+
+        public RouteInfoManager(NameServerController nameServerController)
+        {
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
+            _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
+            _routingInfoDict = new ConcurrentDictionary<string, Cluster>();
+            _nameServerController = nameServerController;
+            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+        }
+
+        public void Start()
+        {
+            _routingInfoDict.Clear();
+            _scheduleService.StartTask("ScanNotActiveBroker", ScanNotActiveBroker, 1000, 1000);
+        }
+        public void Shutdown()
+        {
+            _routingInfoDict.Clear();
+            _scheduleService.StopTask("ScanNotActiveBroker");
+        }
+        public void RegisterBroker(BrokerRegistrationRequest request)
         {
             lock (_lockObj)
             {
-                var brokerDict = _brokerInfoDict.GetOrAdd(brokerName, x => new ConcurrentDictionary<string, int>());
-                brokerDict.TryAdd(brokerAddress, (int)brokerRole);
-
-                foreach (var entry in queueDict)
+                var brokerInfo = request.BrokerInfo;
+                var cluster = _routingInfoDict.GetOrAdd(brokerInfo.ClusterName, x => new Cluster { ClusterName = x });
+                var brokerGroup = cluster.BrokerGroups.GetOrAdd(brokerInfo.GroupName, x => new BrokerGroup { GroupName = x });
+                Broker broker;
+                if (!brokerGroup.Brokers.TryGetValue(brokerInfo.BrokerName, out broker))
                 {
-                    var topic = entry.Key;
-                    var queueId = entry.Value;
-                    var routeInfoDict = _topicRouteInfoDict.GetOrAdd(topic, x => new ConcurrentDictionary<string, IList<int>>());
-                    var queueIdList = routeInfoDict.GetOrAdd(brokerName, x => new List<int>());
-                    queueIdList.Add(queueId);
+                    broker = new Broker
+                    {
+                        BrokerInfo = request.BrokerInfo,
+                        QueueInfoDict = request.QueueInfoDict,
+                        LastActiveTime = DateTime.Now
+                    };
+                    if (brokerGroup.Brokers.TryAdd(brokerInfo.BrokerName, broker))
+                    {
+                        _logger.InfoFormat("Registered new broker, brokerInfo: {0}", _jsonSerializer.Serialize(brokerInfo));
+                    }
+                }
+                else
+                {
+                    var newQueueInfo = _jsonSerializer.Serialize(request.QueueInfoDict);
+                    var oldQueueInfo = _jsonSerializer.Serialize(broker.QueueInfoDict);
+
+                    if (!broker.BrokerInfo.IsEqualsWith(request.BrokerInfo) || oldQueueInfo != newQueueInfo)
+                    {
+                        var logInfo = string.Format("Registered changed broker, newBrokerInfo: [BrokerInfo={0},QueueInfo={1}], oldBrokerInfo: [BrokerInfo={2},QueueInfo={3}]",
+                            request.BrokerInfo,
+                            newQueueInfo,
+                            broker.BrokerInfo,
+                            oldQueueInfo);
+                        broker.BrokerInfo = request.BrokerInfo;
+                        broker.QueueInfoDict = request.QueueInfoDict;
+                        _logger.Info(logInfo);
+                    }
+                    broker.LastActiveTime = DateTime.Now;
                 }
             }
         }
-        public void UnregisterController(string brokerName, string brokerAddress)
+        public void UnregisterBroker(BrokerUnRegistrationRequest request)
         {
             lock (_lockObj)
             {
-                ConcurrentDictionary<string, int> brokerDict;
-                if (_brokerInfoDict.TryGetValue(brokerName, out brokerDict))
+                var brokerInfo = request.BrokerInfo;
+                var cluster = _routingInfoDict.GetOrAdd(brokerInfo.ClusterName, x => new Cluster { ClusterName = x });
+                var brokerGroup = cluster.BrokerGroups.GetOrAdd(brokerInfo.GroupName, x => new BrokerGroup { GroupName = x });
+                Broker broker;
+                if (brokerGroup.Brokers.TryRemove(brokerInfo.BrokerName, out broker))
                 {
-                    int role;
-                    brokerDict.TryRemove(brokerAddress, out role);
+                    _logger.InfoFormat("Unregistered broker, brokerInfo: {0}", _jsonSerializer.Serialize(broker));
                 }
             }
         }
-        public IList<TopicRouteInfo> GetTopicRouteInfo(string topic)
+        public void UnregisterBroker(EndPoint brokerAddress)
+        {
+            lock (_lockObj)
+            {
+                foreach (var cluster in _routingInfoDict.Values)
+                {
+                    foreach (var brokerGroup in cluster.BrokerGroups.Values)
+                    {
+                        var toRemoveBroker = default(Broker);
+                        foreach (var broker in brokerGroup.Brokers.Values)
+                        {
+                            if (broker.BrokerInfo.ProducerAddress == brokerAddress.ToAddress())
+                            {
+                                toRemoveBroker = broker;
+                                break;
+                            }
+                        }
+                        if (toRemoveBroker != null)
+                        {
+                            Broker removed;
+                            if (brokerGroup.Brokers.TryRemove(toRemoveBroker.BrokerInfo.BrokerName, out removed))
+                            {
+                                _logger.InfoFormat("Removed closed broker, brokerInfo: {0}", _jsonSerializer.Serialize(removed.BrokerInfo));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        public IList<TopicRouteInfo> GetTopicRouteInfo(GetTopicRouteInfoRequest request)
         {
             lock (_lockObj)
             {
                 var returnList = new List<TopicRouteInfo>();
-                var brokerQueueInfo = _topicRouteInfoDict.GetOrAdd(topic, x => new ConcurrentDictionary<string, IList<int>>());
-
-                foreach (var brokerQueue in brokerQueueInfo)
+                Cluster cluster;
+                if (!_routingInfoDict.TryGetValue(request.ClusterName, out cluster))
                 {
-                    var brokerName = brokerQueue.Key;
-                    var queueIds = brokerQueue.Value;
-                    if (queueIds.Count == 0)
+                    return returnList;
+                }
+
+                foreach (var brokerGroup in cluster.BrokerGroups.Values)
+                {
+                    foreach (var broker in brokerGroup.Brokers.Values)
                     {
-                        continue;
-                    }
-                    foreach (var queueId in queueIds)
-                    {
-                        ConcurrentDictionary<string, int> brokerAddressDict;
-                        if (!_brokerInfoDict.TryGetValue(brokerName, out brokerAddressDict) || brokerAddressDict.Count == 0)
+                        if (request.OnlyFindMaster && broker.BrokerInfo.BrokerRole != (int)BrokerRole.Master)
                         {
-                            break;
+                            continue;
                         }
 
-                        var returnItem = new TopicRouteInfo();
-                        var brokerInfo = new BrokerInfo();
-                        returnItem.Topic = topic;
-                        returnItem.QueueId = queueId;
-                        returnItem.BrokerInfo = brokerInfo;
-                        brokerInfo.BrokerName = brokerName;
-                        foreach (var brokerAddress in brokerAddressDict)
+                        foreach (var entry in broker.QueueInfoDict)
                         {
-                            brokerInfo.BrokerAddresses.Add(brokerAddress.Key, brokerAddress.Value);
+                            var topic = entry.Key;
+                            var queueInfo = entry.Value;
+
+                            if (topic == request.Topic)
+                            {
+                                IList<int> queueList = null;
+                                if (request.ClientRole == ClientRole.Producer)
+                                {
+                                    queueList = queueInfo.Where(x => x.ProducerVisible).Select(x => x.QueueId).ToList();
+                                }
+                                else if (request.ClientRole == ClientRole.Consumer)
+                                {
+                                    queueList = queueInfo.Where(x => x.ConsumerVisible).Select(x => x.QueueId).ToList();
+                                }
+                                else
+                                {
+                                    throw new Exception("Invalid clientRole: " + request.ClientRole);
+                                }
+                                var topicRouteInfo = new TopicRouteInfo
+                                {
+                                    BrokerInfo = broker.BrokerInfo,
+                                    QueueInfo = queueList
+                                };
+                                returnList.Add(topicRouteInfo);
+                                break;
+                            }
                         }
-                        returnList.Add(returnItem);
                     }
                 }
 
                 return returnList;
             }
+        }
+        public IList<BrokerInfo> GetClusterBrokers(GetClusterBrokersRequest request)
+        {
+            lock (_lockObj)
+            {
+                var returnList = new List<BrokerInfo>();
+                Cluster cluster;
+                if (!_routingInfoDict.TryGetValue(request.ClusterName, out cluster))
+                {
+                    return returnList;
+                }
+
+                foreach (var brokerGroup in cluster.BrokerGroups.Values)
+                {
+                    foreach (var broker in brokerGroup.Brokers.Values)
+                    {
+                        if (request.OnlyFindMaster && broker.BrokerInfo.BrokerRole != (int)BrokerRole.Master)
+                        {
+                            continue;
+                        }
+                        returnList.Add(broker.BrokerInfo);
+                    }
+                }
+
+                returnList.Sort((x, y) => string.Compare(x.BrokerName, y.BrokerName));
+
+                return returnList;
+            }
+        }
+
+        private void ScanNotActiveBroker()
+        {
+            lock (_lockObj)
+            {
+                foreach (var cluster in _routingInfoDict.Values)
+                {
+                    foreach (var brokerGroup in cluster.BrokerGroups.Values)
+                    {
+                        var notActiveBrokers = new List<Broker>();
+                        foreach (var broker in brokerGroup.Brokers.Values)
+                        {
+                            if (broker.IsTimeout(_nameServerController.Setting.BrokerInactiveMaxMilliseconds))
+                            {
+                                notActiveBrokers.Add(broker);
+                            }
+                        }
+                        if (notActiveBrokers.Count > 0)
+                        {
+                            foreach (var broker in notActiveBrokers)
+                            {
+                                Broker removed;
+                                if (brokerGroup.Brokers.TryRemove(broker.BrokerInfo.BrokerName, out removed))
+                                {
+                                    _logger.InfoFormat("Removed timeout broker, brokerInfo: {0}, lastActiveTime: {1}", _jsonSerializer.Serialize(removed.BrokerInfo), removed.LastActiveTime);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        class Broker
+        {
+            public BrokerInfo BrokerInfo { get; set; }
+            public DateTime LastActiveTime { get; set; }
+            public IDictionary<string /*topic*/, IList<QueueInfo>> QueueInfoDict = new Dictionary<string, IList<QueueInfo>>();
+
+            public bool IsTimeout(double timeoutMilliseconds)
+            {
+                return (DateTime.Now - LastActiveTime).TotalMilliseconds >= timeoutMilliseconds;
+            }
+        }
+        class BrokerGroup
+        {
+            public string GroupName { get; set; }
+            public ConcurrentDictionary<string /*brokerName*/, Broker> Brokers = new ConcurrentDictionary<string, Broker>();
+        }
+        class Cluster
+        {
+            public string ClusterName { get; set; }
+            public ConcurrentDictionary<string /*groupName*/, BrokerGroup> BrokerGroups = new ConcurrentDictionary<string, BrokerGroup>();
         }
     }
 }

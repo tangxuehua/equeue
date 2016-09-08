@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using EQueue.Clients.Producers;
 using EQueue.Protocols;
 
 namespace EQueue.Utils

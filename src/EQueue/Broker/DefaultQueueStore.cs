@@ -52,6 +52,10 @@ namespace EQueue.Broker
         {
             return _queueDict.Values.Select(x => x.Topic).Distinct();
         }
+        public IEnumerable<Queue> GetAllQueues()
+        {
+            return _queueDict.Values.Where(x => !x.Setting.IsDeleted).ToList();
+        }
         public int GetAllQueueCount()
         {
             return _queueDict.Count;

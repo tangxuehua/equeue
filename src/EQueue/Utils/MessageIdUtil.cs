@@ -15,11 +15,11 @@ namespace EQueue.Utils
         {
             if (_ipBytes == null)
             {
-                _ipBytes = BrokerController.Instance.Setting.ProducerAddress.Address.GetAddressBytes();
+                _ipBytes = BrokerController.Instance.Setting.BrokerInfo.ProducerAddress.ToEndPoint().Address.GetAddressBytes();
             }
             if (_portBytes == null)
             {
-                _portBytes = BitConverter.GetBytes(BrokerController.Instance.Setting.ProducerAddress.Port);
+                _portBytes = BitConverter.GetBytes(BrokerController.Instance.Setting.BrokerInfo.ProducerAddress.ToEndPoint().Port);
             }
             var positionBytes = BitConverter.GetBytes(messagePosition);
             var messageIdBytes = Combine(_ipBytes, _portBytes, positionBytes);

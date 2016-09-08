@@ -5,21 +5,21 @@ namespace EQueue.Protocols
     [Serializable]
     public class MessageQueue
     {
-        public string Topic { get; private set; }
         public string BrokerName { get; private set; }
+        public string Topic { get; private set; }
         public int QueueId { get; private set; }
 
         public MessageQueue() { }
-        public MessageQueue(string topic, string brokerName, int queueId)
+        public MessageQueue(string brokerName, string topic, int queueId)
         {
-            Topic = topic;
             BrokerName = brokerName;
+            Topic = topic;
             QueueId = queueId;
         }
 
         public override string ToString()
         {
-            return string.Format("[Topic={0}, BrokerName={1}, QueueId={2}]", Topic, BrokerName, QueueId);
+            return string.Format("[BrokerName={0}, Topic={1}, QueueId={2}]", BrokerName, Topic, QueueId);
         }
     }
 }

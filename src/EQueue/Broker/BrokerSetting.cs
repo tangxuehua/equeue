@@ -1,22 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using ECommon.Socketing;
 using EQueue.Broker.Storage;
+using EQueue.Protocols;
+using EQueue.Utils;
 
 namespace EQueue.Broker
 {
     public class BrokerSetting
     {
-        /// <summary>发送消息端口号，默认为5000
+        /// <summary>Broker基本配置信息
         /// </summary>
-        public IPEndPoint ProducerAddress { get; set; }
-        /// <summary>消费消息端口号，默认为5001
+        public BrokerInfo BrokerInfo { get; set; }
+        /// <summary>NameServer地址列表
         /// </summary>
-        public IPEndPoint ConsumerAddress { get; set; }
-        /// <summary>Producer，Consumer对Broker发送的发消息和拉消息除外的其他内部请求，以及后台管理控制台发送的查询请求使用的端口号，默认为5002
-        /// </summary>
-        public IPEndPoint AdminAddress { get; set; }
+        public IEnumerable<IPEndPoint> NameServerList { get; set; }
         /// <summary>消息到达时是否立即通知相关的PullRequest，默认为true；
         /// <remarks>
         /// 如果希望当前场景消息吞吐量不大且要求消息消费的实时性更高，可以考虑设置为true；设置为false时，最多在<see cref="CheckBlockingPullRequestMilliseconds"/>
@@ -24,6 +24,9 @@ namespace EQueue.Broker
         /// </remarks>
         /// </summary>
         public bool NotifyWhenMessageArrived { get; set; }
+        /// <summary>Broker定期向NameServer注册信息的时间间隔，默认为5秒钟；
+        /// </summary>
+        public int RegisterBrokerToNameServerInterval { get; set; }
         /// <summary>删除符合删除条件的消息的定时间隔，默认为10秒钟；
         /// </summary>
         public int DeleteMessagesInterval { get; set; }
@@ -81,11 +84,22 @@ namespace EQueue.Broker
 
         public BrokerSetting(bool isMessageStoreMemoryMode = false, string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 1024 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 5 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, bool enableCache = true, int messageChunkLocalCacheSize = 300000, int queueChunkLocalCacheSize = 10000)
         {
-            ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000);
-            ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001);
-            AdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002);
+            BrokerInfo = new BrokerInfo(
+                "DefaultBroker",
+                "DefaultGroup",
+                "DefaultCluster",
+                BrokerRole.Master,
+                new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000).ToAddress(),
+                new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001).ToAddress(),
+                new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002).ToAddress());
+
+            NameServerList = new List<IPEndPoint>()
+            {
+                new IPEndPoint(SocketUtils.GetLocalIPV4(), 9493)
+            };
 
             NotifyWhenMessageArrived = true;
+            RegisterBrokerToNameServerInterval = 1000 * 5;
             DeleteMessagesInterval = 1000 * 10;
             DeleteQueueMessagesInterval = 1000 * 10;
             DeleteMessageIgnoreUnConsumed = true;

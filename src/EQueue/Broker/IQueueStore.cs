@@ -12,6 +12,7 @@ namespace EQueue.Broker
         IEnumerable<string> GetAllTopics();
         Queue GetQueue(string topic, int queueId);
         int GetAllQueueCount();
+        IEnumerable<Queue> GetAllQueues();
         long GetMinConusmedMessagePosition();
         long GetTotalUnConusmedMessageCount();
         bool IsTopicExist(string topic);
