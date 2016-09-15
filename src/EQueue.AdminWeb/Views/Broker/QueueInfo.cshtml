@@ -1,6 +1,7 @@
 ﻿@model EQueue.AdminWeb.Models.TopicQueueViewModel
 @{
-    ViewBag.Title = "队列信息";
+    ViewBag.Title = "Broker队列信息";
+    Layout = "~/Views/Shared/_BrokerLayout.cshtml";
 }
 <style>
     .header-form {
@@ -12,7 +13,7 @@
     }
 </style>
 <div>
-    @using (Html.BeginForm("QueueInfo", "Home", new { }, FormMethod.Post, new { @class = "form-inline header-form", role = "form" }))
+    @using (Html.BeginForm("QueueInfo", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline header-form", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="Topic"></label>
@@ -20,7 +21,7 @@
         </div>
         <button type="submit" class="btn btn-default">查询</button>
     }
-    @using (Html.BeginForm("CreateTopic", "Home", new { }, FormMethod.Post, new { @class = "form-inline header-form next-form", role = "form" }))
+    @using (Html.BeginForm("CreateTopic", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline header-form next-form", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="topic"></label>
@@ -32,7 +33,7 @@
         </div>
         <button type="submit" class="btn btn-default">创建Topic</button>
     }
-    @using (Html.BeginForm("DeleteTopic", "Home", new { }, FormMethod.Post, new { @class = "form-inline header-form next-form", role = "form" }))
+    @using (Html.BeginForm("DeleteTopic", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline header-form next-form", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="topic"></label>
@@ -124,24 +125,24 @@
                                 <li>
                                     @if (item.ProducerVisible)
                                     {
-                                        @Html.ActionLink("禁止发送", "SetQueueProducerVisible", new { topic = item.Topic, queueId = item.QueueId, visible = !item.ProducerVisible })
+                                        @Html.ActionLink("禁止发送", "SetQueueProducerVisible", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName, topic = item.Topic, queueId = item.QueueId, visible = !item.ProducerVisible })
                                     }
                                     else
                                     {
-                                        @Html.ActionLink("允许发送", "SetQueueProducerVisible", new { topic = item.Topic, queueId = item.QueueId, visible = !item.ProducerVisible })
+                                        @Html.ActionLink("允许发送", "SetQueueProducerVisible", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName, topic = item.Topic, queueId = item.QueueId, visible = !item.ProducerVisible })
                                     }
                                 </li>
                                 <li>
                                     @if (item.ConsumerVisible)
                                     {
-                                        @Html.ActionLink("禁止消费", "SetQueueConsumerVisible", new { topic = item.Topic, queueId = item.QueueId, visible = !item.ConsumerVisible })
+                                        @Html.ActionLink("禁止消费", "SetQueueConsumerVisible", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName, topic = item.Topic, queueId = item.QueueId, visible = !item.ConsumerVisible })
                                     }
                                     else
                                     {
-                                        @Html.ActionLink("允许消费", "SetQueueConsumerVisible", new { topic = item.Topic, queueId = item.QueueId, visible = !item.ConsumerVisible })
+                                        @Html.ActionLink("允许消费", "SetQueueConsumerVisible", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName, topic = item.Topic, queueId = item.QueueId, visible = !item.ConsumerVisible })
                                     }
                                 </li>
-                                <li>@Html.ActionLink("删除队列", "DeleteQueue", new { topic = item.Topic, queueId = item.QueueId })</li>
+                                <li>@Html.ActionLink("删除队列", "DeleteQueue", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName, topic = item.Topic, queueId = item.QueueId })</li>
                             </ul>
                         </div>
                     </td>

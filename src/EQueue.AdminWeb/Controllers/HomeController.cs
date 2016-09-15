@@ -16,64 +16,27 @@ namespace EQueue.AdminWeb.Controllers
 
         public ActionResult Index()
         {
-            var result = _messageService.QueryBrokerStatisticInfo();
-            return View(new BrokerStatisticInfoViewModel
+            var clusterList = _messageService.GetAllClusters();
+            return View(new ClusterListViewModel
             {
-                TopicCount = result.TopicCount,
-                QueueCount = result.QueueCount,
-                ConsumerGroupCount = result.ConsumerGroupCount,
-                ProducerCount = result.ProducerCount,
-                ConsumerCount = result.ConsumerCount,
-                TotalUnConsumedMessageCount = result.TotalUnConsumedMessageCount,
-                MessageChunkCount = result.MessageChunkCount,
-                MessageMaxChunkNum = result.MessageMaxChunkNum,
-                MessageMinChunkNum = result.MessageMinChunkNum
+                ClusterList = clusterList
             });
         }
-        public ActionResult CreateTopic(string topic, int? initialQueueCount)
+        public ActionResult BrokerList(string clusterName)
         {
-            _messageService.CreateTopic(topic, initialQueueCount ?? 4);
-            return RedirectToAction("QueueInfo");
-        }
-        public ActionResult DeleteTopic(string topic)
-        {
-            _messageService.DeleteTopic(topic);
-            return RedirectToAction("QueueInfo");
-        }
-        public ActionResult QueueInfo(string topic)
-        {
-            var topicQueueInfos = _messageService.GetTopicQueueInfo(topic);
-            return View(new TopicQueueViewModel
+            var brokerList = _messageService.GetClusterBrokers(clusterName);
+            return View(new BrokerListViewModel
             {
-                Topic = topic,
-                TopicQueueInfos = topicQueueInfos
+                BrokerList = brokerList
             });
         }
-        public ActionResult ProducerInfo(string group, string topic)
-        {
-            var producerIds = _messageService.GetProducerInfo();
-            return View(new ProducerViewModel
-            {
-                ProducerIds = producerIds
-            });
-        }
-        public ActionResult ConsumerInfo(string group, string topic)
-        {
-            var consumerInfos = _messageService.GetConsumerInfo(group, topic);
-            return View(new ConsumerViewModel
-            {
-                Group = group,
-                Topic = topic,
-                ConsumerInfos = consumerInfos
-            });
-        }
-        public ActionResult Message(string searchMessageId)
+        public ActionResult Message(string clusterName, string searchMessageId)
         {
             if (string.IsNullOrWhiteSpace(searchMessageId))
             {
                 return View(new MessageViewModel());
             }
-            var message = _messageService.GetMessageDetail(searchMessageId);
+            var message = _messageService.GetMessageDetail(clusterName, searchMessageId);
             var model = new MessageViewModel { SearchMessageId = searchMessageId };
             if (message != null)
             {
@@ -87,48 +50,6 @@ namespace EQueue.AdminWeb.Controllers
                 model.StoredTime = message.StoredTime.ToString();
             }
             return View(model);
-        }
-        public ActionResult AddQueue(string topic)
-        {
-            _messageService.AddQueue(topic);
-            return RedirectToAction("QueueInfo");
-        }
-        public ActionResult DeleteQueue(string topic, int queueId)
-        {
-            _messageService.DeleteQueue(topic, queueId);
-            return RedirectToAction("QueueInfo");
-        }
-        public ActionResult SetQueueProducerVisible(string topic, int queueId, bool visible)
-        {
-            _messageService.SetQueueProducerVisible(topic, queueId, visible);
-            return RedirectToAction("QueueInfo");
-        }
-        public ActionResult SetQueueConsumerVisible(string topic, int queueId, bool visible)
-        {
-            _messageService.SetQueueConsumerVisible(topic, queueId, visible);
-            return RedirectToAction("QueueInfo");
-        }
-        [HttpGet]
-        public ActionResult SetQueueNextConsumeOffset(string consumerGroup, string topic, int queueId)
-        {
-            var model = new SetQueueNextConsumeOffsetViewModel
-            {
-                ConsumerGroup = consumerGroup,
-                Topic = topic,
-                QueueId = queueId
-            };
-            return View(model);
-        }
-        [HttpPost]
-        public ActionResult SetQueueNextConsumeOffset(string consumerGroup, string topic, int queueId, long nextOffset)
-        {
-            _messageService.SetQueueNextConsumeOffset(consumerGroup, topic, queueId, nextOffset);
-            return RedirectToAction("ConsumerInfo");
-        }
-        public ActionResult DeleteConsumerGroup(string consumerGroup)
-        {
-            _messageService.DeleteConsumerGroup(consumerGroup);
-            return RedirectToAction("ConsumerInfo");
         }
     }
 }

@@ -20,7 +20,7 @@ namespace EQueue.Broker.RequestHandlers
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var producerId = Encoding.UTF8.GetString(remotingRequest.Body);
-            _producerManager.RegisterProducer(producerId, context.Connection);
+            _producerManager.RegisterProducer(context.Connection, producerId);
             return null;
         }
     }

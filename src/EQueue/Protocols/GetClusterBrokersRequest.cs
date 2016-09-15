@@ -6,6 +6,7 @@ namespace EQueue.Protocols
     public class GetClusterBrokersRequest
     {
         public string ClusterName { get; set; }
+        public string Topic { get; set; }
         public bool OnlyFindMaster { get; set; }
     }
 }

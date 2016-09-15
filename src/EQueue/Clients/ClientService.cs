@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -23,6 +24,7 @@ namespace EQueue.Clients
     {
         #region Private Variables
 
+        private static long _instanceNumber;
         private readonly object _lockObj = new object();
         private readonly string _clientId;
         private readonly ClientSetting _setting;
@@ -40,10 +42,22 @@ namespace EQueue.Clients
 
         #endregion
 
-        public ClientService(ClientSetting setting)
+        public ClientService(ClientSetting setting, Producer producer, Consumer consumer)
         {
             Ensure.NotNull(setting, "setting");
+            if (producer == null && consumer == null)
+            {
+                throw new ArgumentException("producer or consumer must set at least one of them.");
+            }
+            else if (producer != null && consumer != null)
+            {
+                throw new ArgumentException("producer or consumer cannot set both of them.");
+            }
 
+            Interlocked.Increment(ref _instanceNumber);
+
+            _producer = producer;
+            _consumer = consumer;
             _setting = setting;
             _clientId = BuildClientId(setting.ClientName);
             _brokerConnectionDict = new ConcurrentDictionary<string, BrokerConnection>();
@@ -60,14 +74,6 @@ namespace EQueue.Clients
         public string GetClientId()
         {
             return _clientId;
-        }
-        public void SetProducer(Producer producer)
-        {
-            _producer = producer;
-        }
-        public void SetConsumer(Consumer consumer)
-        {
-            _consumer = consumer;
         }
         public ClientService RegisterSubscriptionTopic(string topic)
         {
@@ -169,11 +175,11 @@ namespace EQueue.Clients
 
         private void SendHeartbeatToAllBrokers()
         {
-            if (_setting.ClientRole == ClientRole.Producer)
+            if (_producer != null)
             {
                 _producer.SendHeartbeat();
             }
-            else if (_setting.ClientRole == ClientRole.Consumer)
+            else if (_consumer != null)
             {
                 _consumer.SendHeartbeat();
             }
@@ -296,7 +302,7 @@ namespace EQueue.Clients
             }
             var request = new GetTopicRouteInfoRequest
             {
-                ClientRole = _setting.ClientRole,
+                ClientRole = _producer != null ? ClientRole.Producer : ClientRole.Consumer,
                 ClusterName = _setting.ClusterName,
                 OnlyFindMaster = _setting.OnlyFindMasterBroker,
                 Topic = topic
@@ -356,29 +362,26 @@ namespace EQueue.Clients
         private BrokerConnection BuildAndStartBrokerConnection(BrokerInfo brokerInfo)
         {
             IPEndPoint brokerEndpoint;
-            if (_setting.ClientRole == ClientRole.Producer)
+            if (_producer != null)
             {
                 brokerEndpoint = brokerInfo.ProducerAddress.ToEndPoint();
             }
-            else if (_setting.ClientRole == ClientRole.Consumer)
+            else if (_consumer != null)
             {
                 brokerEndpoint = brokerInfo.ConsumerAddress.ToEndPoint();
             }
             else
             {
-                throw new Exception("Invalid clientRole:" + _setting.ClientRole);
+                throw new Exception("ClientService must set producer or consumer.");
             }
             var brokerAdminEndpoint = brokerInfo.AdminAddress.ToEndPoint();
             var remotingClient = new SocketRemotingClient(brokerEndpoint, _setting.SocketSetting);
             var adminRemotingClient = new SocketRemotingClient(brokerAdminEndpoint, _setting.SocketSetting);
             var brokerConnection = new BrokerConnection(brokerInfo, remotingClient, adminRemotingClient);
 
-            if (_setting.ClientRole == ClientRole.Producer)
+            if (_producer != null && _producer.ResponseHandler != null)
             {
-                if (_producer.ResponseHandler != null)
-                {
-                    remotingClient.RegisterResponseHandler((int)RequestCode.SendMessage, _producer.ResponseHandler);
-                }
+                remotingClient.RegisterResponseHandler((int)RequestCode.SendMessage, _producer.ResponseHandler);
             }
 
             brokerConnection.Start();
@@ -388,11 +391,12 @@ namespace EQueue.Clients
         private static string BuildClientId(string clientName)
         {
             var ip = SocketUtils.GetLocalIPV4().ToString();
+            var processId = Process.GetCurrentProcess().Id;
             if (string.IsNullOrWhiteSpace(clientName))
             {
                 clientName = "default";
             }
-            return string.Format("{0}@{1}", ip, clientName);
+            return string.Format("{0}@{1}@{2}@{3}", ip, clientName, processId, _instanceNumber);
         }
 
         #endregion

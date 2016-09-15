@@ -1,0 +1,62 @@
+﻿@model EQueue.AdminWeb.Models.BrokerListViewModel
+@{
+    ViewBag.Title = "Broker列表";
+}
+<div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th width="15%" class="vertical-center">
+                    GroupName
+                </th>
+                <th width="15%" class="vertical-center">
+                    BrokerName
+                </th>
+                <th width="15%" class="vertical-center">
+                    BrokerRole
+                </th>
+                <th width="15%" class="vertical-center">
+                    ProducerAddress
+                </th>
+                <th width="15%" class="vertical-center">
+                    ConsumerAddress
+                </th>
+                <th width="15%" class="vertical-center">
+                    AdminAddress
+                </th>
+                <th width="10%" class="vertical-center">
+                    操作
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.BrokerList)
+            {
+                <tr>
+                    <td class="vertical-center">
+                        @item.GroupName
+                    </td>
+                    <td class="vertical-center">
+                        @item.BrokerName
+                    </td>
+                    <td class="vertical-center">
+                        @item.BrokerRole
+                    </td>
+                    <td class="vertical-center">
+                        @item.ProducerAddress
+                    </td>
+                    <td class="vertical-center">
+                        @item.ConsumerAddress
+                    </td>
+                    <td class="vertical-center">
+                        @item.AdminAddress
+                    </td>
+                    <td class="vertical-center">
+                        @Html.ActionLink("查看Broker详情", "Index", "Broker", new { clusterName = item.ClusterName, brokerName = item.BrokerName }, null)
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+

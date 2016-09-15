@@ -75,7 +75,6 @@ namespace EQueue.Clients.Consumers
             var clientSetting = new ClientSetting
             {
                 ClientName = Name,
-                ClientRole = ClientRole.Consumer,
                 ClusterName = setting.ClusterName,
                 NameServerList = setting.NameServerList,
                 SocketSetting = setting.SocketSetting,
@@ -83,8 +82,7 @@ namespace EQueue.Clients.Consumers
                 SendHeartbeatInterval = setting.HeartbeatBrokerInterval,
                 RefreshBrokerAndTopicRouteInfoInterval = setting.RefreshBrokerAndTopicRouteInfoInterval
             };
-            _clientService = new ClientService(clientSetting);
-            _clientService.SetConsumer(this);
+            _clientService = new ClientService(clientSetting, null, this);
             _pullMessageService = new PullMessageService(this, _clientService);
             _commitConsumeOffsetService = new CommitConsumeOffsetService(this, _clientService);
             _rebalanceService = new RebalanceService(this, _clientService, _pullMessageService, _commitConsumeOffsetService);

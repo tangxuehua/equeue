@@ -1,0 +1,70 @@
+﻿@model EQueue.AdminWeb.Models.BrokerStatisticInfoViewModel
+@{
+    ViewBag.Title = "Broker基本信息";
+    Layout = "~/Views/Shared/_BrokerLayout.cshtml";
+}
+
+<style>
+    .col-sm-10 {
+        margin-top: 7px;
+    }
+</style>
+
+<div>
+    <form class="form-horizontal" role="form">
+        <div class="form-group">
+            <label class="col-sm-2 control-label">主题个数：</label>
+            <div class="col-sm-10">
+                @Model.TopicCount
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">队列个数：</label>
+            <div class="col-sm-10">
+                @Model.QueueCount
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">生产者个数：</label>
+            <div class="col-sm-10">
+                @Model.ProducerCount
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">消费者组个数：</label>
+            <div class="col-sm-10">
+                @Model.ConsumerGroupCount
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">消费者个数：</label>
+            <div class="col-sm-10">
+                @Model.ConsumerCount
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">消息堆积总数：</label>
+            <div class="col-sm-10">
+                @Model.TotalUnConsumedMessageCount
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">消息Chunk总数：</label>
+            <div class="col-sm-10">
+                @Model.MessageChunkCount
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">消息最大Chunk：</label>
+            <div class="col-sm-10">
+                @Model.MessageMaxChunkNum
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">消息最小Chunk：</label>
+            <div class="col-sm-10">
+                @Model.MessageMinChunkNum
+            </div>
+        </div>
+    </form>
+</div>

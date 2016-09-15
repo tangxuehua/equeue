@@ -49,7 +49,6 @@ namespace EQueue.Clients.Producers
             var clientSetting = new ClientSetting
             {
                 ClientName = Name,
-                ClientRole = ClientRole.Producer,
                 ClusterName = setting.ClusterName,
                 NameServerList = setting.NameServerList,
                 SocketSetting = setting.SocketSetting,
@@ -57,8 +56,7 @@ namespace EQueue.Clients.Producers
                 SendHeartbeatInterval = setting.HeartbeatBrokerInterval,
                 RefreshBrokerAndTopicRouteInfoInterval = setting.RefreshBrokerAndTopicRouteInfoInterval
             };
-            _clientService = new ClientService(clientSetting);
-            _clientService.SetProducer(this);
+            _clientService = new ClientService(clientSetting, this, null);
         }
 
         #region Public Methods

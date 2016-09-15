@@ -27,6 +27,7 @@
         RegisterBroker = 1013,
         UnregisterBroker = 1014,
         GetTopicRouteInfo = 1015,
-        GetClusterBrokers = 1016
+        GetAllClusters = 1016,
+        GetClusterBrokers = 1017
     }
 }

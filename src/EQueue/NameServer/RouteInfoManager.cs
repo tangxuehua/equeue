@@ -3,8 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using ECommon.Components;
 using ECommon.Logging;
+using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using EQueue.Protocols;
@@ -22,6 +24,7 @@ namespace EQueue.NameServer
         private readonly NameServerController _nameServerController;
         private readonly ILogger _logger;
         private readonly IJsonSerializer _jsonSerializer;
+        private readonly IBinarySerializer _binarySerializer;
 
         #endregion
 
@@ -29,6 +32,7 @@ namespace EQueue.NameServer
         {
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
+            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _routingInfoDict = new ConcurrentDictionary<string, Cluster>();
             _nameServerController = nameServerController;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
@@ -148,6 +152,7 @@ namespace EQueue.NameServer
                             continue;
                         }
 
+                        var isTopicExist = false;
                         foreach (var entry in broker.QueueInfoDict)
                         {
                             var topic = entry.Key;
@@ -174,14 +179,29 @@ namespace EQueue.NameServer
                                     QueueInfo = queueList
                                 };
                                 returnList.Add(topicRouteInfo);
+                                isTopicExist = true;
                                 break;
                             }
+                        }
+                        if (!isTopicExist && _nameServerController.Setting.AutoCreateTopic)
+                        {
+                            var queueList = CreateTopicOnBroker(request.Topic, broker).ToList();
+                            var topicRouteInfo = new TopicRouteInfo
+                            {
+                                BrokerInfo = broker.BrokerInfo,
+                                QueueInfo = queueList
+                            };
+                            returnList.Add(topicRouteInfo);
                         }
                     }
                 }
 
                 return returnList;
             }
+        }
+        public IList<string> GetAllClusters()
+        {
+            return _routingInfoDict.Keys.ToList();
         }
         public IList<BrokerInfo> GetClusterBrokers(GetClusterBrokersRequest request)
         {
@@ -202,7 +222,17 @@ namespace EQueue.NameServer
                         {
                             continue;
                         }
-                        returnList.Add(broker.BrokerInfo);
+                        if (!string.IsNullOrEmpty(request.Topic))
+                        {
+                            if (broker.QueueInfoDict.Any(x => x.Key == request.Topic))
+                            {
+                                returnList.Add(broker.BrokerInfo);
+                            }
+                        }
+                        else
+                        {
+                            returnList.Add(broker.BrokerInfo);
+                        }
                     }
                 }
 
@@ -212,6 +242,20 @@ namespace EQueue.NameServer
             }
         }
 
+        private IEnumerable<int> CreateTopicOnBroker(string topic, Broker broker)
+        {
+            var brokerAdminEndpoint = broker.BrokerInfo.AdminAddress.ToEndPoint();
+            var adminRemotingClient = new SocketRemotingClient(brokerAdminEndpoint, _nameServerController.Setting.SocketSetting).Start();
+            var requestData = _binarySerializer.Serialize(new CreateTopicRequest(topic));
+            var remotingRequest = new RemotingRequest((int)RequestCode.CreateTopic, requestData);
+            var remotingResponse = adminRemotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code != ResponseCode.Success)
+            {
+                throw new Exception(string.Format("AutoCreateTopicOnBroker failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+            }
+            adminRemotingClient.Shutdown();
+            return _binarySerializer.Deserialize<IEnumerable<int>>(remotingResponse.Body);
+        }
         private void ScanNotActiveBroker()
         {
             lock (_lockObj)

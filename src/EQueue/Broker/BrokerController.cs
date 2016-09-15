@@ -375,13 +375,18 @@ namespace EQueue.Broker
                 _brokerController = brokerController;
             }
 
-            public void OnConnectionAccepted(ITcpConnection connection) { }
+            public void OnConnectionAccepted(ITcpConnection connection)
+            {
+                var connectionId = connection.RemotingEndPoint.ToAddress();
+                _brokerController._logger.InfoFormat("Producer connection accepted, connectionId: {0}", connectionId);
+            }
             public void OnConnectionEstablished(ITcpConnection connection) { }
             public void OnConnectionFailed(SocketError socketError) { }
             public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
             {
-                var producerId = connection.RemotingEndPoint.ToAddress();
-                _brokerController._producerManager.RemoveProducer(producerId);
+                var connectionId = connection.RemotingEndPoint.ToAddress();
+                _brokerController._logger.InfoFormat("Producer connection closed, connectionId: {0}", connectionId);
+                _brokerController._producerManager.RemoveProducer(connectionId);
             }
         }
         class ConsumerConnectionEventListener : IConnectionEventListener
@@ -393,15 +398,20 @@ namespace EQueue.Broker
                 _brokerController = brokerController;
             }
 
-            public void OnConnectionAccepted(ITcpConnection connection) { }
+            public void OnConnectionAccepted(ITcpConnection connection)
+            {
+                var connectionId = connection.RemotingEndPoint.ToAddress();
+                _brokerController._logger.InfoFormat("Consumer connection accepted, connectionId: {0}", connectionId);
+            }
             public void OnConnectionEstablished(ITcpConnection connection) { }
             public void OnConnectionFailed(SocketError socketError) { }
             public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
             {
-                var consumerId = connection.RemotingEndPoint.ToAddress();
+                var connectionId = connection.RemotingEndPoint.ToAddress();
+                _brokerController._logger.InfoFormat("Consumer connection closed, connectionId: {0}", connectionId);
                 if (_brokerController.Setting.RemoveConsumerWhenDisconnect)
                 {
-                    _brokerController._consumerManager.RemoveConsumer(consumerId);
+                    _brokerController._consumerManager.RemoveConsumer(connectionId);
                 }
             }
         }

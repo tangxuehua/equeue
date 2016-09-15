@@ -58,6 +58,7 @@ namespace EQueue.NameServer
 
         private void RegisterRequestHandlers()
         {
+            _socketRemotingServer.RegisterRequestHandler((int)RequestCode.GetAllClusters, new GetAllClustersRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)RequestCode.RegisterBroker, new RegisterBrokerRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)RequestCode.UnregisterBroker, new UnregisterBrokerRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)RequestCode.GetClusterBrokers, new GetClusterBrokersRequestHandler(this));

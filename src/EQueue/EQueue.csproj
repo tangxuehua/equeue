@@ -72,6 +72,7 @@
     <Compile Include="Clients\RebalanceService.cs" />
     <Compile Include="NameServer\NameServerSetting.cs" />
     <Compile Include="NameServer\NameServerController.cs" />
+    <Compile Include="NameServer\RequestHandlers\GetAllClustersRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\GetClusterBrokersRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\GetTopicRouteInfoRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\UnregisterBrokerRequestHandler.cs" />
@@ -113,7 +114,7 @@
     <Compile Include="Broker\RequestHandlers\Admin\QueryConsumerInfoRequestHandler.cs" />
     <Compile Include="Broker\DefaultConsumeOffsetStore.cs" />
     <Compile Include="Broker\BrokerSetting.cs" />
-    <Compile Include="Broker\Client\ConsumerHeartbeatInfo.cs" />
+    <Compile Include="Broker\Client\ClientHeartbeatInfo.cs" />
     <Compile Include="Broker\Client\ConsumerGroup.cs" />
     <Compile Include="Broker\Client\ConsumerManager.cs" />
     <Compile Include="Broker\IConsumeOffsetStore.cs" />

@@ -1,9 +1,10 @@
 ﻿@model EQueue.AdminWeb.Models.SetQueueNextConsumeOffsetViewModel
 @{
-    ViewBag.Title = "设置队列消费进度";
+    ViewBag.Title = "Broker设置队列消费进度";
+    Layout = "~/Views/Shared/_BrokerLayout.cshtml";
 }
 <div>
-    @using (Html.BeginForm("SetQueueNextConsumeOffset", "Home", new { }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+    @using (Html.BeginForm("SetQueueNextConsumeOffset", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
     {
         <div class="form-group">
             <label class="col-sm-2 control-label" for="ConsumerGroup">ConsumerGroup：</label>

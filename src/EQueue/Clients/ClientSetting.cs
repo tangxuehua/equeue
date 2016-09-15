@@ -1,13 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Net;
 using ECommon.Socketing;
-using EQueue.Protocols;
 
 namespace EQueue.Clients
 {
     public class ClientSetting
     {
-        public ClientRole ClientRole { get; set; }
         public string ClientName { get; set; }
         public string ClusterName { get; set; }
         public IEnumerable<IPEndPoint> NameServerList { get; set; }

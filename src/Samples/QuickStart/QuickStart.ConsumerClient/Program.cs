@@ -36,7 +36,10 @@ namespace QuickStart.ConsumerClient
                 .RegisterEQueueComponents();
 
             var clusterName = ConfigurationManager.AppSettings["ClusterName"];
+            var consumerName = ConfigurationManager.AppSettings["ConsumerName"];
+            var consumerGroup = ConfigurationManager.AppSettings["ConsumerGroup"];
             var address = ConfigurationManager.AppSettings["NameServerAddress"];
+            var topic = ConfigurationManager.AppSettings["Topic"];
             var nameServerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var setting = new ConsumerSetting
@@ -49,8 +52,8 @@ namespace QuickStart.ConsumerClient
             var messageHandler = new MessageHandler();
             for (var i = 1; i <= clientCount; i++)
             {
-                new Consumer(ConfigurationManager.AppSettings["ConsumerGroup"], setting)
-                    .Subscribe(ConfigurationManager.AppSettings["Topic"])
+                new Consumer(consumerGroup, setting, consumerName)
+                    .Subscribe(topic)
                     .SetMessageHandler(messageHandler)
                     .Start();
             }

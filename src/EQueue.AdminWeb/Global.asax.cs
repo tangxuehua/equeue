@@ -7,7 +7,6 @@ using Autofac.Integration.Mvc;
 using ECommon.Autofac;
 using ECommon.Components;
 using ECommon.Configurations;
-using ECommon.Log4Net;
 
 namespace EQueue.AdminWeb
 {
@@ -26,7 +25,6 @@ namespace EQueue.AdminWeb
                 .UseLog4Net()
                 .UseJsonNet();
 
-            configuration.SetDefault<SendEmailService, SendEmailService>();
             configuration.SetDefault<MessageService, MessageService>();
             ObjectContainer.Resolve<MessageService>().Start();
             RegisterControllers();

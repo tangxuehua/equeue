@@ -9,7 +9,6 @@ using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Utilities;
 using EQueue.Protocols;
-using EQueue.Utils;
 
 namespace EQueue.Broker
 {
@@ -144,16 +143,24 @@ namespace EQueue.Broker
 
             return totalCount;
         }
-        public void CreateTopic(string topic, int initialQueueCount)
+        public IEnumerable<int> CreateTopic(string topic, int? initialQueueCount = null)
         {
             lock (_lockObj)
             {
                 Ensure.NotNullOrEmpty(topic, "topic");
-                Ensure.Positive(initialQueueCount, "initialQueueCount");
+
+                if (initialQueueCount != null)
+                {
+                    Ensure.Positive(initialQueueCount.Value, "initialQueueCount");
+                }
+                else
+                {
+                    initialQueueCount = BrokerController.Instance.Setting.TopicDefaultQueueCount;
+                }
 
                 if (IsTopicExist(topic))
                 {
-                    throw new ArgumentException(string.Format("Topic '{0}' already exist.", topic));
+                    return _queueDict.Values.Where(x => x.Topic == topic && !x.Setting.IsDeleted).Select(x => x.QueueId).ToList();
                 }
                 if (initialQueueCount > BrokerController.Instance.Setting.TopicMaxQueueCount)
                 {
@@ -164,6 +171,7 @@ namespace EQueue.Broker
                 {
                     LoadQueue(topic, index);
                 }
+                return _queueDict.Values.Where(x => x.Topic == topic && !x.Setting.IsDeleted).Select(x => x.QueueId).ToList();
             }
         }
         public void DeleteTopic(string topic)

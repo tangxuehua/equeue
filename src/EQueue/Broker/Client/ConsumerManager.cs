@@ -31,15 +31,13 @@ namespace EQueue.Broker.Client
         public void RegisterConsumer(string groupName, string consumerId, IEnumerable<string> subscriptionTopics, IEnumerable<MessageQueue> consumingQueues, ITcpConnection connection)
         {
             var consumerGroup = _consumerGroupDict.GetOrAdd(groupName, key => new ConsumerGroup(key));
-            consumerGroup.Register(consumerId, connection);
-            consumerGroup.UpdateConsumerSubscriptionTopics(consumerId, subscriptionTopics);
-            consumerGroup.UpdateConsumerConsumingQueues(consumerId, consumingQueues);
+            consumerGroup.RegisterConsumer(connection, consumerId, subscriptionTopics.ToList(), consumingQueues.ToList());
         }
-        public void RemoveConsumer(string consumerId)
+        public void RemoveConsumer(string connectionId)
         {
             foreach (var consumerGroup in _consumerGroupDict.Values)
             {
-                consumerGroup.RemoveConsumer(consumerId);
+                consumerGroup.RemoveConsumer(connectionId);
             }
         }
         public int GetConsumerGroupCount()

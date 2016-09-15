@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using EQueue.Broker.Storage;
 using EQueue.Protocols;
 
 namespace EQueue.Broker
@@ -24,7 +23,7 @@ namespace EQueue.Broker
         void DeleteQueue(string topic, int queueId);
         void SetProducerVisible(string topic, int queueId, bool visible);
         void SetConsumerVisible(string topic, int queueId, bool visible);
-        void CreateTopic(string topic, int initialQueueCount);
+        IEnumerable<int> CreateTopic(string topic, int? initialQueueCount);
         void DeleteTopic(string topic);
         IEnumerable<Queue> QueryQueues(string topic = null);
         IEnumerable<Queue> GetQueues(string topic, bool autoCreate = false);

@@ -11,8 +11,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickStart", "QuickStart", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuickStart.ProducerClient", "Samples\QuickStart\QuickStart.ProducerClient\QuickStart.ProducerClient.csproj", "{D93C0587-356F-4243-A039-F998F36D4DA6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuickStart.BrokerServer", "Samples\QuickStart\QuickStart.BrokerServer\QuickStart.BrokerServer.csproj", "{31A79375-9EA3-42E9-91EF-7803CB135AF2}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuickStart.ConsumerClient", "Samples\QuickStart\QuickStart.ConsumerClient\QuickStart.ConsumerClient.csproj", "{BC1219CF-C5E5-4385-AF55-E537706996AB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{33C6C286-E8C3-46C1-8132-3E6E88A42AAB}"
@@ -28,6 +26,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EQueue.MessageStorePerfTest
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuickStart.NameServer", "Samples\QuickStart\QuickStart.NameServer\QuickStart.NameServer.csproj", "{92EF689D-3622-4B59-B72D-A669F663AA4B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuickStart.BrokerServer1", "Samples\QuickStart\QuickStart.BrokerServer1\QuickStart.BrokerServer1.csproj", "{91D8A480-AF22-477F-9B84-1313D71ED6A6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuickStart.BrokerServer2", "Samples\QuickStart\QuickStart.BrokerServer2\QuickStart.BrokerServer2.csproj", "{31A79375-9EA3-42E9-91EF-7803CB135AF2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,10 +44,6 @@ Global
 		{D93C0587-356F-4243-A039-F998F36D4DA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D93C0587-356F-4243-A039-F998F36D4DA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D93C0587-356F-4243-A039-F998F36D4DA6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{31A79375-9EA3-42E9-91EF-7803CB135AF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{31A79375-9EA3-42E9-91EF-7803CB135AF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{31A79375-9EA3-42E9-91EF-7803CB135AF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{31A79375-9EA3-42E9-91EF-7803CB135AF2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BC1219CF-C5E5-4385-AF55-E537706996AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BC1219CF-C5E5-4385-AF55-E537706996AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC1219CF-C5E5-4385-AF55-E537706996AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -62,6 +60,14 @@ Global
 		{92EF689D-3622-4B59-B72D-A669F663AA4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{92EF689D-3622-4B59-B72D-A669F663AA4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{92EF689D-3622-4B59-B72D-A669F663AA4B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91D8A480-AF22-477F-9B84-1313D71ED6A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91D8A480-AF22-477F-9B84-1313D71ED6A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91D8A480-AF22-477F-9B84-1313D71ED6A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91D8A480-AF22-477F-9B84-1313D71ED6A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31A79375-9EA3-42E9-91EF-7803CB135AF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31A79375-9EA3-42E9-91EF-7803CB135AF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31A79375-9EA3-42E9-91EF-7803CB135AF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31A79375-9EA3-42E9-91EF-7803CB135AF2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -69,8 +75,9 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{E4BBD460-A437-4AC8-854D-AA7CA34B62F5} = {645B2898-D082-408D-BCD7-AC72A2092D33}
 		{D93C0587-356F-4243-A039-F998F36D4DA6} = {E4BBD460-A437-4AC8-854D-AA7CA34B62F5}
-		{31A79375-9EA3-42E9-91EF-7803CB135AF2} = {E4BBD460-A437-4AC8-854D-AA7CA34B62F5}
 		{BC1219CF-C5E5-4385-AF55-E537706996AB} = {E4BBD460-A437-4AC8-854D-AA7CA34B62F5}
 		{92EF689D-3622-4B59-B72D-A669F663AA4B} = {E4BBD460-A437-4AC8-854D-AA7CA34B62F5}
+		{91D8A480-AF22-477F-9B84-1313D71ED6A6} = {E4BBD460-A437-4AC8-854D-AA7CA34B62F5}
+		{31A79375-9EA3-42E9-91EF-7803CB135AF2} = {E4BBD460-A437-4AC8-854D-AA7CA34B62F5}
 	EndGlobalSection
 EndGlobal

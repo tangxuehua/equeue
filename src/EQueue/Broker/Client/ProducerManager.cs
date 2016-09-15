@@ -6,22 +6,18 @@ using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Socketing;
+using EQueue.Utils;
 
 namespace EQueue.Broker.Client
 {
     public class ProducerManager
     {
-        class ProducerHeartbeatInfo
+        class ProducerInfo
         {
-            public ITcpConnection Connection { get; private set; }
-            public DateTime LastHeartbeatTime { get; set; }
-
-            public ProducerHeartbeatInfo(ITcpConnection connection)
-            {
-                Connection = connection;
-            }
+            public string ProducerId;
+            public ClientHeartbeatInfo HeartbeatInfo;
         }
-        private readonly ConcurrentDictionary<string, ProducerHeartbeatInfo> _producerDict = new ConcurrentDictionary<string, ProducerHeartbeatInfo>();
+        private readonly ConcurrentDictionary<string /*connectionId*/, ProducerInfo> _producerInfoDict = new ConcurrentDictionary<string, ProducerInfo>();
         private readonly IScheduleService _scheduleService;
         private readonly ILogger _logger;
 
@@ -33,60 +29,69 @@ namespace EQueue.Broker.Client
 
         public void Start()
         {
-            _producerDict.Clear();
+            _producerInfoDict.Clear();
             _scheduleService.StartTask("ScanNotActiveProducer", ScanNotActiveProducer, 1000, 1000);
         }
         public void Shutdown()
         {
-            _producerDict.Clear();
+            _producerInfoDict.Clear();
             _scheduleService.StopTask("ScanNotActiveProducer");
         }
-        public void RegisterProducer(string producerId, ITcpConnection connection)
+        public void RegisterProducer(ITcpConnection connection, string producerId)
         {
-            _producerDict.AddOrUpdate(producerId, key =>
+            var connectionId = connection.RemotingEndPoint.ToAddress();
+            _producerInfoDict.AddOrUpdate(connectionId, key =>
             {
-                _logger.InfoFormat("Producer registered, producerId: {0}", key);
-                return new ProducerHeartbeatInfo(connection) { LastHeartbeatTime = DateTime.Now };
-            }, (key, existing) =>
+                var producerInfo = new ProducerInfo
+                {
+                    ProducerId = producerId,
+                    HeartbeatInfo = new ClientHeartbeatInfo(connection) { LastHeartbeatTime = DateTime.Now }
+                };
+                _logger.InfoFormat("Producer registered, producerId: {0}, connectionId: {1}", producerId, key);
+                return producerInfo;
+            }, (key, existingProducerInfo) =>
             {
-                existing.LastHeartbeatTime = DateTime.Now;
-                return existing;
+                existingProducerInfo.HeartbeatInfo.LastHeartbeatTime = DateTime.Now;
+                return existingProducerInfo;
             });
         }
-        public void RemoveProducer(string producerId)
+        public void RemoveProducer(string connectionId)
         {
-            ProducerHeartbeatInfo heartbeatInfo;
-            if (_producerDict.TryRemove(producerId, out heartbeatInfo))
+            ProducerInfo producerInfo;
+            if (_producerInfoDict.TryRemove(connectionId, out producerInfo))
             {
                 try
                 {
-                    heartbeatInfo.Connection.Close();
+                    producerInfo.HeartbeatInfo.Connection.Close();
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("Close tcp connection for producer client failed, producerId: {0}", producerId), ex);
+                    _logger.Error(string.Format("Close connection for producer failed, producerId: {0}, connectionId: {1}", producerInfo.ProducerId, connectionId), ex);
                 }
-                _logger.InfoFormat("Producer removed, producerId: {0}, lastHeartbeat time: {1}", producerId, heartbeatInfo.LastHeartbeatTime);
+                _logger.InfoFormat("Producer removed, producerId: {0}, connectionId: {1}, lastHeartbeat: {2}",
+                    producerInfo.ProducerId,
+                    connectionId,
+                    producerInfo.HeartbeatInfo.LastHeartbeatTime);
             }
         }
         public int GetProducerCount()
         {
-            return _producerDict.Count;
+            return _producerInfoDict.Count;
         }
         public IEnumerable<string> GetAllProducers()
         {
-            return _producerDict.Keys.ToList();
+            return _producerInfoDict.Values.Select(x => x.ProducerId).ToList();
         }
         public bool IsProducerExist(string producerId)
         {
-            return _producerDict.ContainsKey(producerId);
+            return _producerInfoDict.Values.Any(x => x.ProducerId == producerId);
         }
 
         private void ScanNotActiveProducer()
         {
-            foreach (var entry in _producerDict)
+            foreach (var entry in _producerInfoDict)
             {
-                if ((DateTime.Now - entry.Value.LastHeartbeatTime).TotalMilliseconds >= BrokerController.Instance.Setting.ProducerExpiredTimeout)
+                if (entry.Value.HeartbeatInfo.IsTimeout(BrokerController.Instance.Setting.ProducerExpiredTimeout))
                 {
                     RemoveProducer(entry.Key);
                 }
