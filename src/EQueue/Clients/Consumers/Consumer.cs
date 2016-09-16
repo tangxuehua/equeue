@@ -1,20 +1,13 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using ECommon.Components;
-using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
-using ECommon.Scheduling;
 using ECommon.Serializing;
-using ECommon.Utilities;
 using EQueue.Protocols;
-using EQueue.Utils;
+using EQueue.Protocols.Brokers;
 
 namespace EQueue.Clients.Consumers
 {
@@ -170,7 +163,7 @@ namespace EQueue.Clients.Consumers
                     var heartbeatData = new ConsumerHeartbeatData(clientId, GroupName, _subscriptionTopics.Keys, messageQueues);
                     var data = _binarySerializer.Serialize(heartbeatData);
 
-                    remotingClient.InvokeOneway(new RemotingRequest((int)RequestCode.ConsumerHeartbeat, data));
+                    remotingClient.InvokeOneway(new RemotingRequest((int)BrokerRequestCode.ConsumerHeartbeat, data));
                 }
                 catch (Exception ex)
                 {

@@ -1,0 +1,96 @@
+﻿@model EQueue.AdminWeb.Models.TopicConsumeInfoViewModel
+@{
+    ViewBag.Title = "Broker消费信息";
+    Layout = "~/Views/Shared/_BrokerLayout.cshtml";
+}
+<div>
+    @using (Html.BeginForm("ConsumeInfo", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
+    {
+        <div class="form-group">
+            <label class="sr-only" for="Group"></label>
+            @Html.TextBoxFor(m => m.Group, new { @class = "form-control", placeholder = "Group" })
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="Topic"></label>
+            @Html.TextBoxFor(m => m.Topic, new { @class = "form-control", placeholder = "Topic" })
+        </div>
+        <button type="submit" class="btn btn-default">查询</button>
+    }
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th width="15%" class="vertical-center">
+                    ConsumerGroup
+                </th>
+                <th width="15%" class="vertical-center">
+                    Topic
+                </th>
+                <th width="10%" class="text-center vertical-center">
+                    QueueId
+                </th>
+                <th width="10%" class="text-center vertical-center">
+                    CurrentOffset
+                </th>
+                <th width="10%" class="text-center vertical-center">
+                    消费进度
+                </th>
+                <th width="15%" class="text-center vertical-center">
+                    消息堆积数
+                </th>
+                <th width="15%" class="text-center vertical-center">
+                    消费者个数
+                </th>
+                <th width="10%" class="vertical-center">
+                    操作
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.TopicConsumeInfoList)
+            {
+                <tr>
+                    <td class="vertical-center">
+                        @item.ConsumerGroup
+                    </td>
+                    <td class="vertical-center">
+                        @item.Topic
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.QueueId
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.QueueCurrentOffset
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ConsumedOffset
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.QueueNotConsumeCount
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.OnlineConsumerCount
+                    </td>
+                    <td class="vertical-center">
+                        <div class="dropdown">
+                            <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+                                操作
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    @Html.ActionLink("设置队列消费进度", "SetQueueNextConsumeOffset", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName, consumerGroup = item.ConsumerGroup, topic = item.Topic, queueId = item.QueueId })
+                                </li>
+                                @if (item.OnlineConsumerCount == 0)
+                                {
+                                    <li>
+                                        @Html.ActionLink("删除消费者分组", "DeleteConsumerGroup", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName, consumerGroup = item.ConsumerGroup })
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

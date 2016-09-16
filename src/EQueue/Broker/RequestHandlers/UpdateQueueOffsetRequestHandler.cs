@@ -1,7 +1,7 @@
 ﻿using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
-using EQueue.Protocols;
+using EQueue.Protocols.Brokers.Requests;
 
 namespace EQueue.Broker.RequestHandlers
 {

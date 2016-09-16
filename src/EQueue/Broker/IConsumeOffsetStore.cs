@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using EQueue.Protocols;
+using EQueue.Protocols.Brokers;
 
 namespace EQueue.Broker
 {
@@ -17,6 +17,6 @@ namespace EQueue.Broker
         void SetConsumeNextOffset(string topic, int queueId, string group, long nextOffset);
         bool TryFetchNextConsumeOffset(string topic, int queueId, string group, out long nextOffset);
         IEnumerable<QueueKey> GetConsumeKeys();
-        IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic);
+        IEnumerable<TopicConsumeInfo> GetTopicConsumeInfoList(string groupName, string topic);
     }
 }

@@ -6,6 +6,7 @@ using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Socketing;
 using EQueue.Protocols;
+using EQueue.Protocols.Brokers;
 using EQueue.Utils;
 
 namespace EQueue.Broker.Client
@@ -120,10 +121,6 @@ namespace EQueue.Broker.Client
         public IEnumerable<string> GetConsumerIdsForTopic(string topic)
         {
             return _consumerInfoDict.Where(x => x.Value.SubscriptionTopics.Any(y => y == topic)).Select(z => z.Value.ConsumerId);
-        }
-        public IEnumerable<string> QueryConsumerIdsForTopic(string topic)
-        {
-            return _consumerInfoDict.Where(x => x.Value.SubscriptionTopics.Any(y => y.Contains(topic))).Select(z => z.Value.ConsumerId);
         }
         public bool IsConsumerExistForQueue(string topic, int queueId)
         {

@@ -8,7 +8,7 @@ using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Utilities;
-using EQueue.Protocols;
+using EQueue.Protocols.Brokers;
 
 namespace EQueue.Broker
 {
@@ -54,6 +54,35 @@ namespace EQueue.Broker
         public IEnumerable<Queue> GetAllQueues()
         {
             return _queueDict.Values.Where(x => !x.Setting.IsDeleted).ToList();
+        }
+        public IList<TopicQueueInfo> GetTopicQueueInfoList(string topic = null)
+        {
+            var topicQueueInfoList = new List<TopicQueueInfo>();
+            var queueList = default(IList<Queue>);
+            if (string.IsNullOrEmpty(topic))
+            {
+                queueList = GetAllQueues().ToList();
+            }
+            else
+            {
+                queueList = GetQueues(topic).ToList();
+            }
+            var foundQueues = queueList.OrderBy(x => x.Topic).ThenBy(x => x.QueueId);
+            foreach (var queue in foundQueues)
+            {
+                var topicQueueInfo = new TopicQueueInfo();
+                topicQueueInfo.Topic = queue.Topic;
+                topicQueueInfo.QueueId = queue.QueueId;
+                topicQueueInfo.QueueCurrentOffset = queue.NextOffset - 1;
+                topicQueueInfo.QueueMinOffset = queue.GetMinQueueOffset();
+                topicQueueInfo.QueueMinConsumedOffset = _consumeOffsetStore.GetMinConsumedOffset(queue.Topic, queue.QueueId);
+                topicQueueInfo.ProducerVisible = queue.Setting.ProducerVisible;
+                topicQueueInfo.ConsumerVisible = queue.Setting.ConsumerVisible;
+                topicQueueInfo.QueueNotConsumeCount = topicQueueInfo.CalculateQueueNotConsumeCount();
+                topicQueueInfoList.Add(topicQueueInfo);
+            }
+
+            return topicQueueInfoList;
         }
         public int GetAllQueueCount()
         {
@@ -273,21 +302,17 @@ namespace EQueue.Broker
         {
             return GetQueue(new QueueKey(topic, queueId));
         }
-        public IEnumerable<Queue> QueryQueues(string topic = null)
-        {
-            return _queueDict.Values.Where(x => (string.IsNullOrEmpty(topic) || x.Topic.Contains(topic)) && !x.Setting.IsDeleted);
-        }
         public IEnumerable<Queue> GetQueues(string topic, bool autoCreate = false)
         {
             lock (_lockObj)
             {
-                var queues = _queueDict.Values.Where(x => x.Topic == topic);
+                var queues = _queueDict.Values.Where(x => x.Topic == topic && !x.Setting.IsDeleted);
                 if (queues.IsEmpty() && autoCreate)
                 {
                     CreateTopic(topic, BrokerController.Instance.Setting.TopicDefaultQueueCount);
-                    queues = _queueDict.Values.Where(x => x.Topic == topic);
+                    queues = _queueDict.Values.Where(x => x.Topic == topic && !x.Setting.IsDeleted);
                 }
-                return queues.Where(x => !x.Setting.IsDeleted);
+                return queues;
             }
         }
 

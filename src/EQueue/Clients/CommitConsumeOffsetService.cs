@@ -6,6 +6,8 @@ using ECommon.Serializing;
 using ECommon.Utilities;
 using EQueue.Clients.Consumers;
 using EQueue.Protocols;
+using EQueue.Protocols.Brokers;
+using EQueue.Protocols.Brokers.Requests;
 using EQueue.Utils;
 
 namespace EQueue.Clients
@@ -66,7 +68,7 @@ namespace EQueue.Clients
             var remotingClient = brokerConnection.AdminRemotingClient;
 
             var request = new UpdateQueueOffsetRequest(_consumer.GroupName, messageQueue, consumeOffset);
-            var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
+            var remotingRequest = new RemotingRequest((int)BrokerRequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
             var brokerAddress = remotingClient.ServerEndPoint.ToAddress();
 
             try

@@ -2,6 +2,7 @@
 
 namespace EQueue.Protocols
 {
+    [Serializable]
     public class MessageStoreResult
     {
         public string MessageId { get; private set; }
@@ -13,6 +14,7 @@ namespace EQueue.Protocols
         public DateTime CreatedTime { get; private set; }
         public DateTime StoredTime { get; private set; }
 
+        public MessageStoreResult() { }
         public MessageStoreResult(string messageId, int code, string topic, int queueId, long queueOffset, DateTime createdTime, DateTime storedTime, string tag = null)
         {
             MessageId = messageId;

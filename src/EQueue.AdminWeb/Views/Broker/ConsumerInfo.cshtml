@@ -40,9 +40,6 @@
                 <th width="10%" class="text-center vertical-center">
                     消息堆积数
                 </th>
-                <th width="10%" class="vertical-center">
-                    操作
-                </th>
             </tr>
         </thead>
         <tbody>
@@ -68,29 +65,7 @@
                         @item.ConsumedOffset
                     </td>
                     <td class="text-center vertical-center">
-                        @(item.QueueCurrentOffset - item.ConsumedOffset)
-                    </td>
-                    <td class="vertical-center">
-                        <div class="dropdown">
-                            <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
-                                操作
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu">
-                                @if (!string.IsNullOrEmpty(item.ConsumerId))
-                                {
-                                    <li>
-                                        @Html.ActionLink("设置队列消费进度", "SetQueueNextConsumeOffset", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName, consumerGroup = item.ConsumerGroup, topic = item.Topic, queueId = item.QueueId })
-                                    </li>
-                                }
-                                @if (string.IsNullOrEmpty(item.ConsumerId))
-                                {
-                                    <li>
-                                        @Html.ActionLink("删除消费者分组", "DeleteConsumerGroup", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName, consumerGroup = item.ConsumerGroup })
-                                    </li>
-                                }
-                            </ul>
-                        </div>
+                        @item.QueueNotConsumeCount
                     </td>
                 </tr>
             }

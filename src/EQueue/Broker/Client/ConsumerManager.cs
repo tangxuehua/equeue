@@ -48,7 +48,7 @@ namespace EQueue.Broker.Client
         {
             return _consumerGroupDict.Values.ToList();
         }
-        public int GetConsumerCount()
+        public int GetAllConsumerCount()
         {
             return GetAllConsumerGroups().Sum(x => x.GetConsumerCount());
         }
@@ -60,6 +60,15 @@ namespace EQueue.Broker.Client
                 return consumerGroup;
             }
             return null;
+        }
+        public int GetConsumerCount(string groupName)
+        {
+            ConsumerGroup consumerGroup;
+            if (_consumerGroupDict.TryGetValue(groupName, out consumerGroup))
+            {
+                return consumerGroup.GetConsumerCount();
+            }
+            return 0;
         }
         public bool IsConsumerActive(string consumerGroup, string consumerId)
         {
@@ -77,10 +86,6 @@ namespace EQueue.Broker.Client
                 }
             }
             return false;
-        }
-        public IEnumerable<ConsumerGroup> QueryConsumerGroup(string groupName)
-        {
-            return _consumerGroupDict.Where(x => x.Key.Contains(groupName)).Select(x => x.Value);
         }
 
         private void ScanNotActiveConsumer()

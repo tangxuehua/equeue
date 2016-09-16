@@ -5,8 +5,7 @@ using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Serializing;
 using EQueue.Broker.Storage;
-using EQueue.Protocols;
-using EQueue.Utils;
+using EQueue.Protocols.Brokers;
 
 namespace EQueue.Broker
 {

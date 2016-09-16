@@ -93,18 +93,7 @@
                         @item.QueueMinConsumedOffset
                     </td>
                     <td class="text-center vertical-center">
-                        @if (item.QueueMinConsumedOffset >= 0)
-                        {
-                            @(item.QueueCurrentOffset - item.QueueMinConsumedOffset)
-                        }
-                        else if (item.QueueCurrentOffset >= 0 && item.QueueMinOffset >= 0)
-                        {
-                            @(item.QueueCurrentOffset - item.QueueMinOffset + 1)
-                        }
-                        else
-                        {
-                            @Html.Raw("0")
-                        }
+                        @item.QueueNotConsumeCount
                     </td>
                     <td class="text-center vertical-center">
                         @item.ProducerVisible

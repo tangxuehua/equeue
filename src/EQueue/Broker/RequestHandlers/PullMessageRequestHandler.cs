@@ -10,6 +10,7 @@ using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.Storage;
 using EQueue.Protocols;
+using EQueue.Protocols.Brokers.Requests;
 using EQueue.Utils;
 
 namespace EQueue.Broker.RequestHandlers

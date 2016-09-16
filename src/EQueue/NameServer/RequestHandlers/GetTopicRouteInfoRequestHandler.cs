@@ -1,26 +1,26 @@
 ﻿using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
-using EQueue.Protocols;
+using EQueue.Protocols.NameServers.Requests;
 using EQueue.Utils;
 
 namespace EQueue.NameServer.RequestHandlers
 {
     public class GetTopicRouteInfoRequestHandler : IRequestHandler
     {
-        private RouteInfoManager _routeInfoManager;
+        private ClusterManager _clusterManager;
         private IBinarySerializer _binarySerializer;
 
         public GetTopicRouteInfoRequestHandler(NameServerController nameServerController)
         {
-            _routeInfoManager = nameServerController.RouteInfoManager;
+            _clusterManager = nameServerController.ClusterManager;
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var request = _binarySerializer.Deserialize<GetTopicRouteInfoRequest>(remotingRequest.Body);
-            var routeInfoList = _routeInfoManager.GetTopicRouteInfo(request);
+            var routeInfoList = _clusterManager.GetTopicRouteInfo(request);
             var data = _binarySerializer.Serialize(routeInfoList);
             return RemotingResponseFactory.CreateResponse(remotingRequest, data);
         }

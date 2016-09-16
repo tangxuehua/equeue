@@ -7,18 +7,18 @@ namespace EQueue.NameServer.RequestHandlers
 {
     public class GetAllClustersRequestHandler : IRequestHandler
     {
-        private RouteInfoManager _routeInfoManager;
+        private ClusterManager _clusterManager;
         private IBinarySerializer _binarySerializer;
 
         public GetAllClustersRequestHandler(NameServerController nameServerController)
         {
-            _routeInfoManager = nameServerController.RouteInfoManager;
+            _clusterManager = nameServerController.ClusterManager;
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
-            var clusterList = _routeInfoManager.GetAllClusters();
+            var clusterList = _clusterManager.GetAllClusters();
             var data = _binarySerializer.Serialize(clusterList);
             return RemotingResponseFactory.CreateResponse(remotingRequest, data);
         }

@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using EQueue.Protocols;
+using EQueue.Protocols.Brokers;
 
 namespace EQueue.AdminWeb.Models
 {

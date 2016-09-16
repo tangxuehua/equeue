@@ -15,6 +15,8 @@ using ECommon.Serializing;
 using ECommon.Utilities;
 using EQueue.Clients.Consumers;
 using EQueue.Protocols;
+using EQueue.Protocols.Brokers;
+using EQueue.Protocols.Brokers.Requests;
 using EQueue.Utils;
 
 namespace EQueue.Clients
@@ -199,7 +201,7 @@ namespace EQueue.Clients
                     ConsumeFromWhere = _consumer.Setting.ConsumeFromWhere
                 };
                 var data = SerializePullMessageRequest(request);
-                var remotingRequest = new RemotingRequest((int)RequestCode.PullMessage, data);
+                var remotingRequest = new RemotingRequest((int)BrokerRequestCode.PullMessage, data);
 
                 pullRequest.PullStartTime = DateTime.Now;
                 remotingClient.InvokeAsync(remotingRequest, _consumer.Setting.PullRequestTimeoutMilliseconds).ContinueWith(pullTask =>
@@ -400,7 +402,7 @@ namespace EQueue.Clients
                 pullRequest.ProcessQueue.Reset();
 
                 var request = new UpdateQueueOffsetRequest(_consumer.GroupName, pullRequest.MessageQueue, newOffset - 1);
-                var remotingRequest = new RemotingRequest((int)RequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
+                var remotingRequest = new RemotingRequest((int)BrokerRequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
                 remotingClient.InvokeOneway(remotingRequest);
                 _logger.InfoFormat("Resetted nextConsumeOffset, [pullRequest:{0}, oldOffset:{1}, newOffset:{2}]", pullRequest, oldOffset, newOffset);
             }

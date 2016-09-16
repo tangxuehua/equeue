@@ -57,6 +57,18 @@ namespace EQueue.AdminWeb.Controllers
                 TopicQueueInfos = topicQueueInfos
             });
         }
+        public ActionResult ConsumeInfo(string clusterName, string brokerName, string group, string topic)
+        {
+            ViewBag.ClusterName = clusterName;
+            ViewBag.BrokerName = brokerName;
+            var topicConsumeInfoList = _messageService.GetTopicConsumeInfo(clusterName, brokerName, group, topic);
+            return View(new TopicConsumeInfoViewModel
+            {
+                Group = group,
+                Topic = topic,
+                TopicConsumeInfoList = topicConsumeInfoList
+            });
+        }
         public ActionResult ProducerInfo(string clusterName, string brokerName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;

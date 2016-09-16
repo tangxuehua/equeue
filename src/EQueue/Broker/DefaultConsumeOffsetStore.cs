@@ -8,9 +8,7 @@ using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Serializing;
-using ECommon.Utilities;
-using EQueue.Protocols;
-using EQueue.Utils;
+using EQueue.Protocols.Brokers;
 
 namespace EQueue.Broker
 {
@@ -151,26 +149,25 @@ namespace EQueue.Broker
 
             return keyList;
         }
-        public IEnumerable<TopicConsumeInfo> QueryTopicConsumeInfos(string groupName, string topic)
+        public IEnumerable<TopicConsumeInfo> GetTopicConsumeInfoList(string groupName, string topic)
         {
-            var entryList = _groupConsumeOffsetsDict.Where(x => string.IsNullOrEmpty(groupName) || x.Key.Contains(groupName));
             var topicConsumeInfoList = new List<TopicConsumeInfo>();
-
-            foreach (var entry in entryList)
+            ConcurrentDictionary<QueueKey, long> found;
+            if (_groupConsumeOffsetsDict.TryGetValue(groupName, out found))
             {
-                foreach (var subEntry in entry.Value.Where(x => string.IsNullOrEmpty(topic) || x.Key.Topic.Contains(topic)))
+                foreach (var entry in found.Where(x => x.Key.Topic == topic))
                 {
-                    var queueKey = subEntry.Key;
+                    var queueKey = entry.Key;
+                    var consumedOffset = entry.Value;
                     topicConsumeInfoList.Add(new TopicConsumeInfo
                     {
-                        ConsumerGroup = entry.Key,
+                        ConsumerGroup = groupName,
                         Topic = queueKey.Topic,
                         QueueId = queueKey.QueueId,
-                        ConsumedOffset = subEntry.Value
+                        ConsumedOffset = consumedOffset
                     });
                 }
             }
-
             return topicConsumeInfoList;
         }
         public void SetConsumeNextOffset(string topic, int queueId, string group, long nextOffset)

@@ -1,10 +1,9 @@
 ﻿using System.Collections.Generic;
-using System.Text;
 using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Broker.Exceptions;
-using EQueue.Protocols;
+using EQueue.Protocols.Brokers.Requests;
 using EQueue.Utils;
 
 namespace EQueue.Broker.RequestHandlers.Admin

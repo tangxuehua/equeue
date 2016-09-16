@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -17,8 +16,10 @@ using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.RequestHandlers;
 using EQueue.Broker.RequestHandlers.Admin;
-using EQueue.Clients;
 using EQueue.Protocols;
+using EQueue.Protocols.Brokers;
+using EQueue.Protocols.NameServers;
+using EQueue.Protocols.NameServers.Requests;
 using EQueue.Utils;
 
 namespace EQueue.Broker
@@ -219,7 +220,7 @@ namespace EQueue.Broker
             statisticInfo.TotalUnConsumedMessageCount = _queueStore.GetTotalUnConusmedMessageCount();
             statisticInfo.ConsumerGroupCount = _consumeOffsetStore.GetConsumerGroupCount();
             statisticInfo.ProducerCount = _producerManager.GetProducerCount();
-            statisticInfo.ConsumerCount = _consumerManager.GetConsumerCount();
+            statisticInfo.ConsumerCount = _consumerManager.GetAllConsumerCount();
             statisticInfo.MessageChunkCount = _messageStore.ChunkCount;
             statisticInfo.MessageMinChunkNum = _messageStore.MinChunkNum;
             statisticInfo.MessageMaxChunkNum = _messageStore.MaxChunkNum;
@@ -239,47 +240,31 @@ namespace EQueue.Broker
         }
         private void RegisterRequestHandlers()
         {
-            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ProducerHeartbeat, new ProducerHeartbeatRequestHandler(this));
-            _producerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SendMessage, new SendMessageRequestHandler(this));
+            _producerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.ProducerHeartbeat, new ProducerHeartbeatRequestHandler(this));
+            _producerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SendMessage, new SendMessageRequestHandler(this));
 
-            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
-            _consumerSocketRemotingServer.RegisterRequestHandler((int)RequestCode.PullMessage, new PullMessageRequestHandler());
+            _consumerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
+            _consumerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.PullMessage, new PullMessageRequestHandler());
 
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueIdsForProducer, new GetTopicQueueIdsForProducerRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetTopicQueueIdsForConsumer, new GetTopicQueueIdsForConsumerRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryGroupConsumer, new QueryConsumerRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.UpdateQueueOffsetRequest, new UpdateQueueOffsetRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetTopicQueueIdsForProducer, new GetTopicQueueIdsForProducerRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetTopicQueueIdsForConsumer, new GetTopicQueueIdsForConsumerRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetConsumerIdsForTopic, new GetConsumerIdsForTopicRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.UpdateQueueOffsetRequest, new UpdateQueueOffsetRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetTopicConsumeInfo, new GetTopicConsumeInfoRequestHandler());
 
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryBrokerStatisticInfo, new QueryBrokerStatisticInfoRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.CreateTopic, new CreateTopicRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.DeleteTopic, new DeleteTopicRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryTopicQueueInfo, new QueryTopicQueueInfoRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryProducerInfo, new QueryProducerInfoRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.QueryConsumerInfo, new QueryConsumerInfoRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.AddQueue, new AddQueueRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.DeleteQueue, new DeleteQueueRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SetProducerVisible, new SetQueueProducerVisibleRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SetConsumerVisible, new SetQueueConsumerVisibleRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.GetMessageDetail, new GetMessageDetailRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.SetQueueNextConsumeOffset, new SetQueueNextConsumeOffsetRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)RequestCode.DeleteConsumerGroup, new DeleteConsumerGroupRequestHandler());
-        }
-        private IDictionary<string, IList<QueueInfo>> GetTopicRouteInfo()
-        {
-            var topicRouteInfo = new Dictionary<string, IList<QueueInfo>>();
-
-            var groupList = _queueStore.GetAllQueues().GroupBy(x => x.Topic);
-            foreach (var group in groupList)
-            {
-                topicRouteInfo.Add(group.Key, group.Select(x => new QueueInfo
-                {
-                    QueueId = x.QueueId,
-                    ProducerVisible = x.Setting.ProducerVisible,
-                    ConsumerVisible = x.Setting.ConsumerVisible
-                }).ToList());
-            }
-
-            return topicRouteInfo;
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetBrokerStatisticInfo, new GetBrokerStatisticInfoRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.CreateTopic, new CreateTopicRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.DeleteTopic, new DeleteTopicRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetTopicQueueInfo, new GetTopicQueueInfoRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetProducerInfo, new GetProducerListRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetConsumerList, new GetConsumerListRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.AddQueue, new AddQueueRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.DeleteQueue, new DeleteQueueRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetProducerVisible, new SetQueueProducerVisibleRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetConsumerVisible, new SetQueueConsumerVisibleRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetMessageDetail, new GetMessageDetailRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetQueueNextConsumeOffset, new SetQueueNextConsumeOffsetRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.DeleteConsumerGroup, new DeleteConsumerGroupRequestHandler());
         }
         private void StartAllNameServerClients()
         {
@@ -297,12 +282,13 @@ namespace EQueue.Broker
         }
         private void RegisterBrokerToAllNameServers()
         {
-            var topicRouteInfo = GetTopicRouteInfo();
+            var topicQueueInfoList = _queueStore.GetTopicQueueInfoList();
             var request = new BrokerRegistrationRequest
             {
                 BrokerInfo = Setting.BrokerInfo,
-                QueueInfoDict = topicRouteInfo
+                TopicQueueInfoList = topicQueueInfoList
             };
+            //TODO
             foreach (var remotingClient in _nameServerRemotingClientList)
             {
                 RegisterBrokerToNameServer(request, remotingClient);
@@ -325,7 +311,7 @@ namespace EQueue.Broker
             try
             {
                 var data = _binarySerializer.Serialize(request);
-                var remotingRequest = new RemotingRequest((int)RequestCode.RegisterBroker, data);
+                var remotingRequest = new RemotingRequest((int)NameServerRequestCode.RegisterBroker, data);
                 var remotingResponse = remotingClient.InvokeSync(remotingRequest, 5 * 1000);
                 if (remotingResponse.Code != ResponseCode.Success)
                 {
@@ -343,7 +329,7 @@ namespace EQueue.Broker
             try
             {
                 var data = _binarySerializer.Serialize(request);
-                var remotingRequest = new RemotingRequest((int)RequestCode.UnregisterBroker, data);
+                var remotingRequest = new RemotingRequest((int)NameServerRequestCode.UnregisterBroker, data);
                 var remotingResponse = remotingClient.InvokeSync(remotingRequest, 5 * 1000);
                 if (remotingResponse.Code != ResponseCode.Success)
                 {

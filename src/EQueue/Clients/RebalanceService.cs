@@ -10,6 +10,8 @@ using ECommon.Scheduling;
 using ECommon.Serializing;
 using EQueue.Clients.Consumers;
 using EQueue.Protocols;
+using EQueue.Protocols.Brokers;
+using EQueue.Protocols.Brokers.Requests;
 using EQueue.Utils;
 
 namespace EQueue.Clients
@@ -108,8 +110,8 @@ namespace EQueue.Clients
             {
                 throw new Exception("QueryGroupConsumers, no available broker found.");
             }
-            var queryConsumerRequest = _binarySerializer.Serialize(new QueryConsumerRequest(_consumer.GroupName, topic));
-            var remotingRequest = new RemotingRequest((int)RequestCode.QueryGroupConsumer, queryConsumerRequest);
+            var request = _binarySerializer.Serialize(new GetConsumerIdsForTopicRequest(_consumer.GroupName, topic));
+            var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetConsumerIdsForTopic, request);
             var remotingResponse = brokerConnection.AdminRemotingClient.InvokeSync(remotingRequest, 1000 * 5);
             if (remotingResponse.Code != ResponseCode.Success)
             {

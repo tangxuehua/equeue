@@ -8,6 +8,8 @@ using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Utilities;
 using EQueue.Protocols;
+using EQueue.Protocols.Brokers;
+using EQueue.Protocols.Brokers.Requests;
 using EQueue.Utils;
 
 namespace EQueue.Clients.Producers
@@ -214,7 +216,7 @@ namespace EQueue.Clients.Producers
                 try
                 {
                     var data = Encoding.UTF8.GetBytes(clientId);
-                    remotingClient.InvokeOneway(new RemotingRequest((int)RequestCode.ProducerHeartbeat, data));
+                    remotingClient.InvokeOneway(new RemotingRequest((int)BrokerRequestCode.ProducerHeartbeat, data));
                 }
                 catch (Exception ex)
                 {
@@ -268,7 +270,7 @@ namespace EQueue.Clients.Producers
             {
                 throw new Exception("Message size cannot exceed max message size:" + Setting.MessageMaxSize);
             }
-            return new RemotingRequest((int)RequestCode.SendMessage, data);
+            return new RemotingRequest((int)BrokerRequestCode.SendMessage, data);
         }
 
         #endregion

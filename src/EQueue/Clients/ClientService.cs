@@ -16,6 +16,9 @@ using ECommon.Utilities;
 using EQueue.Clients.Consumers;
 using EQueue.Clients.Producers;
 using EQueue.Protocols;
+using EQueue.Protocols.Brokers;
+using EQueue.Protocols.NameServers;
+using EQueue.Protocols.NameServers.Requests;
 using EQueue.Utils;
 
 namespace EQueue.Clients
@@ -197,7 +200,7 @@ namespace EQueue.Clients
                 OnlyFindMaster = _setting.OnlyFindMasterBroker
             };
             var data = _binarySerializer.Serialize(request);
-            var remotingRequest = new RemotingRequest((int)RequestCode.GetClusterBrokers, data);
+            var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetClusterBrokers, data);
             var remotingResponse = nameServerRemotingClient.InvokeSync(remotingRequest, 5 * 1000);
             if (remotingResponse.Code != ResponseCode.Success)
             {
@@ -308,7 +311,7 @@ namespace EQueue.Clients
                 Topic = topic
             };
             var data = _binarySerializer.Serialize(request);
-            var remotingRequest = new RemotingRequest((int)RequestCode.GetTopicRouteInfo, data);
+            var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetTopicRouteInfo, data);
             var remotingResponse = nameServerRemotingClient.InvokeSync(remotingRequest, 5 * 1000);
             if (remotingResponse.Code != ResponseCode.Success)
             {
@@ -381,7 +384,7 @@ namespace EQueue.Clients
 
             if (_producer != null && _producer.ResponseHandler != null)
             {
-                remotingClient.RegisterResponseHandler((int)RequestCode.SendMessage, _producer.ResponseHandler);
+                remotingClient.RegisterResponseHandler((int)BrokerRequestCode.SendMessage, _producer.ResponseHandler);
             }
 
             brokerConnection.Start();

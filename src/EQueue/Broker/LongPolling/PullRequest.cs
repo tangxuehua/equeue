@@ -1,6 +1,6 @@
 ﻿using System;
 using ECommon.Remoting;
-using EQueue.Protocols;
+using EQueue.Protocols.Brokers.Requests;
 
 namespace EQueue.Broker.LongPolling
 {
