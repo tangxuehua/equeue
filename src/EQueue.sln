@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{645B
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickStart", "QuickStart", "{E4BBD460-A437-4AC8-854D-AA7CA34B62F5}"
 	ProjectSection(SolutionItems) = preProject
-		README.txt = README.txt
+		Samples\QuickStart\README.txt = Samples\QuickStart\README.txt
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuickStart.ProducerClient", "Samples\QuickStart\QuickStart.ProducerClient\QuickStart.ProducerClient.csproj", "{D93C0587-356F-4243-A039-F998F36D4DA6}"
