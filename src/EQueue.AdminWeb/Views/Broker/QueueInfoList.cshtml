@@ -13,7 +13,7 @@
     }
 </style>
 <div>
-    @using (Html.BeginForm("QueueInfo", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline header-form", role = "form" }))
+    @using (Html.BeginForm("QueueInfoList", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline header-form", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="Topic"></label>

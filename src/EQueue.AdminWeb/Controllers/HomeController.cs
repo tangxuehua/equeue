@@ -31,7 +31,7 @@ namespace EQueue.AdminWeb.Controllers
                 BrokerList = brokerList
             });
         }
-        public ActionResult QueueInfo(string clusterName, string topic)
+        public ActionResult QueueInfoList(string clusterName, string topic)
         {
             ViewBag.ClusterName = clusterName;
             var topicQueueInfoList = _messageService.GetTopicQueueInfoList(clusterName, topic);
@@ -41,7 +41,7 @@ namespace EQueue.AdminWeb.Controllers
                 TopicQueueInfoList = topicQueueInfoList
             });
         }
-        public ActionResult ConsumeInfo(string clusterName, string group, string topic)
+        public ActionResult ConsumeInfoList(string clusterName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
             var topicConsumeInfoList = _messageService.GetTopicConsumeInfoList(clusterName, group, topic);
@@ -52,7 +52,7 @@ namespace EQueue.AdminWeb.Controllers
                 TopicConsumeInfoList = topicConsumeInfoList
             });
         }
-        public ActionResult ProducerInfo(string clusterName, string group, string topic)
+        public ActionResult ProducerList(string clusterName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
             var producerList = _messageService.GetProducerInfoList(clusterName);
@@ -61,7 +61,7 @@ namespace EQueue.AdminWeb.Controllers
                 ProducerList = producerList
             });
         }
-        public ActionResult ConsumerInfo(string clusterName, string group, string topic)
+        public ActionResult ConsumerList(string clusterName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
             var consumerList = _messageService.GetConsumerInfoList(clusterName, group, topic);
@@ -74,6 +74,7 @@ namespace EQueue.AdminWeb.Controllers
         }
         public ActionResult Message(string clusterName, string searchMessageId)
         {
+            ViewBag.ClusterName = clusterName;
             if (string.IsNullOrWhiteSpace(searchMessageId))
             {
                 return View(new MessageViewModel());

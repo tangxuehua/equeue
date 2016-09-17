@@ -46,7 +46,7 @@ namespace EQueue.AdminWeb.Controllers
             _messageService.DeleteTopic(clusterName, brokerName, topic);
             return RedirectToAction("QueueInfo", new { ClusterName = clusterName, BrokerName = brokerName });
         }
-        public ActionResult QueueInfo(string clusterName, string brokerName, string topic)
+        public ActionResult QueueInfoList(string clusterName, string brokerName, string topic)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
@@ -57,7 +57,7 @@ namespace EQueue.AdminWeb.Controllers
                 TopicQueueInfoList = topicQueueInfoList
             });
         }
-        public ActionResult ConsumeInfo(string clusterName, string brokerName, string group, string topic)
+        public ActionResult ConsumeInfoList(string clusterName, string brokerName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
@@ -69,7 +69,7 @@ namespace EQueue.AdminWeb.Controllers
                 TopicConsumeInfoList = topicConsumeInfoList
             });
         }
-        public ActionResult ProducerInfo(string clusterName, string brokerName, string group, string topic)
+        public ActionResult ProducerList(string clusterName, string brokerName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
@@ -79,7 +79,7 @@ namespace EQueue.AdminWeb.Controllers
                 ProducerList = producerList
             });
         }
-        public ActionResult ConsumerInfo(string clusterName, string brokerName, string group, string topic)
+        public ActionResult ConsumerList(string clusterName, string brokerName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;

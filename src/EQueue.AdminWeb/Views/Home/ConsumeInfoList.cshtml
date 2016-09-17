@@ -1,9 +1,9 @@
-﻿@model EQueue.AdminWeb.Models.ClusterConsumerListViewModel
+﻿@model EQueue.AdminWeb.Models.ClusterTopicConsumeListViewModel
 @{
-    ViewBag.Title = "在线消费者列表";
+    ViewBag.Title = "ConsumeInfoList";
 }
 <div>
-    @using (Html.BeginForm("ConsumerInfo", "Home", new { clusterName = ViewBag.ClusterName }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
+    @using (Html.BeginForm("ConsumeInfoList", "Home", new { clusterName = ViewBag.ClusterName }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="Group"></label>
@@ -28,9 +28,6 @@
                     ConsumerGroup
                 </th>
                 <th width="10%" class="vertical-center">
-                    ConsumerId
-                </th>
-                <th width="10%" class="vertical-center">
                     Topic
                 </th>
                 <th width="10%" class="text-center vertical-center">
@@ -45,12 +42,15 @@
                 <th width="10%" class="text-center vertical-center">
                     消息堆积数
                 </th>
+                <th width="10%" class="text-center vertical-center">
+                    消费者个数
+                </th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var line in Model.ConsumerList)
+            @foreach (var line in Model.TopicConsumeInfoList)
             {
-                @foreach (var item in line.ConsumerList)
+                foreach (var item in line.TopicConsumeInfoList)
                 {
                     <tr>
                         <td class="vertical-center">
@@ -67,9 +67,6 @@
                             @item.ConsumerGroup
                         </td>
                         <td class="vertical-center">
-                            @item.ConsumerId
-                        </td>
-                        <td class="vertical-center">
                             @item.Topic
                         </td>
                         <td class="text-center vertical-center">
@@ -83,6 +80,9 @@
                         </td>
                         <td class="text-center vertical-center">
                             @item.QueueNotConsumeCount
+                        </td>
+                        <td class="text-center vertical-center">
+                            @item.OnlineConsumerCount
                         </td>
                     </tr>
                 }

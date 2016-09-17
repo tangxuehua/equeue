@@ -1,6 +1,6 @@
 ﻿@model EQueue.AdminWeb.Models.ClusterBrokerListViewModel
 @{
-    ViewBag.Title = "Broker列表";
+    ViewBag.Title = "BrokerList";
 }
 <div>
     @using (Html.BeginForm("BrokerList", "Home", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline", role = "form" }))

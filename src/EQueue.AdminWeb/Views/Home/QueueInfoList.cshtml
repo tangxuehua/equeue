@@ -1,6 +1,6 @@
 ﻿@model EQueue.AdminWeb.Models.ClusterTopicQueueListViewModel
 @{
-    ViewBag.Title = "队列信息";
+    ViewBag.Title = "QueueInfoList";
 }
 <style>
     .header-form {
@@ -12,7 +12,7 @@
     }
 </style>
 <div>
-    @using (Html.BeginForm("QueueInfo", "Home", new { clusterName = ViewBag.ClusterName }, FormMethod.Post, new { @class = "form-inline header-form", role = "form" }))
+    @using (Html.BeginForm("QueueInfoList", "Home", new { clusterName = ViewBag.ClusterName }, FormMethod.Post, new { @class = "form-inline header-form", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="Topic"></label>
@@ -58,7 +58,7 @@
         <tbody>
             @foreach (var line in Model.TopicQueueInfoList)
             {
-                @foreach (var item in line.TopicQueueInfoList)
+                foreach (var item in line.TopicQueueInfoList)
                 {
                     <tr>
                         <td class="vertical-center">

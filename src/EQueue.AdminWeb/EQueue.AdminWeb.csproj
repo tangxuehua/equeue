@@ -196,17 +196,17 @@
     <Content Include="Views\Shared\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
     <Content Include="Views\Broker\Index.cshtml" />
-    <Content Include="Views\Broker\ConsumerInfo.cshtml" />
-    <Content Include="Views\Broker\ProducerInfo.cshtml" />
+    <Content Include="Views\Broker\ConsumerList.cshtml" />
+    <Content Include="Views\Broker\ProducerList.cshtml" />
     <Content Include="Views\Broker\SetQueueNextConsumeOffset.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Home\BrokerList.cshtml" />
     <Content Include="Views\Shared\_BrokerLayout.cshtml" />
-    <Content Include="Views\Broker\ConsumeInfo.cshtml" />
-    <Content Include="Views\Home\QueueInfo.cshtml" />
-    <Content Include="Views\Home\ConsumerInfo.cshtml" />
-    <Content Include="Views\Home\ConsumeInfo.cshtml" />
-    <Content Include="Views\Home\ProducerInfo.cshtml" />
+    <Content Include="Views\Broker\ConsumeInfoList.cshtml" />
+    <Content Include="Views\Home\QueueInfoList.cshtml" />
+    <Content Include="Views\Home\ConsumerList.cshtml" />
+    <Content Include="Views\Home\ConsumeInfoList.cshtml" />
+    <Content Include="Views\Home\ProducerList.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EQueue\EQueue.csproj">
@@ -226,7 +226,7 @@
     <Content Include="Views\Home\Message.cshtml" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Views\Broker\QueueInfo.cshtml" />
+    <Content Include="Views\Broker\QueueInfoList.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap\css\bootstrap-theme.css.map" />

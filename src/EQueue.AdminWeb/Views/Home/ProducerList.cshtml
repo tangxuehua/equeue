@@ -1,6 +1,6 @@
 ﻿@model EQueue.AdminWeb.Models.ClusterProducerListViewModel
 @{
-    ViewBag.Title = "在线生产者列表";
+    ViewBag.Title = "ProducerList";
 }
 <div>
     <table class="table table-striped">
@@ -20,7 +20,7 @@
         <tbody>
             @foreach (var line in Model.ProducerList)
             {
-                @foreach (var item in line.ProducerList)
+                foreach (var item in line.ProducerList)
                 {
                     <tr>
                         <td class="vertical-center">
