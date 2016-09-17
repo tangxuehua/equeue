@@ -1,6 +1,6 @@
-﻿@model EQueue.AdminWeb.Models.ProducerViewModel
+﻿@model EQueue.AdminWeb.Models.BrokerProducerListViewModel
 @{
-    ViewBag.Title = "Broker在线生产者列表";
+    ViewBag.Title = "在线生产者列表";
     Layout = "~/Views/Shared/_BrokerLayout.cshtml";
 }
 <div>
@@ -13,7 +13,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Model.ProducerIds)
+            @foreach (var item in Model.ProducerList)
             {
                 <tr>
                     <td class="vertical-center">

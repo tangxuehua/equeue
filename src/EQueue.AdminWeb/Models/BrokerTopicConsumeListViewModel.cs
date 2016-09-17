@@ -3,7 +3,7 @@ using EQueue.Protocols.Brokers;
 
 namespace EQueue.AdminWeb.Models
 {
-    public class TopicConsumeInfoViewModel
+    public class BrokerTopicConsumeListViewModel
     {
         public string Group { get; set; }
         public string Topic { get; set; }

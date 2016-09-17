@@ -250,17 +250,15 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
             _consumerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.PullMessage, new PullMessageRequestHandler());
 
-            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetTopicQueueIdsForProducer, new GetTopicQueueIdsForProducerRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetTopicQueueIdsForConsumer, new GetTopicQueueIdsForConsumerRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetConsumerIdsForTopic, new GetConsumerIdsForTopicRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.UpdateQueueOffsetRequest, new UpdateQueueOffsetRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.UpdateQueueConsumeOffsetRequest, new UpdateQueueConsumeOffsetRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetTopicConsumeInfo, new GetTopicConsumeInfoRequestHandler());
 
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetBrokerStatisticInfo, new GetBrokerStatisticInfoRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.CreateTopic, new CreateTopicRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.DeleteTopic, new DeleteTopicRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetTopicQueueInfo, new GetTopicQueueInfoRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetProducerInfo, new GetProducerListRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetProducerList, new GetProducerListRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetConsumerList, new GetConsumerListRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.AddQueue, new AddQueueRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.DeleteQueue, new DeleteQueueRequestHandler());

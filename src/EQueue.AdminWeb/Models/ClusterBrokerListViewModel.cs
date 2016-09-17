@@ -3,8 +3,9 @@ using EQueue.Protocols.Brokers;
 
 namespace EQueue.AdminWeb.Models
 {
-    public class BrokerListViewModel
+    public class ClusterBrokerListViewModel
     {
+        public string ClusterName { get; set; }
         public IEnumerable<BrokerInfo> BrokerList { get; set; }
     }
 }

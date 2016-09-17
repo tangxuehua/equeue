@@ -98,24 +98,24 @@ namespace EQueue.Clients
             {
                 return;
             }
-            var consumerIdList = QueryGroupConsumers(topic);
+            var consumerIdList = GetConsumerIdsForTopic(topic);
+            if (consumerIdList == null || consumerIdList.Count == 0)
+            {
+                return;
+            }
             var allocatedMessageQueueList = _allocateMessageQueueStragegy.Allocate(_clientId, messageQueueList, consumerIdList).ToList();
 
             UpdatePullRequestDict(pair, allocatedMessageQueueList);
         }
-        private IList<string> QueryGroupConsumers(string topic)
+        private IList<string> GetConsumerIdsForTopic(string topic)
         {
-            var brokerConnection = _clientService.GetRandomBrokerConnection();
-            if (brokerConnection == null)
-            {
-                throw new Exception("QueryGroupConsumers, no available broker found.");
-            }
+            var brokerConnection = _clientService.GetFirstBrokerConnection();
             var request = _binarySerializer.Serialize(new GetConsumerIdsForTopicRequest(_consumer.GroupName, topic));
             var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetConsumerIdsForTopic, request);
             var remotingResponse = brokerConnection.AdminRemotingClient.InvokeSync(remotingRequest, 1000 * 5);
             if (remotingResponse.Code != ResponseCode.Success)
             {
-                throw new Exception(string.Format("QueryGroupConsumers has exception, consumerGroup: {0}, topic: {1}, brokerAddress: {2}, remoting response code: {3}, errorMessage: {4}",
+                throw new Exception(string.Format("GetConsumerIdsForTopic has exception, consumerGroup: {0}, topic: {1}, brokerAddress: {2}, remoting response code: {3}, errorMessage: {4}",
                     _consumer.GroupName,
                     topic,
                     brokerConnection.AdminRemotingClient.ServerEndPoint.ToAddress(),

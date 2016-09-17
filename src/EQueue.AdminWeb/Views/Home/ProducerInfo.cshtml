@@ -1,0 +1,44 @@
+﻿@model EQueue.AdminWeb.Models.ClusterProducerListViewModel
+@{
+    ViewBag.Title = "在线生产者列表";
+}
+<div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th width="20%" class="vertical-center">
+                    Broker
+                </th>
+                <th width="20%" class="vertical-center">
+                    BrokerAddress
+                </th>
+                <th width="60%" class="vertical-center">
+                    ProducerId
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Model.ProducerList)
+            {
+                @foreach (var item in line.ProducerList)
+                {
+                    <tr>
+                        <td class="vertical-center">
+                            @line.BrokerInfo.BrokerName<br />
+                            @line.BrokerInfo.GroupName<br />
+                            @line.BrokerInfo.BrokerRole
+                        </td>
+                        <td class="vertical-center">
+                            @line.BrokerInfo.ProducerAddress<br />
+                            @line.BrokerInfo.ConsumerAddress<br />
+                            @line.BrokerInfo.AdminAddress
+                        </td>
+                        <td class="vertical-center">
+                            @item
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

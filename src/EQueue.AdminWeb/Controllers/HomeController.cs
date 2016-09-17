@@ -24,10 +24,52 @@ namespace EQueue.AdminWeb.Controllers
         }
         public ActionResult BrokerList(string clusterName)
         {
+            ViewBag.ClusterName = clusterName;
             var brokerList = _messageService.GetClusterBrokers(clusterName);
-            return View(new BrokerListViewModel
+            return View(new ClusterBrokerListViewModel
             {
                 BrokerList = brokerList
+            });
+        }
+        public ActionResult QueueInfo(string clusterName, string topic)
+        {
+            ViewBag.ClusterName = clusterName;
+            var topicQueueInfoList = _messageService.GetTopicQueueInfoList(clusterName, topic);
+            return View(new ClusterTopicQueueListViewModel
+            {
+                Topic = topic,
+                TopicQueueInfoList = topicQueueInfoList
+            });
+        }
+        public ActionResult ConsumeInfo(string clusterName, string group, string topic)
+        {
+            ViewBag.ClusterName = clusterName;
+            var topicConsumeInfoList = _messageService.GetTopicConsumeInfoList(clusterName, group, topic);
+            return View(new ClusterTopicConsumeListViewModel
+            {
+                Group = group,
+                Topic = topic,
+                TopicConsumeInfoList = topicConsumeInfoList
+            });
+        }
+        public ActionResult ProducerInfo(string clusterName, string group, string topic)
+        {
+            ViewBag.ClusterName = clusterName;
+            var producerList = _messageService.GetProducerInfoList(clusterName);
+            return View(new ClusterProducerListViewModel
+            {
+                ProducerList = producerList
+            });
+        }
+        public ActionResult ConsumerInfo(string clusterName, string group, string topic)
+        {
+            ViewBag.ClusterName = clusterName;
+            var consumerList = _messageService.GetConsumerInfoList(clusterName, group, topic);
+            return View(new ClusterConsumerListViewModel
+            {
+                Group = group,
+                Topic = topic,
+                ConsumerList = consumerList
             });
         }
         public ActionResult Message(string clusterName, string searchMessageId)
@@ -37,7 +79,7 @@ namespace EQueue.AdminWeb.Controllers
                 return View(new MessageViewModel());
             }
             var message = _messageService.GetMessageDetail(clusterName, searchMessageId);
-            var model = new MessageViewModel { SearchMessageId = searchMessageId };
+            var model = new MessageViewModel { ClusterName = clusterName, SearchMessageId = searchMessageId };
             if (message != null)
             {
                 model.MessageId = message.MessageId;

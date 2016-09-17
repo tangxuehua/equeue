@@ -68,7 +68,7 @@ namespace EQueue.Clients
             var remotingClient = brokerConnection.AdminRemotingClient;
 
             var request = new UpdateQueueOffsetRequest(_consumer.GroupName, messageQueue, consumeOffset);
-            var remotingRequest = new RemotingRequest((int)BrokerRequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
+            var remotingRequest = new RemotingRequest((int)BrokerRequestCode.UpdateQueueConsumeOffsetRequest, _binarySerializer.Serialize(request));
             var brokerAddress = remotingClient.ServerEndPoint.ToAddress();
 
             try

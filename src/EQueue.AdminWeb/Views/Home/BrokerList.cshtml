@@ -1,8 +1,16 @@
-﻿@model EQueue.AdminWeb.Models.BrokerListViewModel
+﻿@model EQueue.AdminWeb.Models.ClusterBrokerListViewModel
 @{
     ViewBag.Title = "Broker列表";
 }
 <div>
+    @using (Html.BeginForm("BrokerList", "Home", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
+    {
+        <div class="form-group">
+            <label class="sr-only" for="ClusterName"></label>
+            @Html.TextBoxFor(m => m.ClusterName, new { @class = "form-control", placeholder = "ClusterName" })
+        </div>
+        <button type="submit" class="btn btn-default">查询</button>
+    }
     <table class="table table-striped">
         <thead>
             <tr>

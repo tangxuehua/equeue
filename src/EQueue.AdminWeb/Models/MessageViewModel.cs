@@ -2,6 +2,7 @@
 {
     public class MessageViewModel
     {
+        public string ClusterName { get; set; }
         public string SearchMessageId { get; set; }
         public string MessageId { get; set; }
         public string QueueId { get; set; }

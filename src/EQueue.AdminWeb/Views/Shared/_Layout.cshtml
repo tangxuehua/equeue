@@ -25,6 +25,11 @@
                     <span class="icon-bar"></span>
                 </button>
                 @Html.ActionLink("集群列表", "Index", "Home", null, new { @class = "navbar-brand" })
+                @Html.ActionLink("Broker列表", "BrokerList", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("队列信息", "QueueInfo", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("消费信息", "ConsumeInfo", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("在线生产者列表", "ProducerInfo", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("在线消费者列表", "ConsumerInfo", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
             </div>
         </div>
     </div>

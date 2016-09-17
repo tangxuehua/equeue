@@ -41,7 +41,6 @@ namespace EQueue.Clients
         private Producer _producer;
         private Consumer _consumer;
         private long _nameServerIndex;
-        private long _brokerIndex;
 
         #endregion
 
@@ -121,18 +120,14 @@ namespace EQueue.Clients
             }
             return null;
         }
-        public BrokerConnection GetRandomBrokerConnection()
+        public BrokerConnection GetFirstBrokerConnection()
         {
-            if (_brokerConnectionDict.Count == 0)
-            {
-                return null;
-            }
             var availableList = _brokerConnectionDict.Values.Where(x => x.RemotingClient.IsConnected).ToList();
             if (availableList.Count == 0)
             {
-                return null;
+                throw new Exception("No available broker.");
             }
-            return availableList[(int)(Interlocked.Increment(ref _brokerIndex) % availableList.Count)];
+            return availableList.First();
         }
         public IList<MessageQueue> GetTopicMessageQueues(string topic)
         {
@@ -190,10 +185,6 @@ namespace EQueue.Clients
         private IList<BrokerInfo> GetClusterBrokerList()
         {
             var nameServerRemotingClient = GetAvailableNameServerRemotingClient();
-            if (nameServerRemotingClient == null)
-            {
-                throw new Exception("No available name server could be found.");
-            }
             var request = new GetClusterBrokersRequest
             {
                 ClusterName = _setting.ClusterName,
@@ -299,10 +290,6 @@ namespace EQueue.Clients
         private IList<TopicRouteInfo> GetTopicRouteInfoList(string topic)
         {
             var nameServerRemotingClient = GetAvailableNameServerRemotingClient();
-            if (nameServerRemotingClient == null)
-            {
-                throw new Exception("No available name server could be found.");
-            }
             var request = new GetTopicRouteInfoRequest
             {
                 ClientRole = _producer != null ? ClientRole.Producer : ClientRole.Consumer,
@@ -321,14 +308,10 @@ namespace EQueue.Clients
         }
         private SocketRemotingClient GetAvailableNameServerRemotingClient()
         {
-            if (_nameServerRemotingClientList.Count == 0)
-            {
-                return null;
-            }
             var availableList = _nameServerRemotingClientList.Where(x => x.IsConnected).ToList();
             if (availableList.Count == 0)
             {
-                return null;
+                throw new Exception("No available name server.");
             }
             return availableList[(int)(Interlocked.Increment(ref _nameServerIndex) % availableList.Count)];
         }

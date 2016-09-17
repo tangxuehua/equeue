@@ -1,6 +1,6 @@
-﻿@model EQueue.AdminWeb.Models.TopicQueueViewModel
+﻿@model EQueue.AdminWeb.Models.BrokerTopicQueueListViewModel
 @{
-    ViewBag.Title = "Broker队列信息";
+    ViewBag.Title = "队列信息";
     Layout = "~/Views/Shared/_BrokerLayout.cshtml";
 }
 <style>
@@ -74,7 +74,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Model.TopicQueueInfos)
+            @foreach (var item in Model.TopicQueueInfoList)
             {
                 <tr>
                     <td class="vertical-center">

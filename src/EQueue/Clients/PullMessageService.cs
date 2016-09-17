@@ -402,7 +402,7 @@ namespace EQueue.Clients
                 pullRequest.ProcessQueue.Reset();
 
                 var request = new UpdateQueueOffsetRequest(_consumer.GroupName, pullRequest.MessageQueue, newOffset - 1);
-                var remotingRequest = new RemotingRequest((int)BrokerRequestCode.UpdateQueueOffsetRequest, _binarySerializer.Serialize(request));
+                var remotingRequest = new RemotingRequest((int)BrokerRequestCode.UpdateQueueConsumeOffsetRequest, _binarySerializer.Serialize(request));
                 remotingClient.InvokeOneway(remotingRequest);
                 _logger.InfoFormat("Resetted nextConsumeOffset, [pullRequest:{0}, oldOffset:{1}, newOffset:{2}]", pullRequest, oldOffset, newOffset);
             }

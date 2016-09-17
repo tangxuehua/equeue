@@ -50,19 +50,19 @@ namespace EQueue.AdminWeb.Controllers
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
-            var topicQueueInfos = _messageService.GetTopicQueueInfo(clusterName, brokerName, topic);
-            return View(new TopicQueueViewModel
+            var topicQueueInfoList = _messageService.GetTopicQueueInfoList(clusterName, brokerName, topic);
+            return View(new BrokerTopicQueueListViewModel
             {
                 Topic = topic,
-                TopicQueueInfos = topicQueueInfos
+                TopicQueueInfoList = topicQueueInfoList
             });
         }
         public ActionResult ConsumeInfo(string clusterName, string brokerName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
-            var topicConsumeInfoList = _messageService.GetTopicConsumeInfo(clusterName, brokerName, group, topic);
-            return View(new TopicConsumeInfoViewModel
+            var topicConsumeInfoList = _messageService.GetTopicConsumeInfoList(clusterName, brokerName, group, topic);
+            return View(new BrokerTopicConsumeListViewModel
             {
                 Group = group,
                 Topic = topic,
@@ -73,22 +73,22 @@ namespace EQueue.AdminWeb.Controllers
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
-            var producerIds = _messageService.GetProducerInfo(clusterName, brokerName);
-            return View(new ProducerViewModel
+            var producerList = _messageService.GetProducerInfoList(clusterName, brokerName);
+            return View(new BrokerProducerListViewModel
             {
-                ProducerIds = producerIds
+                ProducerList = producerList
             });
         }
         public ActionResult ConsumerInfo(string clusterName, string brokerName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
-            var consumerInfos = _messageService.GetConsumerInfo(clusterName, brokerName, group, topic);
-            return View(new ConsumerViewModel
+            var consumerList = _messageService.GetConsumerInfoList(clusterName, brokerName, group, topic);
+            return View(new BrokerConsumerListViewModel
             {
                 Group = group,
                 Topic = topic,
-                ConsumerInfos = consumerInfos
+                ConsumerList = consumerList
             });
         }
         public ActionResult AddQueue(string clusterName, string brokerName, string topic)
