@@ -127,7 +127,7 @@ namespace EQueue.Broker.Client
             var key = new QueueKey(topic, queueId);
             return _consumerInfoDict.Values.Any(x => x.ConsumingQueues.Any(y => y == key));
         }
-        public IEnumerable<QueueKey> GetConsumingQueue(string consumerId)
+        public IEnumerable<QueueKey> GetConsumingQueueList(string consumerId)
         {
             var consumerInfo = _consumerInfoDict.Values.SingleOrDefault(x => x.ConsumerId == consumerId);
             if (consumerInfo != null)

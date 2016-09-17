@@ -11,16 +11,12 @@ namespace EQueue.Broker.RequestHandlers.Admin
     public class GetTopicConsumeInfoRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IConsumeOffsetStore _offsetStore;
-        private IQueueStore _queueStore;
-        private ConsumerManager _consumerManager;
+        private GetTopicConsumeInfoListService _getTopicConsumeInfoListService;
 
         public GetTopicConsumeInfoRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
-            _queueStore = ObjectContainer.Resolve<IQueueStore>();
-            _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
+            _getTopicConsumeInfoListService = ObjectContainer.Resolve<GetTopicConsumeInfoListService>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
@@ -31,15 +27,7 @@ namespace EQueue.Broker.RequestHandlers.Admin
             }
 
             var request = _binarySerializer.Deserialize<GetTopicConsumeInfoRequest>(remotingRequest.Body);
-            var topicConsumeInfoList = _offsetStore.GetTopicConsumeInfoList(request.GroupName, request.Topic);
-
-            foreach (var topicConsumeInfo in topicConsumeInfoList)
-            {
-                var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topicConsumeInfo.Topic, topicConsumeInfo.QueueId);
-                topicConsumeInfo.QueueCurrentOffset = queueCurrentOffset;
-                topicConsumeInfo.QueueNotConsumeCount = topicConsumeInfo.CalculateQueueNotConsumeCount();
-                topicConsumeInfo.OnlineConsumerCount = _consumerManager.GetConsumerCount(request.GroupName);
-            }
+            var topicConsumeInfoList = _getTopicConsumeInfoListService.GetTopicConsumeInfoList(request.GroupName, request.Topic);
 
             return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(topicConsumeInfoList));
         }

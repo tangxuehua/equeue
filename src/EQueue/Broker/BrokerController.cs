@@ -36,6 +36,8 @@ namespace EQueue.Broker
         private readonly SuspendedPullRequestManager _suspendedPullRequestManager;
         private readonly ProducerManager _producerManager;
         private readonly ConsumerManager _consumerManager;
+        private readonly GetConsumerListService _getConsumerListService;
+        private readonly GetTopicConsumeInfoListService _getTopicConsumeInfoListService;
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
         private readonly SocketRemotingServer _adminSocketRemotingServer;
@@ -78,6 +80,8 @@ namespace EQueue.Broker
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _consumeOffsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
+            _getTopicConsumeInfoListService = ObjectContainer.Resolve<GetTopicConsumeInfoListService>();
+            _getConsumerListService = ObjectContainer.Resolve<GetConsumerListService>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
@@ -283,12 +287,17 @@ namespace EQueue.Broker
         private void RegisterBrokerToAllNameServers()
         {
             var topicQueueInfoList = _queueStore.GetTopicQueueInfoList();
+            var topicConsumeInfoList = _getTopicConsumeInfoListService.GetAllTopicConsumeInfoList().ToList();
+            var producerList = _producerManager.GetAllProducers().ToList();
+            var consumerList = _getConsumerListService.GetAllConsumerList().ToList();
             var request = new BrokerRegistrationRequest
             {
                 BrokerInfo = Setting.BrokerInfo,
-                TopicQueueInfoList = topicQueueInfoList
+                TopicQueueInfoList = topicQueueInfoList,
+                TopicConsumeInfoList = topicConsumeInfoList,
+                ProducerList = producerList,
+                ConsumerList = consumerList
             };
-            //TODO
             foreach (var remotingClient in _nameServerRemotingClientList)
             {
                 RegisterBrokerToNameServer(request, remotingClient);

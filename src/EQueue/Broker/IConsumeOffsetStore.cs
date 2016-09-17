@@ -17,6 +17,7 @@ namespace EQueue.Broker
         void SetConsumeNextOffset(string topic, int queueId, string group, long nextOffset);
         bool TryFetchNextConsumeOffset(string topic, int queueId, string group, out long nextOffset);
         IEnumerable<QueueKey> GetConsumeKeys();
+        IEnumerable<TopicConsumeInfo> GetAllTopicConsumeInfoList();
         IEnumerable<TopicConsumeInfo> GetTopicConsumeInfoList(string groupName, string topic);
     }
 }

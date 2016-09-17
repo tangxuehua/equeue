@@ -1,11 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using ECommon.Components;
+﻿using ECommon.Components;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Broker.Client;
 using EQueue.Broker.Exceptions;
-using EQueue.Protocols.Brokers;
 using EQueue.Protocols.Brokers.Requests;
 using EQueue.Utils;
 
@@ -14,16 +11,12 @@ namespace EQueue.Broker.RequestHandlers.Admin
     public class GetConsumerListRequestHandler : IRequestHandler
     {
         private IBinarySerializer _binarySerializer;
-        private IConsumeOffsetStore _offsetStore;
-        private ConsumerManager _consumerManager;
-        private IQueueStore _queueStore;
+        private GetConsumerListService _getConsumerListService;
 
         public GetConsumerListRequestHandler()
         {
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
-            _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
-            _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
-            _queueStore = ObjectContainer.Resolve<IQueueStore>();
+            _getConsumerListService = ObjectContainer.Resolve<GetConsumerListService>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
@@ -34,69 +27,9 @@ namespace EQueue.Broker.RequestHandlers.Admin
             }
 
             var request = _binarySerializer.Deserialize<GetConsumerListRequest>(remotingRequest.Body);
-            var consumerGroup = _consumerManager.GetConsumerGroup(request.GroupName);
-            var consumerInfoList = GetConsumerInfoForGroup(consumerGroup, request.Topic);
+            var consumerInfoList = _getConsumerListService.GetConsumerList(request.GroupName, request.Topic);
 
             return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(consumerInfoList));
-        }
-
-        private IEnumerable<ConsumerInfo> GetConsumerInfoForGroup(ConsumerGroup consumerGroup, string topic)
-        {
-            var consumerInfoList = new List<ConsumerInfo>();
-            var consumerIdList = consumerGroup.GetConsumerIdsForTopic(topic).ToList();
-            consumerIdList.Sort();
-
-            foreach (var consumerId in consumerIdList)
-            {
-                var consumingQueues = consumerGroup.GetConsumingQueue(consumerId).Where(x => x.Topic == topic);
-                foreach (var consumingQueue in consumingQueues)
-                {
-                    consumerInfoList.Add(BuildConsumerInfo(consumerGroup.GroupName, consumerId, consumingQueue.Topic, consumingQueue.QueueId));
-                }
-            }
-
-            consumerInfoList.Sort((x, y) =>
-            {
-                var result = string.Compare(x.ConsumerGroup, y.ConsumerGroup);
-                if (result != 0)
-                {
-                    return result;
-                }
-                result = string.Compare(x.ConsumerId, y.ConsumerId);
-                if (result != 0)
-                {
-                    return result;
-                }
-                result = string.Compare(x.Topic, y.Topic);
-                if (result != 0)
-                {
-                    return result;
-                }
-                if (x.QueueId > y.QueueId)
-                {
-                    return 1;
-                }
-                else if (x.QueueId < y.QueueId)
-                {
-                    return -1;
-                }
-                return 0;
-            });
-
-            return consumerInfoList;
-        }
-        private ConsumerInfo BuildConsumerInfo(string group, string consumerId, string topic, int queueId)
-        {
-            var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
-            var consumerInfo = new ConsumerInfo();
-            consumerInfo.ConsumerGroup = group;
-            consumerInfo.ConsumerId = consumerId;
-            consumerInfo.Topic = topic;
-            consumerInfo.QueueId = queueId;
-            consumerInfo.QueueCurrentOffset = queueCurrentOffset;
-            consumerInfo.ConsumedOffset = _offsetStore.GetConsumeOffset(topic, queueId, group);
-            consumerInfo.QueueNotConsumeCount = consumerInfo.CalculateQueueNotConsumeCount();
-            return consumerInfo;
         }
     }
 }

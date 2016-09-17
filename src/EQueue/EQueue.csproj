@@ -63,6 +63,8 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Broker\Client\GetTopicConsumeInfoListService.cs" />
+    <Compile Include="Broker\Client\GetConsumerListService.cs" />
     <Compile Include="Broker\Client\ProducerManager.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\GetTopicConsumeInfoRequestHandler.cs" />
     <Compile Include="Clients\BrokerConnection.cs" />

@@ -21,8 +21,8 @@ namespace EQueue.Broker
         private readonly ILogger _logger;
         private string _consumeOffsetFile;
         private string _consumeOffsetBackupFile;
-        private ConcurrentDictionary<string, ConcurrentDictionary<QueueKey, long>> _groupConsumeOffsetsDict;
-        private ConcurrentDictionary<string, ConcurrentDictionary<QueueKey, long>> _groupNextConsumeOffsetsDict;
+        private ConcurrentDictionary<string /*groupName*/, ConcurrentDictionary<QueueKey, long>> _groupConsumeOffsetsDict;
+        private ConcurrentDictionary<string /*groupName*/, ConcurrentDictionary<QueueKey, long>> _groupNextConsumeOffsetsDict;
         private int _isPersistingOffsets;
 
         public DefaultConsumeOffsetStore(IScheduleService scheduleService, IJsonSerializer jsonSerializer, ILoggerFactory loggerFactory)
@@ -149,27 +149,6 @@ namespace EQueue.Broker
 
             return keyList;
         }
-        public IEnumerable<TopicConsumeInfo> GetTopicConsumeInfoList(string groupName, string topic)
-        {
-            var topicConsumeInfoList = new List<TopicConsumeInfo>();
-            ConcurrentDictionary<QueueKey, long> found;
-            if (_groupConsumeOffsetsDict.TryGetValue(groupName, out found))
-            {
-                foreach (var entry in found.Where(x => x.Key.Topic == topic))
-                {
-                    var queueKey = entry.Key;
-                    var consumedOffset = entry.Value;
-                    topicConsumeInfoList.Add(new TopicConsumeInfo
-                    {
-                        ConsumerGroup = groupName,
-                        Topic = queueKey.Topic,
-                        QueueId = queueKey.QueueId,
-                        ConsumedOffset = consumedOffset
-                    });
-                }
-            }
-            return topicConsumeInfoList;
-        }
         public void SetConsumeNextOffset(string topic, int queueId, string group, long nextOffset)
         {
             var queueOffsetDict = _groupNextConsumeOffsetsDict.GetOrAdd(group, k =>
@@ -194,6 +173,51 @@ namespace EQueue.Broker
                 }
             }
             return false;
+        }
+        public IEnumerable<TopicConsumeInfo> GetAllTopicConsumeInfoList()
+        {
+            var topicConsumeInfoList = new List<TopicConsumeInfo>();
+            
+            foreach (var entry in _groupConsumeOffsetsDict)
+            {
+                var groupName = entry.Key;
+                var consumeInfoDict = entry.Value;
+                foreach (var entry2 in consumeInfoDict)
+                {
+                    var queueKey = entry2.Key;
+                    var consumedOffset = entry2.Value;
+                    topicConsumeInfoList.Add(new TopicConsumeInfo
+                    {
+                        ConsumerGroup = groupName,
+                        Topic = queueKey.Topic,
+                        QueueId = queueKey.QueueId,
+                        ConsumedOffset = consumedOffset
+                    });
+                }
+            }
+
+            return topicConsumeInfoList;
+        }
+        public IEnumerable<TopicConsumeInfo> GetTopicConsumeInfoList(string groupName, string topic)
+        {
+            var topicConsumeInfoList = new List<TopicConsumeInfo>();
+            ConcurrentDictionary<QueueKey, long> found;
+            if (_groupConsumeOffsetsDict.TryGetValue(groupName, out found))
+            {
+                foreach (var entry in found.Where(x => x.Key.Topic == topic))
+                {
+                    var queueKey = entry.Key;
+                    var consumedOffset = entry.Value;
+                    topicConsumeInfoList.Add(new TopicConsumeInfo
+                    {
+                        ConsumerGroup = groupName,
+                        Topic = queueKey.Topic,
+                        QueueId = queueKey.QueueId,
+                        ConsumedOffset = consumedOffset
+                    });
+                }
+            }
+            return topicConsumeInfoList;
         }
 
         private void LoadConsumeOffsetInfo()
