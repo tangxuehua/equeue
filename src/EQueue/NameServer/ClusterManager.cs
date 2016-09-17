@@ -465,5 +465,34 @@ namespace EQueue.NameServer
             public string ClusterName { get; set; }
             public ConcurrentDictionary<string /*groupName*/, BrokerGroup> BrokerGroups = new ConcurrentDictionary<string, BrokerGroup>();
         }
+        class BrokerConnection
+        {
+            private readonly BrokerInfo _brokerInfo;
+            private readonly SocketRemotingClient _adminRemotingClient;
+
+            public BrokerInfo BrokerInfo
+            {
+                get { return _brokerInfo; }
+            }
+            public SocketRemotingClient AdminRemotingClient
+            {
+                get { return _adminRemotingClient; }
+            }
+
+            public BrokerConnection(BrokerInfo brokerInfo, SocketRemotingClient adminRemotingClient)
+            {
+                _brokerInfo = brokerInfo;
+                _adminRemotingClient = adminRemotingClient;
+            }
+
+            public void Start()
+            {
+                _adminRemotingClient.Start();
+            }
+            public void Stop()
+            {
+                _adminRemotingClient.Shutdown();
+            }
+        }
     }
 }

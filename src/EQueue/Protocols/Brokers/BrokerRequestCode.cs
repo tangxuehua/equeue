@@ -10,17 +10,17 @@
         UpdateQueueConsumeOffsetRequest = 103,
         GetBrokerStatisticInfo = 1000,
         GetTopicQueueInfo = 1001,
-        GetConsumerList = 1002,
-        AddQueue = 1003,
-        SetProducerVisible = 1004,
-        SetConsumerVisible = 1005,
-        DeleteQueue = 1006,
-        GetMessageDetail = 1007,
-        CreateTopic = 1008,
-        DeleteTopic = 1009,
-        GetProducerList = 1010,
+        GetTopicConsumeInfo = 1002,
+        GetProducerList = 1003,
+        GetConsumerList = 1004,
+        CreateTopic = 1005,
+        DeleteTopic = 1006,
+        AddQueue = 1007,
+        DeleteQueue = 1008,
+        SetQueueProducerVisible = 1009,
+        SetQueueConsumerVisible = 1010,
         SetQueueNextConsumeOffset = 1011,
         DeleteConsumerGroup = 1012,
-        GetTopicConsumeInfo = 1013
+        GetMessageDetail = 1013
     }
 }

@@ -68,7 +68,7 @@ namespace EQueue.Clients
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            _nameServerRemotingClientList = CreateRemotingClientList();
+            _nameServerRemotingClientList = RemotingClientUtils.CreateRemotingClientList(_setting.NameServerList, _setting.SocketSetting).ToList();
         }
 
         #region Public Methods
@@ -314,16 +314,6 @@ namespace EQueue.Clients
                 throw new Exception("No available name server.");
             }
             return availableList[(int)(Interlocked.Increment(ref _nameServerIndex) % availableList.Count)];
-        }
-        private IList<SocketRemotingClient> CreateRemotingClientList()
-        {
-            var remotingClientList = new List<SocketRemotingClient>();
-            foreach (var endpoint in _setting.NameServerList)
-            {
-                var remotingClient = new SocketRemotingClient(endpoint, _setting.SocketSetting);
-                remotingClientList.Add(remotingClient);
-            }
-            return remotingClientList;
         }
         private void SortMessageQueues(IList<MessageQueue> queueList)
         {

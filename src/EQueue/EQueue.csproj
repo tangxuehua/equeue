@@ -73,8 +73,17 @@
     <Compile Include="Clients\CommitConsumeOffsetService.cs" />
     <Compile Include="Clients\PullMessageService.cs" />
     <Compile Include="Clients\RebalanceService.cs" />
+    <Compile Include="NameServer\BrokerRequestService.cs" />
     <Compile Include="NameServer\NameServerSetting.cs" />
     <Compile Include="NameServer\NameServerController.cs" />
+    <Compile Include="NameServer\RequestHandlers\DeleteConsumerGroupForClusterRequestHandler.cs" />
+    <Compile Include="NameServer\RequestHandlers\SetQueueNextConsumeOffsetForClusterRequestHandler.cs" />
+    <Compile Include="NameServer\RequestHandlers\SetQueueConsumerVisibleForClusterRequestHandler.cs" />
+    <Compile Include="NameServer\RequestHandlers\SetQueueProducerVisibleForClusterRequestHandler.cs" />
+    <Compile Include="NameServer\RequestHandlers\DeleteQueueForClusterRequestHandler.cs" />
+    <Compile Include="NameServer\RequestHandlers\AddQueueForClusterRequestHandler.cs" />
+    <Compile Include="NameServer\RequestHandlers\DeleteTopicForClusterRequestHandler.cs" />
+    <Compile Include="NameServer\RequestHandlers\CreateTopicForClusterRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\GetAllClustersRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\GetClusterBrokersRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\GetConsumerListRequestHandler.cs" />
@@ -86,11 +95,16 @@
     <Compile Include="NameServer\RequestHandlers\RegisterBrokerRequestHandler.cs" />
     <Compile Include="Protocols\Brokers\BrokerInfo.cs" />
     <Compile Include="Protocols\NameServers\BrokerConsumerListInfo.cs" />
+    <Compile Include="Protocols\NameServers\Requests\DeleteConsumerGroupForClusterRequest.cs" />
+    <Compile Include="Protocols\NameServers\Requests\DeleteQueueForClusterRequest.cs" />
     <Compile Include="Protocols\NameServers\Requests\BrokerRegistrationRequest.cs" />
     <Compile Include="Protocols\NameServers\BrokerTopicConsumeInfo.cs" />
     <Compile Include="Protocols\NameServers\BrokerProducerListInfo.cs" />
     <Compile Include="Protocols\NameServers\ClientRole.cs" />
     <Compile Include="Protocols\NameServers\Requests\BrokerUnRegistrationRequest.cs" />
+    <Compile Include="Protocols\NameServers\Requests\AddQueueForClusterRequest.cs" />
+    <Compile Include="Protocols\NameServers\Requests\DeleteTopicForClusterRequest.cs" />
+    <Compile Include="Protocols\NameServers\Requests\CreateTopicForClusterRequest.cs" />
     <Compile Include="Protocols\NameServers\Requests\GetClusterBrokersRequest.cs" />
     <Compile Include="Protocols\NameServers\Requests\GetConsumerListRequest.cs" />
     <Compile Include="Protocols\NameServers\Requests\GetProducerListRequest.cs" />
@@ -100,6 +114,9 @@
     <Compile Include="Protocols\NameServers\BrokerTopicQueueInfo.cs" />
     <Compile Include="Protocols\Brokers\Requests\GetTopicConsumeInfoRequest.cs" />
     <Compile Include="Protocols\NameServers\NameServerRequestCode.cs" />
+    <Compile Include="Protocols\NameServers\Requests\SetQueueConsumerVisibleForClusterRequest.cs" />
+    <Compile Include="Protocols\NameServers\Requests\SetQueueNextConsumeOffsetForClusterRequest.cs" />
+    <Compile Include="Protocols\NameServers\Requests\SetQueueProducerVisibleForClusterRequest.cs" />
     <Compile Include="Protocols\NameServers\TopicRouteInfo.cs" />
     <Compile Include="Utils\DefaultRTStatisticService.cs" />
     <Compile Include="Broker\DefaultChunkStatisticService.cs" />
@@ -222,6 +239,7 @@
     <Compile Include="Utils\ConsoleEventHandlerService.cs" />
     <Compile Include="Utils\MessageIdUtil.cs" />
     <Compile Include="Utils\MessageUtils.cs" />
+    <Compile Include="Utils\RemotingClientUtils.cs" />
     <Compile Include="Utils\RemotingResponseFactory.cs" />
     <Compile Include="Utils\EndPointAddressUtil.cs" />
   </ItemGroup>

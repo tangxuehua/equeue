@@ -98,7 +98,7 @@ namespace EQueue.Broker
 
             _service = new ConsoleEventHandlerService();
             _service.RegisterClosingEventHandler(eventCode => { Shutdown(); });
-            _nameServerRemotingClientList = CreateRemotingClientList();
+            _nameServerRemotingClientList = RemotingClientUtils.CreateRemotingClientList(Setting.NameServerList, Setting.SocketSetting).ToList();
         }
 
         public static BrokerController Create(BrokerSetting setting = null)
@@ -262,8 +262,8 @@ namespace EQueue.Broker
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetConsumerList, new GetConsumerListRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.AddQueue, new AddQueueRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.DeleteQueue, new DeleteQueueRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetProducerVisible, new SetQueueProducerVisibleRequestHandler());
-            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetConsumerVisible, new SetQueueConsumerVisibleRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetQueueProducerVisible, new SetQueueProducerVisibleRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetQueueConsumerVisible, new SetQueueConsumerVisibleRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetMessageDetail, new GetMessageDetailRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetQueueNextConsumeOffset, new SetQueueNextConsumeOffsetRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.DeleteConsumerGroup, new DeleteConsumerGroupRequestHandler());
@@ -347,16 +347,6 @@ namespace EQueue.Broker
             {
                 _logger.Error(string.Format("Unregister broker from name server has exception, brokerInfo: {0}, nameServerAddress: {1}", request.BrokerInfo, nameServerAddress), ex);
             }
-        }
-        private IList<SocketRemotingClient> CreateRemotingClientList()
-        {
-            var remotingClientList = new List<SocketRemotingClient>();
-            foreach (var endpoint in Setting.NameServerList)
-            {
-                var remotingClient = new SocketRemotingClient(endpoint, Setting.SocketSetting);
-                remotingClientList.Add(remotingClient);
-            }
-            return remotingClientList;
         }
 
         class ProducerConnectionEventListener : IConnectionEventListener

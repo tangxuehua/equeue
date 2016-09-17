@@ -67,6 +67,14 @@ namespace EQueue.NameServer
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetTopicConsumeInfo, new GetTopicConsumeInfoRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetProducerList, new GetProducerListRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetConsumerList, new GetConsumerListRequestHandler(this));
+            _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.CreateTopic, new CreateTopicForClusterRequestHandler(this));
+            _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.DeleteTopic, new DeleteTopicForClusterRequestHandler(this));
+            _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.AddQueue, new AddQueueForClusterRequestHandler(this));
+            _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.DeleteQueue, new DeleteQueueForClusterRequestHandler(this));
+            _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.SetQueueProducerVisible, new SetQueueProducerVisibleForClusterRequestHandler(this));
+            _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.SetQueueConsumerVisible, new SetQueueConsumerVisibleForClusterRequestHandler(this));
+            _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.SetQueueNextConsumeOffset, new SetQueueNextConsumeOffsetForClusterRequestHandler(this));
+            _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.DeleteConsumerGroup, new DeleteConsumerGroupForClusterRequestHandler(this));
         }
 
         class BrokerConnectionEventListener : IConnectionEventListener

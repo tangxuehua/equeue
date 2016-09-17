@@ -5,10 +5,10 @@ namespace EQueue.Protocols.Brokers.Requests
     [Serializable]
     public class SetQueueNextConsumeOffsetRequest
     {
-        public string ConsumerGroup { get; set; }
+        public string ConsumerGroup { get; private set; }
         public string Topic { get; private set; }
         public int QueueId { get; private set; }
-        public long NextOffset { get; set; }
+        public long NextOffset { get; private set; }
 
         public SetQueueNextConsumeOffsetRequest(string consumerGroup, string topic, int queueId, long nextOffset)
         {
