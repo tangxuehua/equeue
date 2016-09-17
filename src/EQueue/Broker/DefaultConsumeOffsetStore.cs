@@ -177,7 +177,6 @@ namespace EQueue.Broker
         public IEnumerable<TopicConsumeInfo> GetAllTopicConsumeInfoList()
         {
             var topicConsumeInfoList = new List<TopicConsumeInfo>();
-            
             foreach (var entry in _groupConsumeOffsetsDict)
             {
                 var groupName = entry.Key;
@@ -195,7 +194,7 @@ namespace EQueue.Broker
                     });
                 }
             }
-
+            topicConsumeInfoList.Sort(SortTopicConsumeInfo);
             return topicConsumeInfoList;
         }
         public IEnumerable<TopicConsumeInfo> GetTopicConsumeInfoList(string groupName, string topic)
@@ -220,9 +219,32 @@ namespace EQueue.Broker
                     }
                 }
             }
+            topicConsumeInfoList.Sort(SortTopicConsumeInfo);
             return topicConsumeInfoList;
         }
 
+        private int SortTopicConsumeInfo(TopicConsumeInfo x, TopicConsumeInfo y)
+        {
+            var result = string.Compare(x.ConsumerGroup, y.ConsumerGroup);
+            if (result != 0)
+            {
+                return result;
+            }
+            result = string.Compare(x.Topic, y.Topic);
+            if (result != 0)
+            {
+                return result;
+            }
+            if (x.QueueId > y.QueueId)
+            {
+                return 1;
+            }
+            else if (x.QueueId < y.QueueId)
+            {
+                return -1;
+            }
+            return 0;
+        }
         private void LoadConsumeOffsetInfo()
         {
             try

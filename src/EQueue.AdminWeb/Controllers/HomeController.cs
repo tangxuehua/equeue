@@ -94,5 +94,66 @@ namespace EQueue.AdminWeb.Controllers
             }
             return View(model);
         }
+        public ActionResult CreateTopic(string clusterName, string topic, int? initialQueueCount)
+        {
+            ViewBag.ClusterName = clusterName;
+            _messageService.CreateTopic(clusterName, topic, initialQueueCount ?? 4);
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName });
+        }
+        public ActionResult DeleteTopic(string clusterName, string topic)
+        {
+            ViewBag.ClusterName = clusterName;
+            _messageService.DeleteTopic(clusterName, topic);
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName });
+        }
+        public ActionResult AddQueue(string clusterName, string topic)
+        {
+            ViewBag.ClusterName = clusterName;
+            _messageService.AddQueue(clusterName, topic);
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName });
+        }
+        public ActionResult DeleteQueue(string clusterName, string topic, int queueId)
+        {
+            ViewBag.ClusterName = clusterName;
+            _messageService.DeleteQueue(clusterName, topic, queueId);
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName });
+        }
+        public ActionResult SetQueueProducerVisible(string clusterName, string topic, int queueId, bool visible)
+        {
+            ViewBag.ClusterName = clusterName;
+            _messageService.SetQueueProducerVisible(clusterName, topic, queueId, visible);
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName });
+        }
+        public ActionResult SetQueueConsumerVisible(string clusterName, string topic, int queueId, bool visible)
+        {
+            ViewBag.ClusterName = clusterName;
+            _messageService.SetQueueConsumerVisible(clusterName, topic, queueId, visible);
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName });
+        }
+        [HttpGet]
+        public ActionResult SetQueueNextConsumeOffset(string clusterName, string consumerGroup, string topic, int queueId)
+        {
+            ViewBag.ClusterName = clusterName;
+            var model = new SetQueueNextConsumeOffsetViewModel
+            {
+                ConsumerGroup = consumerGroup,
+                Topic = topic,
+                QueueId = queueId
+            };
+            return View(model);
+        }
+        [HttpPost]
+        public ActionResult SetQueueNextConsumeOffset(string clusterName, string consumerGroup, string topic, int queueId, long nextOffset)
+        {
+            ViewBag.ClusterName = clusterName;
+            _messageService.SetQueueNextConsumeOffset(clusterName, consumerGroup, topic, queueId, nextOffset);
+            return RedirectToAction("ConsumeInfoList", new { ClusterName = clusterName });
+        }
+        public ActionResult DeleteConsumerGroup(string clusterName, string consumerGroup)
+        {
+            ViewBag.ClusterName = clusterName;
+            _messageService.DeleteConsumerGroup(clusterName, consumerGroup);
+            return RedirectToAction("ConsumeInfoList", new { ClusterName = clusterName });
+        }
     }
 }

@@ -7,6 +7,7 @@
         display: inline-block;
         float: left;
     }
+
     .next-form {
         margin-left: 15px;
     }
@@ -30,32 +31,35 @@
                 <th width="10%" class="vertical-center">
                     Broker
                 </th>
-                <th width="10%" class="vertical-center">
+                <th width="8%" class="vertical-center">
                     BrokerAddress
                 </th>
                 <th width="10%" class="vertical-center">
                     Topic
                 </th>
-                <th width="10%" class="text-center vertical-center">
+                <th width="5%" class="text-center vertical-center">
                     QueueId
                 </th>
-                <th width="10%" class="text-center vertical-center">
+                <th width="8%" class="text-center vertical-center">
                     CurrentOffset
                 </th>
-                <th width="10%" class="text-center vertical-center">
+                <th width="8%" class="text-center vertical-center">
                     MinOffset
                 </th>
-                <th width="10%" class="text-center vertical-center">
+                <th width="12%" class="text-center vertical-center">
                     最慢消费进度
                 </th>
                 <th width="10%" class="text-center vertical-center">
                     消息堆积数
                 </th>
-                <th width="10%" class="text-center vertical-center">
+                <th width="12%" class="text-center vertical-center">
                     是否允许发送
                 </th>
-                <th width="10%" class="text-center vertical-center">
+                <th width="12%" class="text-center vertical-center">
                     是否允许消费
+                </th>
+                <th width="5%" class="vertical-center">
+                    操作
                 </th>
             </tr>
         </thead>
@@ -71,7 +75,7 @@
                             @line.BrokerInfo.BrokerRole
                         </td>
                         <td class="vertical-center">
-                            @line.BrokerInfo.ProducerAddress<br/>
+                            @line.BrokerInfo.ProducerAddress<br />
                             @line.BrokerInfo.ConsumerAddress<br />
                             @line.BrokerInfo.AdminAddress
                         </td>
@@ -98,6 +102,40 @@
                         </td>
                         <td class="text-center vertical-center">
                             @item.ConsumerVisible
+                        </td>
+                        <td class="vertical-center">
+                            <div class="dropdown">
+                                <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+                                    操作
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        @Html.ActionLink("新增队列", "AddQueue", new { clusterName = ViewBag.ClusterName, topic = item.Topic })
+                                    </li>
+                                    <li>
+                                        @if (item.ProducerVisible)
+                                        {
+                                            @Html.ActionLink("禁止发送", "SetQueueProducerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ProducerVisible })
+                                        }
+                                        else
+                                        {
+                                            @Html.ActionLink("允许发送", "SetQueueProducerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ProducerVisible })
+                                        }
+                                    </li>
+                                    <li>
+                                        @if (item.ConsumerVisible)
+                                        {
+                                            @Html.ActionLink("禁止消费", "SetQueueConsumerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ConsumerVisible })
+                                        }
+                                        else
+                                        {
+                                            @Html.ActionLink("允许消费", "SetQueueConsumerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ConsumerVisible })
+                                        }
+                                    </li>
+                                    <li>@Html.ActionLink("删除队列", "DeleteQueue", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId })</li>
+                                </ul>
+                            </div>
                         </td>
                     </tr>
                 }

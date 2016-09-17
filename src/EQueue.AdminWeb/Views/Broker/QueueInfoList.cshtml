@@ -109,7 +109,7 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li>
-                                    @Html.ActionLink("新增队列", "AddQueue", new { topic = item.Topic })
+                                    @Html.ActionLink("新增队列", "AddQueue", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName, topic = item.Topic })
                                 </li>
                                 <li>
                                     @if (item.ProducerVisible)

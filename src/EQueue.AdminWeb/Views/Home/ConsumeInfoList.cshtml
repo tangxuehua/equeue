@@ -25,7 +25,7 @@
                 <th width="15%" class="vertical-center">
                     Broker
                 </th>
-                <th width="15%" class="vertical-center">
+                <th width="10%" class="vertical-center">
                     BrokerAddress
                 </th>
                 <th width="10%" class="vertical-center">
@@ -48,6 +48,9 @@
                 </th>
                 <th width="10%" class="text-center vertical-center">
                     消费者个数
+                </th>
+                <th width="5%" class="vertical-center">
+                    操作
                 </th>
             </tr>
         </thead>
@@ -87,6 +90,25 @@
                         </td>
                         <td class="text-center vertical-center">
                             @item.OnlineConsumerCount
+                        </td>
+                        <td class="vertical-center">
+                            <div class="dropdown">
+                                <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+                                    操作
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        @Html.ActionLink("设置队列消费进度", "SetQueueNextConsumeOffset", new { clusterName = ViewBag.ClusterName, consumerGroup = item.ConsumerGroup, topic = item.Topic, queueId = item.QueueId })
+                                    </li>
+                                    @if (item.OnlineConsumerCount == 0)
+                                    {
+                                        <li>
+                                            @Html.ActionLink("删除消费者分组", "DeleteConsumerGroup", new { clusterName = ViewBag.ClusterName, consumerGroup = item.ConsumerGroup })
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
                         </td>
                     </tr>
                 }

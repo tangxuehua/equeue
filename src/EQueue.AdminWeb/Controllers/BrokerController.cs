@@ -32,20 +32,6 @@ namespace EQueue.AdminWeb.Controllers
                 MessageMinChunkNum = result.MessageMinChunkNum
             });
         }
-        public ActionResult CreateTopic(string clusterName, string brokerName, string topic, int? initialQueueCount)
-        {
-            ViewBag.ClusterName = clusterName;
-            ViewBag.BrokerName = brokerName;
-            _messageService.CreateTopic(clusterName, brokerName, topic, initialQueueCount ?? 4);
-            return RedirectToAction("QueueInfo", new { ClusterName = clusterName, BrokerName = brokerName });
-        }
-        public ActionResult DeleteTopic(string clusterName, string brokerName, string topic)
-        {
-            ViewBag.ClusterName = clusterName;
-            ViewBag.BrokerName = brokerName;
-            _messageService.DeleteTopic(clusterName, brokerName, topic);
-            return RedirectToAction("QueueInfo", new { ClusterName = clusterName, BrokerName = brokerName });
-        }
         public ActionResult QueueInfoList(string clusterName, string brokerName, string topic)
         {
             ViewBag.ClusterName = clusterName;
@@ -91,33 +77,47 @@ namespace EQueue.AdminWeb.Controllers
                 ConsumerList = consumerList
             });
         }
+        public ActionResult CreateTopic(string clusterName, string brokerName, string topic, int? initialQueueCount)
+        {
+            ViewBag.ClusterName = clusterName;
+            ViewBag.BrokerName = brokerName;
+            _messageService.CreateTopic(clusterName, brokerName, topic, initialQueueCount ?? 4);
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, BrokerName = brokerName });
+        }
+        public ActionResult DeleteTopic(string clusterName, string brokerName, string topic)
+        {
+            ViewBag.ClusterName = clusterName;
+            ViewBag.BrokerName = brokerName;
+            _messageService.DeleteTopic(clusterName, brokerName, topic);
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, BrokerName = brokerName });
+        }
         public ActionResult AddQueue(string clusterName, string brokerName, string topic)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
             _messageService.AddQueue(clusterName, brokerName, topic);
-            return RedirectToAction("QueueInfo", new { ClusterName = clusterName, BrokerName = brokerName });
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, BrokerName = brokerName });
         }
         public ActionResult DeleteQueue(string clusterName, string brokerName, string topic, int queueId)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
             _messageService.DeleteQueue(clusterName, brokerName, topic, queueId);
-            return RedirectToAction("QueueInfo", new { ClusterName = clusterName, BrokerName = brokerName });
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, BrokerName = brokerName });
         }
         public ActionResult SetQueueProducerVisible(string clusterName, string brokerName, string topic, int queueId, bool visible)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
             _messageService.SetQueueProducerVisible(clusterName, brokerName, topic, queueId, visible);
-            return RedirectToAction("QueueInfo", new { ClusterName = clusterName, BrokerName = brokerName });
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, BrokerName = brokerName });
         }
         public ActionResult SetQueueConsumerVisible(string clusterName, string brokerName, string topic, int queueId, bool visible)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
             _messageService.SetQueueConsumerVisible(clusterName, brokerName, topic, queueId, visible);
-            return RedirectToAction("QueueInfo", new { ClusterName = clusterName, BrokerName = brokerName });
+            return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, BrokerName = brokerName });
         }
         [HttpGet]
         public ActionResult SetQueueNextConsumeOffset(string clusterName, string brokerName, string consumerGroup, string topic, int queueId)
@@ -138,14 +138,14 @@ namespace EQueue.AdminWeb.Controllers
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
             _messageService.SetQueueNextConsumeOffset(clusterName, brokerName, consumerGroup, topic, queueId, nextOffset);
-            return RedirectToAction("ConsumerInfo", new { ClusterName = clusterName, BrokerName = brokerName });
+            return RedirectToAction("ConsumeInfoList", new { ClusterName = clusterName, BrokerName = brokerName });
         }
         public ActionResult DeleteConsumerGroup(string clusterName, string brokerName, string consumerGroup)
         {
             ViewBag.ClusterName = clusterName;
             ViewBag.BrokerName = brokerName;
             _messageService.DeleteConsumerGroup(clusterName, brokerName, consumerGroup);
-            return RedirectToAction("ConsumerInfo", new { ClusterName = clusterName, BrokerName = brokerName });
+            return RedirectToAction("ConsumeInfoList", new { ClusterName = clusterName, BrokerName = brokerName });
         }
     }
 }
