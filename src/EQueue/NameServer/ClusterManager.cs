@@ -165,7 +165,7 @@ namespace EQueue.NameServer
             {
                 var returnList = new List<TopicRouteInfo>();
                 Cluster cluster;
-                if (!_clusterDict.TryGetValue(request.ClusterName, out cluster))
+                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
                 {
                     return returnList;
                 }
@@ -215,7 +215,7 @@ namespace EQueue.NameServer
             {
                 var returnList = new List<BrokerTopicQueueInfo>();
                 Cluster cluster;
-                if (!_clusterDict.TryGetValue(request.ClusterName, out cluster))
+                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
                 {
                     return returnList;
                 }
@@ -246,7 +246,7 @@ namespace EQueue.NameServer
             {
                 var returnList = new List<BrokerTopicConsumeInfo>();
                 Cluster cluster;
-                if (!_clusterDict.TryGetValue(request.ClusterName, out cluster))
+                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
                 {
                     return returnList;
                 }
@@ -277,7 +277,7 @@ namespace EQueue.NameServer
             {
                 var returnList = new List<BrokerProducerListInfo>();
                 Cluster cluster;
-                if (!_clusterDict.TryGetValue(request.ClusterName, out cluster))
+                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
                 {
                     return returnList;
                 }
@@ -307,7 +307,7 @@ namespace EQueue.NameServer
             {
                 var returnList = new List<BrokerConsumerListInfo>();
                 Cluster cluster;
-                if (!_clusterDict.TryGetValue(request.ClusterName, out cluster))
+                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
                 {
                     return returnList;
                 }
@@ -342,7 +342,7 @@ namespace EQueue.NameServer
             {
                 var returnList = new List<BrokerInfo>();
                 Cluster cluster;
-                if (!_clusterDict.TryGetValue(request.ClusterName, out cluster))
+                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
                 {
                     return returnList;
                 }

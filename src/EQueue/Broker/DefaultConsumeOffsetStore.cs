@@ -201,20 +201,23 @@ namespace EQueue.Broker
         public IEnumerable<TopicConsumeInfo> GetTopicConsumeInfoList(string groupName, string topic)
         {
             var topicConsumeInfoList = new List<TopicConsumeInfo>();
-            ConcurrentDictionary<QueueKey, long> found;
-            if (_groupConsumeOffsetsDict.TryGetValue(groupName, out found))
+            if (!string.IsNullOrEmpty(groupName) && !string.IsNullOrEmpty(topic))
             {
-                foreach (var entry in found.Where(x => x.Key.Topic == topic))
+                ConcurrentDictionary<QueueKey, long> found;
+                if (_groupConsumeOffsetsDict.TryGetValue(groupName, out found))
                 {
-                    var queueKey = entry.Key;
-                    var consumedOffset = entry.Value;
-                    topicConsumeInfoList.Add(new TopicConsumeInfo
+                    foreach (var entry in found.Where(x => x.Key.Topic == topic))
                     {
-                        ConsumerGroup = groupName,
-                        Topic = queueKey.Topic,
-                        QueueId = queueKey.QueueId,
-                        ConsumedOffset = consumedOffset
-                    });
+                        var queueKey = entry.Key;
+                        var consumedOffset = entry.Value;
+                        topicConsumeInfoList.Add(new TopicConsumeInfo
+                        {
+                            ConsumerGroup = groupName,
+                            Topic = queueKey.Topic,
+                            QueueId = queueKey.QueueId,
+                            ConsumedOffset = consumedOffset
+                        });
+                    }
                 }
             }
             return topicConsumeInfoList;

@@ -10,7 +10,7 @@ namespace EQueue.Broker.Client
         private readonly IQueueStore _queueStore;
         private readonly IConsumeOffsetStore _consumeOffsetStore;
 
-        private GetConsumerListService(ConsumerManager consumerManager, IConsumeOffsetStore consumeOffsetStore, IQueueStore queueStore)
+        public GetConsumerListService(ConsumerManager consumerManager, IConsumeOffsetStore consumeOffsetStore, IQueueStore queueStore)
         {
             _consumerManager = consumerManager;
             _consumeOffsetStore = consumeOffsetStore;
@@ -48,25 +48,29 @@ namespace EQueue.Broker.Client
         public IEnumerable<ConsumerInfo> GetConsumerList(string groupName, string topic)
         {
             var consumerInfoList = new List<ConsumerInfo>();
-            var consumerGroup = _consumerManager.GetConsumerGroup(groupName);
-            if (consumerGroup == null)
-            {
-                return consumerInfoList;
-            }
 
-            var consumerIdList = consumerGroup.GetConsumerIdsForTopic(topic).ToList();
-            consumerIdList.Sort();
-
-            foreach (var consumerId in consumerIdList)
+            if (!string.IsNullOrEmpty(groupName) && !string.IsNullOrEmpty(topic))
             {
-                var queueKeyList = consumerGroup.GetConsumingQueueList(consumerId).Where(x => x.Topic == topic);
-                foreach (var queueKey in queueKeyList)
+                var consumerGroup = _consumerManager.GetConsumerGroup(groupName);
+                if (consumerGroup == null)
                 {
-                    consumerInfoList.Add(BuildConsumerInfo(consumerGroup.GroupName, consumerId, queueKey));
+                    return consumerInfoList;
                 }
-            }
 
-            consumerInfoList.Sort(SortConsumerInfo);
+                var consumerIdList = consumerGroup.GetConsumerIdsForTopic(topic).ToList();
+                consumerIdList.Sort();
+
+                foreach (var consumerId in consumerIdList)
+                {
+                    var queueKeyList = consumerGroup.GetConsumingQueueList(consumerId).Where(x => x.Topic == topic);
+                    foreach (var queueKey in queueKeyList)
+                    {
+                        consumerInfoList.Add(BuildConsumerInfo(consumerGroup.GroupName, consumerId, queueKey));
+                    }
+                }
+
+                consumerInfoList.Sort(SortConsumerInfo);
+            }
 
             return consumerInfoList;
         }

@@ -9,7 +9,7 @@ namespace EQueue.Broker.Client
         private readonly IQueueStore _queueStore;
         private readonly IConsumeOffsetStore _consumeOffsetStore;
 
-        private GetTopicConsumeInfoListService(ConsumerManager consumerManager, IConsumeOffsetStore consumeOffsetStore, IQueueStore queueStore)
+        public GetTopicConsumeInfoListService(ConsumerManager consumerManager, IConsumeOffsetStore consumeOffsetStore, IQueueStore queueStore)
         {
             _consumerManager = consumerManager;
             _consumeOffsetStore = consumeOffsetStore;

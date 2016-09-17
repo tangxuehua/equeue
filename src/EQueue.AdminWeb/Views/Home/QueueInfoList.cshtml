@@ -15,6 +15,10 @@
     @using (Html.BeginForm("QueueInfoList", "Home", new { clusterName = ViewBag.ClusterName }, FormMethod.Post, new { @class = "form-inline header-form", role = "form" }))
     {
         <div class="form-group">
+            <label class="sr-only" for="ClusterName"></label>
+            @Html.TextBoxFor(m => m.ClusterName, new { @class = "form-control", placeholder = "ClusterName" })
+        </div>
+        <div class="form-group">
             <label class="sr-only" for="Topic"></label>
             @Html.TextBoxFor(m => m.Topic, new { @class = "form-control", placeholder = "Topic" })
         </div>

@@ -178,7 +178,11 @@ namespace EQueue.AdminWeb
         public IEnumerable<BrokerProducerListInfo> GetProducerInfoList(string clusterName)
         {
             var remotingClient = GetAvailableNameServerRemotingClient();
-            var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetProducerList, EmptyBytes);
+            var requestData = _binarySerializer.Serialize(new GetProducerListRequest
+            {
+                ClusterName = clusterName
+            });
+            var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetProducerList, requestData);
             var remotingResponse = remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == ResponseCode.Success)
             {

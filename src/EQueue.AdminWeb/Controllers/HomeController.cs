@@ -52,7 +52,7 @@ namespace EQueue.AdminWeb.Controllers
                 TopicConsumeInfoList = topicConsumeInfoList
             });
         }
-        public ActionResult ProducerList(string clusterName, string group, string topic)
+        public ActionResult ProducerList(string clusterName)
         {
             ViewBag.ClusterName = clusterName;
             var producerList = _messageService.GetProducerInfoList(clusterName);
