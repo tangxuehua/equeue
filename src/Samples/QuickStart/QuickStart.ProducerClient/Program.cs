@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
@@ -65,7 +64,7 @@ namespace QuickStart.ProducerClient
             var messageSize = int.Parse(ConfigurationManager.AppSettings["MessageSize"]);
             var messageCount = int.Parse(ConfigurationManager.AppSettings["MessageCount"]);
             var actions = new List<Action>();
-            var payload = Encoding.UTF8.GetBytes("Hello World.");
+            var payload = new byte[messageSize];
             var topic = ConfigurationManager.AppSettings["Topic"];
 
             for (var i = 0; i < clientCount; i++)
@@ -107,10 +106,8 @@ namespace QuickStart.ProducerClient
                     {
                         throw new Exception(result.ErrorMessage);
                     }
-                    _logger.Info(result);
                     _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
                     Interlocked.Increment(ref _sentCount);
-                    Thread.Sleep(1);
                 };
             }
             else if (_mode == "Async")
