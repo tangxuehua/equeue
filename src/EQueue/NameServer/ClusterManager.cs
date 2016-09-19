@@ -95,33 +95,19 @@ namespace EQueue.NameServer
                     }
                     if (IsTopicQueueInfoChanged(request.TopicQueueInfoList, broker.TopicQueueInfoList))
                     {
-                        var newQueueInfo = _jsonSerializer.Serialize(request.TopicQueueInfoList);
-                        var oldQueueInfo = _jsonSerializer.Serialize(broker.TopicQueueInfoList);
-                        var logInfo = string.Format("Broker topicQueueInfo changed, old: {0}, new: {1}", oldQueueInfo, newQueueInfo);
                         broker.TopicQueueInfoList = request.TopicQueueInfoList;
-                        _logger.Info(logInfo);
                     }
                     if (IsTopicConsumeInfoChanged(request.TopicConsumeInfoList, broker.TopicConsumeInfoList))
                     {
-                        var newConsumeInfo = _jsonSerializer.Serialize(request.TopicConsumeInfoList);
-                        var oldConsumeInfo = _jsonSerializer.Serialize(broker.TopicConsumeInfoList);
-                        var logInfo = string.Format("Broker topicConsumeInfo changed, old: {0}, new: {1}", oldConsumeInfo, newConsumeInfo);
                         broker.TopicConsumeInfoList = request.TopicConsumeInfoList;
-                        _logger.Info(logInfo);
                     }
                     if (oldProducerList != newProducerList)
                     {
-                        var logInfo = string.Format("Broker producerList changed, old: {0}, new: {1}", oldProducerList, newProducerList);
                         broker.ProducerList = request.ProducerList;
-                        _logger.Info(logInfo);
                     }
                     if (IsConsumerInfoChanged(request.ConsumerList, broker.ConsumerList))
                     {
-                        var newConsumerList = _jsonSerializer.Serialize(request.ConsumerList);
-                        var oldConsumerList = _jsonSerializer.Serialize(broker.ConsumerList);
-                        var logInfo = string.Format("Broker consumerList changed, old: {0}, new: {1}", oldConsumerList, newConsumerList);
                         broker.ConsumerList = request.ConsumerList;
-                        _logger.Info(logInfo);
                     }
                 }
             }
