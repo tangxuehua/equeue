@@ -219,6 +219,7 @@ namespace EQueue.Broker
         public BrokerStatisticInfo GetBrokerStatisticInfo()
         {
             var statisticInfo = new BrokerStatisticInfo();
+            statisticInfo.BrokerInfo = Setting.BrokerInfo;
             statisticInfo.TopicCount = _queueStore.GetAllTopics().Count();
             statisticInfo.QueueCount = _queueStore.GetAllQueueCount();
             statisticInfo.TotalUnConsumedMessageCount = _queueStore.GetTotalUnConusmedMessageCount();

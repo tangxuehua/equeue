@@ -28,11 +28,8 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th width="10%" class="vertical-center">
-                    Broker
-                </th>
-                <th width="8%" class="vertical-center">
-                    BrokerAddress
+                <th width="13%" class="vertical-center">
+                    BrokerName
                 </th>
                 <th width="10%" class="vertical-center">
                     Topic
@@ -40,7 +37,7 @@
                 <th width="5%" class="text-center vertical-center">
                     QueueId
                 </th>
-                <th width="8%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     CurrentOffset
                 </th>
                 <th width="8%" class="text-center vertical-center">
@@ -70,14 +67,7 @@
                 {
                     <tr>
                         <td class="vertical-center">
-                            @line.BrokerInfo.BrokerName<br />
-                            @line.BrokerInfo.GroupName<br />
-                            @line.BrokerInfo.BrokerRole
-                        </td>
-                        <td class="vertical-center">
-                            @line.BrokerInfo.ProducerAddress<br />
-                            @line.BrokerInfo.ConsumerAddress<br />
-                            @line.BrokerInfo.AdminAddress
+                            @Html.ActionLink(@line.BrokerInfo.BrokerName, "Index", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = @line.BrokerInfo.BrokerName }, null)
                         </td>
                         <td class="vertical-center">
                             @item.Topic
@@ -111,29 +101,29 @@
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li>
-                                        @Html.ActionLink("新增队列", "AddQueue", new { clusterName = ViewBag.ClusterName, topic = item.Topic })
+                                        @Html.ActionLink("新增队列 For Cluster", "AddQueue", new { clusterName = ViewBag.ClusterName, topic = item.Topic })
                                     </li>
                                     <li>
                                         @if (item.ProducerVisible)
                                         {
-                                            @Html.ActionLink("禁止发送", "SetQueueProducerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ProducerVisible })
+                                            @Html.ActionLink("禁止发送 For Cluster", "SetQueueProducerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ProducerVisible })
                                         }
                                         else
                                         {
-                                            @Html.ActionLink("允许发送", "SetQueueProducerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ProducerVisible })
+                                            @Html.ActionLink("允许发送 For Cluster", "SetQueueProducerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ProducerVisible })
                                         }
                                     </li>
                                     <li>
                                         @if (item.ConsumerVisible)
                                         {
-                                            @Html.ActionLink("禁止消费", "SetQueueConsumerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ConsumerVisible })
+                                            @Html.ActionLink("禁止消费 For Cluster", "SetQueueConsumerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ConsumerVisible })
                                         }
                                         else
                                         {
-                                            @Html.ActionLink("允许消费", "SetQueueConsumerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ConsumerVisible })
+                                            @Html.ActionLink("允许消费 For Cluster", "SetQueueConsumerVisible", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId, visible = !item.ConsumerVisible })
                                         }
                                     </li>
-                                    <li>@Html.ActionLink("删除队列", "DeleteQueue", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId })</li>
+                                    <li>@Html.ActionLink("删除队列 For Cluster", "DeleteQueue", new { clusterName = ViewBag.ClusterName, topic = item.Topic, queueId = item.QueueId })</li>
                                 </ul>
                             </div>
                         </td>

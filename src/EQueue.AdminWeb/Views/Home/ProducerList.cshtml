@@ -15,12 +15,9 @@
         <thead>
             <tr>
                 <th width="20%" class="vertical-center">
-                    Broker
+                    BrokerName
                 </th>
-                <th width="20%" class="vertical-center">
-                    BrokerAddress
-                </th>
-                <th width="60%" class="vertical-center">
+                <th width="80%" class="vertical-center">
                     ProducerId
                 </th>
             </tr>
@@ -32,14 +29,7 @@
                 {
                     <tr>
                         <td class="vertical-center">
-                            @line.BrokerInfo.BrokerName<br />
-                            @line.BrokerInfo.GroupName<br />
-                            @line.BrokerInfo.BrokerRole
-                        </td>
-                        <td class="vertical-center">
-                            @line.BrokerInfo.ProducerAddress<br />
-                            @line.BrokerInfo.ConsumerAddress<br />
-                            @line.BrokerInfo.AdminAddress
+                            @Html.ActionLink(@line.BrokerInfo.BrokerName, "Index", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = @line.BrokerInfo.BrokerName }, null)
                         </td>
                         <td class="vertical-center">
                             @item

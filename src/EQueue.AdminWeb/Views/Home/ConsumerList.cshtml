@@ -22,16 +22,13 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th width="15%" class="vertical-center">
-                    Broker
-                </th>
                 <th width="10%" class="vertical-center">
-                    BrokerAddress
+                    BrokerName
                 </th>
                 <th width="10%" class="vertical-center">
                     ConsumerGroup
                 </th>
-                <th width="10%" class="vertical-center">
+                <th width="30%" class="vertical-center">
                     ConsumerId
                 </th>
                 <th width="10%" class="vertical-center">
@@ -46,7 +43,7 @@
                 <th width="10%" class="text-center vertical-center">
                     消费进度
                 </th>
-                <th width="15%" class="text-center vertical-center">
+                <th width="10%" class="text-center vertical-center">
                     消息堆积数
                 </th>
             </tr>
@@ -58,14 +55,7 @@
                 {
                     <tr>
                         <td class="vertical-center">
-                            @line.BrokerInfo.BrokerName<br />
-                            @line.BrokerInfo.GroupName<br />
-                            @line.BrokerInfo.BrokerRole
-                        </td>
-                        <td class="vertical-center">
-                            @line.BrokerInfo.ProducerAddress<br />
-                            @line.BrokerInfo.ConsumerAddress<br />
-                            @line.BrokerInfo.AdminAddress
+                            @Html.ActionLink(@line.BrokerInfo.BrokerName, "Index", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = @line.BrokerInfo.BrokerName }, null)
                         </td>
                         <td class="vertical-center">
                             @item.ConsumerGroup

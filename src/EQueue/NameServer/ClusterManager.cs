@@ -84,17 +84,8 @@ namespace EQueue.NameServer
                 {
                     broker.LastActiveTime = DateTime.Now;
 
-                    var newQueueInfo = _jsonSerializer.Serialize(request.TopicQueueInfoList);
-                    var oldQueueInfo = _jsonSerializer.Serialize(broker.TopicQueueInfoList);
-
-                    var newConsumeInfo = _jsonSerializer.Serialize(request.TopicConsumeInfoList);
-                    var oldConsumeInfo = _jsonSerializer.Serialize(broker.TopicConsumeInfoList);
-
                     var newProducerList = _jsonSerializer.Serialize(request.ProducerList);
                     var oldProducerList = _jsonSerializer.Serialize(broker.ProducerList);
-
-                    var newConsumerList = _jsonSerializer.Serialize(request.ConsumerList);
-                    var oldConsumerList = _jsonSerializer.Serialize(broker.ConsumerList);
 
                     if (!broker.BrokerInfo.IsEqualsWith(request.BrokerInfo))
                     {
@@ -102,14 +93,18 @@ namespace EQueue.NameServer
                         broker.BrokerInfo = request.BrokerInfo;
                         _logger.Info(logInfo);
                     }
-                    if (oldQueueInfo != newQueueInfo)
+                    if (IsTopicQueueInfoChanged(request.TopicQueueInfoList, broker.TopicQueueInfoList))
                     {
+                        var newQueueInfo = _jsonSerializer.Serialize(request.TopicQueueInfoList);
+                        var oldQueueInfo = _jsonSerializer.Serialize(broker.TopicQueueInfoList);
                         var logInfo = string.Format("Broker topicQueueInfo changed, old: {0}, new: {1}", oldQueueInfo, newQueueInfo);
                         broker.TopicQueueInfoList = request.TopicQueueInfoList;
                         _logger.Info(logInfo);
                     }
-                    if (oldConsumeInfo != newConsumeInfo)
+                    if (IsTopicConsumeInfoChanged(request.TopicConsumeInfoList, broker.TopicConsumeInfoList))
                     {
+                        var newConsumeInfo = _jsonSerializer.Serialize(request.TopicConsumeInfoList);
+                        var oldConsumeInfo = _jsonSerializer.Serialize(broker.TopicConsumeInfoList);
                         var logInfo = string.Format("Broker topicConsumeInfo changed, old: {0}, new: {1}", oldConsumeInfo, newConsumeInfo);
                         broker.TopicConsumeInfoList = request.TopicConsumeInfoList;
                         _logger.Info(logInfo);
@@ -120,8 +115,10 @@ namespace EQueue.NameServer
                         broker.ProducerList = request.ProducerList;
                         _logger.Info(logInfo);
                     }
-                    if (oldConsumerList != newConsumerList)
+                    if (IsConsumerInfoChanged(request.ConsumerList, broker.ConsumerList))
                     {
+                        var newConsumerList = _jsonSerializer.Serialize(request.ConsumerList);
+                        var oldConsumerList = _jsonSerializer.Serialize(broker.ConsumerList);
                         var logInfo = string.Format("Broker consumerList changed, old: {0}, new: {1}", oldConsumerList, newConsumerList);
                         broker.ConsumerList = request.ConsumerList;
                         _logger.Info(logInfo);
@@ -375,6 +372,99 @@ namespace EQueue.NameServer
             }
         }
 
+        private bool IsTopicQueueInfoChanged(IList<TopicQueueInfo> list1, IList<TopicQueueInfo> list2)
+        {
+            if (list1.Count != list2.Count)
+            {
+                return true;
+            }
+            for (var i = 0; i < list1.Count; i++)
+            {
+                var item1 = list1[i];
+                var item2 = list2[i];
+
+                if (item1.Topic != item2.Topic)
+                {
+                    return true;
+                }
+                if (item1.QueueId != item2.QueueId)
+                {
+                    return true;
+                }
+                if (item1.ProducerVisible != item2.ProducerVisible)
+                {
+                    return true;
+                }
+                if (item1.ConsumerVisible != item2.ConsumerVisible)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        private bool IsTopicConsumeInfoChanged(IList<TopicConsumeInfo> list1, IList<TopicConsumeInfo> list2)
+        {
+            if (list1.Count != list2.Count)
+            {
+                return true;
+            }
+            for (var i = 0; i < list1.Count; i++)
+            {
+                var item1 = list1[i];
+                var item2 = list2[i];
+
+                if (item1.ConsumerGroup != item2.ConsumerGroup)
+                {
+                    return true;
+                }
+                if (item1.Topic != item2.Topic)
+                {
+                    return true;
+                }
+                if (item1.QueueId != item2.QueueId)
+                {
+                    return true;
+                }
+                if (item1.OnlineConsumerCount != item2.OnlineConsumerCount)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        private bool IsConsumerInfoChanged(IList<ConsumerInfo> list1, IList<ConsumerInfo> list2)
+        {
+            if (list1.Count != list2.Count)
+            {
+                return true;
+            }
+            for (var i = 0; i < list1.Count; i++)
+            {
+                var item1 = list1[i];
+                var item2 = list2[i];
+
+                if (item1.ConsumerGroup != item2.ConsumerGroup)
+                {
+                    return true;
+                }
+                if (item1.Topic != item2.Topic)
+                {
+                    return true;
+                }
+                if (item1.QueueId != item2.QueueId)
+                {
+                    return true;
+                }
+                if (item1.ConsumerId != item2.ConsumerId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
         private Broker FindBroker(string connectionId)
         {
             foreach (var cluster in _clusterDict.Values)

@@ -46,7 +46,9 @@ namespace QuickStart.ConsumerClient
             {
                 ClusterName = clusterName,
                 ConsumeFromWhere = ConsumeFromWhere.FirstOffset,
-                MessageHandleMode = MessageHandleMode.Parallel,
+                MessageHandleMode = MessageHandleMode.Sequential,
+                PullMessageFlowControlThreshold = 10,
+                PullMessageFlowControlStepWaitMilliseconds = 1,
                 NameServerList = new List<IPEndPoint> { new IPEndPoint(nameServerAddress, 9493) }
             };
             var messageHandler = new MessageHandler();
@@ -81,6 +83,7 @@ namespace QuickStart.ConsumerClient
                 Interlocked.Increment(ref _handledCount);
                 _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
                 context.OnMessageHandled(message);
+                Thread.Sleep(10);
             }
 
             private void PrintThroughput()

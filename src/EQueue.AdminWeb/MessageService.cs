@@ -456,19 +456,24 @@ namespace EQueue.AdminWeb
         }
         public QueueMessage GetMessageDetail(string clusterName, string messageId)
         {
-            var messageIdInfo = MessageIdUtil.ParseMessageId(messageId);
-            var remotingClient = GetBrokerByBrokerAddress(clusterName, messageIdInfo.IP);
-            var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageId));
-            var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetMessageDetail, requestData);
-            var remotingResponse = remotingClient.InvokeSync(remotingRequest, 30000);
-            if (remotingResponse.Code == ResponseCode.Success)
+            var brokerClientList = GetClusterBrokers(clusterName);
+
+            foreach (var brokerClient in brokerClientList)
             {
-                return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.Body).SingleOrDefault();
+                var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageId));
+                var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetMessageDetail, requestData);
+                var remotingResponse = brokerClient.RemotingClient.InvokeSync(remotingRequest, 30000);
+                if (remotingResponse.Code == ResponseCode.Success)
+                {
+                    return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.Body).SingleOrDefault();
+                }
+                else
+                {
+                    throw new Exception(string.Format("GetMessageDetail failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                }
             }
-            else
-            {
-                throw new Exception(string.Format("GetMessageDetail failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
-            }
+
+            return null;
         }
 
         private void StartAllNameServerClients()
@@ -546,7 +551,7 @@ namespace EQueue.AdminWeb
             }
             return null;
         }
-        private SocketRemotingClient GetBrokerByBrokerAddress(string clusterName, IPAddress brokerAddress)
+        private IList<BrokerClient> GetClusterBrokers(string clusterName)
         {
             IList<BrokerClient> clientList;
             if (!_clusterBrokerDict.TryGetValue(clusterName, out clientList))
@@ -557,21 +562,7 @@ namespace EQueue.AdminWeb
                     return null;
                 }
             }
-            var brokerClient = clientList.SingleOrDefault(x => x.BrokerInfo.ProducerAddress.ToEndPoint().Address.ToString() == brokerAddress.ToString());
-            if (brokerClient == null)
-            {
-                RefreshClusterBrokers(clusterName);
-                if (!_clusterBrokerDict.TryGetValue(clusterName, out clientList))
-                {
-                    return null;
-                }
-                brokerClient = clientList.SingleOrDefault(x => x.BrokerInfo.ProducerAddress.ToEndPoint().Address.ToString() == brokerAddress.ToString());
-            }
-            if (brokerClient != null)
-            {
-                return brokerClient.RemotingClient;
-            }
-            return null;
+            return clientList;
         }
         private IList<SocketRemotingClient> CreateRemotingClientList(IEnumerable<IPEndPoint> endpointList)
         {

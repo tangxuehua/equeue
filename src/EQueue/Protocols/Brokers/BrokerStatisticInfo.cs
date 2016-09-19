@@ -5,6 +5,9 @@ namespace EQueue.Protocols.Brokers
     [Serializable]
     public class BrokerStatisticInfo
     {
+        /// <summary>基本信息
+        /// </summary>
+        public BrokerInfo BrokerInfo { get; set; }
         /// <summary>主题个数
         /// </summary>
         public int TopicCount { get; set; }

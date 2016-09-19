@@ -143,7 +143,6 @@
     <Compile Include="Models\ClusterProducerListViewModel.cs" />
     <Compile Include="Models\ClusterConsumerListViewModel.cs" />
     <Compile Include="Models\SetQueueNextConsumeOffsetViewModel.cs" />
-    <Compile Include="Models\BrokerStatisticInfoViewModel.cs" />
     <Compile Include="Models\BrokerProducerListViewModel.cs" />
     <Compile Include="Models\MessageViewModel.cs" />
     <Compile Include="Models\BrokerConsumerListViewModel.cs" />
@@ -207,6 +206,7 @@
     <Content Include="Views\Home\ConsumerList.cshtml" />
     <Content Include="Views\Home\ConsumeInfoList.cshtml" />
     <Content Include="Views\Home\ProducerList.cshtml" />
+    <Content Include="Views\Home\SetQueueNextConsumeOffset.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EQueue\EQueue.csproj">
