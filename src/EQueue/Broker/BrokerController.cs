@@ -43,6 +43,7 @@ namespace EQueue.Broker
         private readonly SocketRemotingServer _adminSocketRemotingServer;
         private readonly ConsoleEventHandlerService _service;
         private readonly IChunkStatisticService _chunkReadStatisticService;
+        private readonly ITpsStatisticService _tpsStatisticService;
         private readonly IList<SocketRemotingClient> _nameServerRemotingClientList;
         private int _isShuttingdown = 0;
         private int _isCleaning = 0;
@@ -86,6 +87,7 @@ namespace EQueue.Broker
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
             _chunkReadStatisticService = ObjectContainer.Resolve<IChunkStatisticService>();
+            _tpsStatisticService = ObjectContainer.Resolve<ITpsStatisticService>();
 
             _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.BrokerInfo.ProducerAddress.ToEndPoint(), Setting.SocketSetting);
             _consumerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ConsumerRemotingServer", Setting.BrokerInfo.ConsumerAddress.ToEndPoint(), Setting.SocketSetting);
@@ -183,6 +185,7 @@ namespace EQueue.Broker
             _producerSocketRemotingServer.Start();
             _adminSocketRemotingServer.Start();
             _chunkReadStatisticService.Start();
+            _tpsStatisticService.Start();
 
             RemoveNotExistQueueConsumeOffsets();
             StartAllNameServerClients();
@@ -212,6 +215,7 @@ namespace EQueue.Broker
                 _consumeOffsetStore.Shutdown();
                 _queueStore.Shutdown();
                 _chunkReadStatisticService.Shutdown();
+                _tpsStatisticService.Shutdown();
                 _logger.InfoFormat("Broker shutdown success, timeSpent:{0}ms", watch.ElapsedMilliseconds);
             }
             return this;
@@ -229,6 +233,8 @@ namespace EQueue.Broker
             statisticInfo.MessageChunkCount = _messageStore.ChunkCount;
             statisticInfo.MessageMinChunkNum = _messageStore.MinChunkNum;
             statisticInfo.MessageMaxChunkNum = _messageStore.MaxChunkNum;
+            statisticInfo.TotalSendThroughput = _tpsStatisticService.GetTotalSendThroughput();
+            statisticInfo.TotalConsumeThroughput = _tpsStatisticService.GetTotalConsumeThroughput();
             return statisticInfo;
         }
 
@@ -285,6 +291,8 @@ namespace EQueue.Broker
         }
         private void RegisterBrokerToAllNameServers()
         {
+            var totalSendThroughput = _tpsStatisticService.GetTotalSendThroughput();
+            var totalConsumeThroughput = _tpsStatisticService.GetTotalConsumeThroughput();
             var topicQueueInfoList = _queueStore.GetTopicQueueInfoList();
             var topicConsumeInfoList = _getTopicConsumeInfoListService.GetAllTopicConsumeInfoList().ToList();
             var producerList = _producerManager.GetAllProducers().ToList();
@@ -292,6 +300,8 @@ namespace EQueue.Broker
             var request = new BrokerRegistrationRequest
             {
                 BrokerInfo = Setting.BrokerInfo,
+                TotalSendThroughput = totalSendThroughput,
+                TotalConsumeThroughput = totalConsumeThroughput,
                 TopicQueueInfoList = topicQueueInfoList,
                 TopicConsumeInfoList = topicConsumeInfoList,
                 ProducerList = producerList,

@@ -9,11 +9,13 @@ namespace EQueue.Broker.RequestHandlers
     {
         private IConsumeOffsetStore _offsetStore;
         private IBinarySerializer _binarySerializer;
+        private readonly ITpsStatisticService _tpsStatisticService;
 
         public UpdateQueueConsumeOffsetRequestHandler()
         {
             _offsetStore = ObjectContainer.Resolve<IConsumeOffsetStore>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
+            _tpsStatisticService = ObjectContainer.Resolve<ITpsStatisticService>();
         }
 
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
@@ -29,6 +31,11 @@ namespace EQueue.Broker.RequestHandlers
                 request.MessageQueue.QueueId,
                 request.QueueOffset,
                 request.ConsumerGroup);
+            _tpsStatisticService.UpdateTopicConsumeOffset(
+                request.MessageQueue.Topic,
+                request.MessageQueue.QueueId,
+                request.ConsumerGroup,
+                request.QueueOffset);
             return null;
         }
     }

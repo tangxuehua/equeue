@@ -35,5 +35,11 @@ namespace EQueue.Protocols.Brokers
         /// <summary>消息最大Chunk
         /// </summary>
         public int MessageMaxChunkNum { get; set; }
+        /// <summary>发送消息的总吞吐，每1s统计一次
+        /// </summary>
+        public long TotalSendThroughput { get; set; }
+        /// <summary>消费消息的总吞吐，每10s统计一次
+        /// </summary>
+        public long TotalConsumeThroughput { get; set; }
     }
 }

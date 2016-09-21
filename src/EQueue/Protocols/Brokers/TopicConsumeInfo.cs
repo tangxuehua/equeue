@@ -26,6 +26,9 @@ namespace EQueue.Protocols.Brokers
         /// <summary>在线消费者个数
         /// </summary>
         public int OnlineConsumerCount { get; set; }
+        /// <summary>消费消息的吞吐，每10s统计一次
+        /// </summary>
+        public long ConsumeThroughput { get; set; }
 
         /// <summary>计算队列未消费的消息数，即队列的消息堆积数
         /// </summary>

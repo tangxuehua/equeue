@@ -66,6 +66,8 @@ namespace EQueue.NameServer
                     broker = new Broker
                     {
                         BrokerInfo = request.BrokerInfo,
+                        TotalSendThroughput = request.TotalSendThroughput,
+                        TotalConsumeThroughput = request.TotalConsumeThroughput,
                         TopicQueueInfoList = request.TopicQueueInfoList,
                         TopicConsumeInfoList = request.TopicConsumeInfoList,
                         ProducerList = request.ProducerList,
@@ -83,9 +85,8 @@ namespace EQueue.NameServer
                 else
                 {
                     broker.LastActiveTime = DateTime.Now;
-
-                    var newProducerList = _jsonSerializer.Serialize(request.ProducerList);
-                    var oldProducerList = _jsonSerializer.Serialize(broker.ProducerList);
+                    broker.TotalSendThroughput = request.TotalSendThroughput;
+                    broker.TotalConsumeThroughput = request.TotalConsumeThroughput;
 
                     if (!broker.BrokerInfo.IsEqualsWith(request.BrokerInfo))
                     {
@@ -93,22 +94,11 @@ namespace EQueue.NameServer
                         broker.BrokerInfo = request.BrokerInfo;
                         _logger.Info(logInfo);
                     }
-                    if (IsTopicQueueInfoChanged(request.TopicQueueInfoList, broker.TopicQueueInfoList))
-                    {
-                        broker.TopicQueueInfoList = request.TopicQueueInfoList;
-                    }
-                    if (IsTopicConsumeInfoChanged(request.TopicConsumeInfoList, broker.TopicConsumeInfoList))
-                    {
-                        broker.TopicConsumeInfoList = request.TopicConsumeInfoList;
-                    }
-                    if (oldProducerList != newProducerList)
-                    {
-                        broker.ProducerList = request.ProducerList;
-                    }
-                    if (IsConsumerInfoChanged(request.ConsumerList, broker.ConsumerList))
-                    {
-                        broker.ConsumerList = request.ConsumerList;
-                    }
+
+                    broker.TopicQueueInfoList = request.TopicQueueInfoList;
+                    broker.TopicConsumeInfoList = request.TopicConsumeInfoList;
+                    broker.ProducerList = request.ProducerList;
+                    broker.ConsumerList = request.ConsumerList;
                 }
             }
         }
@@ -357,6 +347,54 @@ namespace EQueue.NameServer
                 return returnList;
             }
         }
+        public IList<BrokerStatusInfo> GetClusterBrokerStatusInfos(GetClusterBrokersRequest request)
+        {
+            lock (_lockObj)
+            {
+                var returnList = new List<BrokerStatusInfo>();
+                Cluster cluster;
+                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
+                {
+                    return returnList;
+                }
+
+                foreach (var brokerGroup in cluster.BrokerGroups.Values)
+                {
+                    foreach (var broker in brokerGroup.Brokers.Values)
+                    {
+                        if (request.OnlyFindMaster && broker.BrokerInfo.BrokerRole != (int)BrokerRole.Master)
+                        {
+                            continue;
+                        }
+                        if (!string.IsNullOrEmpty(request.Topic))
+                        {
+                            if (broker.TopicQueueInfoList.Any(x => x.Topic == request.Topic))
+                            {
+                                returnList.Add(new BrokerStatusInfo
+                                {
+                                    BrokerInfo = broker.BrokerInfo,
+                                    TotalSendThroughput = broker.TotalSendThroughput,
+                                    TotalConsumeThroughput = broker.TotalConsumeThroughput
+                                });
+                            }
+                        }
+                        else
+                        {
+                            returnList.Add(new BrokerStatusInfo
+                            {
+                                BrokerInfo = broker.BrokerInfo,
+                                TotalSendThroughput = broker.TotalSendThroughput,
+                                TotalConsumeThroughput = broker.TotalConsumeThroughput
+                            });
+                        }
+                    }
+                }
+
+                returnList.Sort((x, y) => string.Compare(x.BrokerInfo.BrokerName, y.BrokerInfo.BrokerName));
+
+                return returnList;
+            }
+        }
 
         private bool IsTopicQueueInfoChanged(IList<TopicQueueInfo> list1, IList<TopicQueueInfo> list2)
         {
@@ -517,6 +555,8 @@ namespace EQueue.NameServer
         class Broker
         {
             public BrokerInfo BrokerInfo { get; set; }
+            public long TotalSendThroughput { get; set; }
+            public long TotalConsumeThroughput { get; set; }
             public IList<TopicQueueInfo> TopicQueueInfoList = new List<TopicQueueInfo>();
             public IList<TopicConsumeInfo> TopicConsumeInfoList = new List<TopicConsumeInfo>();
             public IList<string> ProducerList = new List<string>();

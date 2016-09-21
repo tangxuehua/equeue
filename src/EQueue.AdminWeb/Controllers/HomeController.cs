@@ -26,7 +26,7 @@ namespace EQueue.AdminWeb.Controllers
         public ActionResult BrokerList(string clusterName)
         {
             ViewBag.ClusterName = clusterName;
-            var brokerList = _messageService.GetClusterBrokers(clusterName);
+            var brokerList = _messageService.GetClusterBrokerStatusInfoList(clusterName);
             return View(new ClusterBrokerListViewModel
             {
                 BrokerList = brokerList

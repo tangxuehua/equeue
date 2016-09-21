@@ -62,6 +62,7 @@ namespace EQueue.NameServer
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.UnregisterBroker, new UnregisterBrokerRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetAllClusters, new GetAllClustersRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetClusterBrokers, new GetClusterBrokersRequestHandler(this));
+            _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetClusterBrokerStatusInfoList, new GetClusterBrokerStatusInfoListRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetTopicRouteInfo, new GetTopicRouteInfoRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetTopicQueueInfo, new GetTopicQueueInfoRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetTopicConsumeInfo, new GetTopicConsumeInfoRequestHandler(this));

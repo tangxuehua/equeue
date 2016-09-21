@@ -14,23 +14,29 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th width="15%" class="vertical-center">
+                <th width="10%" class="vertical-center">
                     GroupName
                 </th>
-                <th width="15%" class="vertical-center">
+                <th width="16%" class="vertical-center">
                     BrokerName
                 </th>
-                <th width="15%" class="vertical-center">
+                <th width="8%" class="vertical-center">
                     BrokerRole
                 </th>
-                <th width="15%" class="vertical-center">
+                <th width="12%" class="vertical-center">
                     ProducerAddress
                 </th>
-                <th width="15%" class="vertical-center">
+                <th width="12%" class="vertical-center">
                     ConsumerAddress
                 </th>
-                <th width="15%" class="vertical-center">
+                <th width="12%" class="vertical-center">
                     AdminAddress
+                </th>
+                <th width="10%" class="vertical-center">
+                    发送TPS
+                </th>
+                <th width="10%" class="vertical-center">
+                    消费TPS
                 </th>
                 <th width="10%" class="vertical-center">
                     操作
@@ -40,27 +46,34 @@
         <tbody>
             @foreach (var item in Model.BrokerList)
             {
+                var broker = item.BrokerInfo;
                 <tr>
                     <td class="vertical-center">
-                        @item.GroupName
+                        @broker.GroupName
                     </td>
                     <td class="vertical-center">
-                        @item.BrokerName
+                        @broker.BrokerName
                     </td>
                     <td class="vertical-center">
-                        @item.BrokerRole
+                        @broker.BrokerRole
                     </td>
                     <td class="vertical-center">
-                        @item.ProducerAddress
+                        @broker.ProducerAddress
                     </td>
                     <td class="vertical-center">
-                        @item.ConsumerAddress
+                        @broker.ConsumerAddress
                     </td>
                     <td class="vertical-center">
-                        @item.AdminAddress
+                        @broker.AdminAddress
                     </td>
                     <td class="vertical-center">
-                        @Html.ActionLink("查看Broker详情", "Index", "Broker", new { clusterName = item.ClusterName, brokerName = item.BrokerName }, null)
+                        @item.TotalSendThroughput
+                    </td>
+                    <td class="vertical-center">
+                        @item.TotalConsumeThroughput
+                    </td>
+                    <td class="vertical-center">
+                        @Html.ActionLink("查看", "Index", "Broker", new { clusterName = broker.ClusterName, brokerName = broker.BrokerName }, null)
                     </td>
                 </tr>
             }

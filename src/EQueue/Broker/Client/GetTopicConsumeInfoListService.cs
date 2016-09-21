@@ -8,12 +8,14 @@ namespace EQueue.Broker.Client
         private readonly ConsumerManager _consumerManager;
         private readonly IQueueStore _queueStore;
         private readonly IConsumeOffsetStore _consumeOffsetStore;
+        private readonly ITpsStatisticService _tpsStatisticService;
 
-        public GetTopicConsumeInfoListService(ConsumerManager consumerManager, IConsumeOffsetStore consumeOffsetStore, IQueueStore queueStore)
+        public GetTopicConsumeInfoListService(ConsumerManager consumerManager, IConsumeOffsetStore consumeOffsetStore, IQueueStore queueStore, ITpsStatisticService tpsStatisticService)
         {
             _consumerManager = consumerManager;
             _consumeOffsetStore = consumeOffsetStore;
             _queueStore = queueStore;
+            _tpsStatisticService = tpsStatisticService;
         }
 
         public IEnumerable<TopicConsumeInfo> GetAllTopicConsumeInfoList()
@@ -26,6 +28,7 @@ namespace EQueue.Broker.Client
                 topicConsumeInfo.QueueCurrentOffset = queueCurrentOffset;
                 topicConsumeInfo.QueueNotConsumeCount = topicConsumeInfo.CalculateQueueNotConsumeCount();
                 topicConsumeInfo.OnlineConsumerCount = _consumerManager.GetConsumerCount(topicConsumeInfo.ConsumerGroup);
+                topicConsumeInfo.ConsumeThroughput = _tpsStatisticService.GetTopicConsumeThroughput(topicConsumeInfo.Topic, topicConsumeInfo.QueueId, topicConsumeInfo.ConsumerGroup);
             }
 
             return topicConsumeInfoList;
@@ -40,6 +43,7 @@ namespace EQueue.Broker.Client
                 topicConsumeInfo.QueueCurrentOffset = queueCurrentOffset;
                 topicConsumeInfo.QueueNotConsumeCount = topicConsumeInfo.CalculateQueueNotConsumeCount();
                 topicConsumeInfo.OnlineConsumerCount = _consumerManager.GetConsumerCount(topicConsumeInfo.ConsumerGroup);
+                topicConsumeInfo.ConsumeThroughput = _tpsStatisticService.GetTopicConsumeThroughput(topicConsumeInfo.Topic, topicConsumeInfo.QueueId, topicConsumeInfo.ConsumerGroup);
             }
 
             return topicConsumeInfoList;

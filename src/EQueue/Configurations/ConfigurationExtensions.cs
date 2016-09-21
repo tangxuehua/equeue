@@ -26,6 +26,7 @@ namespace EQueue.Configurations
             configuration.SetDefault<GetTopicConsumeInfoListService, GetTopicConsumeInfoListService>();
             configuration.SetDefault<GetConsumerListService, GetConsumerListService>();
             configuration.SetDefault<SuspendedPullRequestManager, SuspendedPullRequestManager>();
+            configuration.SetDefault<ITpsStatisticService, DefaultTpsStatisticService>();
             configuration.SetDefault<IChunkStatisticService, DefaultChunkStatisticService>();
             configuration.SetDefault<IRTStatisticService, DefaultRTStatisticService>(life: LifeStyle.Transient);
 

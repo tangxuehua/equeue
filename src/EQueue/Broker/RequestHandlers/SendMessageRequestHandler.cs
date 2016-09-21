@@ -23,6 +23,7 @@ namespace EQueue.Broker.RequestHandlers
         private readonly BrokerController _brokerController;
         private readonly bool _notifyWhenMessageArrived;
         private readonly BufferQueue<StoreContext> _bufferQueue;
+        private readonly ITpsStatisticService _tpsStatisticService;
         private const string SendMessageFailedText = "Send message failed.";
 
         public SendMessageRequestHandler(BrokerController brokerController)
@@ -31,6 +32,7 @@ namespace EQueue.Broker.RequestHandlers
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
             _queueStore = ObjectContainer.Resolve<IQueueStore>();
+            _tpsStatisticService = ObjectContainer.Resolve<ITpsStatisticService>();
             _notifyWhenMessageArrived = _brokerController.Setting.NotifyWhenMessageArrived;
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _sendRTLogger = ObjectContainer.Resolve<ILoggerFactory>().Create("SendRT");
@@ -72,6 +74,8 @@ namespace EQueue.Broker.RequestHandlers
                 Queue = queue,
                 SendMessageRequestHandler = this
             });
+
+            _tpsStatisticService.AddTopicSendCount(message.Topic, queueId);
 
             return null;
         }

@@ -55,15 +55,15 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("GetAllClusters failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
-        public IEnumerable<BrokerInfo> GetClusterBrokers(string clusterName, string topic = null, bool onlyFindMaster = false)
+        public IEnumerable<BrokerStatusInfo> GetClusterBrokerStatusInfoList(string clusterName, string topic = null, bool onlyFindMaster = false)
         {
             var remotingClient = GetAvailableNameServerRemotingClient();
             var requestData = _binarySerializer.Serialize(new GetClusterBrokersRequest { ClusterName = clusterName, Topic = topic, OnlyFindMaster = onlyFindMaster });
-            var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetClusterBrokers, requestData);
+            var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetClusterBrokerStatusInfoList, requestData);
             var remotingResponse = remotingClient.InvokeSync(remotingRequest, 30000);
             if (remotingResponse.Code == ResponseCode.Success)
             {
-                return _binarySerializer.Deserialize<IEnumerable<BrokerInfo>>(remotingResponse.Body);
+                return _binarySerializer.Deserialize<IEnumerable<BrokerStatusInfo>>(remotingResponse.Body);
             }
             else
             {

@@ -57,18 +57,21 @@
                     MinOffset
                 </th>
                 <th width="10%" class="text-center vertical-center">
-                    最慢消费进度
+                    消费进度
                 </th>
                 <th width="10%" class="text-center vertical-center">
-                    消息堆积数
+                    堆积数
                 </th>
                 <th width="10%" class="text-center vertical-center">
-                    是否允许发送
+                    A_S
                 </th>
                 <th width="10%" class="text-center vertical-center">
-                    是否允许消费
+                    A_C
                 </th>
-                <th width="15%" class="vertical-center">
+                <th width="10%" class="text-center vertical-center">
+                    发送TPS
+                </th>
+                <th width="5%" class="vertical-center">
                     操作
                 </th>
             </tr>
@@ -100,6 +103,9 @@
                     </td>
                     <td class="text-center vertical-center">
                         @item.ConsumerVisible
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.SendThroughput
                     </td>
                     <td class="vertical-center">
                         <div class="dropdown">

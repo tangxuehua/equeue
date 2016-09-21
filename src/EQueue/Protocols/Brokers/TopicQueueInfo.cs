@@ -29,6 +29,9 @@ namespace EQueue.Protocols.Brokers
         /// <summary>对消费者是否可见
         /// </summary>
         public bool ConsumerVisible { get; set; }
+        /// <summary>发送消息的吞吐，每1s统计一次
+        /// </summary>
+        public long SendThroughput { get; set; }
 
         /// <summary>计算队列未消费的消息数，即队列的消息堆积数
         /// </summary>

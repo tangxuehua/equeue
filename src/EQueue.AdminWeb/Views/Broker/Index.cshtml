@@ -25,6 +25,18 @@
             </div>
         </div>
         <div class="form-group">
+            <label class="col-sm-2 control-label">发送总吞吐：</label>
+            <div class="col-sm-10">
+                @Model.TotalSendThroughput
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">消费总吞吐：</label>
+            <div class="col-sm-10">
+                @Model.TotalConsumeThroughput
+            </div>
+        </div>
+        <div class="form-group">
             <label class="col-sm-2 control-label">主题个数：</label>
             <div class="col-sm-10">
                 @Model.TopicCount

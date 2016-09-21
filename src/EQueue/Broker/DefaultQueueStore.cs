@@ -18,17 +18,19 @@ namespace EQueue.Broker
         private readonly IMessageStore _messageStore;
         private readonly IConsumeOffsetStore _consumeOffsetStore;
         private readonly IScheduleService _scheduleService;
+        private readonly ITpsStatisticService _tpsStatisticService;
         private readonly ILogger _logger;
         private readonly object _lockObj = new object();
         private int _isUpdatingMinConsumedMessagePosition;
         private int _isDeletingQueueMessage;
 
-        public DefaultQueueStore(IMessageStore messageStore, IConsumeOffsetStore consumeOffsetStore, IScheduleService scheduleService, ILoggerFactory loggerFactory)
+        public DefaultQueueStore(IMessageStore messageStore, IConsumeOffsetStore consumeOffsetStore, IScheduleService scheduleService, ITpsStatisticService tpsStatisticService, ILoggerFactory loggerFactory)
         {
             _queueDict = new ConcurrentDictionary<QueueKey, Queue>();
             _messageStore = messageStore;
             _consumeOffsetStore = consumeOffsetStore;
             _scheduleService = scheduleService;
+            _tpsStatisticService = tpsStatisticService;
             _logger = loggerFactory.Create(GetType().FullName);
         }
 
@@ -79,6 +81,7 @@ namespace EQueue.Broker
                 topicQueueInfo.ProducerVisible = queue.Setting.ProducerVisible;
                 topicQueueInfo.ConsumerVisible = queue.Setting.ConsumerVisible;
                 topicQueueInfo.QueueNotConsumeCount = topicQueueInfo.CalculateQueueNotConsumeCount();
+                topicQueueInfo.SendThroughput = _tpsStatisticService.GetTopicSendThroughput(queue.Topic, queue.QueueId);
                 topicQueueInfoList.Add(topicQueueInfo);
             }
 

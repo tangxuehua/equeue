@@ -6,6 +6,6 @@ namespace EQueue.AdminWeb.Models
     public class ClusterBrokerListViewModel
     {
         public string ClusterName { get; set; }
-        public IEnumerable<BrokerInfo> BrokerList { get; set; }
+        public IEnumerable<BrokerStatusInfo> BrokerList { get; set; }
     }
 }
