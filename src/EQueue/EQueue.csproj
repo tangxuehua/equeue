@@ -97,6 +97,7 @@
     <Compile Include="NameServer\RequestHandlers\UnregisterBrokerRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\RegisterBrokerRequestHandler.cs" />
     <Compile Include="Protocols\Brokers\BrokerInfo.cs" />
+    <Compile Include="Protocols\MessageQueueEx.cs" />
     <Compile Include="Protocols\NameServers\BrokerConsumerListInfo.cs" />
     <Compile Include="Protocols\NameServers\BrokerStatusInfo.cs" />
     <Compile Include="Protocols\NameServers\Requests\DeleteConsumerGroupForClusterRequest.cs" />

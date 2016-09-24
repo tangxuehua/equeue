@@ -28,6 +28,7 @@ namespace EQueue.Broker.Client
                 topicConsumeInfo.QueueCurrentOffset = queueCurrentOffset;
                 topicConsumeInfo.QueueNotConsumeCount = topicConsumeInfo.CalculateQueueNotConsumeCount();
                 topicConsumeInfo.OnlineConsumerCount = _consumerManager.GetConsumerCount(topicConsumeInfo.ConsumerGroup);
+                topicConsumeInfo.ClientCachedMessageCount = _consumerManager.GetClientCacheMessageCount(topicConsumeInfo.ConsumerGroup, topicConsumeInfo.Topic, topicConsumeInfo.QueueId);
                 topicConsumeInfo.ConsumeThroughput = _tpsStatisticService.GetTopicConsumeThroughput(topicConsumeInfo.Topic, topicConsumeInfo.QueueId, topicConsumeInfo.ConsumerGroup);
             }
 
@@ -43,6 +44,7 @@ namespace EQueue.Broker.Client
                 topicConsumeInfo.QueueCurrentOffset = queueCurrentOffset;
                 topicConsumeInfo.QueueNotConsumeCount = topicConsumeInfo.CalculateQueueNotConsumeCount();
                 topicConsumeInfo.OnlineConsumerCount = _consumerManager.GetConsumerCount(topicConsumeInfo.ConsumerGroup);
+                topicConsumeInfo.ClientCachedMessageCount = _consumerManager.GetClientCacheMessageCount(topicConsumeInfo.ConsumerGroup, topicConsumeInfo.Topic, topicConsumeInfo.QueueId);
                 topicConsumeInfo.ConsumeThroughput = _tpsStatisticService.GetTopicConsumeThroughput(topicConsumeInfo.Topic, topicConsumeInfo.QueueId, topicConsumeInfo.ConsumerGroup);
             }
 

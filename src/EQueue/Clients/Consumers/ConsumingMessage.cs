@@ -12,6 +12,7 @@ namespace EQueue.Clients.Consumers
         {
             Message = message;
             PullRequest = pullRequest;
+            Message.BrokerName = pullRequest.MessageQueue.BrokerName;
         }
     }
 }

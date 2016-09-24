@@ -20,6 +20,9 @@ namespace EQueue.Protocols.Brokers
         /// <summary>队列消费位置
         /// </summary>
         public long ConsumedOffset { get; set; }
+        /// <summary>客户端缓存的消息树
+        /// </summary>
+        public int ClientCachedMessageCount { get; set; }
         /// <summary>未消费消息数，即消息堆积数
         /// </summary>
         public long QueueNotConsumeCount { get; set; }

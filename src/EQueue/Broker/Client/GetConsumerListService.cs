@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using EQueue.Protocols;
 using EQueue.Protocols.Brokers;
 
 namespace EQueue.Broker.Client
@@ -33,10 +34,10 @@ namespace EQueue.Broker.Client
 
                 foreach (var consumerId in consumerIdList)
                 {
-                    var queueKeyList = consumerGroup.GetConsumingQueueList(consumerId);
-                    foreach (var queueKey in queueKeyList)
+                    var messageQueueList = consumerGroup.GetConsumingQueueList(consumerId);
+                    foreach (var messageQueue in messageQueueList)
                     {
-                        consumerInfoList.Add(BuildConsumerInfo(consumerGroup.GroupName, consumerId, queueKey));
+                        consumerInfoList.Add(BuildConsumerInfo(consumerGroup.GroupName, consumerId, messageQueue));
                     }
                 }
             }
@@ -62,10 +63,10 @@ namespace EQueue.Broker.Client
 
                 foreach (var consumerId in consumerIdList)
                 {
-                    var queueKeyList = consumerGroup.GetConsumingQueueList(consumerId).Where(x => x.Topic == topic);
-                    foreach (var queueKey in queueKeyList)
+                    var messageQueueList = consumerGroup.GetConsumingQueueList(consumerId).Where(x => x.Topic == topic);
+                    foreach (var messageQueue in messageQueueList)
                     {
-                        consumerInfoList.Add(BuildConsumerInfo(consumerGroup.GroupName, consumerId, queueKey));
+                        consumerInfoList.Add(BuildConsumerInfo(consumerGroup.GroupName, consumerId, messageQueue));
                     }
                 }
 
@@ -102,16 +103,17 @@ namespace EQueue.Broker.Client
             }
             return 0;
         }
-        private ConsumerInfo BuildConsumerInfo(string groupName, string consumerId, QueueKey queueKey)
+        private ConsumerInfo BuildConsumerInfo(string groupName, string consumerId, MessageQueueEx messageQueue)
         {
-            var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(queueKey.Topic, queueKey.QueueId);
+            var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(messageQueue.Topic, messageQueue.QueueId);
             var consumerInfo = new ConsumerInfo();
             consumerInfo.ConsumerGroup = groupName;
             consumerInfo.ConsumerId = consumerId;
-            consumerInfo.Topic = queueKey.Topic;
-            consumerInfo.QueueId = queueKey.QueueId;
+            consumerInfo.Topic = messageQueue.Topic;
+            consumerInfo.QueueId = messageQueue.QueueId;
+            consumerInfo.ClientCachedMessageCount = messageQueue.ClientCachedMessageCount;
             consumerInfo.QueueCurrentOffset = queueCurrentOffset;
-            consumerInfo.ConsumedOffset = _consumeOffsetStore.GetConsumeOffset(queueKey.Topic, queueKey.QueueId, groupName);
+            consumerInfo.ConsumedOffset = _consumeOffsetStore.GetConsumeOffset(messageQueue.Topic, messageQueue.QueueId, groupName);
             consumerInfo.QueueNotConsumeCount = consumerInfo.CalculateQueueNotConsumeCount();
             return consumerInfo;
         }

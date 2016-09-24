@@ -9,9 +9,9 @@ namespace EQueue.Protocols.Brokers
         public string ConsumerId { get; private set; }
         public string GroupName { get; private set; }
         public IEnumerable<string> SubscriptionTopics { get; private set; }
-        public IEnumerable<MessageQueue> ConsumingQueues { get; private set; }
+        public IEnumerable<MessageQueueEx> ConsumingQueues { get; private set; }
 
-        public ConsumerHeartbeatData(string consumerId, string groupName, IEnumerable<string> subscriptionTopics, IEnumerable<MessageQueue> consumingQueues)
+        public ConsumerHeartbeatData(string consumerId, string groupName, IEnumerable<string> subscriptionTopics, IEnumerable<MessageQueueEx> consumingQueues)
         {
             ConsumerId = consumerId;
             GroupName = groupName;

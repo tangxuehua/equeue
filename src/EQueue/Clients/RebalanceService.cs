@@ -54,7 +54,7 @@ namespace EQueue.Clients
             {
                 _scheduleService.StartTask("CommitOffsets", CommitOffsets, 1000, _consumer.Setting.CommitConsumerOffsetInterval);
             }
-            _logger.Info("RebalanceService startted.");
+            _logger.InfoFormat("{0} startted.", GetType().Name);
         }
         public void Stop()
         {
@@ -68,11 +68,17 @@ namespace EQueue.Clients
                 pullRequest.IsDropped = true;
             }
             _pullRequestDict.Clear();
-            _logger.Info("RebalanceService stopped.");
+            _logger.InfoFormat("{0} stopped.", GetType().Name);
         }
-        public IEnumerable<MessageQueue> GetCurrentQueues()
+        public IEnumerable<MessageQueueEx> GetCurrentQueues()
         {
-            return _pullRequestDict.Values.Select(x => x.MessageQueue).ToList();
+            return _pullRequestDict.Values.Select(x =>
+            {
+                return new MessageQueueEx(x.MessageQueue.BrokerName, x.MessageQueue.Topic, x.MessageQueue.QueueId)
+                {
+                    ClientCachedMessageCount = x.ProcessQueue.GetMessageCount()
+                };
+            }).ToList();
         }
 
         private void Rebalance()

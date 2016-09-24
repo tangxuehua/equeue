@@ -22,7 +22,7 @@ namespace EQueue.Clients.Consumers
         private readonly IBinarySerializer _binarySerializer;
         private readonly IDictionary<string, HashSet<string>> _subscriptionTopics;
         private readonly ILogger _logger;
-        private bool _isShutdown;
+        private bool _stopped;
 
         #endregion
 
@@ -35,9 +35,9 @@ namespace EQueue.Clients.Consumers
         {
             get { return _subscriptionTopics; }
         }
-        public bool IsShutdown
+        public bool Stopped
         {
-            get { return _isShutdown; }
+            get { return _stopped; }
         }
 
         #endregion
@@ -95,16 +95,18 @@ namespace EQueue.Clients.Consumers
             _clientService.Start();
             _pullMessageService.Start();
             _rebalanceService.Start();
-            _logger.InfoFormat("Consumer startted.");
+            _commitConsumeOffsetService.Start();
+            _logger.InfoFormat("{0} startted.", GetType().Name);
             return this;
         }
-        public Consumer Shutdown()
+        public Consumer Stop()
         {
-            _isShutdown = true;
+            _stopped = true;
+            _commitConsumeOffsetService.Stop();
             _rebalanceService.Stop();
             _pullMessageService.Stop();
             _clientService.Stop();
-            _logger.Info("Consumer shutdown.");
+            _logger.InfoFormat("{0} stopped.", GetType().Name);
             return this;
         }
         public Consumer Subscribe(string topic, params string[] tags)
@@ -127,7 +129,7 @@ namespace EQueue.Clients.Consumers
             _clientService.RegisterSubscriptionTopic(topic);
             return this;
         }
-        public IEnumerable<MessageQueue> GetCurrentQueues()
+        public IEnumerable<MessageQueueEx> GetCurrentQueues()
         {
             return _rebalanceService.GetCurrentQueues();
         }
@@ -154,7 +156,7 @@ namespace EQueue.Clients.Consumers
 
                 try
                 {
-                    var messageQueues = new List<MessageQueue>();
+                    var messageQueues = new List<MessageQueueEx>();
                     var queueGroup = queueGroups.SingleOrDefault(x => x.Key == brokerConnection.BrokerInfo.BrokerName);
                     if (queueGroup != null)
                     {

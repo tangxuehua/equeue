@@ -74,7 +74,7 @@ namespace EQueue.Clients
         }
         public void SchedulePullRequest(PullRequest pullRequest)
         {
-            if (_messageHandler == null)
+            if (_consumer.Setting.AutoPull && _messageHandler == null)
             {
                 _logger.Error("Schedule pullRequest is cancelled as the messageHandler is null.");
                 return;
@@ -83,20 +83,19 @@ namespace EQueue.Clients
         }
         public void Start()
         {
-            if (_messageHandler == null)
-            {
-                throw new Exception("Cannot start as no messageHandler was set, please call SetMessageHandler first.");
-            }
-
             if (_consumer.Setting.AutoPull)
             {
+                if (_messageHandler == null)
+                {
+                    throw new Exception("Cannot start as no messageHandler was set, please call SetMessageHandler first.");
+                }
                 if (_consumer.Setting.MessageHandleMode == MessageHandleMode.Sequential)
                 {
                     _consumeMessageWorker.Start();
                 }
                 _scheduleService.StartTask("RetryMessage", RetryMessage, 1000, _consumer.Setting.RetryMessageInterval);
             }
-            _logger.Info("PullMessageService startted.");
+            _logger.InfoFormat("{0} startted.", GetType().Name);
         }
         public void Stop()
         {
@@ -108,7 +107,7 @@ namespace EQueue.Clients
                 }
                 _scheduleService.StopTask("RetryMessage");
             }
-            _logger.Info("PullMessageService stopped.");
+            _logger.InfoFormat("{0} stopped.", GetType().Name);
         }
         public IEnumerable<QueueMessage> PullMessages(int maxCount, int timeoutMilliseconds, CancellationToken cancellation)
         {
@@ -141,7 +140,7 @@ namespace EQueue.Clients
 
         private void ExecutePullRequest(object parameter)
         {
-            if (_consumer.IsShutdown) return;
+            if (_consumer.Stopped) return;
 
             var pullRequest = parameter as PullRequest;
             if (pullRequest == null) return;
@@ -161,7 +160,7 @@ namespace EQueue.Clients
 
             try
             {
-                if (_consumer.IsShutdown) return;
+                if (_consumer.Stopped) return;
                 if (pullRequest.IsDropped) return;
 
                 var messageCount = 0;
@@ -208,7 +207,7 @@ namespace EQueue.Clients
                 {
                     try
                     {
-                        if (_consumer.IsShutdown) return;
+                        if (_consumer.Stopped) return;
                         if (pullRequest.IsDropped) return;
 
                         if (pullTask.Exception != null)
@@ -249,7 +248,7 @@ namespace EQueue.Clients
                     }
                     catch (Exception ex)
                     {
-                        if (_consumer.IsShutdown) return;
+                        if (_consumer.Stopped) return;
                         if (pullRequest.IsDropped) return;
                         if (remotingClient.IsConnected)
                         {
@@ -270,7 +269,7 @@ namespace EQueue.Clients
             }
             catch (Exception ex)
             {
-                if (_consumer.IsShutdown) return;
+                if (_consumer.Stopped) return;
                 if (pullRequest.IsDropped) return;
 
                 if (remotingClient.IsConnected)
@@ -338,7 +337,7 @@ namespace EQueue.Clients
         private void HandleMessage(object parameter)
         {
             var consumingMessage = parameter as ConsumingMessage;
-            if (_consumer.IsShutdown) return;
+            if (_consumer.Stopped) return;
             if (consumingMessage == null) return;
             if (consumingMessage.PullRequest.IsDropped) return;
             if (consumingMessage.IsIgnored)

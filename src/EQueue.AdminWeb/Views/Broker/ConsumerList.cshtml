@@ -22,10 +22,10 @@
                 <th width="15%" class="vertical-center">
                     ConsumerGroup
                 </th>
-                <th width="15%" class="vertical-center">
+                <th width="20%" class="vertical-center">
                     ConsumerId
                 </th>
-                <th width="20%" class="vertical-center">
+                <th width="15%" class="vertical-center">
                     Topic
                 </th>
                 <th width="10%" class="text-center vertical-center">
@@ -39,6 +39,9 @@
                 </th>
                 <th width="10%" class="text-center vertical-center">
                     堆积数
+                </th>
+                <th width="10%" class="text-center vertical-center">
+                    CacheCount
                 </th>
             </tr>
         </thead>
@@ -66,6 +69,9 @@
                     </td>
                     <td class="text-center vertical-center">
                         @item.QueueNotConsumeCount
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ClientCachedMessageCount
                     </td>
                 </tr>
             }

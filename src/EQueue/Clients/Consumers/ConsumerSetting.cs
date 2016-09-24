@@ -19,6 +19,11 @@ namespace EQueue.Clients.Consumers
         /// <summary>表示框架是否需要自动PullMessage、HandleMessage、Commit Consume Offset；默认值为True；
         /// </summary>
         public bool AutoPull { get; set; }
+        /// <summary>当AutoPull为False时，当用户调用Consumer的CommitConsumeOffset方法来更新消费进度时，Consumer内部是否需要异步提交消费进度到Broker；默认为True；
+        /// 如果是异步，则当用户调用CommitConsumeOffset时，只是在本地内存更新消费进度，然后定时的方式提交消费进度到Broker；
+        /// 定时间隔通过CommitConsumerOffsetInterval来设置；
+        /// </summary>
+        public bool CommitConsumeOffsetAsync { get; set; }
         /// <summary>当要自己拉取消息时，Consumer内部拉取消息到本地缓存的缓存队列的大小，默认为100000
         /// </summary>
         public int ManualPullLocalMessageQueueMaxSize { get; set; }
@@ -99,6 +104,7 @@ namespace EQueue.Clients.Consumers
             ConsumeFromWhere = ConsumeFromWhere.LastOffset;
             MessageHandleMode = MessageHandleMode.Parallel;
             AutoPull = true;
+            CommitConsumeOffsetAsync = true;
             ManualPullLocalMessageQueueMaxSize = 10 * 10000;
         }
     }

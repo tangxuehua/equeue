@@ -96,6 +96,7 @@ namespace EQueue.Clients
                 RefreshClusterBrokers();
                 RefreshTopicRouteInfo();
             }, 1000, _setting.RefreshBrokerAndTopicRouteInfoInterval);
+            _logger.InfoFormat("{0} startted.", GetType().Name);
             return this;
         }
         public virtual ClientService Stop()
@@ -104,7 +105,7 @@ namespace EQueue.Clients
             _scheduleService.StopTask("RefreshBrokerAndTopicRouteInfo");
             StopAllNameServerClients();
             StopAllBrokerServices();
-            _logger.Info("Producer shutdown");
+            _logger.InfoFormat("{0} stopped.", GetType().Name);
             return this;
         }
         public List<BrokerConnection> GetAllBrokerConnections()

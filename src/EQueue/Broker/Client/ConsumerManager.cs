@@ -28,7 +28,7 @@ namespace EQueue.Broker.Client
             _consumerGroupDict.Clear();
             _scheduleService.StopTask("ScanNotActiveConsumer");
         }
-        public void RegisterConsumer(string groupName, string consumerId, IEnumerable<string> subscriptionTopics, IEnumerable<MessageQueue> consumingQueues, ITcpConnection connection)
+        public void RegisterConsumer(string groupName, string consumerId, IEnumerable<string> subscriptionTopics, IEnumerable<MessageQueueEx> consumingQueues, ITcpConnection connection)
         {
             var consumerGroup = _consumerGroupDict.GetOrAdd(groupName, key => new ConsumerGroup(key));
             consumerGroup.RegisterConsumer(connection, consumerId, subscriptionTopics.ToList(), consumingQueues.ToList());
@@ -67,6 +67,15 @@ namespace EQueue.Broker.Client
             if (_consumerGroupDict.TryGetValue(groupName, out consumerGroup))
             {
                 return consumerGroup.GetConsumerCount();
+            }
+            return 0;
+        }
+        public int GetClientCacheMessageCount(string groupName, string topic, int queueId)
+        {
+            ConsumerGroup consumerGroup;
+            if (_consumerGroupDict.TryGetValue(groupName, out consumerGroup))
+            {
+                return consumerGroup.GetClientCacheMessageCount(topic, queueId);
             }
             return 0;
         }

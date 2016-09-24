@@ -11,6 +11,7 @@ namespace EQueue.Protocols
         public int QueueId { get; set; }
         public long QueueOffset { get; set; }
         public DateTime StoredTime { get; set; }
+        public string BrokerName { get; set; }
 
         public QueueMessage() { }
         public QueueMessage(string messageId, string topic, int code, byte[] body, int queueId, long queueOffset, DateTime createdTime, DateTime storedTime, string tag)

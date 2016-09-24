@@ -26,11 +26,11 @@
                 </button>
                 @Html.ActionLink("首页", "Index", "Home", null, new { @class = "navbar-brand" })
                 @Html.ActionLink("BROKER列表", "BrokerList", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
-                @Html.ActionLink("BROKER基本信息", "Index", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
-                @Html.ActionLink("BROKER队列信息", "QueueInfoList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
-                @Html.ActionLink("BROKER消费信息", "ConsumeInfoList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
-                @Html.ActionLink("BROKER生产者列表", "ProducerList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
-                @Html.ActionLink("BROKER消费者列表", "ConsumerList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("基本信息", "Index", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("队列信息", "QueueInfoList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("消费信息", "ConsumeInfoList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("生产者列表", "ProducerList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("消费者列表", "ConsumerList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
             </div>
         </div>
     </div>

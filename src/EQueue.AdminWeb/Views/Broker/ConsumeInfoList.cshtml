@@ -19,10 +19,10 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th width="15%" class="vertical-center">
+                <th width="10%" class="vertical-center">
                     ConsumerGroup
                 </th>
-                <th width="15%" class="vertical-center">
+                <th width="10%" class="vertical-center">
                     Topic
                 </th>
                 <th width="10%" class="text-center vertical-center">
@@ -36,6 +36,9 @@
                 </th>
                 <th width="10%" class="text-center vertical-center">
                     堆积数
+                </th>
+                <th width="10%" class="text-center vertical-center">
+                    CacheCount
                 </th>
                 <th width="10%" class="text-center vertical-center">
                     消费者个数
@@ -69,6 +72,9 @@
                     </td>
                     <td class="text-center vertical-center">
                         @item.QueueNotConsumeCount
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ClientCachedMessageCount
                     </td>
                     <td class="text-center vertical-center">
                         @item.OnlineConsumerCount

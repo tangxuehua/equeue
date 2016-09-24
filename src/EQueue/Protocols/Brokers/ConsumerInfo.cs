@@ -26,6 +26,9 @@ namespace EQueue.Protocols.Brokers
         /// <summary>未消费消息数，即消息堆积数
         /// </summary>
         public long QueueNotConsumeCount { get; set; }
+        /// <summary>客户端缓存的消息树
+        /// </summary>
+        public int ClientCachedMessageCount { get; set; }
 
         /// <summary>计算队列未消费的消息数，即队列的消息堆积数
         /// </summary>

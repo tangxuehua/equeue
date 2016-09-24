@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Linq;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
+using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Utilities;
 using EQueue.Clients.Consumers;
@@ -21,18 +24,38 @@ namespace EQueue.Clients
         private readonly ClientService _clientService;
         private readonly IBinarySerializer _binarySerializer;
         private readonly ILogger _logger;
+        private readonly IScheduleService _scheduleService;
+        private readonly ConcurrentDictionary<string, ConsumeOffsetInfo> _consumeOffsetInfoDict;
 
         #endregion
 
         public CommitConsumeOffsetService(Consumer consumer, ClientService clientService)
         {
+            _consumeOffsetInfoDict = new ConcurrentDictionary<string, ConsumeOffsetInfo>();
             _consumer = consumer;
             _clientService = clientService;
             _clientId = clientService.GetClientId();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
+            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
         }
 
+        public void Start()
+        {
+            if (_consumer.Setting.CommitConsumeOffsetAsync)
+            {
+                _scheduleService.StartTask("CommitOffsets", CommitOffsets, 1000, _consumer.Setting.CommitConsumerOffsetInterval);
+            }
+            _logger.InfoFormat("{0} startted.", GetType().Name);
+        }
+        public void Stop()
+        {
+            if (_consumer.Setting.CommitConsumeOffsetAsync)
+            {
+                _scheduleService.StopTask("CommitOffsets");
+            }
+            _logger.InfoFormat("{0} stopped.", GetType().Name);
+        }
         public void CommitConsumeOffset(string brokerName, string topic, int queueId, long consumeOffset)
         {
             Ensure.NotNullOrEmpty(brokerName, "brokerName");
@@ -40,7 +63,23 @@ namespace EQueue.Clients
             Ensure.Nonnegative(queueId, "queueId");
             Ensure.Nonnegative(consumeOffset, "consumeOffset");
 
-            CommitConsumeOffset(new MessageQueue(brokerName, topic, queueId), consumeOffset, true);
+            if (_consumer.Setting.CommitConsumeOffsetAsync)
+            {
+                var key = string.Format("{0}_{1}_{2}", brokerName, topic, queueId);
+                _consumeOffsetInfoDict.AddOrUpdate(key, x =>
+                {
+                    return new ConsumeOffsetInfo { MessageQueue = new MessageQueue(brokerName, topic, queueId), ConsumeOffset = consumeOffset };
+                },
+                (x, y) =>
+                {
+                    y.ConsumeOffset = consumeOffset;
+                    return y;
+                });
+            }
+            else
+            {
+                CommitConsumeOffset(new MessageQueue(brokerName, topic, queueId), consumeOffset, true);
+            }
         }
         public void CommitConsumeOffset(PullRequest pullRequest)
         {
@@ -100,6 +139,19 @@ namespace EQueue.Clients
                     throw;
                 }
             }
+        }
+
+        private void CommitOffsets()
+        {
+            foreach (var consumeOffsetInfo in _consumeOffsetInfoDict.Values)
+            {
+                CommitConsumeOffset(consumeOffsetInfo.MessageQueue, consumeOffsetInfo.ConsumeOffset); ;
+            }
+        }
+        class ConsumeOffsetInfo
+        {
+            public MessageQueue MessageQueue;
+            public long ConsumeOffset;
         }
     }
 }
