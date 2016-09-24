@@ -14,13 +14,14 @@ namespace EQueue.Protocols
         public string BrokerName { get; set; }
 
         public QueueMessage() { }
-        public QueueMessage(string messageId, string topic, int code, byte[] body, int queueId, long queueOffset, DateTime createdTime, DateTime storedTime, string tag)
+        public QueueMessage(string messageId, string topic, int code, byte[] body, int queueId, long queueOffset, DateTime createdTime, DateTime storedTime, string tag, string producerAddress)
             : base(topic, code, body, createdTime, tag)
         {
             MessageId = messageId;
             QueueId = queueId;
             QueueOffset = queueOffset;
             StoredTime = storedTime;
+            ProducerAddress = producerAddress;
         }
 
         public virtual void ReadFrom(byte[] recordBuffer)
@@ -31,6 +32,7 @@ namespace EQueue.Protocols
             MessageId = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
             Topic = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
             Tag = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
+            ProducerAddress = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
             Code = MessageUtils.DecodeInt(recordBuffer, srcOffset, out srcOffset);
             Body = MessageUtils.DecodeBytes(recordBuffer, srcOffset, out srcOffset);
             QueueId = MessageUtils.DecodeInt(recordBuffer, srcOffset, out srcOffset);
@@ -45,7 +47,7 @@ namespace EQueue.Protocols
 
         public override string ToString()
         {
-            return string.Format("[Topic={0},QueueId={1},QueueOffset={2},MessageId={3},LogPosition={4},Code={5},CreatedTime={6},StoredTime={7},BodyLength={8},Tag={9}]",
+            return string.Format("[Topic={0},QueueId={1},QueueOffset={2},MessageId={3},LogPosition={4},Code={5},CreatedTime={6},StoredTime={7},BodyLength={8},Tag={9},ProducerAddress={10}]",
                 Topic,
                 QueueId,
                 QueueOffset,
@@ -55,7 +57,8 @@ namespace EQueue.Protocols
                 CreatedTime,
                 StoredTime,
                 Body.Length,
-                Tag);
+                Tag,
+                ProducerAddress);
         }
     }
 }

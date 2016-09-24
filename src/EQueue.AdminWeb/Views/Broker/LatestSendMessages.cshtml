@@ -1,0 +1,44 @@
+﻿@model EQueue.AdminWeb.Models.BrokerLatestMessageIdListViewModel
+@{
+    ViewBag.Title = "最近发送消息列表";
+    Layout = "~/Views/Shared/_BrokerLayout.cshtml";
+}
+<div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th width="5%" class="vertical-center">
+                    序号
+                </th>
+                <th width="30%" class="vertical-center">
+                    消息ID
+                </th>
+                <th width="20%" class="vertical-center">
+                    创建时间
+                </th>
+                <th class="vertical-center">
+                    存储时间
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.MessageInfoList)
+            {
+                <tr>
+                    <td class="vertical-center">
+                        @item.Sequence
+                    </td>
+                    <td class="vertical-center">
+                        @Html.ActionLink(@item.MessageId, "Message", "Home", new { clusterName = ViewBag.ClusterName, searchMessageId = @item.MessageId }, null)
+                    </td>
+                    <td class="vertical-center">
+                        @item.CreateTime.ToString("yyyy-MM-dd HH:mm:ss.fff")
+                    </td>
+                    <td class="vertical-center">
+                        @item.StoredTime.ToString("yyyy-MM-dd HH:mm:ss.fff")
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Web.Mvc;
 using EQueue.AdminWeb.Models;
 
@@ -64,6 +66,49 @@ namespace EQueue.AdminWeb.Controllers
                 Group = group,
                 Topic = topic,
                 ConsumerList = consumerList
+            });
+        }
+        public ActionResult LatestSendMessages(string clusterName, string brokerName)
+        {
+            ViewBag.ClusterName = clusterName;
+            ViewBag.BrokerName = brokerName;
+            var messageList = _messageService.GetLatestSendMessagesList(clusterName, brokerName);
+            var messageInfoList = new List<MessageInfo>();
+
+            foreach (var message in messageList)
+            {
+                string[] array = message.Split('_');
+                var messageId = array[0];
+                var createTime = new DateTime(long.Parse(array[1]));
+                var storedTime = new DateTime(long.Parse(array[2]));
+                messageInfoList.Add(new MessageInfo
+                {
+                    MessageId = messageId,
+                    CreateTime = createTime,
+                    StoredTime = storedTime
+                });
+            }
+            messageInfoList.Sort((x, y) =>
+            {
+                if (x.StoredTime.Ticks > y.StoredTime.Ticks)
+                {
+                    return -1;
+                }
+                else if (x.StoredTime.Ticks < y.StoredTime.Ticks)
+                {
+                    return 1;
+                }
+                return 0;
+            });
+
+            var sequence = 1;
+            foreach (var messageInfo in messageInfoList)
+            {
+                messageInfo.Sequence = sequence++;
+            }
+            return View(new BrokerLatestMessageIdListViewModel
+            {
+                MessageInfoList = messageInfoList
             });
         }
         public ActionResult CreateTopic(string clusterName, string brokerName, string topic, int? initialQueueCount)

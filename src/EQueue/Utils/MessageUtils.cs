@@ -33,6 +33,10 @@ namespace EQueue.Utils
             }
             var tagLengthBytes = BitConverter.GetBytes(tagBytes.Length);
 
+            //producerAddress
+            var producerAddressBytes = Encoding.UTF8.GetBytes(request.Message.ProducerAddress);
+            var producerAddressLengthBytes = BitConverter.GetBytes(producerAddressBytes.Length);
+
             return Combine(
                 queueIdBytes,
                 messageCodeBytes,
@@ -41,6 +45,8 @@ namespace EQueue.Utils
                 topicBytes,
                 tagLengthBytes,
                 tagBytes,
+                producerAddressLengthBytes,
+                producerAddressBytes,
                 request.Message.Body);
         }
         public static SendMessageRequest DecodeSendMessageRequest(byte[] messageBuffer)
@@ -50,6 +56,7 @@ namespace EQueue.Utils
             var messageCreatedTimeTicksBytes = new byte[8];
             var topicLengthBytes = new byte[4];
             var tagLengthBytes = new byte[4];
+            var producerAddressLengthBytes = new byte[4];
             var srcOffset = 0;
 
             //queueId
@@ -82,6 +89,15 @@ namespace EQueue.Utils
             Buffer.BlockCopy(messageBuffer, srcOffset, tagBytes, 0, tagLength);
             srcOffset += tagLength;
 
+            //producerAddress
+            Buffer.BlockCopy(messageBuffer, srcOffset, producerAddressLengthBytes, 0, 4);
+            srcOffset += 4;
+
+            var producerAddressLength = BitConverter.ToInt32(producerAddressLengthBytes, 0);
+            var producerAddressBytes = new byte[producerAddressLength];
+            Buffer.BlockCopy(messageBuffer, srcOffset, producerAddressBytes, 0, producerAddressLength);
+            srcOffset += producerAddressLength;
+
             //body
             var bodyBytes = new byte[messageBuffer.Length - srcOffset];
             Buffer.BlockCopy(messageBuffer, srcOffset, bodyBytes, 0, bodyBytes.Length);
@@ -92,8 +108,9 @@ namespace EQueue.Utils
             var createdTime = new DateTime(createdTimeTicks);
             var topic = Encoding.UTF8.GetString(topicBytes);
             var tag = Encoding.UTF8.GetString(tagBytes);
+            var producerAddress = Encoding.UTF8.GetString(producerAddressBytes);
 
-            return new SendMessageRequest { QueueId = queueId, Message = new Message(topic, code, bodyBytes, createdTime, tag) };
+            return new SendMessageRequest { QueueId = queueId, Message = new Message(topic, code, bodyBytes, createdTime, tag) { ProducerAddress = producerAddress } };
         }
 
         public static byte[] EncodeMessageStoreResult(MessageStoreResult result)

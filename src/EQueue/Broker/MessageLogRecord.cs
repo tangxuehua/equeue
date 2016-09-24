@@ -23,8 +23,8 @@ namespace EQueue.Broker.Storage
             long queueOffset,
             DateTime createdTime,
             DateTime storedTime,
-            string tag, Action<MessageLogRecord, object> callback, object parameter)
-            : base(null, topic, code, body, queueId, queueOffset, createdTime, storedTime, tag)
+            string tag, string producerAddress, Action<MessageLogRecord, object> callback, object parameter)
+            : base(null, topic, code, body, queueId, queueOffset, createdTime, storedTime, tag, producerAddress)
         {
             _callback = callback;
             _parameter = parameter;
@@ -56,6 +56,11 @@ namespace EQueue.Broker.Storage
             }
             writer.Write(tagBytes.Length);
             writer.Write(tagBytes);
+
+            //producerAddress
+            var producerAddressBytes = Encoding.UTF8.GetBytes(ProducerAddress);
+            writer.Write(producerAddressBytes.Length);
+            writer.Write(producerAddressBytes);
 
             //code
             writer.Write(Code);

@@ -114,6 +114,8 @@ namespace EQueue.Broker.RequestHandlers
                     {
                         SendMessageRequestHandler._suspendedPullRequestManager.NotifyNewMessage(MessageLogRecord.Topic, result.QueueId, result.QueueOffset);
                     }
+
+                    SendMessageRequestHandler._brokerController.AddLatestMessage(result.MessageId, result.CreatedTime, result.StoredTime);
                 }
                 else
                 {

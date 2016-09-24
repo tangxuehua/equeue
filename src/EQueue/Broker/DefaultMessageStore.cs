@@ -88,6 +88,7 @@ namespace EQueue.Broker
                     message.CreatedTime,
                     DateTime.Now,
                     message.Tag,
+                    message.ProducerAddress ?? string.Empty,
                     callback,
                     parameter);
                 _bufferQueue.EnqueueMessage(record);

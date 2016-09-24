@@ -72,6 +72,9 @@ namespace EQueue.Broker
         /// <summary>EQueue存储文件的根目录
         /// </summary>
         public string FileStoreRootPath { get; private set; }
+        /// <summary>最新消息显示个数，默认为100个；
+        /// </summary>
+        public int LatestMessageShowCount { get; set; }
         /// <summary>TCP通行层设置
         /// </summary>
         public SocketSetting SocketSetting { get; set; }
@@ -115,6 +118,7 @@ namespace EQueue.Broker
             MessageWriteQueueThreshold = 2 * 10000;
             IsMessageStoreMemoryMode = isMessageStoreMemoryMode;
             FileStoreRootPath = chunkFileStoreRootPath;
+            LatestMessageShowCount = 100;
             MessageChunkConfig = new ChunkManagerConfig(
                 Path.Combine(chunkFileStoreRootPath, @"message-chunks"),
                 new DefaultFileNamingStrategy("message-chunk-"),

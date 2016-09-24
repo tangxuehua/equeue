@@ -68,6 +68,7 @@
     <Compile Include="Broker\Client\ProducerManager.cs" />
     <Compile Include="Broker\DefaultTpsStatisticService.cs" />
     <Compile Include="Broker\ITpsStatisticService.cs" />
+    <Compile Include="Broker\RequestHandlers\Admin\GetBrokerLatestSendMessagesRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\GetTopicConsumeInfoRequestHandler.cs" />
     <Compile Include="Clients\BrokerConnection.cs" />
     <Compile Include="Clients\ClientService.cs" />

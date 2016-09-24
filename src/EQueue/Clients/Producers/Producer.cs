@@ -114,7 +114,7 @@ namespace EQueue.Clients.Producers
                     throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
                 }
 
-                var remotingRequest = BuildSendMessageRequest(message, messageQueue.QueueId);
+                var remotingRequest = BuildSendMessageRequest(message, messageQueue.QueueId, brokerConnection);
                 try
                 {
                     var remotingResponse = await brokerConnection.RemotingClient.InvokeAsync(remotingRequest, timeoutMilliseconds).ConfigureAwait(false);
@@ -160,7 +160,7 @@ namespace EQueue.Clients.Producers
                 throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
             }
 
-            var remotingRequest = BuildSendMessageRequest(message, messageQueue.QueueId);
+            var remotingRequest = BuildSendMessageRequest(message, messageQueue.QueueId, brokerConnection);
 
             brokerConnection.RemotingClient.InvokeWithCallback(remotingRequest);
         }
@@ -179,7 +179,7 @@ namespace EQueue.Clients.Producers
                 throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
             }
 
-            var remotingRequest = BuildSendMessageRequest(message, messageQueue.QueueId);
+            var remotingRequest = BuildSendMessageRequest(message, messageQueue.QueueId, brokerConnection);
 
             brokerConnection.RemotingClient.InvokeOneway(remotingRequest);
         }
@@ -262,9 +262,10 @@ namespace EQueue.Clients.Producers
             }
             return _queueSelector.SelectMessageQueue(messageQueueList, message, routingKey);
         }
-        private RemotingRequest BuildSendMessageRequest(Message message, int queueId)
+        private RemotingRequest BuildSendMessageRequest(Message message, int queueId, BrokerConnection brokerConnection)
         {
             var request = new SendMessageRequest { Message = message, QueueId = queueId };
+            request.Message.ProducerAddress = brokerConnection.RemotingClient.LocalEndPoint.ToAddress();
             var data = MessageUtils.EncodeSendMessageRequest(request);
             if (data.Length > Setting.MessageMaxSize)
             {

@@ -139,6 +139,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\BrokerLatestMessageIdListViewModel.cs" />
     <Compile Include="Models\ClusterBrokerListViewModel.cs" />
     <Compile Include="Models\ClusterProducerListViewModel.cs" />
     <Compile Include="Models\ClusterConsumerListViewModel.cs" />
@@ -207,6 +208,7 @@
     <Content Include="Views\Home\ConsumeInfoList.cshtml" />
     <Content Include="Views\Home\ProducerList.cshtml" />
     <Content Include="Views\Home\SetQueueNextConsumeOffset.cshtml" />
+    <Content Include="Views\Broker\LatestSendMessages.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EQueue\EQueue.csproj">

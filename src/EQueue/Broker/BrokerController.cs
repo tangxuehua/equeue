@@ -45,6 +45,8 @@ namespace EQueue.Broker
         private readonly IChunkStatisticService _chunkReadStatisticService;
         private readonly ITpsStatisticService _tpsStatisticService;
         private readonly IList<SocketRemotingClient> _nameServerRemotingClientList;
+        private string[] _latestMessageIds;
+        private long _messageIdSequece;
         private int _isShuttingdown = 0;
         private int _isCleaning = 0;
 
@@ -76,6 +78,7 @@ namespace EQueue.Broker
                 throw new ArgumentException("NameServerList is empty.");
             }
 
+            _latestMessageIds = new string[Setting.LatestMessageShowCount];
             _producerManager = ObjectContainer.Resolve<ProducerManager>();
             _consumerManager = ObjectContainer.Resolve<ConsumerManager>();
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
@@ -237,6 +240,16 @@ namespace EQueue.Broker
             statisticInfo.TotalConsumeThroughput = _tpsStatisticService.GetTotalConsumeThroughput();
             return statisticInfo;
         }
+        public string GetLatestSendMessageIds()
+        {
+            return string.Join(",", _latestMessageIds.ToList());
+        }
+        public void AddLatestMessage(string messageId, DateTime createTime, DateTime storedTime)
+        {
+            var sequence = Interlocked.Increment(ref _messageIdSequece);
+            var index = sequence % _latestMessageIds.Length;
+            _latestMessageIds[index] = string.Format("{0}_{1}_{2}", messageId, createTime.Ticks, storedTime.Ticks);
+        }
 
         private void RemoveNotExistQueueConsumeOffsets()
         {
@@ -274,6 +287,7 @@ namespace EQueue.Broker
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetMessageDetail, new GetMessageDetailRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetQueueNextConsumeOffset, new SetQueueNextConsumeOffsetRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.DeleteConsumerGroup, new DeleteConsumerGroupRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetLastestMessages, new GetBrokerLatestSendMessagesRequestHandler());
         }
         private void StartAllNameServerClients()
         {

@@ -21,6 +21,7 @@
         SetQueueConsumerVisible = 1010,
         SetQueueNextConsumeOffset = 1011,
         DeleteConsumerGroup = 1012,
-        GetMessageDetail = 1013
+        GetMessageDetail = 1013,
+        GetLastestMessages = 1014
     }
 }

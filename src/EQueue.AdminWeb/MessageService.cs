@@ -221,6 +221,21 @@ namespace EQueue.AdminWeb
                 throw new Exception(string.Format("GetConsumerInfo failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
             }
         }
+        public IEnumerable<string> GetLatestSendMessagesList(string clusterName, string brokerName)
+        {
+            var remotingClient = GetBrokerByName(clusterName, brokerName);
+            var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetLastestMessages, EmptyBytes);
+            var remotingResponse = remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code == ResponseCode.Success)
+            {
+                var messageIds = Encoding.UTF8.GetString(remotingResponse.Body);
+                return messageIds.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+            }
+            else
+            {
+                throw new Exception(string.Format("GetLatestSendMessagesList failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+            }
+        }
         public void CreateTopic(string clusterName, string topic, int? initialQueueCount)
         {
             var remotingClient = GetAvailableNameServerRemotingClient();

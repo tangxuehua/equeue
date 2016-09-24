@@ -1,18 +1,34 @@
 ﻿@{
     Layout = null;
 }
-
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <meta name="viewport" content="width=device-width" />
-    <title>错误页面</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EQueue - ErrorPage</title>
+    <link href="~/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+    <link type="text/css" rel="Stylesheet" href="@Url.Content("~/content/bootstrap/css/bootstrap.min.css")" />
+    <link type="text/css" rel="Stylesheet" href="@Url.Content("~/content/site.css")" />
+    <style>
+        .center-block {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
 </head>
 <body>
-    <hgroup>
-        <h2>非常抱歉！处理你的请求时出错，错误信息如下：</h2>
-        <p>@Model.Exception.Message</p>
-    </hgroup>
+    <div class="container body-content">
+        <div>
+            <p class="center-block alert alert-danger" role="alert" style="padding:15px">@Model.Exception.Message</p>
+        </div>
+        <hr />
+        <footer>
+            <p style="text-align:center">&copy; @DateTime.Now.Year - EQueue Admin Console</p>
+        </footer>
+    </div>
 </body>
 </html>
+

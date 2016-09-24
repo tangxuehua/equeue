@@ -11,6 +11,7 @@ namespace EQueue.Protocols
         public int Code { get; set; }
         public byte[] Body { get; set; }
         public DateTime CreatedTime { get; set; }
+        public string ProducerAddress { get; set; }
 
         public Message() { }
         public Message(string topic, int code, byte[] body, string tag = null) : this(topic, code, body, DateTime.Now, tag) { }

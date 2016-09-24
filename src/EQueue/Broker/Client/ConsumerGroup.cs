@@ -61,9 +61,7 @@ namespace EQueue.Broker.Client
 
                 var oldConsumingQueues = existingConsumerInfo.ConsumingQueues;
                 var newConsumingQueues = consumingMessageQueues;
-                var oldList = oldConsumingQueues.Select(x => x.ToString()).ToList();
-                var newList = newConsumingQueues.Select(x => x.ToString()).ToList();
-                if (IsStringCollectionChanged(oldList, newList))
+                if (IsMessageQueueChanged(oldConsumingQueues, newConsumingQueues))
                 {
                     existingConsumerInfo.ConsumingQueues = newConsumingQueues;
                     _logger.InfoFormat("Consumer consumingQueues changed. groupName: {0}, consumerId: {1}, connectionId: {2}, old: {3}, new: {4}", _groupName, consumerId, key, string.Join("|", oldConsumingQueues), string.Join("|", newConsumingQueues));
@@ -149,6 +147,29 @@ namespace EQueue.Broker.Client
             return new List<MessageQueueEx>();
         }
 
+        private bool IsMessageQueueChanged(IList<MessageQueueEx> list1, IList<MessageQueueEx> list2)
+        {
+            if (list1.Count != list2.Count)
+            {
+                return true;
+            }
+            for (var i = 0; i < list1.Count; i++)
+            {
+                var item1 = list1[i];
+                var item2 = list2[i];
+
+                if (item1.Topic != item2.Topic)
+                {
+                    return true;
+                }
+                if (item1.QueueId != item2.QueueId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
         private bool IsStringCollectionChanged(IList<string> original, IList<string> current)
         {
             if (original.Count != current.Count)

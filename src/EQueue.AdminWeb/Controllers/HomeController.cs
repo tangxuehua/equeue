@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Web.Mvc;
 using EQueue.AdminWeb.Models;
 using EQueue.Utils;
@@ -80,11 +81,20 @@ namespace EQueue.AdminWeb.Controllers
             {
                 return View(new MessageViewModel());
             }
-            var messageIdInfo = MessageIdUtil.ParseMessageId(searchMessageId);
+            MessageIdInfo messageIdInfo;
+            try
+            {
+                messageIdInfo = MessageIdUtil.ParseMessageId(searchMessageId);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("无效的消息ID", ex);
+            }
             var message = _messageService.GetMessageDetail(clusterName, searchMessageId);
             var model = new MessageViewModel { ClusterName = clusterName, SearchMessageId = searchMessageId };
             if (message != null)
             {
+                model.ProducerAddress = message.ProducerAddress;
                 model.BrokerAddress = messageIdInfo.IP.ToString() + ":" + messageIdInfo.Port.ToString();
                 model.MessageId = message.MessageId;
                 model.Topic = message.Topic;
@@ -92,8 +102,8 @@ namespace EQueue.AdminWeb.Controllers
                 model.QueueOffset = message.QueueOffset.ToString();
                 model.Code = message.Code.ToString();
                 model.Payload = Encoding.UTF8.GetString(message.Body);
-                model.CreatedTime = message.CreatedTime.ToString();
-                model.StoredTime = message.StoredTime.ToString();
+                model.CreatedTime = message.CreatedTime.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                model.StoredTime = message.StoredTime.ToString("yyyy-MM-dd HH:mm:ss.fff");
             }
             return View(model);
         }

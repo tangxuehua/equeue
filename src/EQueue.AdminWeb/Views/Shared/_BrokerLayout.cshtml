@@ -31,6 +31,7 @@
                 @Html.ActionLink("消费信息", "ConsumeInfoList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
                 @Html.ActionLink("生产者列表", "ProducerList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
                 @Html.ActionLink("消费者列表", "ConsumerList", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("最近发送消息", "LatestSendMessages", "Broker", new { clusterName = @ViewBag.ClusterName, brokerName = @ViewBag.BrokerName }, new { @class = "navbar-brand" })
             </div>
         </div>
     </div>
