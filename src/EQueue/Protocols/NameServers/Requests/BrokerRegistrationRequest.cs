@@ -10,6 +10,7 @@ namespace EQueue.Protocols.NameServers.Requests
         public BrokerInfo BrokerInfo { get; set; }
         public long TotalSendThroughput { get; set; }
         public long TotalConsumeThroughput { get; set; }
+        public long TotalUnConsumedMessageCount { get; set; }
         public IList<TopicQueueInfo> TopicQueueInfoList { get; set; }
         public IList<TopicConsumeInfo> TopicConsumeInfoList { get; set; }
         public IList<string> ProducerList { get; set; }

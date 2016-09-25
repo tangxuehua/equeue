@@ -25,6 +25,7 @@ namespace EQueue.AdminWeb
                 .UseLog4Net()
                 .UseJsonNet();
 
+            configuration.SetDefault<SendEmailService, SendEmailService>();
             configuration.SetDefault<MessageService, MessageService>();
             ObjectContainer.Resolve<MessageService>().Start();
             RegisterControllers();

@@ -241,12 +241,30 @@ namespace EQueue.Clients.Producers
                 messageQueue = GetAvailableMessageQueue(message, routingKey);
                 if (messageQueue == null)
                 {
-                    throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
+                    if (retryCount == 0)
+                    {
+                        _logger.ErrorFormat("No available message queue for topic [{0}]", message.Topic);
+                    }
+                    else
+                    {
+                        _logger.ErrorFormat("No available message queue for topic [{0}], retryTimes: {1}", message.Topic, retryCount);
+                    }
                 }
-                brokerConnection = _clientService.GetBrokerConnection(messageQueue.BrokerName);
-                if (brokerConnection != null)
+                else
                 {
-                    return true;
+                    brokerConnection = _clientService.GetBrokerConnection(messageQueue.BrokerName);
+                    if (brokerConnection != null && brokerConnection.RemotingClient.IsConnected)
+                    {
+                        return true;
+                    }
+                    if (retryCount == 0)
+                    {
+                        _logger.ErrorFormat("Broker is unavailable for queue [{0}]", messageQueue);
+                    }
+                    else
+                    {
+                        _logger.ErrorFormat("Broker is unavailable for queue [{0}], retryTimes: {1}", message.Topic, retryCount);
+                    }
                 }
                 retryCount++;
             }

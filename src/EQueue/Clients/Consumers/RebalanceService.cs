@@ -8,13 +8,12 @@ using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
-using EQueue.Clients.Consumers;
 using EQueue.Protocols;
 using EQueue.Protocols.Brokers;
 using EQueue.Protocols.Brokers.Requests;
 using EQueue.Utils;
 
-namespace EQueue.Clients
+namespace EQueue.Clients.Consumers
 {
     public class RebalanceService
     {
@@ -99,19 +98,30 @@ namespace EQueue.Clients
         private void RebalanceClustering(KeyValuePair<string, HashSet<string>> pair)
         {
             var topic = pair.Key;
-            var messageQueueList = _clientService.GetTopicMessageQueues(topic);
-            if (messageQueueList == null || messageQueueList.Count == 0)
+            try
             {
-                return;
+                var consumerIdList = GetConsumerIdsForTopic(topic);
+                if (consumerIdList == null || consumerIdList.Count == 0)
+                {
+                    _logger.WarnFormat("No available consumers found.");
+                    UpdatePullRequestDict(pair, new List<MessageQueue>());
+                    return;
+                }
+                var messageQueueList = _clientService.GetTopicMessageQueues(topic);
+                if (messageQueueList == null || messageQueueList.Count == 0)
+                {
+                    _logger.WarnFormat("No available message queues found.");
+                    UpdatePullRequestDict(pair, new List<MessageQueue>());
+                    return;
+                }
+                var allocatedMessageQueueList = _allocateMessageQueueStragegy.Allocate(_clientId, messageQueueList, consumerIdList).ToList();
+                UpdatePullRequestDict(pair, allocatedMessageQueueList);
             }
-            var consumerIdList = GetConsumerIdsForTopic(topic);
-            if (consumerIdList == null || consumerIdList.Count == 0)
+            catch (Exception ex)
             {
-                return;
+                _logger.Error(string.Format("RebalanceClustering has exception, consumerGroup: {0}, consumerId: {1}, topic: {2}", _consumer.GroupName, _clientId, topic), ex);
+                UpdatePullRequestDict(pair, new List<MessageQueue>());
             }
-            var allocatedMessageQueueList = _allocateMessageQueueStragegy.Allocate(_clientId, messageQueueList, consumerIdList).ToList();
-
-            UpdatePullRequestDict(pair, allocatedMessageQueueList);
         }
         private IList<string> GetConsumerIdsForTopic(string topic)
         {

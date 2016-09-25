@@ -46,7 +46,7 @@ namespace QuickStart.ConsumerClient
             {
                 ClusterName = clusterName,
                 ConsumeFromWhere = ConsumeFromWhere.FirstOffset,
-                MessageHandleMode = MessageHandleMode.Parallel,
+                MessageHandleMode = MessageHandleMode.Sequential,
                 NameServerList = new List<IPEndPoint> { new IPEndPoint(nameServerAddress, 9493) }
             };
             var messageHandler = new MessageHandler();

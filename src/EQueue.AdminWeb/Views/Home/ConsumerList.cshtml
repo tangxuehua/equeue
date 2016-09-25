@@ -23,13 +23,13 @@
         <thead>
             <tr>
                 <th width="10%" class="vertical-center">
-                    BrokerName
-                </th>
-                <th width="10%" class="vertical-center">
                     ConsumerGroup
                 </th>
                 <th width="20%" class="vertical-center">
                     ConsumerId
+                </th>
+                <th width="10%" class="vertical-center">
+                    BrokerName
                 </th>
                 <th width="10%" class="vertical-center">
                     Topic
@@ -52,40 +52,37 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var line in Model.ConsumerList)
+            @foreach (var item in Model.ConsumerList)
             {
-                foreach (var item in line.ConsumerList)
-                {
-                    <tr>
-                        <td class="vertical-center">
-                            @Html.ActionLink(@line.BrokerInfo.BrokerName, "Index", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = @line.BrokerInfo.BrokerName }, null)
-                        </td>
-                        <td class="vertical-center">
-                            @item.ConsumerGroup
-                        </td>
-                        <td class="vertical-center">
-                            @item.ConsumerId
-                        </td>
-                        <td class="vertical-center">
-                            @item.Topic
-                        </td>
-                        <td class="text-center vertical-center">
-                            @item.QueueId
-                        </td>
-                        <td class="text-center vertical-center">
-                            @item.QueueCurrentOffset
-                        </td>
-                        <td class="text-center vertical-center">
-                            @item.ConsumedOffset
-                        </td>
-                        <td class="text-center vertical-center">
-                            @item.QueueNotConsumeCount
-                        </td>
-                        <td class="text-center vertical-center">
-                            @item.ClientCachedMessageCount
-                        </td>
-                    </tr>
-                }
+                <tr>
+                    <td class="vertical-center">
+                        @item.ConsumerInfo.ConsumerGroup
+                    </td>
+                    <td class="vertical-center">
+                        @item.ConsumerInfo.ConsumerId
+                    </td>
+                    <td class="vertical-center">
+                        @Html.ActionLink(@item.BrokerInfo.BrokerName, "Index", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = @item.BrokerInfo.BrokerName }, null)
+                    </td>
+                    <td class="vertical-center">
+                        @item.ConsumerInfo.Topic
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ConsumerInfo.QueueId
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ConsumerInfo.QueueCurrentOffset
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ConsumerInfo.ConsumedOffset
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ConsumerInfo.QueueNotConsumeCount
+                    </td>
+                    <td class="text-center vertical-center">
+                        @item.ConsumerInfo.ClientCachedMessageCount
+                    </td>
+                </tr>
             }
         </tbody>
     </table>

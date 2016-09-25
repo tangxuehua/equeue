@@ -13,13 +13,12 @@ using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Utilities;
-using EQueue.Clients.Consumers;
 using EQueue.Protocols;
 using EQueue.Protocols.Brokers;
 using EQueue.Protocols.Brokers.Requests;
 using EQueue.Utils;
 
-namespace EQueue.Clients
+namespace EQueue.Clients.Consumers
 {
     public class PullMessageService
     {

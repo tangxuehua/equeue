@@ -316,6 +316,7 @@ namespace EQueue.Broker
                 BrokerInfo = Setting.BrokerInfo,
                 TotalSendThroughput = totalSendThroughput,
                 TotalConsumeThroughput = totalConsumeThroughput,
+                TotalUnConsumedMessageCount = _queueStore.GetTotalUnConusmedMessageCount(),
                 TopicQueueInfoList = topicQueueInfoList,
                 TopicConsumeInfoList = topicConsumeInfoList,
                 ProducerList = producerList,

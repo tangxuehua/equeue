@@ -19,6 +19,7 @@
         SetQueueProducerVisible = 10014,
         SetQueueConsumerVisible = 10015,
         SetQueueNextConsumeOffset = 10016,
-        DeleteConsumerGroup = 10017
+        DeleteConsumerGroup = 10017,
+        GetTopicAccumulateInfoList = 10018
     }
 }

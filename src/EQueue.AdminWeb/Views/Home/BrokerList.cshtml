@@ -14,10 +14,10 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th width="16%" class="vertical-center">
+                <th width="13%" class="vertical-center">
                     GroupName
                 </th>
-                <th width="16%" class="vertical-center">
+                <th width="13%" class="vertical-center">
                     BrokerName
                 </th>
                 <th width="8%" class="vertical-center">
@@ -39,6 +39,9 @@
                     消费TPS
                 </th>
                 <th width="10%" class="vertical-center">
+                    总堆积数
+                </th>
+                <th width="8%" class="vertical-center">
                     操作
                 </th>
             </tr>
@@ -71,6 +74,9 @@
                     </td>
                     <td class="vertical-center">
                         @item.TotalConsumeThroughput
+                    </td>
+                    <td class="vertical-center">
+                        @item.TotalUnConsumedMessageCount
                     </td>
                     <td class="vertical-center">
                         @Html.ActionLink("查看", "Index", "Broker", new { clusterName = broker.ClusterName, brokerName = broker.BrokerName }, null)

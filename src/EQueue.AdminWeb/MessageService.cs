@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using ECommon.Remoting;
+using ECommon.Scheduling;
 using ECommon.Serializing;
 using EQueue.Protocols;
 using EQueue.Protocols.Brokers;
@@ -28,18 +29,27 @@ namespace EQueue.AdminWeb
         private readonly IList<SocketRemotingClient> _nameServerRemotingClientList;
         private readonly ConcurrentDictionary<string /*clusterName*/, IList<BrokerClient>> _clusterBrokerDict;
         private readonly IBinarySerializer _binarySerializer;
+        private readonly IScheduleService _scheduleService;
+        private readonly SendEmailService _sendEmailService;
         private long _nameServerIndex;
 
-        public MessageService(IBinarySerializer binarySerializer)
+        public MessageService(IBinarySerializer binarySerializer, IScheduleService scheduleService, SendEmailService sendEmailService)
         {
             _nameServerRemotingClientList = CreateRemotingClientList(Settings.NameServerList);
             _clusterBrokerDict = new ConcurrentDictionary<string, IList<BrokerClient>>();
             _binarySerializer = binarySerializer;
+            _scheduleService = scheduleService;
+            _sendEmailService = sendEmailService;
         }
 
         public void Start()
         {
             StartAllNameServerClients();
+
+            if (Settings.EnableMonitorMessageAccumulate)
+            {
+                _scheduleService.StartTask("ScanAccumulateMessages", ScanAccumulateMessages, 1000, Settings.ScanMessageAccumulateInterval);
+            }
         }
         public IEnumerable<string> GetAllClusters()
         {
@@ -588,6 +598,36 @@ namespace EQueue.AdminWeb
                 remotingClientList.Add(remotingClient);
             }
             return remotingClientList;
+        }
+        private void ScanAccumulateMessages()
+        {
+            var topicAccumulateInfoList = GetTopicAccumulateInfoList();
+            if (topicAccumulateInfoList.Count() == 0)
+            {
+                return;
+            }
+            foreach (var topicAccumulateInfo in topicAccumulateInfoList)
+            {
+                _sendEmailService.SendMessageAccumulateNotification(topicAccumulateInfo);
+            }
+        }
+        private IEnumerable<TopicAccumulateInfo> GetTopicAccumulateInfoList()
+        {
+            var remotingClient = GetAvailableNameServerRemotingClient();
+            var requestData = _binarySerializer.Serialize(new GetTopicAccumulateInfoListRequest
+            {
+                AccumulateThreshold = Settings.MessageAccumulateThreshold
+            });
+            var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetTopicAccumulateInfoList, requestData);
+            var remotingResponse = remotingClient.InvokeSync(remotingRequest, 30000);
+            if (remotingResponse.Code == ResponseCode.Success)
+            {
+                return _binarySerializer.Deserialize<IEnumerable<TopicAccumulateInfo>>(remotingResponse.Body);
+            }
+            else
+            {
+                throw new Exception(string.Format("GetTopicAccumulateInfoList failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+            }
         }
     }
 }

@@ -73,14 +73,15 @@
     <Compile Include="Clients\BrokerConnection.cs" />
     <Compile Include="Clients\ClientService.cs" />
     <Compile Include="Clients\ClientSetting.cs" />
-    <Compile Include="Clients\CommitConsumeOffsetService.cs" />
-    <Compile Include="Clients\PullMessageService.cs" />
-    <Compile Include="Clients\RebalanceService.cs" />
+    <Compile Include="Clients\Consumers\CommitConsumeOffsetService.cs" />
+    <Compile Include="Clients\Consumers\PullMessageService.cs" />
+    <Compile Include="Clients\Consumers\RebalanceService.cs" />
     <Compile Include="NameServer\BrokerRequestService.cs" />
     <Compile Include="NameServer\NameServerSetting.cs" />
     <Compile Include="NameServer\NameServerController.cs" />
     <Compile Include="NameServer\RequestHandlers\DeleteConsumerGroupForClusterRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\GetClusterBrokerStatusInfoListRequestHandler.cs" />
+    <Compile Include="NameServer\RequestHandlers\GetTopicAccumulateInfoListRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\SetQueueNextConsumeOffsetForClusterRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\SetQueueConsumerVisibleForClusterRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\SetQueueProducerVisibleForClusterRequestHandler.cs" />
@@ -101,6 +102,8 @@
     <Compile Include="Protocols\MessageQueueEx.cs" />
     <Compile Include="Protocols\NameServers\BrokerConsumerListInfo.cs" />
     <Compile Include="Protocols\NameServers\BrokerStatusInfo.cs" />
+    <Compile Include="Protocols\NameServers\Requests\GetTopicAccumulateInfoListRequest.cs" />
+    <Compile Include="Protocols\NameServers\TopicAccumulateInfo.cs" />
     <Compile Include="Protocols\NameServers\Requests\DeleteConsumerGroupForClusterRequest.cs" />
     <Compile Include="Protocols\NameServers\Requests\DeleteQueueForClusterRequest.cs" />
     <Compile Include="Protocols\NameServers\Requests\BrokerRegistrationRequest.cs" />

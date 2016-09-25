@@ -68,6 +68,7 @@ namespace EQueue.NameServer
                         BrokerInfo = request.BrokerInfo,
                         TotalSendThroughput = request.TotalSendThroughput,
                         TotalConsumeThroughput = request.TotalConsumeThroughput,
+                        TotalUnConsumedMessageCount = request.TotalUnConsumedMessageCount,
                         TopicQueueInfoList = request.TopicQueueInfoList,
                         TopicConsumeInfoList = request.TopicConsumeInfoList,
                         ProducerList = request.ProducerList,
@@ -75,6 +76,7 @@ namespace EQueue.NameServer
                         Connection = connection,
                         ConnectionId = connectionId,
                         LastActiveTime = DateTime.Now,
+                        FirstRegisteredTime = DateTime.Now,
                         Group = brokerGroup
                     };
                     if (brokerGroup.Brokers.TryAdd(brokerInfo.BrokerName, broker))
@@ -87,6 +89,7 @@ namespace EQueue.NameServer
                     broker.LastActiveTime = DateTime.Now;
                     broker.TotalSendThroughput = request.TotalSendThroughput;
                     broker.TotalConsumeThroughput = request.TotalConsumeThroughput;
+                    broker.TotalUnConsumedMessageCount = request.TotalUnConsumedMessageCount;
 
                     if (!broker.BrokerInfo.IsEqualsWith(request.BrokerInfo))
                     {
@@ -210,6 +213,11 @@ namespace EQueue.NameServer
                     }
                 }
 
+                returnList.Sort((x, y) =>
+                {
+                    return string.Compare(x.BrokerInfo.BrokerName, y.BrokerInfo.BrokerName);
+                });
+
                 return returnList;
             }
         }
@@ -241,6 +249,11 @@ namespace EQueue.NameServer
                     }
                 }
 
+                returnList.Sort((x, y) =>
+                {
+                    return string.Compare(x.BrokerInfo.BrokerName, y.BrokerInfo.BrokerName);
+                });
+
                 return returnList;
             }
         }
@@ -270,6 +283,11 @@ namespace EQueue.NameServer
                         });
                     }
                 }
+
+                returnList.Sort((x, y) =>
+                {
+                    return string.Compare(x.BrokerInfo.BrokerName, y.BrokerInfo.BrokerName);
+                });
 
                 return returnList;
             }
@@ -302,22 +320,29 @@ namespace EQueue.NameServer
                     }
                 }
 
+                returnList.Sort((x, y) =>
+                {
+                    return string.Compare(x.BrokerInfo.BrokerName, y.BrokerInfo.BrokerName);
+                });
+
                 return returnList;
             }
         }
         public IList<string> GetAllClusters()
         {
-            return _clusterDict.Keys.ToList();
+            var clusterList = _clusterDict.Keys.ToList();
+            clusterList.Sort();
+            return clusterList;
         }
         public IList<BrokerInfo> GetClusterBrokers(GetClusterBrokersRequest request)
         {
             lock (_lockObj)
             {
-                var returnList = new List<BrokerInfo>();
+                var returnList = new List<Broker>();
                 Cluster cluster;
                 if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
                 {
-                    return returnList;
+                    return returnList.Select(x => x.BrokerInfo).ToList();
                 }
 
                 foreach (var brokerGroup in cluster.BrokerGroups.Values)
@@ -332,30 +357,47 @@ namespace EQueue.NameServer
                         {
                             if (broker.TopicQueueInfoList.Any(x => x.Topic == request.Topic))
                             {
-                                returnList.Add(broker.BrokerInfo);
+                                returnList.Add(broker);
                             }
                         }
                         else
                         {
-                            returnList.Add(broker.BrokerInfo);
+                            returnList.Add(broker);
                         }
                     }
                 }
 
-                returnList.Sort((x, y) => string.Compare(x.BrokerName, y.BrokerName));
+                returnList.Sort((x, y) =>
+                {
+                    if (x.FirstRegisteredTime.Ticks > y.FirstRegisteredTime.Ticks)
+                    {
+                        return 1;
+                    }
+                    else if (x.FirstRegisteredTime.Ticks < y.FirstRegisteredTime.Ticks)
+                    {
+                        return -1;
+                    }
+                    return 0;
+                });
 
-                return returnList;
+                return returnList.Select(x => x.BrokerInfo).ToList();
             }
         }
         public IList<BrokerStatusInfo> GetClusterBrokerStatusInfos(GetClusterBrokersRequest request)
         {
             lock (_lockObj)
             {
-                var returnList = new List<BrokerStatusInfo>();
+                var returnList = new List<Broker>();
                 Cluster cluster;
                 if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
                 {
-                    return returnList;
+                    return returnList.Select(x => new BrokerStatusInfo
+                    {
+                        BrokerInfo = x.BrokerInfo,
+                        TotalSendThroughput = x.TotalSendThroughput,
+                        TotalConsumeThroughput = x.TotalConsumeThroughput,
+                        TotalUnConsumedMessageCount = x.TotalUnConsumedMessageCount
+                    }).ToList();
                 }
 
                 foreach (var brokerGroup in cluster.BrokerGroups.Values)
@@ -370,27 +412,89 @@ namespace EQueue.NameServer
                         {
                             if (broker.TopicQueueInfoList.Any(x => x.Topic == request.Topic))
                             {
-                                returnList.Add(new BrokerStatusInfo
-                                {
-                                    BrokerInfo = broker.BrokerInfo,
-                                    TotalSendThroughput = broker.TotalSendThroughput,
-                                    TotalConsumeThroughput = broker.TotalConsumeThroughput
-                                });
+                                returnList.Add(broker);
                             }
                         }
                         else
                         {
-                            returnList.Add(new BrokerStatusInfo
-                            {
-                                BrokerInfo = broker.BrokerInfo,
-                                TotalSendThroughput = broker.TotalSendThroughput,
-                                TotalConsumeThroughput = broker.TotalConsumeThroughput
-                            });
+                            returnList.Add(broker);
                         }
                     }
                 }
 
-                returnList.Sort((x, y) => string.Compare(x.BrokerInfo.BrokerName, y.BrokerInfo.BrokerName));
+                returnList.Sort((x, y) =>
+                {
+                    return string.Compare(x.BrokerInfo.BrokerName, y.BrokerInfo.BrokerName);
+                });
+
+                return returnList.Select(x => new BrokerStatusInfo
+                {
+                    BrokerInfo = x.BrokerInfo,
+                    TotalSendThroughput = x.TotalSendThroughput,
+                    TotalConsumeThroughput = x.TotalConsumeThroughput,
+                    TotalUnConsumedMessageCount = x.TotalUnConsumedMessageCount
+                }).ToList();
+            }
+        }
+        public IList<TopicAccumulateInfo> GetTopicAccumulateInfoList(GetTopicAccumulateInfoListRequest request)
+        {
+            lock (_lockObj)
+            {
+                var returnList = new List<TopicAccumulateInfo>();
+                var tempDict = new ConcurrentDictionary<string, IList<TopicConsumeInfo>>();
+
+                foreach (var entry1 in _clusterDict)
+                {
+                    foreach (var entry2 in entry1.Value.BrokerGroups)
+                    {
+                        foreach (var entry3 in entry2.Value.Brokers)
+                        {
+                            if (entry3.Value.BrokerInfo.BrokerRole != (int)BrokerRole.Master)
+                            {
+                                continue;
+                            }
+                            foreach (var topicConsumeInfo in entry3.Value.TopicConsumeInfoList)
+                            {
+                                var key = string.Format("{0}_{1}", topicConsumeInfo.Topic, topicConsumeInfo.ConsumerGroup);
+                                var list = tempDict.GetOrAdd(key, x => new List<TopicConsumeInfo>());
+                                list.Add(topicConsumeInfo);
+                            }
+                        }
+                    }
+                }
+
+                foreach (var list in tempDict.Values)
+                {
+                    if (list.Count == 0)
+                    {
+                        continue;
+                    }
+                    var consumeGroup = list[0].ConsumerGroup;
+                    var topic = list[0].Topic;
+                    var queueCount = list.Count;
+                    var onlineConsumerCount = list[0].OnlineConsumerCount;
+                    var accumulateCount = 0L;
+                    var consumeThroughput = 0L;
+
+                    foreach (var item in list)
+                    {
+                        accumulateCount += item.QueueNotConsumeCount;
+                        consumeThroughput += item.ConsumeThroughput;
+                    }
+                    var topicAccumulateInfo = new TopicAccumulateInfo
+                    {
+                        ConsumerGroup = consumeGroup,
+                        Topic = topic,
+                        QueueCount = queueCount,
+                        AccumulateCount = accumulateCount,
+                        ConsumeThroughput = consumeThroughput,
+                        OnlineConsumerCount = onlineConsumerCount
+                    };
+
+                    returnList.Add(topicAccumulateInfo);
+                }
+
+                returnList = returnList.Where(x => x.AccumulateCount >= request.AccumulateThreshold).ToList();
 
                 return returnList;
             }
@@ -557,6 +661,7 @@ namespace EQueue.NameServer
             public BrokerInfo BrokerInfo { get; set; }
             public long TotalSendThroughput { get; set; }
             public long TotalConsumeThroughput { get; set; }
+            public long TotalUnConsumedMessageCount { get; set; }
             public IList<TopicQueueInfo> TopicQueueInfoList = new List<TopicQueueInfo>();
             public IList<TopicConsumeInfo> TopicConsumeInfoList = new List<TopicConsumeInfo>();
             public IList<string> ProducerList = new List<string>();
@@ -565,6 +670,7 @@ namespace EQueue.NameServer
             public ITcpConnection Connection { get; set; }
             public DateTime LastActiveTime { get; set; }
             public BrokerGroup Group { get; set; }
+            public DateTime FirstRegisteredTime { get; set; }
 
             public bool IsTimeout(double timeoutMilliseconds)
             {

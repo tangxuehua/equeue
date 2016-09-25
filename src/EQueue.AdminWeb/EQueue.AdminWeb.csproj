@@ -154,6 +154,7 @@
     <Compile Include="Models\BrokerTopicQueueListViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MessageService.cs" />
+    <Compile Include="SendEmailService.cs" />
     <Compile Include="Settings.cs" />
   </ItemGroup>
   <ItemGroup>

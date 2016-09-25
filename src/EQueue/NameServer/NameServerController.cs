@@ -76,6 +76,7 @@ namespace EQueue.NameServer
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.SetQueueConsumerVisible, new SetQueueConsumerVisibleForClusterRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.SetQueueNextConsumeOffset, new SetQueueNextConsumeOffsetForClusterRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.DeleteConsumerGroup, new DeleteConsumerGroupForClusterRequestHandler(this));
+            _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetTopicAccumulateInfoList, new GetTopicAccumulateInfoListRequestHandler(this));
         }
 
         class BrokerConnectionEventListener : IConnectionEventListener

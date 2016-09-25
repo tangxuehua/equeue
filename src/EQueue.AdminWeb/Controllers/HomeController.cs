@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Web.Mvc;
 using EQueue.AdminWeb.Models;
@@ -66,12 +67,56 @@ namespace EQueue.AdminWeb.Controllers
         public ActionResult ConsumerList(string clusterName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
-            var consumerList = _messageService.GetConsumerInfoList(clusterName, group, topic);
+            var consumerInfoList = _messageService.GetConsumerInfoList(clusterName, group, topic);
+            var modelList = new List<ConsumerViewModel>();
+            foreach (var consumerInfo in consumerInfoList)
+            {
+                foreach (var consumer in consumerInfo.ConsumerList)
+                {
+                    modelList.Add(new ConsumerViewModel
+                    {
+                        BrokerInfo = consumerInfo.BrokerInfo,
+                        ConsumerInfo = consumer
+                    });
+                }
+            }
+            modelList.Sort((x, y) =>
+            {
+                var result = string.Compare(x.ConsumerInfo.ConsumerGroup, y.ConsumerInfo.ConsumerGroup);
+                if (result != 0)
+                {
+                    return result;
+                }
+                result = string.Compare(x.ConsumerInfo.ConsumerId, y.ConsumerInfo.ConsumerId);
+                if (result != 0)
+                {
+                    return result;
+                }
+                result = string.Compare(x.BrokerInfo.BrokerName, y.BrokerInfo.BrokerName);
+                if (result != 0)
+                {
+                    return result;
+                }
+                result = string.Compare(x.ConsumerInfo.Topic, y.ConsumerInfo.Topic);
+                if (result != 0)
+                {
+                    return result;
+                }
+                if (x.ConsumerInfo.QueueId > y.ConsumerInfo.QueueId)
+                {
+                    return 1;
+                }
+                else if (x.ConsumerInfo.QueueId < y.ConsumerInfo.QueueId)
+                {
+                    return -1;
+                }
+                return 0;
+            });
             return View(new ClusterConsumerListViewModel
             {
                 Group = group,
                 Topic = topic,
-                ConsumerList = consumerList
+                ConsumerList = modelList
             });
         }
         public ActionResult Message(string clusterName, string searchMessageId)
