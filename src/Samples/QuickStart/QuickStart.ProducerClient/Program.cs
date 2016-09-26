@@ -62,7 +62,7 @@ namespace QuickStart.ProducerClient
             var nameServerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var messageSize = int.Parse(ConfigurationManager.AppSettings["MessageSize"]);
-            var messageCount = int.Parse(ConfigurationManager.AppSettings["MessageCount"]);
+            var messageCount = long.Parse(ConfigurationManager.AppSettings["MessageCount"]);
             var actions = new List<Action>();
             var payload = new byte[messageSize];
             var topic = ConfigurationManager.AppSettings["Topic"];
@@ -80,11 +80,11 @@ namespace QuickStart.ProducerClient
 
             Task.Factory.StartNew(() => Parallel.Invoke(actions.ToArray()));
         }
-        static void SendMessages(Producer producer, string mode, int messageCount, string topic, byte[] payload)
+        static void SendMessages(Producer producer, string mode, long messageCount, string topic, byte[] payload)
         {
             _logger.Info("----Send message starting----");
 
-            var sendAction = default(Action<int>);
+            var sendAction = default(Action<long>);
 
             if (_mode == "Oneway")
             {
@@ -152,7 +152,7 @@ namespace QuickStart.ProducerClient
 
             Task.Factory.StartNew(() =>
             {
-                for (var i = 0; i < messageCount; i++)
+                for (var i = 0L; i < messageCount; i++)
                 {
                     try
                     {
