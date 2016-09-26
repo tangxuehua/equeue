@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
 using ECommon.Configurations;
@@ -16,6 +17,9 @@ namespace QuickStart.BrokerServer2
         static void Main(string[] args)
         {
             InitializeEQueue();
+
+            var address = ConfigurationManager.AppSettings["nameServerAddress"];
+            var nameServerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
             var setting = new BrokerSetting(
                 bool.Parse(ConfigurationManager.AppSettings["isMemoryMode"]),
                 ConfigurationManager.AppSettings["fileStoreRootPath"],
@@ -32,6 +36,7 @@ namespace QuickStart.BrokerServer2
                 NotifyWhenMessageArrived = bool.Parse(ConfigurationManager.AppSettings["notifyWhenMessageArrived"]),
                 MessageWriteQueueThreshold = int.Parse(ConfigurationManager.AppSettings["messageWriteQueueThreshold"])
             };
+            setting.NameServerList = new List<IPEndPoint> { new IPEndPoint(nameServerAddress, 9493) };
             setting.BrokerInfo.BrokerName = ConfigurationManager.AppSettings["brokerName"];
             setting.BrokerInfo.GroupName = ConfigurationManager.AppSettings["groupName"];
             setting.BrokerInfo.ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), int.Parse(ConfigurationManager.AppSettings["producerPort"])).ToAddress();
