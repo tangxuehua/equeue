@@ -68,12 +68,12 @@ namespace EQueue.Clients.Consumers
             var clientSetting = new ClientSetting
             {
                 ClientName = Name,
-                ClusterName = setting.ClusterName,
-                NameServerList = setting.NameServerList,
-                SocketSetting = setting.SocketSetting,
+                ClusterName = Setting.ClusterName,
+                NameServerList = Setting.NameServerList,
+                SocketSetting = Setting.SocketSetting,
                 OnlyFindMasterBroker = true,
-                SendHeartbeatInterval = setting.HeartbeatBrokerInterval,
-                RefreshBrokerAndTopicRouteInfoInterval = setting.RefreshBrokerAndTopicRouteInfoInterval
+                SendHeartbeatInterval = Setting.HeartbeatBrokerInterval,
+                RefreshBrokerAndTopicRouteInfoInterval = Setting.RefreshBrokerAndTopicRouteInfoInterval
             };
             _clientService = new ClientService(clientSetting, null, this);
             _pullMessageService = new PullMessageService(this, _clientService);
