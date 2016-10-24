@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
@@ -103,7 +104,7 @@ namespace EQueue.Broker
 
             _service = new ConsoleEventHandlerService();
             _service.RegisterClosingEventHandler(eventCode => { Shutdown(); });
-            _nameServerRemotingClientList = RemotingClientUtils.CreateRemotingClientList(Setting.NameServerList, Setting.SocketSetting).ToList();
+            _nameServerRemotingClientList = Setting.NameServerList.ToRemotingClientList(Setting.SocketSetting).ToList();
         }
 
         public static BrokerController Create(BrokerSetting setting = null)
@@ -266,6 +267,7 @@ namespace EQueue.Broker
         {
             _producerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.ProducerHeartbeat, new ProducerHeartbeatRequestHandler(this));
             _producerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SendMessage, new SendMessageRequestHandler(this));
+            _producerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.BatchSendMessage, new BatchSendMessageRequestHandler(this));
 
             _consumerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.ConsumerHeartbeat, new ConsumerHeartbeatRequestHandler(this));
             _consumerSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.PullMessage, new PullMessageRequestHandler());
@@ -346,9 +348,9 @@ namespace EQueue.Broker
                 var data = _binarySerializer.Serialize(request);
                 var remotingRequest = new RemotingRequest((int)NameServerRequestCode.RegisterBroker, data);
                 var remotingResponse = remotingClient.InvokeSync(remotingRequest, 5 * 1000);
-                if (remotingResponse.Code != ResponseCode.Success)
+                if (remotingResponse.ResponseCode != ResponseCode.Success)
                 {
-                    _logger.Error(string.Format("Register broker to name server failed, brokerInfo: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.BrokerInfo, nameServerAddress, remotingResponse.Code, Encoding.UTF8.GetString(remotingResponse.Body)));
+                    _logger.Error(string.Format("Register broker to name server failed, brokerInfo: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.BrokerInfo, nameServerAddress, remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
                 }
             }
             catch (Exception ex)
@@ -364,9 +366,9 @@ namespace EQueue.Broker
                 var data = _binarySerializer.Serialize(request);
                 var remotingRequest = new RemotingRequest((int)NameServerRequestCode.UnregisterBroker, data);
                 var remotingResponse = remotingClient.InvokeSync(remotingRequest, 5 * 1000);
-                if (remotingResponse.Code != ResponseCode.Success)
+                if (remotingResponse.ResponseCode != ResponseCode.Success)
                 {
-                    _logger.Error(string.Format("Unregister broker from name server failed, brokerInfo: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.BrokerInfo, nameServerAddress, remotingResponse.Code, Encoding.UTF8.GetString(remotingResponse.Body)));
+                    _logger.Error(string.Format("Unregister broker from name server failed, brokerInfo: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.BrokerInfo, nameServerAddress, remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
                 }
             }
             catch (Exception ex)

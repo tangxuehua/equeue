@@ -4,6 +4,7 @@
     {
         SendMessage = 10,
         PullMessage = 11,
+        BatchSendMessage = 12,
         ProducerHeartbeat = 100,
         ConsumerHeartbeat = 101,
         GetConsumerIdsForTopic = 102,

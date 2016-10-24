@@ -63,6 +63,7 @@ namespace QuickStart.ProducerClient
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var messageSize = int.Parse(ConfigurationManager.AppSettings["MessageSize"]);
             var messageCount = long.Parse(ConfigurationManager.AppSettings["MessageCount"]);
+            var batchSize = int.Parse(ConfigurationManager.AppSettings["BatchSize"]);
             var actions = new List<Action>();
             var payload = new byte[messageSize];
             var topic = ConfigurationManager.AppSettings["Topic"];
@@ -74,13 +75,18 @@ namespace QuickStart.ProducerClient
                     ClusterName = clusterName,
                     NameServerList = new List<IPEndPoint> { new IPEndPoint(nameServerAddress, 9493) }
                 };
-                var producer = new Producer(setting).Start();
-                actions.Add(() => SendMessages(producer, _mode, messageCount, topic, payload));
+                var producer = new Producer(setting);
+                if (_mode == "Callback")
+                {
+                    producer.RegisterResponseHandler(new ResponseHandler { BatchSize = batchSize });
+                }
+                producer.Start();
+                actions.Add(() => SendMessages(producer, _mode, batchSize, messageCount, topic, payload));
             }
 
             Task.Factory.StartNew(() => Parallel.Invoke(actions.ToArray()));
         }
-        static void SendMessages(Producer producer, string mode, long messageCount, string topic, byte[] payload)
+        static void SendMessages(Producer producer, string mode, int batchSize, long messageCount, string topic, byte[] payload)
         {
             _logger.Info("----Send message starting----");
 
@@ -90,65 +96,154 @@ namespace QuickStart.ProducerClient
             {
                 sendAction = index =>
                 {
-                    var message = new Message(topic, 100, payload);
-                    producer.SendOneway(message, index.ToString());
-                    _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
-                    Interlocked.Increment(ref _sentCount);
+                    if (batchSize == 1)
+                    {
+                        var message = new Message(topic, 100, payload);
+                        producer.SendOneway(message, index.ToString());
+                        _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
+                        Interlocked.Increment(ref _sentCount);
+                    }
+                    else
+                    {
+                        var messages = new List<Message>();
+                        for (var i = 0; i < batchSize; i++)
+                        {
+                            messages.Add(new Message(topic, 100, payload));
+                        }
+                        producer.BatchSendOneway(messages, index.ToString());
+                        var currentTime = DateTime.Now;
+                        foreach (var message in messages)
+                        {
+                            _rtStatisticService.AddRT((currentTime - message.CreatedTime).TotalMilliseconds);
+                            Interlocked.Increment(ref _sentCount);
+                        }
+                    }
                 };
             }
             else if (_mode == "Sync")
             {
                 sendAction = index =>
                 {
-                    var message = new Message(topic, 100, payload);
-                    var result = producer.Send(message, index.ToString());
-                    if (result.SendStatus != SendStatus.Success)
+                    if (batchSize == 1)
                     {
-                        throw new Exception(result.ErrorMessage);
+                        var message = new Message(topic, 100, payload);
+                        var result = producer.Send(message, index.ToString());
+                        if (result.SendStatus != SendStatus.Success)
+                        {
+                            throw new Exception(result.ErrorMessage);
+                        }
+                        _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
+                        Interlocked.Increment(ref _sentCount);
                     }
-                    _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
-                    Interlocked.Increment(ref _sentCount);
+                    else
+                    {
+                        var messages = new List<Message>();
+                        for (var i = 0; i < batchSize; i++)
+                        {
+                            messages.Add(new Message(topic, 100, payload));
+                        }
+                        var result = producer.BatchSend(messages, index.ToString());
+                        if (result.SendStatus != SendStatus.Success)
+                        {
+                            throw new Exception(result.ErrorMessage);
+                        }
+                        var currentTime = DateTime.Now;
+                        foreach (var message in messages)
+                        {
+                            _rtStatisticService.AddRT((currentTime - message.CreatedTime).TotalMilliseconds);
+                            Interlocked.Increment(ref _sentCount);
+                        }
+                    }
                 };
             }
             else if (_mode == "Async")
             {
                 sendAction = index =>
                 {
-                    var message = new Message(topic, 100, payload);
-                    producer.SendAsync(message, index.ToString()).ContinueWith(t =>
+                    if (batchSize == 1)
                     {
-                        if (t.Exception != null)
+                        var message = new Message(topic, 100, payload);
+                        producer.SendAsync(message, index.ToString()).ContinueWith(t =>
                         {
-                            _hasError = true;
-                            _logger.ErrorFormat("Send message has exception, errorMessage: {0}", t.Exception.GetBaseException().Message);
-                            return;
-                        }
-                        if (t.Result == null)
+                            if (t.Exception != null)
+                            {
+                                _hasError = true;
+                                _logger.ErrorFormat("Send message has exception, errorMessage: {0}", t.Exception.GetBaseException().Message);
+                                return;
+                            }
+                            if (t.Result == null)
+                            {
+                                _hasError = true;
+                                _logger.Error("Send message timeout.");
+                                return;
+                            }
+                            if (t.Result.SendStatus != SendStatus.Success)
+                            {
+                                _hasError = true;
+                                _logger.ErrorFormat("Send message failed, errorMessage: {0}", t.Result.ErrorMessage);
+                                return;
+                            }
+                            _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
+                            Interlocked.Increment(ref _sentCount);
+                        });
+                    }
+                    else
+                    {
+                        var messages = new List<Message>();
+                        for (var i = 0; i < batchSize; i++)
                         {
-                            _hasError = true;
-                            _logger.Error("Send message timeout.");
-                            return;
+                            messages.Add(new Message(topic, 100, payload));
                         }
-                        if (t.Result.SendStatus != SendStatus.Success)
+                        producer.BatchSendAsync(messages, index.ToString()).ContinueWith(t =>
                         {
-                            _hasError = true;
-                            _logger.ErrorFormat("Send message failed, errorMessage: {0}", t.Result.ErrorMessage);
-                            return;
-                        }
-                        _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
-                        Interlocked.Increment(ref _sentCount);
-                    });
+                            if (t.Exception != null)
+                            {
+                                _hasError = true;
+                                _logger.ErrorFormat("Send message has exception, errorMessage: {0}", t.Exception.GetBaseException().Message);
+                                return;
+                            }
+                            if (t.Result == null)
+                            {
+                                _hasError = true;
+                                _logger.Error("Send message timeout.");
+                                return;
+                            }
+                            if (t.Result.SendStatus != SendStatus.Success)
+                            {
+                                _hasError = true;
+                                _logger.ErrorFormat("Send message failed, errorMessage: {0}", t.Result.ErrorMessage);
+                                return;
+                            }
+                            var currentTime = DateTime.Now;
+                            foreach (var message in messages)
+                            {
+                                _rtStatisticService.AddRT((currentTime - message.CreatedTime).TotalMilliseconds);
+                                Interlocked.Increment(ref _sentCount);
+                            }
+                        });
+                    }
                 };
             }
             else if (_mode == "Callback")
             {
-                producer.RegisterResponseHandler(new ResponseHandler());
                 sendAction = index =>
                 {
-                    var message = new Message(topic, 100, payload);
-                    producer.SendWithCallback(message, index.ToString());
+                    if (batchSize == 1)
+                    {
+                        var message = new Message(topic, 100, payload);
+                        producer.SendWithCallback(message, index.ToString());
+                    }
+                    else
+                    {
+                        var messages = new List<Message>();
+                        for (var i = 0; i < batchSize; i++)
+                        {
+                            messages.Add(new Message(topic, 100, payload));
+                        }
+                        producer.BatchSendWithCallback(messages, index.ToString());
+                    }
                 };
-            }
+            }     
 
             Task.Factory.StartNew(() =>
             {
@@ -197,17 +292,38 @@ namespace QuickStart.ProducerClient
 
         class ResponseHandler : IResponseHandler
         {
+            public int BatchSize;
+
             public void HandleResponse(RemotingResponse remotingResponse)
             {
-                var sendResult = Producer.ParseSendResult(remotingResponse);
-                if (sendResult.SendStatus != SendStatus.Success)
+                if (BatchSize == 1)
                 {
-                    _hasError = true;
-                    _logger.Error(sendResult.ErrorMessage);
-                    return;
+                    var sendResult = Producer.ParseSendResult(remotingResponse);
+                    if (sendResult.SendStatus != SendStatus.Success)
+                    {
+                        _hasError = true;
+                        _logger.Error(sendResult.ErrorMessage);
+                        return;
+                    }
+                    Interlocked.Increment(ref _sentCount);
+                    _rtStatisticService.AddRT((DateTime.Now - sendResult.MessageStoreResult.CreatedTime).TotalMilliseconds);
                 }
-                Interlocked.Increment(ref _sentCount);
-                _rtStatisticService.AddRT((DateTime.Now - sendResult.MessageStoreResult.CreatedTime).TotalMilliseconds);
+                else
+                {
+                    var sendResult = Producer.ParseBatchSendResult(remotingResponse);
+                    if (sendResult.SendStatus != SendStatus.Success)
+                    {
+                        _hasError = true;
+                        _logger.Error(sendResult.ErrorMessage);
+                        return;
+                    }
+                    var currentTime = DateTime.Now;
+                    foreach (var result in sendResult.MessageStoreResult.MessageResults)
+                    {
+                        Interlocked.Increment(ref _sentCount);
+                        _rtStatisticService.AddRT((currentTime - result.CreatedTime).TotalMilliseconds);
+                    }
+                }
             }
         }
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Utilities;
@@ -19,6 +20,7 @@ namespace EQueue.Broker
         private readonly ILogger _logger;
         private long _minConsumedMessagePosition = -1;
         private BufferQueue<MessageLogRecord> _bufferQueue;
+        private BufferQueue<BatchMessageLogRecord> _batchMessageBufferQueue;
         private readonly object _lockObj = new object();
 
         public long MinMessagePosition
@@ -58,6 +60,7 @@ namespace EQueue.Broker
         public void Load()
         {
             _bufferQueue = new BufferQueue<MessageLogRecord>("MessageBufferQueue", BrokerController.Instance.Setting.MessageWriteQueueThreshold, PersistMessages, _logger);
+            _batchMessageBufferQueue = new BufferQueue<BatchMessageLogRecord>("BatchMessageBufferQueue", BrokerController.Instance.Setting.BatchMessageWriteQueueThreshold, BatchPersistMessages, _logger);
             _chunkManager = new ChunkManager("MessageChunk", BrokerController.Instance.Setting.MessageChunkConfig, BrokerController.Instance.Setting.IsMessageStoreMemoryMode);
             _chunkWriter = new ChunkWriter(_chunkManager);
             _chunkReader = new ChunkReader(_chunkManager, _chunkWriter);
@@ -75,7 +78,7 @@ namespace EQueue.Broker
             _chunkWriter.Close();
             _chunkManager.Close();
         }
-        public void StoreMessageAsync(IQueue queue, Message message, Action<MessageLogRecord, object> callback, object parameter)
+        public void StoreMessageAsync(IQueue queue, Message message, Action<MessageLogRecord, object> callback, object parameter, string producerAddress)
         {
             lock (_lockObj)
             {
@@ -88,11 +91,37 @@ namespace EQueue.Broker
                     message.CreatedTime,
                     DateTime.Now,
                     message.Tag,
-                    message.ProducerAddress ?? string.Empty,
+                    producerAddress ?? string.Empty,
                     callback,
                     parameter);
                 _bufferQueue.EnqueueMessage(record);
                 queue.IncrementNextOffset();
+            }
+        }
+        public void BatchStoreMessageAsync(IQueue queue, IEnumerable<Message> messages, Action<BatchMessageLogRecord, object> callback, object parameter, string producerAddress)
+        {
+            lock (_lockObj)
+            {
+                var recordList = new List<MessageLogRecord>();
+                foreach (var message in messages)
+                {
+                    var record = new MessageLogRecord(
+                        queue.Topic,
+                        message.Code,
+                        message.Body,
+                        queue.QueueId,
+                        queue.NextOffset,
+                        message.CreatedTime,
+                        DateTime.Now,
+                        message.Tag,
+                        producerAddress ?? string.Empty,
+                        null,
+                        null);
+                    recordList.Add(record);
+                    queue.IncrementNextOffset();
+                }
+                var batchRecord = new BatchMessageLogRecord(recordList, callback, parameter);
+                _batchMessageBufferQueue.EnqueueMessage(batchRecord);
             }
         }
         public byte[] GetMessageBuffer(long position)
@@ -132,10 +161,18 @@ namespace EQueue.Broker
             _minConsumedMessagePosition = minConsumedMessagePosition;
         }
 
-        private void PersistMessages(MessageLogRecord message)
+        private void PersistMessages(MessageLogRecord record)
         {
-            _chunkWriter.Write(message);
-            message.OnPersisted();
+            _chunkWriter.Write(record);
+            record.OnPersisted();
+        }
+        private void BatchPersistMessages(BatchMessageLogRecord batchRecord)
+        {
+            foreach (var record in batchRecord.Records)
+            {
+                _chunkWriter.Write(record);
+            }
+            batchRecord.OnPersisted();
         }
 
         private void DeleteMessages()

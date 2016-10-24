@@ -31,9 +31,9 @@ namespace EQueue.NameServer.RequestHandlers
             {
                 var requestData = _binarySerializer.Serialize(new DeleteQueueRequest(request.Topic, request.QueueId));
                 var remotingResponse = remotingClient.InvokeSync(new RemotingRequest((int)BrokerRequestCode.DeleteQueue, requestData), 30000);
-                if (remotingResponse.Code != ResponseCode.Success)
+                if (remotingResponse.ResponseCode != ResponseCode.Success)
                 {
-                    throw new Exception(string.Format("DeleteQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                    throw new Exception(string.Format("DeleteQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
                 }
             });
 

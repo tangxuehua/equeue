@@ -254,7 +254,7 @@ namespace EQueue.Clients.Consumers
                             string remotingResponseBodyLength;
                             if (pullTask.Result != null)
                             {
-                                remotingResponseBodyLength = pullTask.Result.Body.Length.ToString();
+                                remotingResponseBodyLength = pullTask.Result.ResponseBody.Length.ToString();
                             }
                             else
                             {
@@ -287,37 +287,37 @@ namespace EQueue.Clients.Consumers
                 return;
             }
 
-            if (remotingResponse.Code == -1)
+            if (remotingResponse.ResponseCode == -1)
             {
-                _logger.ErrorFormat("Pull message failed, pullRequest:{0}, errorMsg:{1}", pullRequest, Encoding.UTF8.GetString(remotingResponse.Body));
+                _logger.ErrorFormat("Pull message failed, pullRequest:{0}, errorMsg:{1}", pullRequest, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
                 SchedulePullRequest(pullRequest);
                 return;
             }
 
-            if (remotingResponse.Code == (short)PullStatus.Found)
+            if (remotingResponse.ResponseCode == (short)PullStatus.Found)
             {
-                var messages = DecodeMessages(pullRequest, remotingResponse.Body);
+                var messages = DecodeMessages(pullRequest, remotingResponse.ResponseBody);
                 if (messages.Count() > 0)
                 {
                     handlePulledMessageAction(messages);
                     pullRequest.NextConsumeOffset = messages.Last().QueueOffset + 1;
                 }
             }
-            else if (remotingResponse.Code == (short)PullStatus.NextOffsetReset)
+            else if (remotingResponse.ResponseCode == (short)PullStatus.NextOffsetReset)
             {
-                var newOffset = BitConverter.ToInt64(remotingResponse.Body, 0);
+                var newOffset = BitConverter.ToInt64(remotingResponse.ResponseBody, 0);
                 ResetNextConsumeOffset(pullRequest, newOffset);
             }
-            else if (remotingResponse.Code == (short)PullStatus.NoNewMessage)
+            else if (remotingResponse.ResponseCode == (short)PullStatus.NoNewMessage)
             {
                 //No new message to consume.
             }
-            else if (remotingResponse.Code == (short)PullStatus.Ignored)
+            else if (remotingResponse.ResponseCode == (short)PullStatus.Ignored)
             {
                 _logger.InfoFormat("Pull request was ignored, pullRequest:{0}", pullRequest);
                 return;
             }
-            else if (remotingResponse.Code == (short)PullStatus.BrokerIsCleaning)
+            else if (remotingResponse.ResponseCode == (short)PullStatus.BrokerIsCleaning)
             {
                 Thread.Sleep(5000);
             }

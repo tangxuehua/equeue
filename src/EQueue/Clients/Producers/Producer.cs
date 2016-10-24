@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -95,6 +96,20 @@ namespace EQueue.Clients.Producers
             }
             return sendResult;
         }
+        public BatchSendResult BatchSend(IEnumerable<Message> messages, string routingKey, int timeoutMilliseconds = 30 * 1000)
+        {
+            if (!_started)
+            {
+                throw new Exception("Producer not started, please start the producer first.");
+            }
+
+            var sendResult = BatchSendAsync(messages, routingKey, timeoutMilliseconds).WaitResult(timeoutMilliseconds + 3000);
+            if (sendResult == null)
+            {
+                sendResult = new BatchSendResult(SendStatus.Timeout, null, string.Format("Send message timeout, routingKey: {0}, timeoutMilliseconds: {1}", routingKey, timeoutMilliseconds));
+            }
+            return sendResult;
+        }
         public async Task<SendResult> SendAsync(Message message, string routingKey, int timeoutMilliseconds = 30 * 1000)
         {
             Ensure.NotNull(message, "message");
@@ -145,6 +160,61 @@ namespace EQueue.Clients.Producers
             }
             return sendResult;
         }
+        public async Task<BatchSendResult> BatchSendAsync(IEnumerable<Message> messages, string routingKey, int timeoutMilliseconds = 30 * 1000)
+        {
+            Ensure.NotNull(messages, "messages");
+            if (messages.Count() == 0)
+            {
+                throw new Exception("Batch message must contains at least one message.");
+            }
+            if (!_started)
+            {
+                throw new Exception("Producer not started, please start the producer first.");
+            }
+
+            var message = messages.First();
+            var sendResult = default(BatchSendResult);
+            var retryCount = 0;
+            while (retryCount <= Setting.SendMessageMaxRetryCount)
+            {
+                MessageQueue messageQueue;
+                BrokerConnection brokerConnection;
+                if (!TryGetAvailableMessageQueue(message, routingKey, out messageQueue, out brokerConnection))
+                {
+                    throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
+                }
+
+                var remotingRequest = BuildBatchSendMessageRequest(messages, messageQueue.QueueId, brokerConnection);
+                try
+                {
+                    var remotingResponse = await brokerConnection.RemotingClient.InvokeAsync(remotingRequest, timeoutMilliseconds).ConfigureAwait(false);
+                    if (remotingResponse == null)
+                    {
+                        sendResult = new BatchSendResult(SendStatus.Timeout, null, string.Format("Batch send message timeout, queue: {0}, routingKey: {1}, timeoutMilliseconds: {2}, brokerInfo: {3}", messageQueue, routingKey, timeoutMilliseconds, brokerConnection.BrokerInfo));
+                    }
+                    return ParseBatchSendResult(remotingResponse);
+                }
+                catch (Exception ex)
+                {
+                    sendResult = new BatchSendResult(SendStatus.Failed, null, ex.Message);
+                }
+                if (sendResult.SendStatus == SendStatus.Success)
+                {
+                    return sendResult;
+                }
+                if (retryCount > 0)
+                {
+                    _logger.ErrorFormat("Batch send message failed, queue: {0}, routingKey: {1}, broker: {2}, sendResult: {3}, retryTimes: {4}", messageQueue, routingKey, brokerConnection.BrokerInfo, sendResult, retryCount);
+                }
+                else
+                {
+                    _logger.ErrorFormat("Batch send message failed, queue: {0}, routingKey: {1}, broker: {2}, sendResult: {3}", messageQueue, routingKey, brokerConnection.BrokerInfo, sendResult);
+                }
+
+                retryCount++;
+            }
+            return sendResult;
+        }
         public void SendWithCallback(Message message, string routingKey)
         {
             Ensure.NotNull(message, "message");
@@ -161,6 +231,30 @@ namespace EQueue.Clients.Producers
             }
 
             var remotingRequest = BuildSendMessageRequest(message, messageQueue.QueueId, brokerConnection);
+
+            brokerConnection.RemotingClient.InvokeWithCallback(remotingRequest);
+        }
+        public void BatchSendWithCallback(IEnumerable<Message> messages, string routingKey)
+        {
+            Ensure.NotNull(messages, "messages");
+            if (messages.Count() == 0)
+            {
+                throw new Exception("Batch message must contains at least one message.");
+            }
+            if (!_started)
+            {
+                throw new Exception("Producer not started, please start the producer first.");
+            }
+
+            var message = messages.First();
+            MessageQueue messageQueue;
+            BrokerConnection brokerConnection;
+            if (!TryGetAvailableMessageQueue(message, routingKey, out messageQueue, out brokerConnection))
+            {
+                throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
+            }
+
+            var remotingRequest = BuildBatchSendMessageRequest(messages, messageQueue.QueueId, brokerConnection);
 
             brokerConnection.RemotingClient.InvokeWithCallback(remotingRequest);
         }
@@ -183,22 +277,64 @@ namespace EQueue.Clients.Producers
 
             brokerConnection.RemotingClient.InvokeOneway(remotingRequest);
         }
+        public void BatchSendOneway(IEnumerable<Message> messages, string routingKey)
+        {
+            Ensure.NotNull(messages, "messages");
+            if (messages.Count() == 0)
+            {
+                throw new Exception("Batch message must contains at least one message.");
+            }
+            if (!_started)
+            {
+                throw new Exception("Producer not started, please start the producer first.");
+            }
+
+            var message = messages.First();
+            MessageQueue messageQueue;
+            BrokerConnection brokerConnection;
+            if (!TryGetAvailableMessageQueue(message, routingKey, out messageQueue, out brokerConnection))
+            {
+                throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
+            }
+
+            var remotingRequest = BuildBatchSendMessageRequest(messages, messageQueue.QueueId, brokerConnection);
+
+            brokerConnection.RemotingClient.InvokeOneway(remotingRequest);
+        }
         public static SendResult ParseSendResult(RemotingResponse remotingResponse)
         {
             Ensure.NotNull(remotingResponse, "remotingResponse");
 
-            if (remotingResponse.Code == ResponseCode.Success)
+            if (remotingResponse.ResponseCode == ResponseCode.Success)
             {
-                var result = MessageUtils.DecodeMessageStoreResult(remotingResponse.Body);
+                var result = MessageUtils.DecodeMessageStoreResult(remotingResponse.ResponseBody);
                 return new SendResult(SendStatus.Success, result, null);
             }
-            else if (remotingResponse.Code == 0)
+            else if (remotingResponse.ResponseCode == 0)
             {
-                return new SendResult(SendStatus.Timeout, null, Encoding.UTF8.GetString(remotingResponse.Body));
+                return new SendResult(SendStatus.Timeout, null, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
             }
             else
             {
-                return new SendResult(SendStatus.Failed, null, Encoding.UTF8.GetString(remotingResponse.Body));
+                return new SendResult(SendStatus.Failed, null, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
+            }
+        }
+        public static BatchSendResult ParseBatchSendResult(RemotingResponse remotingResponse)
+        {
+            Ensure.NotNull(remotingResponse, "remotingResponse");
+
+            if (remotingResponse.ResponseCode == ResponseCode.Success)
+            {
+                var result = BatchMessageUtils.DecodeMessageStoreResult(remotingResponse.ResponseBody);
+                return new BatchSendResult(SendStatus.Success, result, null);
+            }
+            else if (remotingResponse.ResponseCode == 0)
+            {
+                return new BatchSendResult(SendStatus.Timeout, null, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
+            }
+            else
+            {
+                return new BatchSendResult(SendStatus.Failed, null, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
             }
         }
 
@@ -282,14 +418,33 @@ namespace EQueue.Clients.Producers
         }
         private RemotingRequest BuildSendMessageRequest(Message message, int queueId, BrokerConnection brokerConnection)
         {
-            var request = new SendMessageRequest { Message = message, QueueId = queueId };
-            request.Message.ProducerAddress = brokerConnection.RemotingClient.LocalEndPoint.ToAddress();
+            var request = new SendMessageRequest
+            {
+                Message = message,
+                QueueId = queueId,
+                ProducerAddress = brokerConnection.RemotingClient.LocalEndPoint.ToAddress()
+            };
             var data = MessageUtils.EncodeSendMessageRequest(request);
             if (data.Length > Setting.MessageMaxSize)
             {
                 throw new Exception("Message size cannot exceed max message size:" + Setting.MessageMaxSize);
             }
             return new RemotingRequest((int)BrokerRequestCode.SendMessage, data);
+        }
+        private RemotingRequest BuildBatchSendMessageRequest(IEnumerable<Message> messages, int queueId, BrokerConnection brokerConnection)
+        {
+            var request = new BatchSendMessageRequest
+            {
+                Messages = messages,
+                QueueId = queueId,
+                ProducerAddress = brokerConnection.RemotingClient.LocalEndPoint.ToAddress()
+            };
+            var data = BatchMessageUtils.EncodeSendMessageRequest(request);
+            if (data.Length > Setting.MessageMaxSize * messages.Count())
+            {
+                throw new Exception("Message size cannot exceed max message size:" + Setting.MessageMaxSize);
+            }
+            return new RemotingRequest((int)BrokerRequestCode.BatchSendMessage, data);
         }
 
         #endregion

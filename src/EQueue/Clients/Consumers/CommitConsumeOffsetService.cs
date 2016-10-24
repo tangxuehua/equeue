@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
@@ -9,7 +10,6 @@ using ECommon.Utilities;
 using EQueue.Protocols;
 using EQueue.Protocols.Brokers;
 using EQueue.Protocols.Brokers.Requests;
-using EQueue.Utils;
 
 namespace EQueue.Clients.Consumers
 {

@@ -1,4 +1,5 @@
-﻿using ECommon.Remoting;
+﻿using System;
+using ECommon.Remoting;
 using EQueue.Protocols;
 
 namespace EQueue.Utils
@@ -21,7 +22,16 @@ namespace EQueue.Utils
         }
         public static RemotingResponse CreateResponse(RemotingRequest remotingRequest, short responseCode, byte[] data)
         {
-            return new RemotingResponse(remotingRequest.Code, responseCode, remotingRequest.Type, data, remotingRequest.Sequence);
+            return new RemotingResponse(
+                remotingRequest.Type,
+                remotingRequest.Code,
+                remotingRequest.Sequence,
+                remotingRequest.CreatedTime,
+                responseCode,
+                data,
+                DateTime.Now,
+                remotingRequest.Header,
+                null);
         }
     }
 }

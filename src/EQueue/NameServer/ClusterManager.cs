@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
@@ -14,7 +15,6 @@ using EQueue.Protocols.Brokers;
 using EQueue.Protocols.Brokers.Requests;
 using EQueue.Protocols.NameServers;
 using EQueue.Protocols.NameServers.Requests;
-using EQueue.Utils;
 
 namespace EQueue.NameServer
 {
@@ -617,12 +617,12 @@ namespace EQueue.NameServer
             var requestData = _binarySerializer.Serialize(new CreateTopicRequest(topic));
             var remotingRequest = new RemotingRequest((int)BrokerRequestCode.CreateTopic, requestData);
             var remotingResponse = adminRemotingClient.InvokeSync(remotingRequest, 30000);
-            if (remotingResponse.Code != ResponseCode.Success)
+            if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
-                throw new Exception(string.Format("AutoCreateTopicOnBroker failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                throw new Exception(string.Format("AutoCreateTopicOnBroker failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
             }
             adminRemotingClient.Shutdown();
-            return _binarySerializer.Deserialize<IEnumerable<int>>(remotingResponse.Body);
+            return _binarySerializer.Deserialize<IEnumerable<int>>(remotingResponse.ResponseBody);
         }
         private void ScanNotActiveBroker()
         {

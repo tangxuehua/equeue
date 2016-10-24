@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using ECommon.Extensions;
 using ECommon.Socketing;
 using EQueue.Broker.Storage;
 using EQueue.Protocols.Brokers;
-using EQueue.Utils;
 
 namespace EQueue.Broker
 {
@@ -66,6 +66,9 @@ namespace EQueue.Broker
         /// <summary>消息写入缓冲队列限流阈值，默认为20000；
         /// </summary>
         public int MessageWriteQueueThreshold { get; set; }
+        /// <summary>批量消息写入缓冲队列限流阈值，默认为10000；
+        /// </summary>
+        public int BatchMessageWriteQueueThreshold { get; set; }
         /// <summary>表示是否在内存模式下运行，内存模式下消息都不存储到文件，仅保存在内存；默认为False；
         /// </summary>
         public bool IsMessageStoreMemoryMode { get; set; }
@@ -116,6 +119,7 @@ namespace EQueue.Broker
             TopicMaxQueueCount = 256;
             MessageMaxSize = 1024 * 1024 * 4;
             MessageWriteQueueThreshold = 2 * 10000;
+            BatchMessageWriteQueueThreshold = 1 * 10000;
             IsMessageStoreMemoryMode = isMessageStoreMemoryMode;
             FileStoreRootPath = chunkFileStoreRootPath;
             LatestMessageShowCount = 100;

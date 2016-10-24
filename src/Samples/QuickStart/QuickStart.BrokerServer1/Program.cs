@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
 using ECommon.Configurations;
+using ECommon.Extensions;
 using ECommon.Socketing;
 using EQueue.Broker;
 using EQueue.Configurations;
-using EQueue.Utils;
 using ECommonConfiguration = ECommon.Configurations.Configuration;
 
 namespace QuickStart.BrokerServer1

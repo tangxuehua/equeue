@@ -31,9 +31,9 @@ namespace EQueue.NameServer.RequestHandlers
             {
                 var requestData = _binarySerializer.Serialize(new DeleteConsumerGroupRequest(request.GroupName));
                 var remotingResponse = remotingClient.InvokeSync(new RemotingRequest((int)BrokerRequestCode.DeleteConsumerGroup, requestData), 30000);
-                if (remotingResponse.Code != ResponseCode.Success)
+                if (remotingResponse.ResponseCode != ResponseCode.Success)
                 {
-                    throw new Exception(string.Format("DeleteConsumerGroup failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                    throw new Exception(string.Format("DeleteConsumerGroup failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
                 }
             });
 

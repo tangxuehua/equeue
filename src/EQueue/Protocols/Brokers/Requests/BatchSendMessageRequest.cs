@@ -1,12 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace EQueue.Protocols.Brokers.Requests
 {
     [Serializable]
-    public class SendMessageRequest
+    public class BatchSendMessageRequest
     {
         public int QueueId { get; set; }
-        public Message Message { get; set; }
+        public IEnumerable<Message> Messages { get; set; }
         public string ProducerAddress { get; set; }
     }
 }

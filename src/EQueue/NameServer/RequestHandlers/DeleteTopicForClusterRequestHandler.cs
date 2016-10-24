@@ -31,9 +31,9 @@ namespace EQueue.NameServer.RequestHandlers
             {
                 var requestData = _binarySerializer.Serialize(new DeleteTopicRequest(request.Topic));
                 var remotingResponse = remotingClient.InvokeSync(new RemotingRequest((int)BrokerRequestCode.DeleteTopic, requestData), 30000);
-                if (remotingResponse.Code != ResponseCode.Success)
+                if (remotingResponse.ResponseCode != ResponseCode.Success)
                 {
-                    throw new Exception(string.Format("DeleteTopic failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                    throw new Exception(string.Format("DeleteTopic failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
                 }
             });
 

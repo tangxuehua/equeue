@@ -34,7 +34,7 @@ namespace EQueue.Utils
             var tagLengthBytes = BitConverter.GetBytes(tagBytes.Length);
 
             //producerAddress
-            var producerAddressBytes = Encoding.UTF8.GetBytes(request.Message.ProducerAddress);
+            var producerAddressBytes = Encoding.UTF8.GetBytes(request.ProducerAddress);
             var producerAddressLengthBytes = BitConverter.GetBytes(producerAddressBytes.Length);
 
             return Combine(
@@ -110,7 +110,7 @@ namespace EQueue.Utils
             var tag = Encoding.UTF8.GetString(tagBytes);
             var producerAddress = Encoding.UTF8.GetString(producerAddressBytes);
 
-            return new SendMessageRequest { QueueId = queueId, Message = new Message(topic, code, bodyBytes, createdTime, tag) { ProducerAddress = producerAddress } };
+            return new SendMessageRequest { QueueId = queueId, Message = new Message(topic, code, bodyBytes, createdTime, tag), ProducerAddress = producerAddress };
         }
 
         public static byte[] EncodeMessageStoreResult(MessageStoreResult result)

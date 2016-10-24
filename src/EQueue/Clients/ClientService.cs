@@ -7,6 +7,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
@@ -68,7 +69,7 @@ namespace EQueue.Clients
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            _nameServerRemotingClientList = RemotingClientUtils.CreateRemotingClientList(_setting.NameServerList, _setting.SocketSetting).ToList();
+            _nameServerRemotingClientList = _setting.NameServerList.ToRemotingClientList(_setting.SocketSetting).ToList();
         }
 
         #region Public Methods
@@ -194,11 +195,11 @@ namespace EQueue.Clients
             var data = _binarySerializer.Serialize(request);
             var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetClusterBrokers, data);
             var remotingResponse = nameServerRemotingClient.InvokeSync(remotingRequest, 5 * 1000);
-            if (remotingResponse.Code != ResponseCode.Success)
+            if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
-                throw new Exception(string.Format("Get cluster brokers from name server failed, clusterName: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.ClusterName, nameServerRemotingClient.ServerEndPoint.ToAddress(), remotingResponse.Code, Encoding.UTF8.GetString(remotingResponse.Body)));
+                throw new Exception(string.Format("Get cluster brokers from name server failed, clusterName: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.ClusterName, nameServerRemotingClient.ServerEndPoint.ToAddress(), remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
             }
-            return _binarySerializer.Deserialize<IList<BrokerInfo>>(remotingResponse.Body);
+            return _binarySerializer.Deserialize<IList<BrokerInfo>>(remotingResponse.ResponseBody);
         }
         private void StartAllNameServerClients()
         {
@@ -301,11 +302,11 @@ namespace EQueue.Clients
             var data = _binarySerializer.Serialize(request);
             var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetTopicRouteInfo, data);
             var remotingResponse = nameServerRemotingClient.InvokeSync(remotingRequest, 5 * 1000);
-            if (remotingResponse.Code != ResponseCode.Success)
+            if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
-                throw new Exception(string.Format("Get topic route info from name server failed, topic: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", topic, nameServerRemotingClient.ServerEndPoint.ToAddress(), remotingResponse.Code, Encoding.UTF8.GetString(remotingResponse.Body)));
+                throw new Exception(string.Format("Get topic route info from name server failed, topic: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", topic, nameServerRemotingClient.ServerEndPoint.ToAddress(), remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
             }
-            return _binarySerializer.Deserialize<IList<TopicRouteInfo>>(remotingResponse.Body);
+            return _binarySerializer.Deserialize<IList<TopicRouteInfo>>(remotingResponse.ResponseBody);
         }
         private SocketRemotingClient GetAvailableNameServerRemotingClient()
         {
@@ -359,6 +360,7 @@ namespace EQueue.Clients
             if (_producer != null && _producer.ResponseHandler != null)
             {
                 remotingClient.RegisterResponseHandler((int)BrokerRequestCode.SendMessage, _producer.ResponseHandler);
+                remotingClient.RegisterResponseHandler((int)BrokerRequestCode.BatchSendMessage, _producer.ResponseHandler);
             }
 
             brokerConnection.Start();

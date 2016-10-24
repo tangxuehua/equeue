@@ -31,9 +31,9 @@ namespace EQueue.NameServer.RequestHandlers
             {
                 var requestData = _binarySerializer.Serialize(new SetQueueNextConsumeOffsetRequest(request.ConsumerGroup, request.Topic, request.QueueId, request.NextOffset));
                 var remotingResponse = remotingClient.InvokeSync(new RemotingRequest((int)BrokerRequestCode.SetQueueNextConsumeOffset, requestData), 30000);
-                if (remotingResponse.Code != ResponseCode.Success)
+                if (remotingResponse.ResponseCode != ResponseCode.Success)
                 {
-                    throw new Exception(string.Format("SetQueueNextConsumeOffset failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.Body)));
+                    throw new Exception(string.Format("SetQueueNextConsumeOffset failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
                 }
             });
 

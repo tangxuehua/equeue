@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Linq;
+using ECommon.Extensions;
 using ECommon.Remoting;
 using EQueue.Protocols.NameServers.Requests;
-using EQueue.Utils;
 
 namespace EQueue.NameServer
 {
@@ -23,7 +23,7 @@ namespace EQueue.NameServer
                 OnlyFindMaster = true
             };
             var endpointList = _nameServerController.ClusterManager.GetClusterBrokers(request).Select(x => x.AdminAddress.ToEndPoint());
-            var remotingClientList = RemotingClientUtils.CreateRemotingClientList(endpointList, _nameServerController.Setting.SocketSetting);
+            var remotingClientList = endpointList.ToRemotingClientList(_nameServerController.Setting.SocketSetting);
 
             foreach (var remotingClient in remotingClientList)
             {

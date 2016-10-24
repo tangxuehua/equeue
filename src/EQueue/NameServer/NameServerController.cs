@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using System.Threading;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Socketing;

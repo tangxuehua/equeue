@@ -11,6 +11,7 @@ namespace EQueue.Broker
 {
     public interface IQueue
     {
+        string Topic { get; }
         int QueueId { get; }
         long NextOffset { get; }
         long IncrementNextOffset();

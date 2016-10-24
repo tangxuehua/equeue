@@ -45,8 +45,8 @@
     <Reference Include="Dapper">
       <HintPath>..\packages\Dapper.1.50.2\lib\net45\Dapper.dll</HintPath>
     </Reference>
-    <Reference Include="ECommon, Version=2.1.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\ECommon.2.1.4\lib\net45\ECommon.dll</HintPath>
+    <Reference Include="ECommon, Version=2.1.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ECommon.2.1.5\lib\net45\ECommon.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="log4net">
@@ -63,13 +63,17 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Broker\BatchMessageLogRecord.cs" />
     <Compile Include="Broker\Client\GetTopicConsumeInfoListService.cs" />
     <Compile Include="Broker\Client\GetConsumerListService.cs" />
     <Compile Include="Broker\Client\ProducerManager.cs" />
     <Compile Include="Broker\DefaultTpsStatisticService.cs" />
     <Compile Include="Broker\ITpsStatisticService.cs" />
+    <Compile Include="Clients\Producers\BatchSendResult.cs" />
+    <Compile Include="Protocols\BatchMessageItemResult.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\GetBrokerLatestSendMessagesRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\GetTopicConsumeInfoRequestHandler.cs" />
+    <Compile Include="Broker\RequestHandlers\BatchSendMessageRequestHandler.cs" />
     <Compile Include="Clients\BrokerConnection.cs" />
     <Compile Include="Clients\ClientService.cs" />
     <Compile Include="Clients\ClientSetting.cs" />
@@ -99,7 +103,9 @@
     <Compile Include="NameServer\RequestHandlers\UnregisterBrokerRequestHandler.cs" />
     <Compile Include="NameServer\RequestHandlers\RegisterBrokerRequestHandler.cs" />
     <Compile Include="Protocols\Brokers\BrokerInfo.cs" />
+    <Compile Include="Protocols\Brokers\Requests\BatchSendMessageRequest.cs" />
     <Compile Include="Protocols\MessageQueueEx.cs" />
+    <Compile Include="Protocols\BatchMessageStoreResult.cs" />
     <Compile Include="Protocols\NameServers\BrokerConsumerListInfo.cs" />
     <Compile Include="Protocols\NameServers\BrokerStatusInfo.cs" />
     <Compile Include="Protocols\NameServers\Requests\GetTopicAccumulateInfoListRequest.cs" />
@@ -211,7 +217,7 @@
     <Compile Include="Clients\Producers\ProducerSetting.cs" />
     <Compile Include="Clients\Producers\QueueAverageSelector.cs" />
     <Compile Include="Clients\Producers\QueueHashSelector.cs" />
-    <Compile Include="Configurations\ConfigurationExtensions.cs" />
+    <Compile Include="NameServer\Configurations\ConfigurationExtensions.cs" />
     <Compile Include="Protocols\Brokers\Requests\DeleteTopicRequest.cs" />
     <Compile Include="Protocols\Brokers\Requests\CreateTopicRequest.cs" />
     <Compile Include="Protocols\Brokers\Requests\GetMessageDetailRequest.cs" />
@@ -247,10 +253,9 @@
     <Compile Include="Protocols\Brokers\Requests\UpdateQueueOffsetRequest.cs" />
     <Compile Include="Utils\ConsoleEventHandlerService.cs" />
     <Compile Include="Utils\MessageIdUtil.cs" />
+    <Compile Include="Utils\BatchMessageUtils.cs" />
     <Compile Include="Utils\MessageUtils.cs" />
-    <Compile Include="Utils\RemotingClientUtils.cs" />
     <Compile Include="Utils\RemotingResponseFactory.cs" />
-    <Compile Include="Utils\EndPointAddressUtil.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config">

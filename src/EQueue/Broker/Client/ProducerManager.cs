@@ -3,10 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
 using ECommon.Socketing;
-using EQueue.Utils;
 
 namespace EQueue.Broker.Client
 {

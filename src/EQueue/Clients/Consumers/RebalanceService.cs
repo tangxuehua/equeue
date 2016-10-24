@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
@@ -11,7 +12,6 @@ using ECommon.Serializing;
 using EQueue.Protocols;
 using EQueue.Protocols.Brokers;
 using EQueue.Protocols.Brokers.Requests;
-using EQueue.Utils;
 
 namespace EQueue.Clients.Consumers
 {
@@ -129,17 +129,17 @@ namespace EQueue.Clients.Consumers
             var request = _binarySerializer.Serialize(new GetConsumerIdsForTopicRequest(_consumer.GroupName, topic));
             var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetConsumerIdsForTopic, request);
             var remotingResponse = brokerConnection.AdminRemotingClient.InvokeSync(remotingRequest, 1000 * 5);
-            if (remotingResponse.Code != ResponseCode.Success)
+            if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
                 throw new Exception(string.Format("GetConsumerIdsForTopic has exception, consumerGroup: {0}, topic: {1}, brokerAddress: {2}, remoting response code: {3}, errorMessage: {4}",
                     _consumer.GroupName,
                     topic,
                     brokerConnection.AdminRemotingClient.ServerEndPoint.ToAddress(),
-                    remotingResponse.Code,
-                    Encoding.UTF8.GetString(remotingResponse.Body)));
+                    remotingResponse.ResponseCode,
+                    Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
             }
 
-            var consumerIds = Encoding.UTF8.GetString(remotingResponse.Body);
+            var consumerIds = Encoding.UTF8.GetString(remotingResponse.ResponseBody);
             var consumerIdList = consumerIds.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries).ToList();
             consumerIdList.Sort();
             return consumerIdList;

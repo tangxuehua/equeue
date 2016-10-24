@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
@@ -55,11 +57,17 @@ namespace EQueue.MessageStorePerfTests
             var threadCount = int.Parse(ConfigurationManager.AppSettings["concurrentThreadCount"]);                         //并行写消息的线程数
             var messageSize = int.Parse(ConfigurationManager.AppSettings["messageSize"]);                                   //消息大小，字节为单位
             var messageCount = int.Parse(ConfigurationManager.AppSettings["messageCount"]);                                 //总共要写入的消息数
+            var batchSize = int.Parse(ConfigurationManager.AppSettings["batchSize"]);                                       //批量持久化大小
             var payload = new byte[messageSize];
-            var message = new Message("topic1", 100, payload);
-            var queue = new Queue(message.Topic, 1);
+            var messages = new List<Message>();
+            var topic = "topic1";
+            var queue = new Queue(topic, 1);
             var count = 0L;
 
+            for (var i = 0; i < batchSize; i++)
+            {
+                messages.Add(new Message(topic, 100, payload));
+            }
             _watch = Stopwatch.StartNew();
             StartPrintThroughputTask();
 
@@ -74,10 +82,23 @@ namespace EQueue.MessageStorePerfTests
                         {
                             break;
                         }
-                        _messageStore.StoreMessageAsync(queue, message, (x, y) =>
+                        if (batchSize == 1)
                         {
-                            Interlocked.Increment(ref _currentCount);
-                        }, null);
+                            _messageStore.StoreMessageAsync(queue, messages.First(), (x, y) =>
+                            {
+                                Interlocked.Increment(ref _currentCount);
+                            }, null, null);
+                        }
+                        else
+                        {
+                            _messageStore.BatchStoreMessageAsync(queue, messages, (x, y) =>
+                            {
+                                for (var j = 0; j < x.Records.Count(); j++)
+                                {
+                                    Interlocked.Increment(ref _currentCount);
+                                }
+                            }, null, null);
+                        }
                     }
                 });
             }
