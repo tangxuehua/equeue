@@ -291,7 +291,6 @@ namespace EQueue.Broker
             }
             if (Interlocked.CompareExchange(ref _isPersistingOffsets, 1, 0) == 0)
             {
-                var success = false;
                 try
                 {
                     using (var stream = new FileStream(_consumeOffsetFile, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
@@ -302,9 +301,10 @@ namespace EQueue.Broker
                             var json = _jsonSerializer.Serialize(toDict);
                             writer.Write(json);
                             writer.Flush();
+                            stream.Flush(true);
                         }
                     }
-                    success = true;
+                    File.Copy(_consumeOffsetFile, _consumeOffsetBackupFile, true);
                 }
                 catch (Exception ex)
                 {
@@ -313,10 +313,6 @@ namespace EQueue.Broker
                 finally
                 {
                     Interlocked.Exchange(ref _isPersistingOffsets, 0);
-                    if (success)
-                    {
-                        File.Copy(_consumeOffsetFile, _consumeOffsetBackupFile, true);
-                    }
                 }
             }
         }

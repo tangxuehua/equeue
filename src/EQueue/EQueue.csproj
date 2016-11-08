@@ -69,6 +69,7 @@
     <Compile Include="Broker\Client\ProducerManager.cs" />
     <Compile Include="Broker\DefaultTpsStatisticService.cs" />
     <Compile Include="Broker\ITpsStatisticService.cs" />
+    <Compile Include="Broker\Storage\IStream.cs" />
     <Compile Include="Clients\Producers\BatchSendResult.cs" />
     <Compile Include="Protocols\BatchMessageItemResult.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\GetBrokerLatestSendMessagesRequestHandler.cs" />

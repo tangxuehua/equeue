@@ -6,10 +6,10 @@ namespace EQueue.Broker.Storage
     {
         public readonly MemoryStream BufferStream;
         public readonly BinaryWriter BufferWriter;
-        public readonly Stream WorkingStream;
+        public readonly IStream WorkingStream;
         public long LastFlushedPosition;
 
-        public WriterWorkItem(Stream stream)
+        public WriterWorkItem(IStream stream)
         {
             WorkingStream = stream;
             BufferStream = new MemoryStream(8192);

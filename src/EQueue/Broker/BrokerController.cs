@@ -360,6 +360,10 @@ namespace EQueue.Broker
         }
         private void UnregisterBrokerToNameServer(BrokerUnRegistrationRequest request, SocketRemotingClient remotingClient)
         {
+            if (!remotingClient.IsConnected)
+            {
+                return;
+            }
             var nameServerAddress = remotingClient.ServerEndPoint.ToAddress();
             try
             {

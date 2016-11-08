@@ -265,8 +265,7 @@ namespace EQueue.Broker.Storage
 
                     File.Move(tempFilename, _filename);
 
-                    var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.ChunkWriteBuffer, FileOptions.SequentialScan);
-                    writeStream = new BufferedStream(fileStream, _chunkConfig.ChunkWriteBuffer);
+                    writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.ChunkWriteBuffer, FileOptions.SequentialScan);
                     SetFileAttributes();
                 }
 
@@ -274,7 +273,7 @@ namespace EQueue.Broker.Storage
 
                 _dataPosition = 0;
                 _flushedDataPosition = 0;
-                _writerWorkItem = new WriterWorkItem(writeStream);
+                _writerWorkItem = new WriterWorkItem(new ChunkFileStream(writeStream));
 
                 InitializeReaderWorkItems();
 
@@ -388,13 +387,12 @@ namespace EQueue.Broker.Storage
             }
             else
             {
-                var fileStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.ChunkWriteBuffer, FileOptions.SequentialScan);
-                fileStream.Position = GetStreamPosition(_dataPosition);
-                writeStream = new BufferedStream(fileStream, _chunkConfig.ChunkWriteBuffer);
+                writeStream = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, _chunkConfig.ChunkWriteBuffer, FileOptions.SequentialScan);
+                writeStream.Position = GetStreamPosition(_dataPosition);
                 SetFileAttributes();
             }
 
-            _writerWorkItem = new WriterWorkItem(writeStream);
+            _writerWorkItem = new WriterWorkItem(new ChunkFileStream(writeStream));
 
             InitializeReaderWorkItems();
 
@@ -1246,6 +1244,64 @@ namespace EQueue.Broker.Storage
         {
             public long RecordPosition;
             public byte[] RecordBuffer;
+        }
+        class ChunkFileStream : IStream
+        {
+            public Stream Stream;
+
+            public ChunkFileStream(Stream stream)
+            {
+                Stream = stream;
+            }
+
+            public long Length
+            {
+                get
+                {
+                    return Stream.Length;
+                }
+            }
+
+            public long Position
+            {
+                get
+                {
+                    return Stream.Position;
+                }
+
+                set
+                {
+                    Stream.Position = value;
+                }
+            }
+
+            public void Dispose()
+            {
+                Stream.Dispose();
+            }
+
+            public void Flush()
+            {
+                var fileStream = Stream as FileStream;
+                if (fileStream != null)
+                {
+                    fileStream.Flush(true);
+                }
+                else
+                {
+                    Stream.Flush();
+                }
+            }
+
+            public void SetLength(long value)
+            {
+                Stream.SetLength(value);
+            }
+
+            public void Write(byte[] buffer, int offset, int count)
+            {
+                Stream.Write(buffer, offset, count);
+            }
         }
 
         public override string ToString()
