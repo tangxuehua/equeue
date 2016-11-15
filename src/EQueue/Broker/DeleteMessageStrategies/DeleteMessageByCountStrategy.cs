@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using ECommon.Storage;
 using ECommon.Utilities;
-using EQueue.Broker.Storage;
 
 namespace EQueue.Broker.DeleteMessageStrategies
 {

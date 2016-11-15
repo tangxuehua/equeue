@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using EQueue.Broker.Storage;
-
-namespace EQueue.Broker
+﻿namespace EQueue.Broker
 {
     public interface IChunkStatisticService
     {

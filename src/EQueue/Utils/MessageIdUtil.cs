@@ -23,7 +23,7 @@ namespace EQueue.Utils
                 _portBytes = BitConverter.GetBytes(BrokerController.Instance.Setting.BrokerInfo.ProducerAddress.ToEndPoint().Port);
             }
             var positionBytes = BitConverter.GetBytes(messagePosition);
-            var messageIdBytes = Combine(_ipBytes, _portBytes, positionBytes);
+            var messageIdBytes = ByteUtil.Combine(_ipBytes, _portBytes, positionBytes);
 
             return ObjectId.ToHexString(messageIdBytes);
         }
@@ -48,18 +48,6 @@ namespace EQueue.Utils
                 Port = port,
                 MessagePosition = messagePosition
             };
-        }
-
-        private static byte[] Combine(params byte[][] arrays)
-        {
-            byte[] destination = new byte[arrays.Sum(x => x.Length)];
-            int offset = 0;
-            foreach (byte[] data in arrays)
-            {
-                Buffer.BlockCopy(data, 0, destination, offset, data.Length);
-                offset += data.Length;
-            }
-            return destination;
         }
     }
     public struct MessageIdInfo

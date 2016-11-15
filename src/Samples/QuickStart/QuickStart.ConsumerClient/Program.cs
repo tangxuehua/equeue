@@ -2,16 +2,13 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
-using System.Threading;
 using ECommon.Components;
 using ECommon.Configurations;
-using ECommon.Logging;
-using ECommon.Scheduling;
 using ECommon.Socketing;
+using ECommon.Utilities;
 using EQueue.Clients.Consumers;
 using EQueue.Configurations;
 using EQueue.Protocols;
-using EQueue.Utils;
 using ECommonConfiguration = ECommon.Configurations.Configuration;
 
 namespace QuickStart.ConsumerClient
@@ -61,45 +58,18 @@ namespace QuickStart.ConsumerClient
 
         class MessageHandler : IMessageHandler
         {
-            private long _previusHandledCount;
-            private long _handledCount;
-            private long _calculateCount = 0;
-            private IScheduleService _scheduleService;
-            private IRTStatisticService _rtStatisticService;
-            private ILogger _logger;
+            private readonly IPerformanceService _performanceService;
 
             public MessageHandler()
             {
-                _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-                _scheduleService.StartTask("PrintThroughput", PrintThroughput, 1000, 1000);
-                _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
-                _rtStatisticService = ObjectContainer.Resolve<IRTStatisticService>();
+                _performanceService = ObjectContainer.Resolve<IPerformanceService>();
+                _performanceService.Initialize("TotalReceived").Start();
             }
 
             public void Handle(QueueMessage message, IMessageContext context)
             {
-                Interlocked.Increment(ref _handledCount);
-                _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
+                _performanceService.IncrementKeyCount("default", (DateTime.Now - message.CreatedTime).TotalMilliseconds);
                 context.OnMessageHandled(message);
-            }
-
-            private void PrintThroughput()
-            {
-                var totalHandledCount = _handledCount;
-                var throughput = totalHandledCount - _previusHandledCount;
-                _previusHandledCount = totalHandledCount;
-                if (throughput > 0)
-                {
-                    _calculateCount++;
-                }
-
-                var average = 0L;
-                if (_calculateCount > 0)
-                {
-                    average = totalHandledCount / _calculateCount;
-                }
-
-                _logger.InfoFormat("totalReceived: {0}, throughput: {1}/s, average: {2}, delay: {3:F3}ms", totalHandledCount, throughput, average, _rtStatisticService.ResetAndGetRTStatisticInfo());
             }
         }
     }

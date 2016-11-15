@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using ECommon.Logging;
 using ECommon.Scheduling;
+using ECommon.Storage;
 using ECommon.Utilities;
 using EQueue.Broker.DeleteMessageStrategies;
-using EQueue.Broker.Storage;
 using EQueue.Protocols;
 using EQueue.Utils;
 
@@ -139,7 +139,7 @@ namespace EQueue.Broker
             if (buffer != null)
             {
                 var nextOffset = 0;
-                var messageLength = MessageUtils.DecodeInt(buffer, nextOffset, out nextOffset);
+                var messageLength = ByteUtil.DecodeInt(buffer, nextOffset, out nextOffset);
                 if (messageLength > 0)
                 {
                     var message = new QueueMessage();

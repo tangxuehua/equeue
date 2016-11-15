@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace EQueue.Broker.Storage
+namespace EQueue.Broker
 {
     public class BatchMessageLogRecord
     {

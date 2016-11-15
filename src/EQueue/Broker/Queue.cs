@@ -4,7 +4,7 @@ using ECommon.Components;
 using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Serializing;
-using EQueue.Broker.Storage;
+using ECommon.Storage;
 using EQueue.Protocols.Brokers;
 
 namespace EQueue.Broker

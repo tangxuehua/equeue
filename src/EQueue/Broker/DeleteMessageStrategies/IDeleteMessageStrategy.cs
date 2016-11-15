@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using EQueue.Broker.Storage;
+using ECommon.Storage;
 
 namespace EQueue.Broker.DeleteMessageStrategies
 {

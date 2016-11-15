@@ -1,5 +1,4 @@
 ﻿using System;
-using EQueue.Broker.Storage;
 using EQueue.Protocols;
 
 namespace EQueue.Clients.Consumers

@@ -4,7 +4,8 @@ using System.IO;
 using System.Net;
 using ECommon.Extensions;
 using ECommon.Socketing;
-using EQueue.Broker.Storage;
+using ECommon.Storage;
+using ECommon.Storage.FileNamingStrategies;
 using EQueue.Protocols.Brokers;
 
 namespace EQueue.Broker
@@ -88,7 +89,7 @@ namespace EQueue.Broker
         /// </summary>
         public ChunkManagerConfig QueueChunkConfig { get; set; }
 
-        public BrokerSetting(bool isMessageStoreMemoryMode = false, string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 1024 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 5 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, bool enableCache = true, int messageChunkLocalCacheSize = 300000, int queueChunkLocalCacheSize = 10000)
+        public BrokerSetting(bool isMessageStoreMemoryMode = false, string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 1024 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 5 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, FlushOption flushOption = FlushOption.FlushToOS, bool enableCache = true, int messageChunkLocalCacheSize = 300000, int queueChunkLocalCacheSize = 10000)
         {
             BrokerInfo = new BrokerInfo(
                 "DefaultBroker",
@@ -132,6 +133,7 @@ namespace EQueue.Broker
                 chunkFlushInterval,
                 enableCache,
                 syncFlush,
+                flushOption,
                 Environment.ProcessorCount * 8,
                 maxLogRecordSize,
                 chunkWriteBuffer,
@@ -141,7 +143,6 @@ namespace EQueue.Broker
                 1,
                 5,
                 messageChunkLocalCacheSize,
-                true,
                 true);
             QueueChunkConfig = new ChunkManagerConfig(
                 Path.Combine(chunkFileStoreRootPath, @"queue-chunks"),
@@ -152,6 +153,7 @@ namespace EQueue.Broker
                 chunkFlushInterval,
                 enableCache,
                 syncFlush,
+                flushOption,
                 Environment.ProcessorCount * 2,
                 12,
                 chunkWriteBuffer,
@@ -161,7 +163,6 @@ namespace EQueue.Broker
                 1,
                 5,
                 queueChunkLocalCacheSize,
-                false,
                 false);
         }
     }

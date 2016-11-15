@@ -8,32 +8,26 @@ using ECommon.Components;
 using ECommon.Configurations;
 using ECommon.Logging;
 using ECommon.Remoting;
-using ECommon.Scheduling;
 using ECommon.Socketing;
+using ECommon.Utilities;
 using EQueue.Clients.Producers;
 using EQueue.Configurations;
 using EQueue.Protocols;
-using EQueue.Utils;
 using ECommonConfiguration = ECommon.Configurations.Configuration;
 
 namespace QuickStart.ProducerClient
 {
     class Program
     {
-        static long _previousSentCount = 0;
-        static long _sentCount = 0;
-        static long _calculateCount = 0;
         static string _mode;
         static bool _hasError;
         static ILogger _logger;
-        static IScheduleService _scheduleService;
-        static IRTStatisticService _rtStatisticService;
+        static IPerformanceService _performanceService;
 
         static void Main(string[] args)
         {
             InitializeEQueue();
             SendMessageTest();
-            StartPrintThroughputTask();
             Console.ReadLine();
         }
 
@@ -50,13 +44,22 @@ namespace QuickStart.ProducerClient
                 .SetDefault<IQueueSelector, QueueAverageSelector>();
 
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
-            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _rtStatisticService = ObjectContainer.Resolve<IRTStatisticService>();
+            _performanceService = ObjectContainer.Resolve<IPerformanceService>();
+            _mode = ConfigurationManager.AppSettings["Mode"];
+            var logContextText = "mode: " + _mode;
+            var setting = new PerformanceServiceSetting
+            {
+                AutoLogging = false,
+                StatIntervalSeconds = 1,
+                PerformanceInfoHandler = x =>
+                {
+                    _logger.InfoFormat("{0}, {1}, totalCount: {2}, throughput: {3}, averageThrughput: {4}, rt: {5:F3}ms, averageRT: {6:F3}ms", _performanceService.Name, logContextText, x.TotalCount, x.Throughput, x.AverageThroughput, x.RT, x.AverageRT);
+                }
+            };
+            _performanceService.Initialize("SendMessage", setting).Start();
         }
         static void SendMessageTest()
         {
-            _mode = ConfigurationManager.AppSettings["Mode"];
-
             var clusterName = ConfigurationManager.AppSettings["ClusterName"];
             var address = ConfigurationManager.AppSettings["NameServerAddress"];
             var nameServerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
@@ -100,8 +103,7 @@ namespace QuickStart.ProducerClient
                     {
                         var message = new Message(topic, 100, payload);
                         producer.SendOneway(message, index.ToString());
-                        _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
-                        Interlocked.Increment(ref _sentCount);
+                        _performanceService.IncrementKeyCount(_mode, (DateTime.Now - message.CreatedTime).TotalMilliseconds);
                     }
                     else
                     {
@@ -114,8 +116,7 @@ namespace QuickStart.ProducerClient
                         var currentTime = DateTime.Now;
                         foreach (var message in messages)
                         {
-                            _rtStatisticService.AddRT((currentTime - message.CreatedTime).TotalMilliseconds);
-                            Interlocked.Increment(ref _sentCount);
+                            _performanceService.IncrementKeyCount(_mode, (currentTime - message.CreatedTime).TotalMilliseconds);
                         }
                     }
                 };
@@ -132,8 +133,7 @@ namespace QuickStart.ProducerClient
                         {
                             throw new Exception(result.ErrorMessage);
                         }
-                        _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
-                        Interlocked.Increment(ref _sentCount);
+                        _performanceService.IncrementKeyCount(_mode, (DateTime.Now - message.CreatedTime).TotalMilliseconds);
                     }
                     else
                     {
@@ -150,8 +150,7 @@ namespace QuickStart.ProducerClient
                         var currentTime = DateTime.Now;
                         foreach (var message in messages)
                         {
-                            _rtStatisticService.AddRT((currentTime - message.CreatedTime).TotalMilliseconds);
-                            Interlocked.Increment(ref _sentCount);
+                            _performanceService.IncrementKeyCount(_mode, (currentTime - message.CreatedTime).TotalMilliseconds);
                         }
                     }
                 };
@@ -183,8 +182,7 @@ namespace QuickStart.ProducerClient
                                 _logger.ErrorFormat("Send message failed, errorMessage: {0}", t.Result.ErrorMessage);
                                 return;
                             }
-                            _rtStatisticService.AddRT((DateTime.Now - message.CreatedTime).TotalMilliseconds);
-                            Interlocked.Increment(ref _sentCount);
+                            _performanceService.IncrementKeyCount(_mode, (DateTime.Now - message.CreatedTime).TotalMilliseconds);
                         });
                     }
                     else
@@ -217,8 +215,7 @@ namespace QuickStart.ProducerClient
                             var currentTime = DateTime.Now;
                             foreach (var message in messages)
                             {
-                                _rtStatisticService.AddRT((currentTime - message.CreatedTime).TotalMilliseconds);
-                                Interlocked.Increment(ref _sentCount);
+                                _performanceService.IncrementKeyCount(_mode, (currentTime - message.CreatedTime).TotalMilliseconds);
                             }
                         });
                     }
@@ -268,28 +265,6 @@ namespace QuickStart.ProducerClient
             });
         }
 
-        static void StartPrintThroughputTask()
-        {
-            _scheduleService.StartTask("PrintThroughput", PrintThroughput, 1000, 1000);
-        }
-        static void PrintThroughput()
-        {
-            var totalSentCount = _sentCount;
-            var throughput = totalSentCount - _previousSentCount;
-            _previousSentCount = totalSentCount;
-            if (throughput > 0)
-            {
-                _calculateCount++;
-            }
-
-            var average = 0L;
-            if (_calculateCount > 0)
-            {
-                average = totalSentCount / _calculateCount;
-            }
-            _logger.InfoFormat("Send message mode: {0}, totalSent: {1}, throughput: {2}/s, average: {3}, rt: {4:F3}ms", _mode, totalSentCount, throughput, average, _rtStatisticService.ResetAndGetRTStatisticInfo());
-        }
-
         class ResponseHandler : IResponseHandler
         {
             public int BatchSize;
@@ -305,8 +280,7 @@ namespace QuickStart.ProducerClient
                         _logger.Error(sendResult.ErrorMessage);
                         return;
                     }
-                    Interlocked.Increment(ref _sentCount);
-                    _rtStatisticService.AddRT((DateTime.Now - sendResult.MessageStoreResult.CreatedTime).TotalMilliseconds);
+                    _performanceService.IncrementKeyCount(_mode, (DateTime.Now - sendResult.MessageStoreResult.CreatedTime).TotalMilliseconds);
                 }
                 else
                 {
@@ -320,8 +294,7 @@ namespace QuickStart.ProducerClient
                     var currentTime = DateTime.Now;
                     foreach (var result in sendResult.MessageStoreResult.MessageResults)
                     {
-                        Interlocked.Increment(ref _sentCount);
-                        _rtStatisticService.AddRT((currentTime - result.CreatedTime).TotalMilliseconds);
+                        _performanceService.IncrementKeyCount(_mode, (currentTime - result.CreatedTime).TotalMilliseconds);
                     }
                 }
             }

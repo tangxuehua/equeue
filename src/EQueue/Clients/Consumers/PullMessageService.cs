@@ -438,7 +438,7 @@ namespace EQueue.Clients.Consumers
             try
             {
                 var nextOffset = 0;
-                var messageLength = MessageUtils.DecodeInt(buffer, nextOffset, out nextOffset);
+                var messageLength = ByteUtil.DecodeInt(buffer, nextOffset, out nextOffset);
                 while (messageLength > 0)
                 {
                     var message = new QueueMessage();
@@ -456,7 +456,7 @@ namespace EQueue.Clients.Consumers
                     {
                         break;
                     }
-                    messageLength = MessageUtils.DecodeInt(buffer, nextOffset, out nextOffset);
+                    messageLength = ByteUtil.DecodeInt(buffer, nextOffset, out nextOffset);
                 }
             }
             catch (Exception ex)

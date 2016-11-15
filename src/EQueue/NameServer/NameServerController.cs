@@ -6,9 +6,9 @@ using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Socketing;
+using ECommon.Utilities;
 using EQueue.NameServer.RequestHandlers;
 using EQueue.Protocols.NameServers;
-using EQueue.Utils;
 
 namespace EQueue.NameServer
 {

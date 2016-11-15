@@ -13,6 +13,7 @@ using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
 using ECommon.Socketing;
+using ECommon.Utilities;
 using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
 using EQueue.Broker.RequestHandlers;

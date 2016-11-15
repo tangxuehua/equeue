@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
-using EQueue.Broker.Storage.LogRecords;
+using ECommon.Storage;
 
-namespace EQueue.Broker.Storage
+namespace EQueue.Broker
 {
     public class QueueLogRecord : ILogRecord
     {

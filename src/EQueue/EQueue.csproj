@@ -45,8 +45,8 @@
     <Reference Include="Dapper">
       <HintPath>..\packages\Dapper.1.50.2\lib\net45\Dapper.dll</HintPath>
     </Reference>
-    <Reference Include="ECommon, Version=2.1.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\ECommon.2.1.5\lib\net45\ECommon.dll</HintPath>
+    <Reference Include="ECommon, Version=2.1.6.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ECommon.2.1.6\lib\net45\ECommon.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="log4net">
@@ -68,8 +68,8 @@
     <Compile Include="Broker\Client\GetConsumerListService.cs" />
     <Compile Include="Broker\Client\ProducerManager.cs" />
     <Compile Include="Broker\DefaultTpsStatisticService.cs" />
+    <Compile Include="Broker\Extensions.cs" />
     <Compile Include="Broker\ITpsStatisticService.cs" />
-    <Compile Include="Broker\Storage\IStream.cs" />
     <Compile Include="Clients\Producers\BatchSendResult.cs" />
     <Compile Include="Protocols\BatchMessageItemResult.cs" />
     <Compile Include="Broker\RequestHandlers\Admin\GetBrokerLatestSendMessagesRequestHandler.cs" />
@@ -134,14 +134,12 @@
     <Compile Include="Protocols\NameServers\Requests\SetQueueNextConsumeOffsetForClusterRequest.cs" />
     <Compile Include="Protocols\NameServers\Requests\SetQueueProducerVisibleForClusterRequest.cs" />
     <Compile Include="Protocols\NameServers\TopicRouteInfo.cs" />
-    <Compile Include="Utils\DefaultRTStatisticService.cs" />
     <Compile Include="Broker\DefaultChunkStatisticService.cs" />
     <Compile Include="Broker\DefaultMessageStore.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByCountStrategy.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\DeleteMessageByTimeStrategy.cs" />
     <Compile Include="Broker\DeleteMessageStrategies\IDeleteMessageStrategy.cs" />
     <Compile Include="Broker\Exceptions\BrokerCleanningException.cs" />
-    <Compile Include="Utils\IRTStatisticService.cs" />
     <Compile Include="Broker\IChunkStatisticService.cs" />
     <Compile Include="Broker\QueueLogRecord.cs" />
     <Compile Include="Broker\MessageLogRecord.cs" />
@@ -177,29 +175,7 @@
     <Compile Include="Broker\RequestHandlers\UpdateQueueConsumeOffsetRequestHandler.cs" />
     <Compile Include="Broker\RequestHandlers\SendMessageRequestHandler.cs" />
     <Compile Include="Broker\Queue.cs" />
-    <Compile Include="Broker\Storage\ChunkFooter.cs" />
-    <Compile Include="Broker\Storage\ChunkHeader.cs" />
-    <Compile Include="Broker\Storage\ChunkUtil.cs" />
-    <Compile Include="Broker\Storage\Exceptions\ChunkCreateException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\ChunkCompleteException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\ChunkNotExistException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\ChunkWriteException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\ChunkReadException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\ChunkFileNotExistException.cs" />
-    <Compile Include="Broker\Storage\Exceptions\ChunkBadDataException.cs" />
-    <Compile Include="Broker\Storage\FileNamingStrategies\IFileNamingStrategy.cs" />
-    <Compile Include="Broker\Storage\LogRecords\BufferLogRecord.cs" />
-    <Compile Include="Broker\Storage\LogRecords\ILogRecord.cs" />
-    <Compile Include="Broker\Storage\RecordBufferReadResult.cs" />
-    <Compile Include="Broker\Storage\ChunkManagerConfig.cs" />
-    <Compile Include="Broker\Storage\ChunkManager.cs" />
-    <Compile Include="Broker\Storage\ChunkReader.cs" />
-    <Compile Include="Broker\Storage\RecordWriteResult.cs" />
-    <Compile Include="Broker\Storage\FileNamingStrategies\DefaultFileNamingStrategy.cs" />
-    <Compile Include="Broker\Storage\ChunkWriter.cs" />
-    <Compile Include="Broker\Storage\WriterWorkItem.cs" />
-    <Compile Include="Broker\Storage\ReaderWorkItem.cs" />
-    <Compile Include="Broker\Storage\Chunk.cs" />
+    <Compile Include="Broker\BufferLogRecord.cs" />
     <Compile Include="Clients\Consumers\ConsumingMessage.cs" />
     <Compile Include="Clients\Consumers\MessageContext.cs" />
     <Compile Include="Clients\Consumers\IMessageContext.cs" />
@@ -252,7 +228,6 @@
     <Compile Include="Protocols\Brokers\Requests\GetConsumerIdsForTopicRequest.cs" />
     <Compile Include="Protocols\Brokers\Requests\SetQueueNextConsumeOffsetRequest.cs" />
     <Compile Include="Protocols\Brokers\Requests\UpdateQueueOffsetRequest.cs" />
-    <Compile Include="Utils\ConsoleEventHandlerService.cs" />
     <Compile Include="Utils\MessageIdUtil.cs" />
     <Compile Include="Utils\BatchMessageUtils.cs" />
     <Compile Include="Utils\MessageUtils.cs" />

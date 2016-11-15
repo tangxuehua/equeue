@@ -8,7 +8,6 @@ using ECommon.Remoting;
 using ECommon.Utilities;
 using EQueue.Broker.Exceptions;
 using EQueue.Broker.LongPolling;
-using EQueue.Broker.Storage;
 using EQueue.Protocols;
 using EQueue.Utils;
 

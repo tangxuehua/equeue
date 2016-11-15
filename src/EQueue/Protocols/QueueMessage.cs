@@ -1,4 +1,5 @@
 ﻿using System;
+using ECommon.Utilities;
 using EQueue.Utils;
 
 namespace EQueue.Protocols
@@ -29,17 +30,17 @@ namespace EQueue.Protocols
         {
             var srcOffset = 0;
 
-            LogPosition = MessageUtils.DecodeLong(recordBuffer, srcOffset, out srcOffset);
-            MessageId = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
-            Topic = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
-            Tag = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
-            ProducerAddress = MessageUtils.DecodeString(recordBuffer, srcOffset, out srcOffset);
-            Code = MessageUtils.DecodeInt(recordBuffer, srcOffset, out srcOffset);
-            Body = MessageUtils.DecodeBytes(recordBuffer, srcOffset, out srcOffset);
-            QueueId = MessageUtils.DecodeInt(recordBuffer, srcOffset, out srcOffset);
-            QueueOffset = MessageUtils.DecodeLong(recordBuffer, srcOffset, out srcOffset);
-            CreatedTime = MessageUtils.DecodeDateTime(recordBuffer, srcOffset, out srcOffset);
-            StoredTime = MessageUtils.DecodeDateTime(recordBuffer, srcOffset, out srcOffset);
+            LogPosition = ByteUtil.DecodeLong(recordBuffer, srcOffset, out srcOffset);
+            MessageId = ByteUtil.DecodeString(recordBuffer, srcOffset, out srcOffset);
+            Topic = ByteUtil.DecodeString(recordBuffer, srcOffset, out srcOffset);
+            Tag = ByteUtil.DecodeString(recordBuffer, srcOffset, out srcOffset);
+            ProducerAddress = ByteUtil.DecodeString(recordBuffer, srcOffset, out srcOffset);
+            Code = ByteUtil.DecodeInt(recordBuffer, srcOffset, out srcOffset);
+            Body = ByteUtil.DecodeBytes(recordBuffer, srcOffset, out srcOffset);
+            QueueId = ByteUtil.DecodeInt(recordBuffer, srcOffset, out srcOffset);
+            QueueOffset = ByteUtil.DecodeLong(recordBuffer, srcOffset, out srcOffset);
+            CreatedTime = ByteUtil.DecodeDateTime(recordBuffer, srcOffset, out srcOffset);
+            StoredTime = ByteUtil.DecodeDateTime(recordBuffer, srcOffset, out srcOffset);
         }
         public bool IsValid()
         {

@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Configurations;
-using ECommon.Logging;
-using ECommon.Scheduling;
+using ECommon.Utilities;
 using EQueue.Broker;
 using EQueue.Configurations;
 using EQueue.Protocols;
@@ -18,12 +16,8 @@ namespace EQueue.MessageStorePerfTests
 {
     class Program
     {
-        static ILogger _logger;
         static IMessageStore _messageStore;
-        static IScheduleService _scheduleService;
-        static Stopwatch _watch;
-        static long _currentCount = 0;
-        static long _previousCount = 0;
+        static IPerformanceService _performanceService;
 
         static void Main(string[] args)
         {
@@ -46,9 +40,8 @@ namespace EQueue.MessageStorePerfTests
             BrokerController.Create(new BrokerSetting(false, ConfigurationManager.AppSettings["fileStoreRootPath"], enableCache: false, syncFlush: bool.Parse(ConfigurationManager.AppSettings["syncFlush"])));
 
             _messageStore = ObjectContainer.Resolve<IMessageStore>();
-            _scheduleService = ObjectContainer.Resolve<IScheduleService>();
-            _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
-
+            _performanceService = ObjectContainer.Resolve<IPerformanceService>();
+            _performanceService.Initialize("StoreMessage").Start();
             _messageStore.Load();
             _messageStore.Start();
         }
@@ -68,9 +61,6 @@ namespace EQueue.MessageStorePerfTests
             {
                 messages.Add(new Message(topic, 100, payload));
             }
-            _watch = Stopwatch.StartNew();
-            StartPrintThroughputTask();
-
             for (var i = 0; i < threadCount; i++)
             {
                 Task.Factory.StartNew(() =>
@@ -82,39 +72,30 @@ namespace EQueue.MessageStorePerfTests
                         {
                             break;
                         }
+                        foreach (var message in messages)
+                        {
+                            message.CreatedTime = DateTime.Now;
+                        }
                         if (batchSize == 1)
                         {
                             _messageStore.StoreMessageAsync(queue, messages.First(), (x, y) =>
                             {
-                                Interlocked.Increment(ref _currentCount);
+                                _performanceService.IncrementKeyCount("default", (DateTime.Now - x.CreatedTime).TotalMilliseconds);
                             }, null, null);
                         }
                         else
                         {
                             _messageStore.BatchStoreMessageAsync(queue, messages, (x, y) =>
                             {
-                                for (var j = 0; j < x.Records.Count(); j++)
+                                foreach (var record in x.Records)
                                 {
-                                    Interlocked.Increment(ref _currentCount);
+                                    _performanceService.IncrementKeyCount("default", (DateTime.Now - record.CreatedTime).TotalMilliseconds);
                                 }
                             }, null, null);
                         }
                     }
                 });
             }
-        }
-        static void StartPrintThroughputTask()
-        {
-            _scheduleService.StartTask("PrintThroughput", PrintThroughput, 1000, 1000);
-        }
-        static void PrintThroughput()
-        {
-            var currentCount = _currentCount;
-            var throughput = currentCount - _previousCount;
-            _previousCount = currentCount;
-            var time = _watch.ElapsedMilliseconds;
-
-            _logger.InfoFormat("Store message, totalCount: {0}, average throughput: {1}/s, current throughput: {2}/s", currentCount, currentCount * 1000 / time, throughput);
         }
     }
 }

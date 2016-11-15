@@ -1,11 +1,11 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using EQueue.Broker.Storage.LogRecords;
+using ECommon.Storage;
 using EQueue.Protocols;
 using EQueue.Utils;
 
-namespace EQueue.Broker.Storage
+namespace EQueue.Broker
 {
     [Serializable]
     public class MessageLogRecord : QueueMessage, ILogRecord

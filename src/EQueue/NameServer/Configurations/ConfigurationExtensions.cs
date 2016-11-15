@@ -28,7 +28,6 @@ namespace EQueue.Configurations
             configuration.SetDefault<SuspendedPullRequestManager, SuspendedPullRequestManager>();
             configuration.SetDefault<ITpsStatisticService, DefaultTpsStatisticService>();
             configuration.SetDefault<IChunkStatisticService, DefaultChunkStatisticService>();
-            configuration.SetDefault<IRTStatisticService, DefaultRTStatisticService>(life: LifeStyle.Transient);
 
             return configuration;
         }
