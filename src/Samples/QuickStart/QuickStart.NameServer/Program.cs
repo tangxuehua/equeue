@@ -24,7 +24,8 @@ namespace QuickStart.NameServer
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
-                .RegisterEQueueComponents();
+                .RegisterEQueueComponents()
+                .BuildContainer();
         }
     }
 }

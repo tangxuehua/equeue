@@ -35,7 +35,8 @@ namespace EQueue.MessageStorePerfTests
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
-                .RegisterEQueueComponents();
+                .RegisterEQueueComponents()
+                .BuildContainer();
 
             BrokerController.Create(new BrokerSetting(false, ConfigurationManager.AppSettings["fileStoreRootPath"], enableCache: false, syncFlush: bool.Parse(ConfigurationManager.AppSettings["syncFlush"])));
 

@@ -20,14 +20,12 @@ namespace QuickStart.BrokerServer2
             var address = ConfigurationManager.AppSettings["nameServerAddress"];
             var nameServerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
             var setting = new BrokerSetting(
-                bool.Parse(ConfigurationManager.AppSettings["isMemoryMode"]),
-                ConfigurationManager.AppSettings["fileStoreRootPath"],
-                chunkCacheMaxPercent: 95,
+                isMessageStoreMemoryMode: bool.Parse(ConfigurationManager.AppSettings["isMemoryMode"]),
+                chunkFileStoreRootPath: ConfigurationManager.AppSettings["fileStoreRootPath"],
                 chunkFlushInterval: int.Parse(ConfigurationManager.AppSettings["flushInterval"]),
                 messageChunkDataSize: int.Parse(ConfigurationManager.AppSettings["chunkSize"]) * 1024 * 1024,
                 chunkWriteBuffer: int.Parse(ConfigurationManager.AppSettings["chunkWriteBuffer"]) * 1024,
                 enableCache: bool.Parse(ConfigurationManager.AppSettings["enableCache"]),
-                chunkCacheMinPercent: int.Parse(ConfigurationManager.AppSettings["chunkCacheMinPercent"]),
                 syncFlush: bool.Parse(ConfigurationManager.AppSettings["syncFlush"]),
                 messageChunkLocalCacheSize: 30 * 10000,
                 queueChunkLocalCacheSize: 10000)
@@ -55,7 +53,8 @@ namespace QuickStart.BrokerServer2
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
                 .RegisterEQueueComponents()
-                .UseDeleteMessageByCountStrategy(10);
+                .UseDeleteMessageByCountStrategy(10)
+                .BuildContainer();
         }
     }
 }

@@ -89,7 +89,7 @@ namespace EQueue.Broker
         /// </summary>
         public ChunkManagerConfig QueueChunkConfig { get; set; }
 
-        public BrokerSetting(bool isMessageStoreMemoryMode = false, string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 1024 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxPercent = 75, int chunkCacheMinPercent = 40, int maxLogRecordSize = 5 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, FlushOption flushOption = FlushOption.FlushToOS, bool enableCache = true, int messageChunkLocalCacheSize = 300000, int queueChunkLocalCacheSize = 10000)
+        public BrokerSetting(bool isMessageStoreMemoryMode = false, string chunkFileStoreRootPath = @"c:\equeue-store", int messageChunkDataSize = 1024 * 1024 * 1024, int chunkFlushInterval = 100, int chunkCacheMaxCount = 10, int chunkCacheMinCount =2, int maxLogRecordSize = 5 * 1024 * 1024, int chunkWriteBuffer = 128 * 1024, int chunkReadBuffer = 128 * 1024, bool syncFlush = false, FlushOption flushOption = FlushOption.FlushToOS, bool enableCache = true, int messageChunkLocalCacheSize = 300000, int queueChunkLocalCacheSize = 10000)
         {
             BrokerInfo = new BrokerInfo(
                 "DefaultBroker",
@@ -138,8 +138,8 @@ namespace EQueue.Broker
                 maxLogRecordSize,
                 chunkWriteBuffer,
                 chunkReadBuffer,
-                chunkCacheMaxPercent,
-                chunkCacheMinPercent,
+                chunkCacheMaxCount,
+                chunkCacheMinCount,
                 1,
                 5,
                 messageChunkLocalCacheSize,
@@ -158,8 +158,8 @@ namespace EQueue.Broker
                 12,
                 chunkWriteBuffer,
                 chunkReadBuffer,
-                chunkCacheMaxPercent,
-                chunkCacheMinPercent,
+                chunkCacheMaxCount,
+                chunkCacheMinCount,
                 1,
                 5,
                 queueChunkLocalCacheSize,

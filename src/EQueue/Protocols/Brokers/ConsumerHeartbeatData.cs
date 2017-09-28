@@ -11,6 +11,7 @@ namespace EQueue.Protocols.Brokers
         public IEnumerable<string> SubscriptionTopics { get; private set; }
         public IEnumerable<MessageQueueEx> ConsumingQueues { get; private set; }
 
+        public ConsumerHeartbeatData() { }
         public ConsumerHeartbeatData(string consumerId, string groupName, IEnumerable<string> subscriptionTopics, IEnumerable<MessageQueueEx> consumingQueues)
         {
             ConsumerId = consumerId;

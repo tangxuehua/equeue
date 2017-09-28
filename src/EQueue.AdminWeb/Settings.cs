@@ -11,7 +11,7 @@ namespace EQueue.AdminWeb
         public static IEnumerable<IPEndPoint> NameServerList { get; set; }
         public static bool EnableMonitorMessageAccumulate { get; set; }
         public static int MessageAccumulateThreshold { get; set; }
-        public static int ScanMessageAccumulateInterval { get; set; }
+        public static int ScanMessageAccumulateIntervalSeconds { get; set; }
         public static SocketSetting SocketSetting { get; set; }
 
         static Settings() {
@@ -57,14 +57,14 @@ namespace EQueue.AdminWeb
                 MessageAccumulateThreshold = int.Parse(messageAccumulateThreshold);
             }
 
-            var scanMessageAccumulateInterval = ConfigurationManager.AppSettings["scanMessageAccumulateInterval"];
-            if (string.IsNullOrWhiteSpace(scanMessageAccumulateInterval))
+            var scanMessageAccumulateIntervalSeconds = ConfigurationManager.AppSettings["scanMessageAccumulateIntervalSeconds"];
+            if (string.IsNullOrWhiteSpace(scanMessageAccumulateIntervalSeconds))
             {
-                ScanMessageAccumulateInterval = 1000 * 60 * 5;
+                ScanMessageAccumulateIntervalSeconds = 60 * 5;
             }
             else
             {
-                ScanMessageAccumulateInterval = int.Parse(scanMessageAccumulateInterval);
+                ScanMessageAccumulateIntervalSeconds = int.Parse(scanMessageAccumulateIntervalSeconds);
             }
 
             SocketSetting = new SocketSetting();

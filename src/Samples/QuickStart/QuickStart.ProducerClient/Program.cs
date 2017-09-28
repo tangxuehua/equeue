@@ -41,7 +41,8 @@ namespace QuickStart.ProducerClient
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
                 .RegisterEQueueComponents()
-                .SetDefault<IQueueSelector, QueueAverageSelector>();
+                .SetDefault<IQueueSelector, QueueAverageSelector>()
+                .BuildContainer();
 
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(typeof(Program).Name);
             _performanceService = ObjectContainer.Resolve<IPerformanceService>();

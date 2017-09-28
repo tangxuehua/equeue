@@ -48,7 +48,7 @@ namespace EQueue.AdminWeb
 
             if (Settings.EnableMonitorMessageAccumulate)
             {
-                _scheduleService.StartTask("ScanAccumulateMessages", ScanAccumulateMessages, 1000, Settings.ScanMessageAccumulateInterval);
+                _scheduleService.StartTask("ScanAccumulateMessages", ScanAccumulateMessages, 1000, Settings.ScanMessageAccumulateIntervalSeconds * 1000);
             }
         }
         public IEnumerable<string> GetAllClusters()

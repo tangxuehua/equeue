@@ -30,7 +30,8 @@ namespace QuickStart.ConsumerClient
                 .UseLog4Net()
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
-                .RegisterEQueueComponents();
+                .RegisterEQueueComponents()
+                .BuildContainer();
 
             var clusterName = ConfigurationManager.AppSettings["ClusterName"];
             var consumerName = ConfigurationManager.AppSettings["ConsumerName"];

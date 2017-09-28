@@ -8,6 +8,7 @@ using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Protocols;
 using EQueue.Protocols.Brokers;
+using System.Text;
 
 namespace EQueue.Clients.Consumers
 {
@@ -19,7 +20,7 @@ namespace EQueue.Clients.Consumers
         private readonly PullMessageService _pullMessageService;
         private readonly CommitConsumeOffsetService _commitConsumeOffsetService;
         private readonly RebalanceService _rebalanceService;
-        private readonly IBinarySerializer _binarySerializer;
+        private readonly IJsonSerializer _jsonSerializer;
         private readonly IDictionary<string, HashSet<string>> _subscriptionTopics;
         private readonly ILogger _logger;
         private bool _stopped;
@@ -62,7 +63,7 @@ namespace EQueue.Clients.Consumers
             }
 
             _subscriptionTopics = new Dictionary<string, HashSet<string>>();
-            _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
+            _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
 
             var clientSetting = new ClientSetting
@@ -163,7 +164,8 @@ namespace EQueue.Clients.Consumers
                         messageQueues.AddRange(queueGroup);
                     }
                     var heartbeatData = new ConsumerHeartbeatData(clientId, GroupName, _subscriptionTopics.Keys, messageQueues);
-                    var data = _binarySerializer.Serialize(heartbeatData);
+                    var json = _jsonSerializer.Serialize(heartbeatData);
+                    var data = Encoding.UTF8.GetBytes(json);
 
                     remotingClient.InvokeOneway(new RemotingRequest((int)BrokerRequestCode.ConsumerHeartbeat, data));
                 }
