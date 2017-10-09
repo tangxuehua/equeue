@@ -20,6 +20,6 @@ namespace EQueue.Broker
         byte[] GetMessageBuffer(long position);
         QueueMessage GetMessage(long position);
         bool IsMessagePositionExist(long position);
-        void UpdateMinConsumedMessagePosition(long minConsumedMessagePosition);
+        Func<long> GetMinConsumedMessagePositionFunc { get; set; }
     }
 }

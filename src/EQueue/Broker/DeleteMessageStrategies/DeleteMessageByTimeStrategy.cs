@@ -23,12 +23,12 @@ namespace EQueue.Broker.DeleteMessageStrategies
             MaxStorageHours = maxStorageHours;
         }
 
-        public IEnumerable<Chunk> GetAllowDeleteChunks(ChunkManager chunkManager, long maxMessagePosition)
+        public IEnumerable<Chunk> GetAllowDeleteChunks(ChunkManager chunkManager, Func<long> getMinConsumedMessagePositionFunc)
         {
             var chunks = new List<Chunk>();
             var allCompletedChunks = chunkManager
                 .GetAllChunks()
-                .Where(x => x.IsCompleted && CheckMessageConsumeOffset(x, maxMessagePosition))
+                .Where(x => x.IsCompleted && CheckMessageConsumeOffset(x, getMinConsumedMessagePositionFunc))
                 .OrderBy(x => x.ChunkHeader.ChunkNumber);
 
             foreach (var chunk in allCompletedChunks)
@@ -44,13 +44,13 @@ namespace EQueue.Broker.DeleteMessageStrategies
             return chunks;
         }
 
-        private bool CheckMessageConsumeOffset(Chunk currentChunk, long maxMessagePosition)
+        private bool CheckMessageConsumeOffset(Chunk currentChunk, Func<long> getMinConsumedMessagePositionFunc)
         {
             if (BrokerController.Instance.Setting.DeleteMessageIgnoreUnConsumed)
             {
                 return true;
             }
-            return currentChunk.ChunkHeader.ChunkDataEndPosition <= maxMessagePosition;
+            return currentChunk.ChunkHeader.ChunkDataEndPosition <= getMinConsumedMessagePositionFunc();
         }
     }
 }

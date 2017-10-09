@@ -102,6 +102,8 @@ namespace EQueue.NameServer
                     broker.TopicConsumeInfoList = request.TopicConsumeInfoList;
                     broker.ProducerList = request.ProducerList;
                     broker.ConsumerList = request.ConsumerList;
+
+                    _logger.InfoFormat("Broker heartbeat received, brokerInfo: {0}", broker.BrokerInfo);
                 }
             }
         }

@@ -1,11 +1,8 @@
 ﻿using System.Diagnostics;
-using System.Net.Sockets;
 using System.Threading;
 using ECommon.Components;
-using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Remoting;
-using ECommon.Socketing;
 using ECommon.Utilities;
 using EQueue.NameServer.RequestHandlers;
 using EQueue.Protocols.NameServers;
@@ -30,7 +27,6 @@ namespace EQueue.NameServer
             _socketRemotingServer = new SocketRemotingServer("EQueue.NameServer.RemotingServer", Setting.BindingAddress, Setting.SocketSetting);
             _service = new ConsoleEventHandlerService();
             _service.RegisterClosingEventHandler(eventCode => { Shutdown(); });
-            _socketRemotingServer.RegisterConnectionEventListener(new BrokerConnectionEventListener(this));
             RegisterRequestHandlers();
         }
 
@@ -78,30 +74,6 @@ namespace EQueue.NameServer
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.SetQueueNextConsumeOffset, new SetQueueNextConsumeOffsetForClusterRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.DeleteConsumerGroup, new DeleteConsumerGroupForClusterRequestHandler(this));
             _socketRemotingServer.RegisterRequestHandler((int)NameServerRequestCode.GetTopicAccumulateInfoList, new GetTopicAccumulateInfoListRequestHandler(this));
-        }
-
-        class BrokerConnectionEventListener : IConnectionEventListener
-        {
-            private NameServerController _nameServerController;
-
-            public BrokerConnectionEventListener(NameServerController nameServerController)
-            {
-                _nameServerController = nameServerController;
-            }
-
-            public void OnConnectionAccepted(ITcpConnection connection)
-            {
-                var connectionId = connection.RemotingEndPoint.ToAddress();
-                _nameServerController._logger.InfoFormat("Broker connection accepted, connectionId: {0}", connectionId);
-            }
-            public void OnConnectionEstablished(ITcpConnection connection) { }
-            public void OnConnectionFailed(SocketError socketError) { }
-            public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
-            {
-                var connectionId = connection.RemotingEndPoint.ToAddress();
-                _nameServerController._logger.InfoFormat("Broker connection closed, connectionId: {0}", connectionId);
-                _nameServerController.ClusterManager.RemoveBroker(connection);
-            }
         }
     }
 }

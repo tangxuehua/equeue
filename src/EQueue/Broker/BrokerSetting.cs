@@ -43,10 +43,10 @@ namespace EQueue.Broker
         /// <summary>扫描PullRequest对应的队列是否有新消息的时间间隔，默认为1s；
         /// </summary>
         public int CheckBlockingPullRequestMilliseconds { get; set; }
-        /// <summary>判断生产者者不在线的超时时间，默认为10s；即如果一个生产者10s不发送心跳到Broker，则认为不在线；Broker自动会关闭该生产者的连接并从生产者列表中移除；
+        /// <summary>判断生产者者不在线的超时时间，默认为30s；即如果一个生产者30s不发送心跳到Broker，则认为不在线；Broker自动会关闭该生产者的连接并从生产者列表中移除；
         /// </summary>
         public int ProducerExpiredTimeout { get; set; }
-        /// <summary>判断消费者心跳的超时时间，默认为10s；即如果一个消费者10s不发送心跳到Broker，则认为不在线；Broker自动会关闭该消费者的连接并从消费者列表中移除；
+        /// <summary>判断消费者心跳的超时时间，默认为30s；即如果一个消费者30s不发送心跳到Broker，则认为不在线；Broker自动会关闭该消费者的连接并从消费者列表中移除；
         /// </summary>
         public int ConsumerExpiredTimeout { get; set; }
         /// <summary>当消费者的链接断开时，是否需要立即将消费者从消费者列表中移除；如果为True，则消费者链接断开时立即移除；否则，会等到消费者心跳的超时时间到达后才会移除该消费者。默认为True
@@ -112,8 +112,8 @@ namespace EQueue.Broker
             DeleteMessageIgnoreUnConsumed = true;
             PersistConsumeOffsetInterval = 1000 * 1;
             CheckBlockingPullRequestMilliseconds = 1000 * 1;
-            ProducerExpiredTimeout = 1000 * 10;
-            ConsumerExpiredTimeout = 1000 * 10;
+            ProducerExpiredTimeout = 1000 * 30;
+            ConsumerExpiredTimeout = 1000 * 30;
             RemoveConsumerWhenDisconnect = true;
             AutoCreateTopic = true;
             TopicDefaultQueueCount = 4;

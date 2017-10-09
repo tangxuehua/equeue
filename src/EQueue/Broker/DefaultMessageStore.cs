@@ -50,6 +50,8 @@ namespace EQueue.Broker
             get { return _chunkManager.GetLastChunk().ChunkHeader.ChunkNumber; }
         }
 
+        public Func<long> GetMinConsumedMessagePositionFunc { get; set; }
+
         public DefaultMessageStore(IDeleteMessageStrategy deleteMessageStragegy, IScheduleService scheduleService, ILoggerFactory loggerFactory)
         {
             _deleteMessageStragegy = deleteMessageStragegy;
@@ -174,19 +176,17 @@ namespace EQueue.Broker
             }
             batchRecord.OnPersisted();
         }
-
         private void DeleteMessages()
         {
-            var chunks = _deleteMessageStragegy.GetAllowDeleteChunks(_chunkManager, _minConsumedMessagePosition);
+            var chunks = _deleteMessageStragegy.GetAllowDeleteChunks(_chunkManager, GetMinConsumedMessagePositionFunc);
             foreach (var chunk in chunks)
             {
                 if (_chunkManager.RemoveChunk(chunk))
                 {
-                    _logger.InfoFormat("Message chunk #{0} is deleted, chunkPositionScale: [{1}, {2}], minConsumedMessagePosition: {3}",
+                    _logger.InfoFormat("Message chunk #{0} is deleted, chunkPositionScale: [{1}, {2}]",
                         chunk.ChunkHeader.ChunkNumber,
                         chunk.ChunkHeader.ChunkDataStartPosition,
-                        chunk.ChunkHeader.ChunkDataEndPosition,
-                        _minConsumedMessagePosition);
+                        chunk.ChunkHeader.ChunkDataEndPosition);
                 }
             }
         }

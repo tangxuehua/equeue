@@ -7,6 +7,7 @@ using System.Threading;
 using ECommon.Extensions;
 using ECommon.Logging;
 using ECommon.Scheduling;
+using ECommon.Storage.Exceptions;
 using ECommon.Utilities;
 using EQueue.Protocols.Brokers;
 
@@ -21,7 +22,6 @@ namespace EQueue.Broker
         private readonly ITpsStatisticService _tpsStatisticService;
         private readonly ILogger _logger;
         private readonly object _lockObj = new object();
-        private int _isUpdatingMinConsumedMessagePosition;
         private int _isDeletingQueueMessage;
 
         public DefaultQueueStore(IMessageStore messageStore, IConsumeOffsetStore consumeOffsetStore, IScheduleService scheduleService, ITpsStatisticService tpsStatisticService, ILoggerFactory loggerFactory)
@@ -32,6 +32,7 @@ namespace EQueue.Broker
             _scheduleService = scheduleService;
             _tpsStatisticService = tpsStatisticService;
             _logger = loggerFactory.Create(GetType().FullName);
+            _messageStore.GetMinConsumedMessagePositionFunc = new Func<long>(GetMinConusmedMessagePosition);
         }
 
         public void Load()
@@ -40,13 +41,11 @@ namespace EQueue.Broker
         }
         public void Start()
         {
-            _scheduleService.StartTask("UpdateMinConsumedMessagePosition", UpdateMinConsumedMessagePosition, 1000 * 5, 1000 * 5);
             _scheduleService.StartTask("DeleteQueueMessages", DeleteQueueMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteQueueMessagesInterval);
         }
         public void Shutdown()
         {
             CloseQueues();
-            _scheduleService.StopTask("UpdateMinConsumedMessagePosition");
             _scheduleService.StopTask("DeleteQueueMessages");
         }
         public IEnumerable<string> GetAllTopics()
@@ -122,41 +121,6 @@ namespace EQueue.Broker
                 return queue.GetMinQueueOffset();
             }
             return -1;
-        }
-        public long GetMinConusmedMessagePosition()
-        {
-            var minConsumedQueueOffset = -1L;
-            var queue = default(Queue);
-            var hasConsumerQueues = _queueDict.Values.Where(x => BrokerController.Instance.ConsumerManager.IsConsumerExistForQueue(x.Topic, x.QueueId)).ToList();
-
-            foreach (var currentQueue in hasConsumerQueues)
-            {
-                var offset = _consumeOffsetStore.GetMinConsumedOffset(currentQueue.Topic, currentQueue.QueueId);
-                var queueCurrentOffset = currentQueue.NextOffset - 1;
-                if (offset > queueCurrentOffset)
-                {
-                    offset = queueCurrentOffset;
-                }
-
-                if (minConsumedQueueOffset == -1L && offset >= 0)
-                {
-                    minConsumedQueueOffset = offset;
-                    queue = currentQueue;
-                }
-                else if (offset < minConsumedQueueOffset)
-                {
-                    minConsumedQueueOffset = offset;
-                    queue = currentQueue;
-                }
-            }
-
-            if (queue != null && minConsumedQueueOffset >= 0)
-            {
-                int tagCode;
-                return queue.GetMessagePosition(minConsumedQueueOffset, out tagCode, false);
-            }
-
-            return -1L;
         }
         public long GetTotalUnConusmedMessageCount()
         {
@@ -319,6 +283,47 @@ namespace EQueue.Broker
             }
         }
 
+        private long GetMinConusmedMessagePosition()
+        {
+            var minConsumedQueueOffset = -1L;
+            var queue = default(Queue);
+            var hasConsumerQueues = _queueDict.Values.Where(x => BrokerController.Instance.ConsumerManager.IsConsumerExistForQueue(x.Topic, x.QueueId)).ToList();
+
+            foreach (var currentQueue in hasConsumerQueues)
+            {
+                var offset = _consumeOffsetStore.GetMinConsumedOffset(currentQueue.Topic, currentQueue.QueueId);
+                var queueCurrentOffset = currentQueue.NextOffset - 1;
+                if (offset > queueCurrentOffset)
+                {
+                    offset = queueCurrentOffset;
+                }
+
+                if (minConsumedQueueOffset == -1L && offset >= 0)
+                {
+                    minConsumedQueueOffset = offset;
+                    queue = currentQueue;
+                }
+                else if (offset < minConsumedQueueOffset)
+                {
+                    minConsumedQueueOffset = offset;
+                    queue = currentQueue;
+                }
+            }
+
+            if (queue != null && minConsumedQueueOffset >= 0)
+            {
+                try
+                {
+                    return queue.GetMessagePosition(minConsumedQueueOffset, out int tagCode, false);
+                }
+                catch (ChunkNotExistException)
+                {
+                    return -1;
+                }
+            }
+
+            return -1L;
+        }
         private void CheckQueueAllowToDelete(Queue queue)
         {
             //检查队列对Producer或Consumer是否可见，如果可见是不允许删除的
@@ -401,28 +406,6 @@ namespace EQueue.Broker
                 }
             }
             _queueDict.Clear();
-        }
-        private void UpdateMinConsumedMessagePosition()
-        {
-            if (Interlocked.CompareExchange(ref _isUpdatingMinConsumedMessagePosition, 1, 0) == 0)
-            {
-                try
-                {
-                    var minConsumedMessagePosition = GetMinConusmedMessagePosition();
-                    if (minConsumedMessagePosition >= 0)
-                    {
-                        _messageStore.UpdateMinConsumedMessagePosition(minConsumedMessagePosition);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error("Update min consumed message position has exception.", ex);
-                }
-                finally
-                {
-                    Interlocked.Exchange(ref _isUpdatingMinConsumedMessagePosition, 0);
-                }
-            }
         }
         private void DeleteQueueMessages()
         {

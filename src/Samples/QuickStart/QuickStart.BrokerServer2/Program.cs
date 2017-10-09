@@ -23,6 +23,8 @@ namespace QuickStart.BrokerServer2
                 isMessageStoreMemoryMode: bool.Parse(ConfigurationManager.AppSettings["isMemoryMode"]),
                 chunkFileStoreRootPath: ConfigurationManager.AppSettings["fileStoreRootPath"],
                 chunkFlushInterval: int.Parse(ConfigurationManager.AppSettings["flushInterval"]),
+                chunkCacheMaxCount: int.Parse(ConfigurationManager.AppSettings["chunkCacheMaxCount"]),
+                chunkCacheMinCount: int.Parse(ConfigurationManager.AppSettings["chunkCacheMinCount"]),
                 messageChunkDataSize: int.Parse(ConfigurationManager.AppSettings["chunkSize"]) * 1024 * 1024,
                 chunkWriteBuffer: int.Parse(ConfigurationManager.AppSettings["chunkWriteBuffer"]) * 1024,
                 enableCache: bool.Parse(ConfigurationManager.AppSettings["enableCache"]),
@@ -31,7 +33,8 @@ namespace QuickStart.BrokerServer2
                 queueChunkLocalCacheSize: 10000)
             {
                 NotifyWhenMessageArrived = bool.Parse(ConfigurationManager.AppSettings["notifyWhenMessageArrived"]),
-                MessageWriteQueueThreshold = int.Parse(ConfigurationManager.AppSettings["messageWriteQueueThreshold"])
+                MessageWriteQueueThreshold = int.Parse(ConfigurationManager.AppSettings["messageWriteQueueThreshold"]),
+                DeleteMessageIgnoreUnConsumed = bool.Parse(ConfigurationManager.AppSettings["deleteMessageIgnoreUnConsumed"])
             };
             setting.NameServerList = new List<IPEndPoint> { new IPEndPoint(nameServerAddress, 9493) };
             setting.BrokerInfo.BrokerName = ConfigurationManager.AppSettings["brokerName"];
@@ -53,7 +56,7 @@ namespace QuickStart.BrokerServer2
                 .UseJsonNet()
                 .RegisterUnhandledExceptionHandler()
                 .RegisterEQueueComponents()
-                .UseDeleteMessageByCountStrategy(10)
+                .UseDeleteMessageByCountStrategy(5)
                 .BuildContainer();
         }
     }

@@ -129,9 +129,8 @@ namespace EQueue.Broker.RequestHandlers
                 {
                     messagePosition = queue.GetMessagePosition(queueOffset, out tagCode);
                 }
-                catch (ChunkNotExistException ex)
+                catch (ChunkNotExistException)
                 {
-                    _logger.Error(string.Format("Queue chunk not exist, topic: {0}, queueId: {1}, queueOffset: {2}", topic, queueId, queueOffset), ex);
                     break;
                 }
                 catch (ChunkReadException ex)
@@ -208,7 +207,7 @@ namespace EQueue.Broker.RequestHandlers
             var queueMinOffset = _queueStore.GetQueueMinOffset(topic, queueId);
             if (pullOffset < queueMinOffset)
             {
-                _logger.InfoFormat("Reset next pullOffset to queueMinOffset, [pullOffset: {0}, queueMinOffset: {1}]", pullOffset, queueMinOffset);
+                _logger.InfoFormat("Reset next pullOffset to queueMinOffset, [topic: {0}, queueId: {1}, pullOffset: {2}, queueMinOffset: {3}]", topic, queueId, pullOffset, queueMinOffset);
                 return new PullMessageResult
                 {
                     Status = PullStatus.NextOffsetReset,
@@ -218,7 +217,7 @@ namespace EQueue.Broker.RequestHandlers
             //pullOffset太大
             else if (pullOffset > queueCurrentOffset + 1)
             {
-                _logger.InfoFormat("Reset next pullOffset to queueCurrentOffset, [pullOffset: {0}, queueCurrentOffset: {1}]", pullOffset, queueCurrentOffset);
+                _logger.InfoFormat("Reset next pullOffset to queueCurrentOffset, [topic: {0}, queueId: {1}, pullOffset: {2}, queueCurrentOffset: {3}]", topic, queueId, pullOffset, queueCurrentOffset);
                 return new PullMessageResult
                 {
                     Status = PullStatus.NextOffsetReset,
@@ -229,7 +228,7 @@ namespace EQueue.Broker.RequestHandlers
             else if (messageChunkNotExistException != null)
             {
                 var nextPullOffset = CalculateNextPullOffset(queue, pullOffset, queueCurrentOffset);
-                _logger.InfoFormat("Reset next pullOffset to calculatedNextPullOffset, [pullOffset: {0}, calculatedNextPullOffset: {1}]", pullOffset, nextPullOffset);
+                _logger.InfoFormat("Reset next pullOffset to calculatedNextPullOffset, [topic: {0}, queueId: {1}, pullOffset: {2}, calculatedNextPullOffset: {3}]", topic, queueId, pullOffset, nextPullOffset);
                 return new PullMessageResult
                 {
                     Status = PullStatus.NextOffsetReset,

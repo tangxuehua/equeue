@@ -8,7 +8,7 @@ namespace EQueue.NameServer
         /// <summary>服务端口号，默认为9493
         /// </summary>
         public IPEndPoint BindingAddress { get; set; }
-        /// <summary>Broker不活跃最大允许时间，如果一个Broker超过此时间未发送心跳，则认为此Broker挂掉了；默认超时时间为10s;
+        /// <summary>Broker不活跃最大允许时间，如果一个Broker超过此时间未发送心跳，则认为此Broker挂掉了；默认超时时间为30s;
         /// </summary>
         public int BrokerInactiveMaxMilliseconds { get; set; }
         /// <summary>是否自动创建Topic，默认为true；线上环境建议设置为false，Topic应该总是由后台管理控制台来创建；
@@ -21,7 +21,7 @@ namespace EQueue.NameServer
         public NameServerSetting(int port = 9493)
         {
             BindingAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), port);
-            BrokerInactiveMaxMilliseconds = 10 * 1000;
+            BrokerInactiveMaxMilliseconds = 30 * 1000;
             AutoCreateTopic = true;
         }
     }
