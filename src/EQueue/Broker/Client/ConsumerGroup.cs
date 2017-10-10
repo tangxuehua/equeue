@@ -44,7 +44,7 @@ namespace EQueue.Broker.Client
                     SubscriptionTopics = subscriptionTopics,
                     ConsumingQueues = consumingMessageQueues
                 };
-                _logger.InfoFormat("Consumer registered to group, groupName: {0}, consumerId: {1}, connectionId: {2}, subscriptionTopics: {3}, consumingQueues: {4}", _groupName, consumerId, key, string.Join("|", subscriptionTopics), string.Join("|", consumingMessageQueues));
+                _logger.InfoFormat("Consumer registered, groupName: {0}, consumerId: {1}, connectionId: {2}, subscriptionTopics: {3}, consumingQueues: {4}", _groupName, consumerId, key, string.Join("|", subscriptionTopics), string.Join("|", consumingMessageQueues));
                 return newConsumerInfo;
             },
             (key, existingConsumerInfo) =>
@@ -87,7 +87,7 @@ namespace EQueue.Broker.Client
                 {
                     _logger.Error(string.Format("Close connection for consumer failed, consumerId: {0}, connectionId: {1}", consumerInfo.ConsumerId, connectionId), ex);
                 }
-                _logger.InfoFormat("Consumer removed from group: {0}, consumerId: {1}, connectionId: {2}, lastHeartbeat: {3}, subscriptionTopics: {4}, consumingQueues: {5}",
+                _logger.InfoFormat("Consumer removed, groupName: {0}, consumerId: {1}, connectionId: {2}, lastHeartbeat: {3}, subscriptionTopics: {4}, consumingQueues: {5}",
                     _groupName,
                     consumerInfo.ConsumerId,
                     connectionId,

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using ECommon.Components;
@@ -11,6 +13,7 @@ using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Scheduling;
 using ECommon.Serializing;
+using ECommon.Socketing;
 using ECommon.Utilities;
 using EQueue.Broker.Client;
 using EQueue.Broker.LongPolling;
@@ -96,6 +99,8 @@ namespace EQueue.Broker
             _adminSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.AdminRemotingServer", Setting.BrokerInfo.AdminAddress.ToEndPoint(), Setting.SocketSetting);
 
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
+            _producerSocketRemotingServer.RegisterConnectionEventListener(new ProducerConnectionEventListener(this));
+            _consumerSocketRemotingServer.RegisterConnectionEventListener(new ConsumerConnectionEventListener(this));
             RegisterRequestHandlers();
             _service = new ConsoleEventHandlerService();
             _service.RegisterClosingEventHandler(eventCode => { Shutdown(); });
@@ -371,5 +376,44 @@ namespace EQueue.Broker
                 _logger.Error(string.Format("Unregister broker from name server has exception, brokerInfo: {0}, nameServerAddress: {1}", request.BrokerInfo, nameServerAddress), ex);
             }
         }
+        class ProducerConnectionEventListener : IConnectionEventListener
+         {
+             private BrokerController _brokerController;
+ 
+             public ProducerConnectionEventListener(BrokerController brokerController)
+             {
+                 _brokerController = brokerController;
+             }
+
+             public void OnConnectionAccepted(ITcpConnection connection) { }
+             public void OnConnectionEstablished(ITcpConnection connection) { }
+             public void OnConnectionFailed(EndPoint remotingEndPoint, SocketError socketError) { }
+             public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
+             {
+                 var connectionId = connection.RemotingEndPoint.ToAddress();
+                 _brokerController._producerManager.RemoveProducer(connectionId);
+             }
+         }
+        class ConsumerConnectionEventListener : IConnectionEventListener
+         {
+             private BrokerController _brokerController;
+ 
+             public ConsumerConnectionEventListener(BrokerController brokerController)
+             {
+                 _brokerController = brokerController;
+             }
+
+             public void OnConnectionAccepted(ITcpConnection connection) { }
+             public void OnConnectionEstablished(ITcpConnection connection) { }
+             public void OnConnectionFailed(EndPoint remotingEndPoint, SocketError socketError) { }
+             public void OnConnectionClosed(ITcpConnection connection, SocketError socketError)
+             {
+                 var connectionId = connection.RemotingEndPoint.ToAddress();
+                 if (_brokerController.Setting.RemoveConsumerWhenDisconnect)
+                 {
+                     _brokerController._consumerManager.RemoveConsumer(connectionId);
+                 }
+             }
+         }
     }
 }
