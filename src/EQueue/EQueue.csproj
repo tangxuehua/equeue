@@ -9,6 +9,10 @@
     <Description>a high performance distributed mq written by c#.</Description>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>bin\Release\netstandard2.0\EQueue.xml</DocumentationFile>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="ECommon" Version="2.5.2" />
   </ItemGroup>
