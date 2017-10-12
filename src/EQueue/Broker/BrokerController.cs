@@ -193,8 +193,8 @@ namespace EQueue.Broker
 
             RemoveNotExistQueueConsumeOffsets();
             StartAllNameServerClients();
-            RegisterBrokerToAllNameServers();
-            _scheduleService.StartTask("RegisterBrokerToAllNameServers", RegisterBrokerToAllNameServers, 1000, Setting.RegisterBrokerToNameServerInterval);
+            RegisterBrokerToAllNameServers(true);
+            _scheduleService.StartTask("RegisterBrokerToAllNameServers", () => RegisterBrokerToAllNameServers(), 1000, Setting.RegisterBrokerToNameServerInterval);
 
             Interlocked.Exchange(ref _isShuttingdown, 0);
             _logger.InfoFormat("Broker started, timeSpent:{0}ms, producer:[{1}], consumer:[{2}], admin:[{3}]", watch.ElapsedMilliseconds, Setting.BrokerInfo.ProducerAddress, Setting.BrokerInfo.ConsumerAddress, Setting.BrokerInfo.AdminAddress);
@@ -305,7 +305,7 @@ namespace EQueue.Broker
                 nameServerRemotingClient.Shutdown();
             }
         }
-        private void RegisterBrokerToAllNameServers()
+        private void RegisterBrokerToAllNameServers(bool isSync = false)
         {
             var totalSendThroughput = _tpsStatisticService.GetTotalSendThroughput();
             var totalConsumeThroughput = _tpsStatisticService.GetTotalConsumeThroughput();
@@ -326,7 +326,7 @@ namespace EQueue.Broker
             };
             foreach (var remotingClient in _nameServerRemotingClientList)
             {
-                RegisterBrokerToNameServer(request, remotingClient);
+                RegisterBrokerToNameServer(request, remotingClient, isSync);
             }
         }
         private void UnregisterBrokerToAllNameServers()
@@ -340,14 +340,25 @@ namespace EQueue.Broker
                 UnregisterBrokerToNameServer(request, remotingClient);
             }
         }
-        private void RegisterBrokerToNameServer(BrokerRegistrationRequest request, SocketRemotingClient remotingClient)
+        private void RegisterBrokerToNameServer(BrokerRegistrationRequest request, SocketRemotingClient remotingClient, bool isSync = false)
         {
             var nameServerAddress = remotingClient.ServerEndPoint.ToAddress();
             try
             {
                 var data = _binarySerializer.Serialize(request);
                 var remotingRequest = new RemotingRequest((int)NameServerRequestCode.RegisterBroker, data);
-                remotingClient.InvokeOneway(remotingRequest);
+                if (isSync)
+                {
+                    var response = remotingClient.InvokeSync(remotingRequest, 10000);
+                    if (response.ResponseCode != ResponseCode.Success)
+                    {
+                        throw new Exception("Register broker to name server failed.");
+                    }
+                }
+                else
+                {
+                    remotingClient.InvokeOneway(remotingRequest);
+                }
             }
             catch (Exception ex)
             {
