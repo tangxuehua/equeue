@@ -13,7 +13,6 @@ namespace EQueue.NameServer
     {
         private readonly ILogger _logger;
         private readonly SocketRemotingServer _socketRemotingServer;
-        private readonly ConsoleEventHandlerService _service;
         private int _isShuttingdown = 0;
 
         public NameServerSetting Setting { get; private set; }
@@ -25,8 +24,6 @@ namespace EQueue.NameServer
             ClusterManager = new ClusterManager(this);
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _socketRemotingServer = new SocketRemotingServer("EQueue.NameServer.RemotingServer", Setting.BindingAddress, Setting.SocketSetting);
-            _service = new ConsoleEventHandlerService();
-            _service.RegisterClosingEventHandler(eventCode => { Shutdown(); });
             RegisterRequestHandlers();
         }
 

@@ -6,10 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ECommon" Version="2.5.3" />
+    <PackageReference Include="ECommon" Version="2.5.6" />
     <PackageReference Include="ECommon.Autofac" Version="2.5.0" />
     <PackageReference Include="ECommon.JsonNet" Version="2.5.0" />
-    <PackageReference Include="ECommon.Log4Net" Version="2.5.0" />
+    <PackageReference Include="ECommon.Log4Net" Version="2.5.2" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.4.0" />
   </ItemGroup>
 

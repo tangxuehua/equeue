@@ -43,7 +43,6 @@ namespace EQueue.Broker
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
         private readonly SocketRemotingServer _adminSocketRemotingServer;
-        private readonly ConsoleEventHandlerService _service;
         private readonly IChunkStatisticService _chunkReadStatisticService;
         private readonly ITpsStatisticService _tpsStatisticService;
         private readonly IList<SocketRemotingClient> _nameServerRemotingClientList;
@@ -102,8 +101,6 @@ namespace EQueue.Broker
             _producerSocketRemotingServer.RegisterConnectionEventListener(new ProducerConnectionEventListener(this));
             _consumerSocketRemotingServer.RegisterConnectionEventListener(new ConsumerConnectionEventListener(this));
             RegisterRequestHandlers();
-            _service = new ConsoleEventHandlerService();
-            _service.RegisterClosingEventHandler(eventCode => { Shutdown(); });
             _nameServerRemotingClientList = Setting.NameServerList.ToRemotingClientList(Setting.SocketSetting).ToList();
         }
 
