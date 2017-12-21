@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>2.5.4</Version>
-    <AssemblyVersion>2.5.4.0</AssemblyVersion>
+    <Version>2.5.5.1</Version>
+    <AssemblyVersion>2.5.5.1</AssemblyVersion>
     <Authors>tangxuehua</Authors>
     <Company>tangxuehua</Company>
     <Description>a high performance distributed mq written by c#.</Description>
@@ -11,10 +11,11 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DocumentationFile>bin\Release\netstandard2.0\EQueue.xml</DocumentationFile>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ECommon" Version="2.5.6" />
+    <PackageReference Include="ECommon" Version="2.5.7" />
   </ItemGroup>
 
 </Project>

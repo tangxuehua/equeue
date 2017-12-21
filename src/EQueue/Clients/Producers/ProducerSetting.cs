@@ -33,7 +33,7 @@ namespace EQueue.Clients.Producers
             ClusterName = "DefaultCluster";
             NameServerList = new List<IPEndPoint>()
             {
-                new IPEndPoint(SocketUtils.GetLocalIPV4(), 9493)
+                new IPEndPoint(IPAddress.Loopback, 9493)
             };
             SocketSetting = new SocketSetting();
             RefreshBrokerAndTopicRouteInfoInterval = 1000 * 5;

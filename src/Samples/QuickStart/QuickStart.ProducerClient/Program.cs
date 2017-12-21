@@ -63,7 +63,7 @@ namespace QuickStart.ProducerClient
         {
             var clusterName = ConfigurationManager.AppSettings["ClusterName"];
             var address = ConfigurationManager.AppSettings["NameServerAddress"];
-            var nameServerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
+            var nameServerAddress = string.IsNullOrEmpty(address) ? IPAddress.Loopback : IPAddress.Parse(address);
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var messageSize = int.Parse(ConfigurationManager.AppSettings["MessageSize"]);
             var messageCount = long.Parse(ConfigurationManager.AppSettings["MessageCount"]);

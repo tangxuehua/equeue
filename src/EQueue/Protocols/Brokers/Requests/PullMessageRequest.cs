@@ -14,6 +14,7 @@ namespace EQueue.Protocols.Brokers.Requests
         public int PullMessageBatchSize { get; set; }
         public long SuspendPullRequestMilliseconds { get; set; }
         public ConsumeFromWhere ConsumeFromWhere { get; set; }
+        public bool IgnoreLastConsumedOffset { get; set; }
 
         public static void WriteToStream(PullMessageRequest request, Stream stream)
         {
@@ -29,6 +30,7 @@ namespace EQueue.Protocols.Brokers.Requests
                 writer.Write(request.PullMessageBatchSize);
                 writer.Write(request.SuspendPullRequestMilliseconds);
                 writer.Write((int)request.ConsumeFromWhere);
+                writer.Write(request.IgnoreLastConsumedOffset);
             }
         }
         public static PullMessageRequest ReadFromStream(Stream stream)
@@ -44,6 +46,7 @@ namespace EQueue.Protocols.Brokers.Requests
                 request.PullMessageBatchSize = reader.ReadInt32();
                 request.SuspendPullRequestMilliseconds = reader.ReadInt64();
                 request.ConsumeFromWhere = (ConsumeFromWhere)reader.ReadInt32();
+                request.IgnoreLastConsumedOffset = reader.ReadBoolean();
                 return request;
             }
         }

@@ -18,7 +18,7 @@ namespace QuickStart.BrokerServer1
             InitializeEQueue();
 
             var address = ConfigurationManager.AppSettings["nameServerAddress"];
-            var nameServerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
+            var nameServerAddress = string.IsNullOrEmpty(address) ? IPAddress.Loopback : IPAddress.Parse(address);
             var setting = new BrokerSetting(
                 isMessageStoreMemoryMode: bool.Parse(ConfigurationManager.AppSettings["isMemoryMode"]),
                 chunkFileStoreRootPath: ConfigurationManager.AppSettings["fileStoreRootPath"],
@@ -39,9 +39,9 @@ namespace QuickStart.BrokerServer1
             setting.NameServerList = new List<IPEndPoint> { new IPEndPoint(nameServerAddress, 9493) };
             setting.BrokerInfo.BrokerName = ConfigurationManager.AppSettings["brokerName"];
             setting.BrokerInfo.GroupName = ConfigurationManager.AppSettings["groupName"];
-            setting.BrokerInfo.ProducerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), int.Parse(ConfigurationManager.AppSettings["producerPort"])).ToAddress();
-            setting.BrokerInfo.ConsumerAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), int.Parse(ConfigurationManager.AppSettings["consumerPort"])).ToAddress();
-            setting.BrokerInfo.AdminAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), int.Parse(ConfigurationManager.AppSettings["adminPort"])).ToAddress();
+            setting.BrokerInfo.ProducerAddress = new IPEndPoint(IPAddress.Loopback, int.Parse(ConfigurationManager.AppSettings["producerPort"])).ToAddress();
+            setting.BrokerInfo.ConsumerAddress = new IPEndPoint(IPAddress.Loopback, int.Parse(ConfigurationManager.AppSettings["consumerPort"])).ToAddress();
+            setting.BrokerInfo.AdminAddress = new IPEndPoint(IPAddress.Loopback, int.Parse(ConfigurationManager.AppSettings["adminPort"])).ToAddress();
             BrokerController.Create(setting).Start();
             Console.ReadLine();
         }

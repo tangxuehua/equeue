@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using ECommon.Components;
 using ECommon.Extensions;
@@ -41,7 +42,11 @@ namespace EQueue.Broker
             Key = new QueueKey(topic, queueId);
 
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
-            _chunkManager = new ChunkManager("QueueChunk-" + Key.ToString(), BrokerController.Instance.Setting.QueueChunkConfig, BrokerController.Instance.Setting.IsMessageStoreMemoryMode, Topic + @"\" + QueueId);
+            _chunkManager = new ChunkManager(
+                "QueueChunk-" + Key.ToString(),
+                BrokerController.Instance.Setting.QueueChunkConfig,
+                BrokerController.Instance.Setting.IsMessageStoreMemoryMode,
+                new List<string> { Topic, QueueId.ToString() });
             _chunkWriter = new ChunkWriter(_chunkManager);
             _chunkReader = new ChunkReader(_chunkManager, _chunkWriter);
             _queueSettingFile = Path.Combine(_chunkManager.ChunkPath, QueueSettingFileName);

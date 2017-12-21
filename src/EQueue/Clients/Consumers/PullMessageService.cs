@@ -196,7 +196,8 @@ namespace EQueue.Clients.Consumers
                     QueueOffset = pullRequest.NextConsumeOffset,
                     PullMessageBatchSize = _consumer.Setting.PullMessageBatchSize,
                     SuspendPullRequestMilliseconds = _consumer.Setting.SuspendPullRequestMilliseconds,
-                    ConsumeFromWhere = _consumer.Setting.ConsumeFromWhere
+                    ConsumeFromWhere = _consumer.Setting.ConsumeFromWhere,
+                    IgnoreLastConsumedOffset = _consumer.Setting.IgnoreLastConsumedOffset
                 };
                 var data = SerializePullMessageRequest(request);
                 var remotingRequest = new RemotingRequest((int)BrokerRequestCode.PullMessage, data);

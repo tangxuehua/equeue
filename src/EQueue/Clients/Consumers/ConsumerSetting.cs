@@ -81,13 +81,16 @@ namespace EQueue.Clients.Consumers
         /// </remarks>
         /// </summary>
         public MessageHandleMode MessageHandleMode { get; set; }
+        /// <summary>消费者启动时，向Broker发起拉取消息的请求时，是否需要让Broker忽略队列上次的消费进度；True表示要忽略，False表示不要忽略；默认为False。
+        /// </summary>
+        public bool IgnoreLastConsumedOffset { get; set; }
 
         public ConsumerSetting()
         {
             ClusterName = "DefaultCluster";
             NameServerList = new List<IPEndPoint>()
             {
-                new IPEndPoint(SocketUtils.GetLocalIPV4(), 9493)
+                new IPEndPoint(IPAddress.Loopback, 9493)
             };
             SocketSetting = new SocketSetting();
             RebalanceInterval = 1000;
@@ -106,6 +109,7 @@ namespace EQueue.Clients.Consumers
             AutoPull = true;
             CommitConsumeOffsetAsync = true;
             ManualPullLocalMessageQueueMaxSize = 10 * 10000;
+            IgnoreLastConsumedOffset = false;
         }
     }
 }

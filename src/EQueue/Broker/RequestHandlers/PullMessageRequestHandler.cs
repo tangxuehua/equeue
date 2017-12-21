@@ -51,7 +51,7 @@ namespace EQueue.Broker.RequestHandlers
             var nextConsumeOffset = 0L;
             if (pullOffset < 0)
             {
-                nextConsumeOffset = GetNextConsumeOffset(topic, queueId, request.ConsumerGroup, request.ConsumeFromWhere);
+                nextConsumeOffset = GetNextConsumeOffset(topic, queueId, request.ConsumerGroup, request.ConsumeFromWhere, request.IgnoreLastConsumedOffset);
                 return BuildNextOffsetResetResponse(remotingRequest, nextConsumeOffset);
             }
             //如果用户人工指定了下次要拉取的位置，则返回该位置给消费者并清除该指定的位置
@@ -349,13 +349,16 @@ namespace EQueue.Broker.RequestHandlers
         {
             pullRequest.RequestHandlerContext.SendRemotingResponse(remotingResponse);
         }
-        private long GetNextConsumeOffset(string topic, int queueId, string consumerGroup, ConsumeFromWhere consumerFromWhere)
+        private long GetNextConsumeOffset(string topic, int queueId, string consumerGroup, ConsumeFromWhere consumerFromWhere, bool ignoreLastConsumedOffset)
         {
-            var queueConsumedOffset = _offsetStore.GetConsumeOffset(topic, queueId, consumerGroup);
-            if (queueConsumedOffset >= 0)
+            if (!ignoreLastConsumedOffset)
             {
-                var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
-                return queueCurrentOffset < queueConsumedOffset ? queueCurrentOffset + 1 : queueConsumedOffset + 1;
+                var queueConsumedOffset = _offsetStore.GetConsumeOffset(topic, queueId, consumerGroup);
+                if (queueConsumedOffset >= 0)
+                {
+                    var queueCurrentOffset = _queueStore.GetQueueCurrentOffset(topic, queueId);
+                    return queueCurrentOffset < queueConsumedOffset ? queueCurrentOffset + 1 : queueConsumedOffset + 1;
+                }
             }
 
             if (consumerFromWhere == ConsumeFromWhere.FirstOffset)

@@ -4,7 +4,6 @@ using System.Configuration;
 using System.Net;
 using ECommon.Components;
 using ECommon.Configurations;
-using ECommon.Socketing;
 using ECommon.Utilities;
 using EQueue.Clients.Consumers;
 using EQueue.Configurations;
@@ -38,7 +37,7 @@ namespace QuickStart.ConsumerClient
             var consumerGroup = ConfigurationManager.AppSettings["ConsumerGroup"];
             var address = ConfigurationManager.AppSettings["NameServerAddress"];
             var topic = ConfigurationManager.AppSettings["Topic"];
-            var nameServerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
+            var nameServerAddress = string.IsNullOrEmpty(address) ? IPAddress.Loopback : IPAddress.Parse(address);
             var clientCount = int.Parse(ConfigurationManager.AppSettings["ClientCount"]);
             var setting = new ConsumerSetting
             {

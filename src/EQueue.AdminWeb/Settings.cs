@@ -19,7 +19,7 @@ namespace EQueue.AdminWeb
 
             if (string.IsNullOrWhiteSpace(nameServerAddresses))
             {
-                var defaultNameServer = new IPEndPoint(SocketUtils.GetLocalIPV4(), 9493);
+                var defaultNameServer = new IPEndPoint(IPAddress.Loopback, 9493);
                 var defaultList = new List<IPEndPoint>();
                 defaultList.Add(defaultNameServer);
                 NameServerList = defaultList;

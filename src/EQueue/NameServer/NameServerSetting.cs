@@ -20,7 +20,7 @@ namespace EQueue.NameServer
 
         public NameServerSetting(int port = 9493)
         {
-            BindingAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), port);
+            BindingAddress = new IPEndPoint(IPAddress.Loopback, port);
             BrokerInactiveMaxMilliseconds = 30 * 1000;
             AutoCreateTopic = true;
         }
