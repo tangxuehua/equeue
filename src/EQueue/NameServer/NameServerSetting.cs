@@ -17,10 +17,13 @@ namespace EQueue.NameServer
         /// <summary>TCP通行层设置
         /// </summary>
         public SocketSetting SocketSetting { get; set; }
+        /// <summary>本地IP和端口
+        /// </summary>
+        public IPEndPoint LocalIPEndPoint { get; set; }
 
         public NameServerSetting(int port = 9493)
         {
-            BindingAddress = new IPEndPoint(IPAddress.Loopback, port);
+            BindingAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), port);
             BrokerInactiveMaxMilliseconds = 30 * 1000;
             AutoCreateTopic = true;
         }

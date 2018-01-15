@@ -96,13 +96,13 @@ namespace EQueue.Broker
                 "DefaultGroup",
                 "DefaultCluster",
                 BrokerRole.Master,
-                new IPEndPoint(IPAddress.Loopback, 5000).ToAddress(),
-                new IPEndPoint(IPAddress.Loopback, 5001).ToAddress(),
-                new IPEndPoint(IPAddress.Loopback, 5002).ToAddress());
+                new IPEndPoint(SocketUtils.GetLocalIPV4(), 5000).ToAddress(),
+                new IPEndPoint(SocketUtils.GetLocalIPV4(), 5001).ToAddress(),
+                new IPEndPoint(SocketUtils.GetLocalIPV4(), 5002).ToAddress());
 
             NameServerList = new List<IPEndPoint>()
             {
-                new IPEndPoint(IPAddress.Loopback, 9493)
+                new IPEndPoint(SocketUtils.GetLocalIPV4(), 9493)
             };
 
             NotifyWhenMessageArrived = true;

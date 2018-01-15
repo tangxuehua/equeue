@@ -17,8 +17,10 @@ namespace QuickStart.BrokerServer2
         {
             InitializeEQueue();
 
+            var bindingAddress = ConfigurationManager.AppSettings["bindingAddress"];
             var address = ConfigurationManager.AppSettings["nameServerAddress"];
-            var nameServerAddress = string.IsNullOrEmpty(address) ? IPAddress.Loopback : IPAddress.Parse(address);
+            var brokerAddress = string.IsNullOrEmpty(bindingAddress) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(bindingAddress);
+            var nameServerAddress = string.IsNullOrEmpty(address) ? SocketUtils.GetLocalIPV4() : IPAddress.Parse(address);
             var setting = new BrokerSetting(
                 isMessageStoreMemoryMode: bool.Parse(ConfigurationManager.AppSettings["isMemoryMode"]),
                 chunkFileStoreRootPath: ConfigurationManager.AppSettings["fileStoreRootPath"],
@@ -39,9 +41,9 @@ namespace QuickStart.BrokerServer2
             setting.NameServerList = new List<IPEndPoint> { new IPEndPoint(nameServerAddress, 9493) };
             setting.BrokerInfo.BrokerName = ConfigurationManager.AppSettings["brokerName"];
             setting.BrokerInfo.GroupName = ConfigurationManager.AppSettings["groupName"];
-            setting.BrokerInfo.ProducerAddress = new IPEndPoint(IPAddress.Loopback, int.Parse(ConfigurationManager.AppSettings["producerPort"])).ToAddress();
-            setting.BrokerInfo.ConsumerAddress = new IPEndPoint(IPAddress.Loopback, int.Parse(ConfigurationManager.AppSettings["consumerPort"])).ToAddress();
-            setting.BrokerInfo.AdminAddress = new IPEndPoint(IPAddress.Loopback, int.Parse(ConfigurationManager.AppSettings["adminPort"])).ToAddress();
+            setting.BrokerInfo.ProducerAddress = new IPEndPoint(brokerAddress, int.Parse(ConfigurationManager.AppSettings["producerPort"])).ToAddress();
+            setting.BrokerInfo.ConsumerAddress = new IPEndPoint(brokerAddress, int.Parse(ConfigurationManager.AppSettings["consumerPort"])).ToAddress();
+            setting.BrokerInfo.AdminAddress = new IPEndPoint(brokerAddress, int.Parse(ConfigurationManager.AppSettings["adminPort"])).ToAddress();
             BrokerController.Create(setting).Start();
             Console.ReadLine();
         }

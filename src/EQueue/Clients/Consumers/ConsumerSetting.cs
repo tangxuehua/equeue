@@ -90,7 +90,7 @@ namespace EQueue.Clients.Consumers
             ClusterName = "DefaultCluster";
             NameServerList = new List<IPEndPoint>()
             {
-                new IPEndPoint(IPAddress.Loopback, 9493)
+                new IPEndPoint(SocketUtils.GetLocalIPV4(), 9493)
             };
             SocketSetting = new SocketSetting();
             RebalanceInterval = 1000;

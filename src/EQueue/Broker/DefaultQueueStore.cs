@@ -374,7 +374,7 @@ namespace EQueue.Broker
                             .ToArray();
                 foreach (var queuePath in queuePathList)
                 {
-                    var items = queuePath.Split('\\');
+                    var items = queuePath.Split(Path.DirectorySeparatorChar);
                     var queueId = int.Parse(items[items.Length - 1]);
                     var topic = items[items.Length - 2];
                     LoadQueue(topic, queueId);
