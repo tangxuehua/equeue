@@ -6,6 +6,9 @@
         public string ProducerAddress { get; set; }
         public string BrokerAddress { get; set; }
         public string SearchMessageId { get; set; }
+        public string SearchTopic { get; set; }
+        public string SearchQueueId { get; set; }
+        public string SearchQueueOffset { get; set; }
         public string MessageId { get; set; }
         public string QueueId { get; set; }
         public string QueueOffset { get; set; }

@@ -284,6 +284,7 @@ namespace EQueue.Broker
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetQueueProducerVisible, new SetQueueProducerVisibleRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetQueueConsumerVisible, new SetQueueConsumerVisibleRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetMessageDetail, new GetMessageDetailRequestHandler());
+            _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetMessageDetailByQueueOffset, new GetMessageDetailByQueueOffsetRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.SetQueueNextConsumeOffset, new SetQueueNextConsumeOffsetRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.DeleteConsumerGroup, new DeleteConsumerGroupRequestHandler());
             _adminSocketRemotingServer.RegisterRequestHandler((int)BrokerRequestCode.GetLastestMessages, new GetBrokerLatestSendMessagesRequestHandler());

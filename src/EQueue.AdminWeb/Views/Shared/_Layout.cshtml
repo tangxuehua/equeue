@@ -30,7 +30,8 @@
                 @Html.ActionLink("消费信息", "ConsumeInfoList", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
                 @Html.ActionLink("生产者列表", "ProducerList", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
                 @Html.ActionLink("消费者列表", "ConsumerList", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
-                @Html.ActionLink("消息查询", "Message", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("根据ID查消息", "GetMessageById", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
+                @Html.ActionLink("根据Offset查消息", "GetMessageByQueueOffset", "Home", new { clusterName = @ViewBag.ClusterName }, new { @class = "navbar-brand" })
             </div>
         </div>
     </div>

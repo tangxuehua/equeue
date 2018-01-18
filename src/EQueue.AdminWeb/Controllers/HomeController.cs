@@ -119,7 +119,7 @@ namespace EQueue.AdminWeb.Controllers
                 ConsumerList = modelList
             });
         }
-        public ActionResult Message(string clusterName, string searchMessageId)
+        public ActionResult GetMessageById(string clusterName, string searchMessageId)
         {
             ViewBag.ClusterName = clusterName;
             if (string.IsNullOrWhiteSpace(searchMessageId))
@@ -141,6 +141,49 @@ namespace EQueue.AdminWeb.Controllers
             {
                 model.ProducerAddress = message.ProducerAddress;
                 model.BrokerAddress = messageIdInfo.IP.ToString() + ":" + messageIdInfo.Port.ToString();
+                model.MessageId = message.MessageId;
+                model.Topic = message.Topic;
+                model.QueueId = message.QueueId.ToString();
+                model.QueueOffset = message.QueueOffset.ToString();
+                model.Code = message.Code.ToString();
+                model.Payload = Encoding.UTF8.GetString(message.Body);
+                model.CreatedTime = message.CreatedTime.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                model.StoredTime = message.StoredTime.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            }
+            return View(model);
+        }
+        public ActionResult GetMessageByQueueOffset(string clusterName, string searchTopic, string searchQueueId, string searchQueueOffset)
+        {
+            ViewBag.ClusterName = clusterName;
+            var model = new MessageViewModel
+            {
+                SearchTopic = searchTopic,
+                SearchQueueId = searchQueueId,
+                SearchQueueOffset = searchQueueOffset
+            };
+
+            if (string.IsNullOrWhiteSpace(clusterName)
+             || string.IsNullOrWhiteSpace(searchTopic)
+             || string.IsNullOrWhiteSpace(searchQueueId)
+             || string.IsNullOrWhiteSpace(searchQueueOffset))
+            {
+                return View(model);
+            }
+            var message = _messageService.GetMessageDetailByQueueOffset(clusterName, searchTopic, int.Parse(searchQueueId), long.Parse(searchQueueOffset));
+            if (message != null)
+            {
+                MessageIdInfo? messageIdInfo = null;
+                try
+                {
+                    messageIdInfo = MessageIdUtil.ParseMessageId(message.MessageId);
+                }
+                catch {  }
+
+                if (messageIdInfo != null)
+                {
+                    model.BrokerAddress = messageIdInfo.Value.IP.ToString() + ":" + messageIdInfo.Value.Port.ToString();
+                }
+                model.ProducerAddress = message.ProducerAddress;
                 model.MessageId = message.MessageId;
                 model.Topic = message.Topic;
                 model.QueueId = message.QueueId.ToString();

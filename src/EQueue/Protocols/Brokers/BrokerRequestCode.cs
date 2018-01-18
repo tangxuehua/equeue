@@ -23,6 +23,7 @@
         SetQueueNextConsumeOffset = 1011,
         DeleteConsumerGroup = 1012,
         GetMessageDetail = 1013,
-        GetLastestMessages = 1014
+        GetLastestMessages = 1014,
+        GetMessageDetailByQueueOffset = 1015
     }
 }

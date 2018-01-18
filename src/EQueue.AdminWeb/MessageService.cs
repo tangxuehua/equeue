@@ -500,6 +500,27 @@ namespace EQueue.AdminWeb
 
             return null;
         }
+        public QueueMessage GetMessageDetailByQueueOffset(string clusterName, string topic, int queueId, long queueOffset)
+        {
+            var brokerClientList = GetClusterBrokers(clusterName);
+
+            foreach (var brokerClient in brokerClientList)
+            {
+                var requestData = _binarySerializer.Serialize(new GetMessageDetailByQueueOffsetRequest(topic, queueId, queueOffset));
+                var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetMessageDetailByQueueOffset, requestData);
+                var remotingResponse = brokerClient.RemotingClient.InvokeSync(remotingRequest, 30000);
+                if (remotingResponse.ResponseCode == ResponseCode.Success)
+                {
+                    return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.ResponseBody).SingleOrDefault();
+                }
+                else
+                {
+                    throw new Exception(string.Format("GetMessageDetailByQueueOffset failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
+                }
+            }
+
+            return null;
+        }
 
         private void StartAllNameServerClients()
         {

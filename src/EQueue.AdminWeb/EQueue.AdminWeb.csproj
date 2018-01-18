@@ -232,6 +232,7 @@
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
     <Content Include="Scripts\jquery-3.2.1.slim.min.map" />
     <Content Include="Scripts\jquery-3.2.1.min.map" />
+    <Content Include="Views\Home\GetMessageByQueueOffset.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config">
@@ -239,7 +240,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Views\Home\Message.cshtml" />
+    <Content Include="Views\Home\GetMessageById.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Views\Broker\QueueInfoList.cshtml" />
