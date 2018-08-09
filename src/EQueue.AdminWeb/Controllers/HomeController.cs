@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using System.Web.Mvc;
 using EQueue.AdminWeb.Models;
 using EQueue.Utils;
@@ -17,37 +18,37 @@ namespace EQueue.AdminWeb.Controllers
             _messageService = messageService;
         }
 
-        public ActionResult Index()
+        public async Task<ActionResult> Index()
         {
-            var clusterList = _messageService.GetAllClusters();
+            var clusterList = await _messageService.GetAllClusters();
             return View(new ClusterListViewModel
             {
                 ClusterList = clusterList
             });
         }
-        public ActionResult BrokerList(string clusterName)
+        public async Task<ActionResult> BrokerList(string clusterName)
         {
             ViewBag.ClusterName = clusterName;
-            var brokerList = _messageService.GetClusterBrokerStatusInfoList(clusterName);
+            var brokerList = await _messageService.GetClusterBrokerStatusInfoList(clusterName);
             return View(new ClusterBrokerListViewModel
             {
                 BrokerList = brokerList
             });
         }
-        public ActionResult QueueInfoList(string clusterName, string topic)
+        public async Task<ActionResult> QueueInfoList(string clusterName, string topic)
         {
             ViewBag.ClusterName = clusterName;
-            var topicQueueInfoList = _messageService.GetTopicQueueInfoList(clusterName, topic);
+            var topicQueueInfoList = await _messageService.GetTopicQueueInfoList(clusterName, topic);
             return View(new ClusterTopicQueueListViewModel
             {
                 Topic = topic,
                 TopicQueueInfoList = topicQueueInfoList
             });
         }
-        public ActionResult ConsumeInfoList(string clusterName, string group, string topic)
+        public async Task<ActionResult> ConsumeInfoList(string clusterName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
-            var topicConsumeInfoList = _messageService.GetTopicConsumeInfoList(clusterName, group, topic);
+            var topicConsumeInfoList = await _messageService.GetTopicConsumeInfoList(clusterName, group, topic);
             return View(new ClusterTopicConsumeListViewModel
             {
                 Group = group,
@@ -55,19 +56,19 @@ namespace EQueue.AdminWeb.Controllers
                 TopicConsumeInfoList = topicConsumeInfoList
             });
         }
-        public ActionResult ProducerList(string clusterName)
+        public async Task<ActionResult> ProducerList(string clusterName)
         {
             ViewBag.ClusterName = clusterName;
-            var producerList = _messageService.GetProducerInfoList(clusterName);
+            var producerList = await _messageService.GetProducerInfoList(clusterName);
             return View(new ClusterProducerListViewModel
             {
                 ProducerList = producerList
             });
         }
-        public ActionResult ConsumerList(string clusterName, string group, string topic)
+        public async Task<ActionResult> ConsumerList(string clusterName, string group, string topic)
         {
             ViewBag.ClusterName = clusterName;
-            var consumerInfoList = _messageService.GetConsumerInfoList(clusterName, group, topic);
+            var consumerInfoList = await _messageService.GetConsumerInfoList(clusterName, group, topic);
             var modelList = new List<ConsumerViewModel>();
             foreach (var consumerInfo in consumerInfoList)
             {
@@ -119,7 +120,7 @@ namespace EQueue.AdminWeb.Controllers
                 ConsumerList = modelList
             });
         }
-        public ActionResult GetMessageById(string clusterName, string searchMessageId)
+        public async Task<ActionResult> GetMessageById(string clusterName, string searchMessageId)
         {
             ViewBag.ClusterName = clusterName;
             if (string.IsNullOrWhiteSpace(searchMessageId))
@@ -135,7 +136,7 @@ namespace EQueue.AdminWeb.Controllers
             {
                 throw new Exception("无效的消息ID", ex);
             }
-            var message = _messageService.GetMessageDetail(clusterName, searchMessageId);
+            var message = await _messageService.GetMessageDetail(clusterName, searchMessageId);
             var model = new MessageViewModel { ClusterName = clusterName, SearchMessageId = searchMessageId };
             if (message != null)
             {
@@ -152,7 +153,7 @@ namespace EQueue.AdminWeb.Controllers
             }
             return View(model);
         }
-        public ActionResult GetMessageByQueueOffset(string clusterName, string searchTopic, string searchQueueId, string searchQueueOffset)
+        public async Task<ActionResult> GetMessageByQueueOffset(string clusterName, string searchTopic, string searchQueueId, string searchQueueOffset)
         {
             ViewBag.ClusterName = clusterName;
             var model = new MessageViewModel
@@ -169,7 +170,7 @@ namespace EQueue.AdminWeb.Controllers
             {
                 return View(model);
             }
-            var message = _messageService.GetMessageDetailByQueueOffset(clusterName, searchTopic, int.Parse(searchQueueId), long.Parse(searchQueueOffset));
+            var message = await _messageService.GetMessageDetailByQueueOffset(clusterName, searchTopic, int.Parse(searchQueueId), long.Parse(searchQueueOffset));
             if (message != null)
             {
                 MessageIdInfo? messageIdInfo = null;
@@ -195,40 +196,40 @@ namespace EQueue.AdminWeb.Controllers
             }
             return View(model);
         }
-        public ActionResult CreateTopic(string clusterName, string topic, int? initialQueueCount)
+        public async Task<ActionResult> CreateTopic(string clusterName, string topic, int? initialQueueCount)
         {
             ViewBag.ClusterName = clusterName;
-            _messageService.CreateTopic(clusterName, topic, initialQueueCount ?? 4);
+            await _messageService.CreateTopic(clusterName, topic, initialQueueCount ?? 4);
             return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, Topic = topic });
         }
-        public ActionResult DeleteTopic(string clusterName, string topic)
+        public async Task<ActionResult> DeleteTopic(string clusterName, string topic)
         {
             ViewBag.ClusterName = clusterName;
-            _messageService.DeleteTopic(clusterName, topic);
+            await _messageService.DeleteTopic(clusterName, topic);
             return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, Topic = topic });
         }
-        public ActionResult AddQueue(string clusterName, string topic)
+        public async Task<ActionResult> AddQueue(string clusterName, string topic)
         {
             ViewBag.ClusterName = clusterName;
-            _messageService.AddQueue(clusterName, topic);
+            await _messageService.AddQueue(clusterName, topic);
             return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, Topic = topic });
         }
-        public ActionResult DeleteQueue(string clusterName, string topic, int queueId)
+        public async Task<ActionResult> DeleteQueue(string clusterName, string topic, int queueId)
         {
             ViewBag.ClusterName = clusterName;
-            _messageService.DeleteQueue(clusterName, topic, queueId);
+            await _messageService.DeleteQueue(clusterName, topic, queueId);
             return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, Topic = topic });
         }
-        public ActionResult SetQueueProducerVisible(string clusterName, string topic, int queueId, bool visible)
+        public async Task<ActionResult> SetQueueProducerVisible(string clusterName, string topic, int queueId, bool visible)
         {
             ViewBag.ClusterName = clusterName;
-            _messageService.SetQueueProducerVisible(clusterName, topic, queueId, visible);
+            await _messageService.SetQueueProducerVisible(clusterName, topic, queueId, visible);
             return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, Topic = topic });
         }
-        public ActionResult SetQueueConsumerVisible(string clusterName, string topic, int queueId, bool visible)
+        public async Task<ActionResult> SetQueueConsumerVisible(string clusterName, string topic, int queueId, bool visible)
         {
             ViewBag.ClusterName = clusterName;
-            _messageService.SetQueueConsumerVisible(clusterName, topic, queueId, visible);
+            await _messageService.SetQueueConsumerVisible(clusterName, topic, queueId, visible);
             return RedirectToAction("QueueInfoList", new { ClusterName = clusterName, Topic = topic });
         }
         [HttpGet]
@@ -244,16 +245,16 @@ namespace EQueue.AdminWeb.Controllers
             return View(model);
         }
         [HttpPost]
-        public ActionResult SetQueueNextConsumeOffset(string clusterName, string consumerGroup, string topic, int queueId, long nextOffset)
+        public async Task<ActionResult> SetQueueNextConsumeOffset(string clusterName, string consumerGroup, string topic, int queueId, long nextOffset)
         {
             ViewBag.ClusterName = clusterName;
-            _messageService.SetQueueNextConsumeOffset(clusterName, consumerGroup, topic, queueId, nextOffset);
+            await _messageService.SetQueueNextConsumeOffset(clusterName, consumerGroup, topic, queueId, nextOffset);
             return RedirectToAction("ConsumeInfoList", new { ClusterName = clusterName, Group = consumerGroup, Topic = topic });
         }
-        public ActionResult DeleteConsumerGroup(string clusterName, string consumerGroup)
+        public async Task<ActionResult> DeleteConsumerGroup(string clusterName, string consumerGroup)
         {
             ViewBag.ClusterName = clusterName;
-            _messageService.DeleteConsumerGroup(clusterName, consumerGroup);
+            await _messageService.DeleteConsumerGroup(clusterName, consumerGroup);
             return RedirectToAction("ConsumeInfoList", new { ClusterName = clusterName });
         }
     }

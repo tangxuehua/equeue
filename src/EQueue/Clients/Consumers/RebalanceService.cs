@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Extensions;
 using ECommon.Logging;
@@ -95,22 +96,22 @@ namespace EQueue.Clients.Consumers
                 }
             }
         }
-        private void RebalanceClustering(KeyValuePair<string, HashSet<string>> pair)
+        private async void RebalanceClustering(KeyValuePair<string, HashSet<string>> pair)
         {
             var topic = pair.Key;
             try
             {
-                var consumerIdList = GetConsumerIdsForTopic(topic);
+                var consumerIdList = await GetConsumerIdsForTopic(topic);
                 if (consumerIdList == null || consumerIdList.Count == 0)
                 {
                     _logger.WarnFormat("No available consumers found.");
                     UpdatePullRequestDict(pair, new List<MessageQueue>());
                     return;
                 }
-                var messageQueueList = _clientService.GetTopicMessageQueues(topic);
+                var messageQueueList = await _clientService.GetTopicMessageQueuesAsync(topic);
                 if (messageQueueList == null || messageQueueList.Count == 0)
                 {
-                    _logger.WarnFormat("No available message queues found.");
+                    _logger.WarnFormat("No available message queues found, topic: {0}", topic);
                     UpdatePullRequestDict(pair, new List<MessageQueue>());
                     return;
                 }
@@ -123,12 +124,12 @@ namespace EQueue.Clients.Consumers
                 UpdatePullRequestDict(pair, new List<MessageQueue>());
             }
         }
-        private IList<string> GetConsumerIdsForTopic(string topic)
+        private async Task<IList<string>> GetConsumerIdsForTopic(string topic)
         {
             var brokerConnection = _clientService.GetFirstBrokerConnection();
             var request = _binarySerializer.Serialize(new GetConsumerIdsForTopicRequest(_consumer.GroupName, topic));
             var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetConsumerIdsForTopic, request);
-            var remotingResponse = brokerConnection.AdminRemotingClient.InvokeSync(remotingRequest, 1000 * 5);
+            var remotingResponse = await brokerConnection.AdminRemotingClient.InvokeAsync(remotingRequest, 1000 * 5);
             if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
                 throw new Exception(string.Format("GetConsumerIdsForTopic has exception, consumerGroup: {0}, topic: {1}, brokerAddress: {2}, remoting response code: {3}, errorMessage: {4}",

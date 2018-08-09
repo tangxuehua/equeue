@@ -82,34 +82,6 @@ namespace EQueue.Clients.Producers
             _logger.Info("Producer shutdown.");
             return this;
         }
-        public SendResult Send(Message message, string routingKey, int timeoutMilliseconds = 30 * 1000)
-        {
-            if (!_started)
-            {
-                throw new Exception("Producer not started, please start the producer first.");
-            }
-
-            var sendResult = SendAsync(message, routingKey, timeoutMilliseconds).WaitResult(timeoutMilliseconds + 3000);
-            if (sendResult == null)
-            {
-                sendResult = new SendResult(SendStatus.Timeout, null, string.Format("Send message timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}", message, routingKey, timeoutMilliseconds));
-            }
-            return sendResult;
-        }
-        public BatchSendResult BatchSend(IEnumerable<Message> messages, string routingKey, int timeoutMilliseconds = 30 * 1000)
-        {
-            if (!_started)
-            {
-                throw new Exception("Producer not started, please start the producer first.");
-            }
-
-            var sendResult = BatchSendAsync(messages, routingKey, timeoutMilliseconds).WaitResult(timeoutMilliseconds + 3000);
-            if (sendResult == null)
-            {
-                sendResult = new BatchSendResult(SendStatus.Timeout, null, string.Format("Send message timeout, routingKey: {0}, timeoutMilliseconds: {1}", routingKey, timeoutMilliseconds));
-            }
-            return sendResult;
-        }
         public async Task<SendResult> SendAsync(Message message, string routingKey, int timeoutMilliseconds = 30 * 1000)
         {
             Ensure.NotNull(message, "message");
@@ -122,17 +94,19 @@ namespace EQueue.Clients.Producers
             var retryCount = 0;
             while (retryCount <= Setting.SendMessageMaxRetryCount)
             {
-                MessageQueue messageQueue;
-                BrokerConnection brokerConnection;
-                if (!TryGetAvailableMessageQueue(message, routingKey, out messageQueue, out brokerConnection))
+                var messageQueueInfo = await TryGetAvailableMessageQueue(message, routingKey);
+                if (messageQueueInfo == null)
                 {
                     throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
                 }
 
+                var messageQueue = messageQueueInfo.MessageQueue;
+                var brokerConnection = messageQueueInfo.BrokerConnection;
+
                 var remotingRequest = BuildSendMessageRequest(message, messageQueue.QueueId, brokerConnection);
                 try
                 {
-                    var remotingResponse = await brokerConnection.RemotingClient.InvokeAsync(remotingRequest, timeoutMilliseconds).ConfigureAwait(false);
+                    var remotingResponse = await messageQueueInfo.BrokerConnection.RemotingClient.InvokeAsync(remotingRequest, timeoutMilliseconds).ConfigureAwait(false);
                     if (remotingResponse == null)
                     {
                         sendResult = new SendResult(SendStatus.Timeout, null, string.Format("Send message timeout, message: {0}, routingKey: {1}, timeoutMilliseconds: {2}, brokerInfo: {3}", message, routingKey, timeoutMilliseconds, brokerConnection.BrokerInfo));
@@ -177,12 +151,14 @@ namespace EQueue.Clients.Producers
             var retryCount = 0;
             while (retryCount <= Setting.SendMessageMaxRetryCount)
             {
-                MessageQueue messageQueue;
-                BrokerConnection brokerConnection;
-                if (!TryGetAvailableMessageQueue(message, routingKey, out messageQueue, out brokerConnection))
+                var messageQueueInfo = await TryGetAvailableMessageQueue(message, routingKey);
+                if (messageQueueInfo == null)
                 {
                     throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
                 }
+
+                var messageQueue = messageQueueInfo.MessageQueue;
+                var brokerConnection = messageQueueInfo.BrokerConnection;
 
                 var remotingRequest = BuildBatchSendMessageRequest(messages, messageQueue.QueueId, brokerConnection);
                 try
@@ -215,7 +191,7 @@ namespace EQueue.Clients.Producers
             }
             return sendResult;
         }
-        public void SendWithCallback(Message message, string routingKey)
+        public async Task SendWithCallback(Message message, string routingKey)
         {
             Ensure.NotNull(message, "message");
             if (!_started)
@@ -223,18 +199,20 @@ namespace EQueue.Clients.Producers
                 throw new Exception("Producer not started, please start the producer first.");
             }
 
-            MessageQueue messageQueue;
-            BrokerConnection brokerConnection;
-            if (!TryGetAvailableMessageQueue(message, routingKey, out messageQueue, out brokerConnection))
+            var messageQueueInfo = await TryGetAvailableMessageQueue(message, routingKey);
+            if (messageQueueInfo == null)
             {
                 throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
             }
+
+            var messageQueue = messageQueueInfo.MessageQueue;
+            var brokerConnection = messageQueueInfo.BrokerConnection;
 
             var remotingRequest = BuildSendMessageRequest(message, messageQueue.QueueId, brokerConnection);
 
             brokerConnection.RemotingClient.InvokeWithCallback(remotingRequest);
         }
-        public void BatchSendWithCallback(IEnumerable<Message> messages, string routingKey)
+        public async Task BatchSendWithCallback(IEnumerable<Message> messages, string routingKey)
         {
             Ensure.NotNull(messages, "messages");
             if (messages.Count() == 0)
@@ -247,18 +225,20 @@ namespace EQueue.Clients.Producers
             }
 
             var message = messages.First();
-            MessageQueue messageQueue;
-            BrokerConnection brokerConnection;
-            if (!TryGetAvailableMessageQueue(message, routingKey, out messageQueue, out brokerConnection))
+            var messageQueueInfo = await TryGetAvailableMessageQueue(message, routingKey);
+            if (messageQueueInfo == null)
             {
                 throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
             }
+
+            var messageQueue = messageQueueInfo.MessageQueue;
+            var brokerConnection = messageQueueInfo.BrokerConnection;
 
             var remotingRequest = BuildBatchSendMessageRequest(messages, messageQueue.QueueId, brokerConnection);
 
             brokerConnection.RemotingClient.InvokeWithCallback(remotingRequest);
         }
-        public void SendOneway(Message message, string routingKey)
+        public async Task SendOneway(Message message, string routingKey)
         {
             Ensure.NotNull(message, "message");
             if (!_started)
@@ -266,18 +246,20 @@ namespace EQueue.Clients.Producers
                 throw new Exception("Producer not started, please start the producer first.");
             }
 
-            MessageQueue messageQueue;
-            BrokerConnection brokerConnection;
-            if (!TryGetAvailableMessageQueue(message, routingKey, out messageQueue, out brokerConnection))
+            var messageQueueInfo = await TryGetAvailableMessageQueue(message, routingKey);
+            if (messageQueueInfo == null)
             {
                 throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
             }
+
+            var messageQueue = messageQueueInfo.MessageQueue;
+            var brokerConnection = messageQueueInfo.BrokerConnection;
 
             var remotingRequest = BuildSendMessageRequest(message, messageQueue.QueueId, brokerConnection);
 
             brokerConnection.RemotingClient.InvokeOneway(remotingRequest);
         }
-        public void BatchSendOneway(IEnumerable<Message> messages, string routingKey)
+        public async Task BatchSendOneway(IEnumerable<Message> messages, string routingKey)
         {
             Ensure.NotNull(messages, "messages");
             if (messages.Count() == 0)
@@ -290,12 +272,14 @@ namespace EQueue.Clients.Producers
             }
 
             var message = messages.First();
-            MessageQueue messageQueue;
-            BrokerConnection brokerConnection;
-            if (!TryGetAvailableMessageQueue(message, routingKey, out messageQueue, out brokerConnection))
+            var messageQueueInfo = await TryGetAvailableMessageQueue(message, routingKey);
+            if (messageQueueInfo == null)
             {
                 throw new Exception(string.Format("No available message queue for topic [{0}]", message.Topic));
             }
+
+            var messageQueue = messageQueueInfo.MessageQueue;
+            var brokerConnection = messageQueueInfo.BrokerConnection;
 
             var remotingRequest = BuildBatchSendMessageRequest(messages, messageQueue.QueueId, brokerConnection);
 
@@ -366,50 +350,32 @@ namespace EQueue.Clients.Producers
 
         #region Private Methods
 
-        private bool TryGetAvailableMessageQueue(Message message, string routingKey, out MessageQueue messageQueue, out BrokerConnection brokerConnection)
+        private async Task<MessageQueueInfo> TryGetAvailableMessageQueue(Message message, string routingKey)
         {
-            messageQueue = null;
-            brokerConnection = null;
-            var retryCount = 0;
-
-            while (retryCount <= Setting.SendMessageMaxRetryCount)
+            var messageQueue = await GetAvailableMessageQueueAsync(message, routingKey);
+            if (messageQueue == null)
             {
-                messageQueue = GetAvailableMessageQueue(message, routingKey);
-                if (messageQueue == null)
-                {
-                    if (retryCount == 0)
-                    {
-                        _logger.ErrorFormat("No available message queue for topic [{0}]", message.Topic);
-                    }
-                    else
-                    {
-                        _logger.ErrorFormat("No available message queue for topic [{0}], retryTimes: {1}", message.Topic, retryCount);
-                    }
-                }
-                else
-                {
-                    brokerConnection = _clientService.GetBrokerConnection(messageQueue.BrokerName);
-                    if (brokerConnection != null && brokerConnection.RemotingClient.IsConnected)
-                    {
-                        return true;
-                    }
-                    if (retryCount == 0)
-                    {
-                        _logger.ErrorFormat("Broker is unavailable for queue [{0}]", messageQueue);
-                    }
-                    else
-                    {
-                        _logger.ErrorFormat("Broker is unavailable for queue [{0}], retryTimes: {1}", message.Topic, retryCount);
-                    }
-                }
-                retryCount++;
+                _logger.ErrorFormat("No available message queue for topic [{0}]", message.Topic);
+                return null;
             }
-
-            return false;
+            else
+            {
+                var brokerConnection = _clientService.GetBrokerConnection(messageQueue.BrokerName);
+                if (brokerConnection != null && brokerConnection.RemotingClient.IsConnected)
+                {
+                    return new MessageQueueInfo
+                    {
+                        MessageQueue = messageQueue,
+                        BrokerConnection = brokerConnection
+                    };
+                }
+                _logger.ErrorFormat("Broker is unavailable for queue [{0}]", messageQueue);
+                return null;
+            }
         }
-        private MessageQueue GetAvailableMessageQueue(Message message, string routingKey)
+        private async Task<MessageQueue> GetAvailableMessageQueueAsync(Message message, string routingKey)
         {
-            var messageQueueList = _clientService.GetTopicMessageQueues(message.Topic);
+            var messageQueueList = await _clientService.GetTopicMessageQueuesAsync(message.Topic);
             if (messageQueueList == null || messageQueueList.IsEmpty())
             {
                 return null;
@@ -445,6 +411,12 @@ namespace EQueue.Clients.Producers
                 throw new Exception("Message size cannot exceed max message size:" + Setting.MessageMaxSize);
             }
             return new RemotingRequest((int)BrokerRequestCode.BatchSendMessage, data);
+        }
+
+        class MessageQueueInfo
+        {
+            public MessageQueue MessageQueue { get; set; }
+            public BrokerConnection BrokerConnection { get; set; }
         }
 
         #endregion

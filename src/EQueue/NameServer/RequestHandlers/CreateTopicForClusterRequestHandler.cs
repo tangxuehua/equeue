@@ -27,14 +27,11 @@ namespace EQueue.NameServer.RequestHandlers
             var request = _binarySerializer.Deserialize<CreateTopicForClusterRequest>(remotingRequest.Body);
             var requestService = new BrokerRequestService(_nameServerController);
 
-            requestService.ExecuteActionToAllClusterBrokers(request.ClusterName, remotingClient =>
+            requestService.ExecuteActionToAllClusterBrokers(request.ClusterName, async remotingClient =>
             {
                 var requestData = _binarySerializer.Serialize(new CreateTopicRequest(request.Topic, request.InitialQueueCount));
-                var remotingResponse = remotingClient.InvokeSync(new RemotingRequest((int)BrokerRequestCode.CreateTopic, requestData), 30000);
-                if (remotingResponse.ResponseCode != ResponseCode.Success)
-                {
-                    throw new Exception(string.Format("CreateTopic failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
-                }
+                var remotingResponse = await remotingClient.InvokeAsync(new RemotingRequest((int)BrokerRequestCode.CreateTopic, requestData), 30000);
+                context.SendRemotingResponse(remotingResponse);
             });
 
             return RemotingResponseFactory.CreateResponse(remotingRequest);

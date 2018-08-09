@@ -27,14 +27,11 @@ namespace EQueue.NameServer.RequestHandlers
             var request = _binarySerializer.Deserialize<SetQueueProducerVisibleForClusterRequest>(remotingRequest.Body);
             var requestService = new BrokerRequestService(_nameServerController);
 
-            requestService.ExecuteActionToAllClusterBrokers(request.ClusterName, remotingClient =>
+            requestService.ExecuteActionToAllClusterBrokers(request.ClusterName, async remotingClient =>
             {
                 var requestData = _binarySerializer.Serialize(new SetQueueProducerVisibleRequest(request.Topic, request.QueueId, request.Visible));
-                var remotingResponse = remotingClient.InvokeSync(new RemotingRequest((int)BrokerRequestCode.SetQueueProducerVisible, requestData), 30000);
-                if (remotingResponse.ResponseCode != ResponseCode.Success)
-                {
-                    throw new Exception(string.Format("SetQueueProducerVisible failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
-                }
+                var remotingResponse = await remotingClient.InvokeAsync(new RemotingRequest((int)BrokerRequestCode.SetQueueProducerVisible, requestData), 30000);
+                context.SendRemotingResponse(remotingResponse);
             });
 
             return RemotingResponseFactory.CreateResponse(remotingRequest);

@@ -20,9 +20,14 @@ namespace EQueue.NameServer.RequestHandlers
         public RemotingResponse HandleRequest(IRequestHandlerContext context, RemotingRequest remotingRequest)
         {
             var request = _binarySerializer.Deserialize<GetTopicRouteInfoRequest>(remotingRequest.Body);
-            var routeInfoList = _clusterManager.GetTopicRouteInfo(request);
-            var data = _binarySerializer.Serialize(routeInfoList);
-            return RemotingResponseFactory.CreateResponse(remotingRequest, data);
+            _clusterManager.GetTopicRouteInfo(request).ContinueWith(t =>
+            {
+                var routeInfoList = t.Result; 
+                var data = _binarySerializer.Serialize(routeInfoList);
+                var response = RemotingResponseFactory.CreateResponse(remotingRequest, data);
+                context.SendRemotingResponse(response);
+            });
+            return null;
         }
     }
 }

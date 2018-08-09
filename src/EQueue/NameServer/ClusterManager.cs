@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Extensions;
 using ECommon.Logging;
@@ -15,6 +16,7 @@ using EQueue.Protocols.Brokers;
 using EQueue.Protocols.Brokers.Requests;
 using EQueue.Protocols.NameServers;
 using EQueue.Protocols.NameServers.Requests;
+using EQueue.Utils;
 
 namespace EQueue.NameServer
 {
@@ -23,7 +25,7 @@ namespace EQueue.NameServer
         #region Private Variables
 
         private readonly ConcurrentDictionary<string /*clusterName*/, Cluster> _clusterDict;
-        private readonly object _lockObj = new object();
+        private readonly AsyncLock _asyncLock = new AsyncLock();
         private readonly IScheduleService _scheduleService;
         private readonly NameServerController _nameServerController;
         private readonly ILogger _logger;
@@ -54,7 +56,7 @@ namespace EQueue.NameServer
         }
         public void RegisterBroker(ITcpConnection connection, BrokerRegistrationRequest request)
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 var brokerInfo = request.BrokerInfo;
                 var cluster = _clusterDict.GetOrAdd(brokerInfo.ClusterName, x => new Cluster { ClusterName = x });
@@ -109,13 +111,12 @@ namespace EQueue.NameServer
         }
         public void UnregisterBroker(BrokerUnRegistrationRequest request)
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 var brokerInfo = request.BrokerInfo;
                 var cluster = _clusterDict.GetOrAdd(brokerInfo.ClusterName, x => new Cluster { ClusterName = x });
                 var brokerGroup = cluster.BrokerGroups.GetOrAdd(brokerInfo.GroupName, x => new BrokerGroup { GroupName = x });
-                Broker removed;
-                if (brokerGroup.Brokers.TryRemove(brokerInfo.BrokerName, out removed))
+                if (brokerGroup.Brokers.TryRemove(brokerInfo.BrokerName, out Broker removed))
                 {
                     _logger.InfoFormat("Unregistered broker, brokerInfo: {0}", _jsonSerializer.Serialize(removed.BrokerInfo));
                 }
@@ -123,27 +124,25 @@ namespace EQueue.NameServer
         }
         public void RemoveBroker(ITcpConnection connection)
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 var connectionId = connection.RemotingEndPoint.ToAddress();
                 var broker = FindBroker(connectionId);
                 if (broker != null)
                 {
-                    Broker removed;
-                    if (broker.Group.Brokers.TryRemove(broker.BrokerInfo.BrokerName, out removed))
+                    if (broker.Group.Brokers.TryRemove(broker.BrokerInfo.BrokerName, out Broker removed))
                     {
                         _logger.InfoFormat("Removed broker, brokerInfo: {0}", _jsonSerializer.Serialize(removed.BrokerInfo));
                     }
                 }
             }
         }
-        public IList<TopicRouteInfo> GetTopicRouteInfo(GetTopicRouteInfoRequest request)
+        public async Task<IList<TopicRouteInfo>> GetTopicRouteInfo(GetTopicRouteInfoRequest request)
         {
-            lock (_lockObj)
+            using (await _asyncLock.LockAsync())
             {
                 var returnList = new List<TopicRouteInfo>();
-                Cluster cluster;
-                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
+                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out Cluster cluster))
                 {
                     return returnList;
                 }
@@ -173,7 +172,8 @@ namespace EQueue.NameServer
                         }
                         else if (_nameServerController.Setting.AutoCreateTopic)
                         {
-                            queueList = CreateTopicOnBroker(request.Topic, broker).ToList();
+                            var queueIds = await CreateTopicOnBroker(request.Topic, broker);
+                            queueList = queueIds.ToList();
                         }
 
                         returnList.Add(new TopicRouteInfo
@@ -189,11 +189,10 @@ namespace EQueue.NameServer
         }
         public IList<BrokerTopicQueueInfo> GetTopicQueueInfo(Protocols.NameServers.Requests.GetTopicQueueInfoRequest request)
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 var returnList = new List<BrokerTopicQueueInfo>();
-                Cluster cluster;
-                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out cluster))
+                if (string.IsNullOrEmpty(request.ClusterName) || !_clusterDict.TryGetValue(request.ClusterName, out Cluster cluster))
                 {
                     return returnList;
                 }
@@ -225,7 +224,7 @@ namespace EQueue.NameServer
         }
         public IList<BrokerTopicConsumeInfo> GetTopicConsumeInfo(Protocols.NameServers.Requests.GetTopicConsumeInfoRequest request)
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 var returnList = new List<BrokerTopicConsumeInfo>();
                 Cluster cluster;
@@ -261,7 +260,7 @@ namespace EQueue.NameServer
         }
         public IList<BrokerProducerListInfo> GetProducerList(GetProducerListRequest request)
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 var returnList = new List<BrokerProducerListInfo>();
                 Cluster cluster;
@@ -296,7 +295,7 @@ namespace EQueue.NameServer
         }
         public IList<BrokerConsumerListInfo> GetConsumerList(Protocols.NameServers.Requests.GetConsumerListRequest request)
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 var returnList = new List<BrokerConsumerListInfo>();
                 Cluster cluster;
@@ -338,7 +337,7 @@ namespace EQueue.NameServer
         }
         public IList<BrokerInfo> GetClusterBrokers(GetClusterBrokersRequest request)
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 var returnList = new List<Broker>();
                 Cluster cluster;
@@ -387,7 +386,7 @@ namespace EQueue.NameServer
         }
         public IList<BrokerStatusInfo> GetClusterBrokerStatusInfos(GetClusterBrokersRequest request)
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 var returnList = new List<Broker>();
                 Cluster cluster;
@@ -440,7 +439,7 @@ namespace EQueue.NameServer
         }
         public IList<TopicAccumulateInfo> GetTopicAccumulateInfoList(GetTopicAccumulateInfoListRequest request)
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 var returnList = new List<TopicAccumulateInfo>();
                 var tempDict = new ConcurrentDictionary<string, IList<TopicConsumeInfo>>();
@@ -612,13 +611,13 @@ namespace EQueue.NameServer
             }
             return null;
         }
-        private IEnumerable<int> CreateTopicOnBroker(string topic, Broker broker)
+        private async Task<IEnumerable<int>> CreateTopicOnBroker(string topic, Broker broker)
         {
             var brokerAdminEndpoint = broker.BrokerInfo.AdminAddress.ToEndPoint();
             var adminRemotingClient = new SocketRemotingClient(brokerAdminEndpoint, _nameServerController.Setting.SocketSetting).Start();
             var requestData = _binarySerializer.Serialize(new CreateTopicRequest(topic));
             var remotingRequest = new RemotingRequest((int)BrokerRequestCode.CreateTopic, requestData);
-            var remotingResponse = adminRemotingClient.InvokeSync(remotingRequest, 30000);
+            var remotingResponse = await adminRemotingClient.InvokeAsync(remotingRequest, 30000);
             if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
                 throw new Exception(string.Format("AutoCreateTopicOnBroker failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
@@ -628,7 +627,7 @@ namespace EQueue.NameServer
         }
         private void ScanNotActiveBroker()
         {
-            lock (_lockObj)
+            using (_asyncLock.Lock())
             {
                 foreach (var cluster in _clusterDict.Values)
                 {
@@ -646,8 +645,7 @@ namespace EQueue.NameServer
                         {
                             foreach (var broker in notActiveBrokers)
                             {
-                                Broker removed;
-                                if (brokerGroup.Brokers.TryRemove(broker.BrokerInfo.BrokerName, out removed))
+                                if (brokerGroup.Brokers.TryRemove(broker.BrokerInfo.BrokerName, out Broker removed))
                                 {
                                     _logger.InfoFormat("Removed timeout broker, brokerInfo: {0}, lastActiveTime: {1}", _jsonSerializer.Serialize(removed.BrokerInfo), removed.LastActiveTime);
                                 }

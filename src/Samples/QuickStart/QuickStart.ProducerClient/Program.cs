@@ -103,8 +103,10 @@ namespace QuickStart.ProducerClient
                     if (batchSize == 1)
                     {
                         var message = new Message(topic, 100, payload);
-                        producer.SendOneway(message, index.ToString());
-                        _performanceService.IncrementKeyCount(_mode, (DateTime.Now - message.CreatedTime).TotalMilliseconds);
+                        producer.SendOneway(message, index.ToString()).ContinueWith(t =>
+                        {
+                            _performanceService.IncrementKeyCount(_mode, (DateTime.Now - message.CreatedTime).TotalMilliseconds);
+                        });
                     }
                     else
                     {
@@ -113,46 +115,14 @@ namespace QuickStart.ProducerClient
                         {
                             messages.Add(new Message(topic, 100, payload));
                         }
-                        producer.BatchSendOneway(messages, index.ToString());
-                        var currentTime = DateTime.Now;
-                        foreach (var message in messages)
+                        producer.BatchSendOneway(messages, index.ToString()).ContinueWith(t =>
                         {
-                            _performanceService.IncrementKeyCount(_mode, (currentTime - message.CreatedTime).TotalMilliseconds);
-                        }
-                    }
-                };
-            }
-            else if (_mode == "Sync")
-            {
-                sendAction = index =>
-                {
-                    if (batchSize == 1)
-                    {
-                        var message = new Message(topic, 100, payload);
-                        var result = producer.Send(message, index.ToString());
-                        if (result.SendStatus != SendStatus.Success)
-                        {
-                            throw new Exception(result.ErrorMessage);
-                        }
-                        _performanceService.IncrementKeyCount(_mode, (DateTime.Now - message.CreatedTime).TotalMilliseconds);
-                    }
-                    else
-                    {
-                        var messages = new List<Message>();
-                        for (var i = 0; i < batchSize; i++)
-                        {
-                            messages.Add(new Message(topic, 100, payload));
-                        }
-                        var result = producer.BatchSend(messages, index.ToString());
-                        if (result.SendStatus != SendStatus.Success)
-                        {
-                            throw new Exception(result.ErrorMessage);
-                        }
-                        var currentTime = DateTime.Now;
-                        foreach (var message in messages)
-                        {
-                            _performanceService.IncrementKeyCount(_mode, (currentTime - message.CreatedTime).TotalMilliseconds);
-                        }
+                            var currentTime = DateTime.Now;
+                            foreach (var message in messages)
+                            {
+                                _performanceService.IncrementKeyCount(_mode, (currentTime - message.CreatedTime).TotalMilliseconds);
+                            }
+                        });
                     }
                 };
             }

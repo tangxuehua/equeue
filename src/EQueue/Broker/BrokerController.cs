@@ -303,7 +303,7 @@ namespace EQueue.Broker
                 nameServerRemotingClient.Shutdown();
             }
         }
-        private void RegisterBrokerToAllNameServers(bool isSync = false)
+        private void RegisterBrokerToAllNameServers(bool isFirstTime = false)
         {
             var totalSendThroughput = _tpsStatisticService.GetTotalSendThroughput();
             var totalConsumeThroughput = _tpsStatisticService.GetTotalConsumeThroughput();
@@ -324,7 +324,7 @@ namespace EQueue.Broker
             };
             foreach (var remotingClient in _nameServerRemotingClientList)
             {
-                RegisterBrokerToNameServer(request, remotingClient, isSync);
+                RegisterBrokerToNameServer(request, remotingClient, isFirstTime);
             }
         }
         private void UnregisterBrokerToAllNameServers()
@@ -338,24 +338,21 @@ namespace EQueue.Broker
                 UnregisterBrokerToNameServer(request, remotingClient);
             }
         }
-        private void RegisterBrokerToNameServer(BrokerRegistrationRequest request, SocketRemotingClient remotingClient, bool isSync = false)
+        private async void RegisterBrokerToNameServer(BrokerRegistrationRequest request, SocketRemotingClient remotingClient, bool isFirstTime = false)
         {
             var nameServerAddress = remotingClient.ServerEndPoint.ToAddress();
             try
             {
                 var data = _binarySerializer.Serialize(request);
                 var remotingRequest = new RemotingRequest((int)NameServerRequestCode.RegisterBroker, data);
-                if (isSync)
+                var remotingResponse = await remotingClient.InvokeAsync(remotingRequest, 10 * 1000);
+                if (remotingResponse.ResponseCode != ResponseCode.Success)
                 {
-                    var response = remotingClient.InvokeSync(remotingRequest, 10000);
-                    if (response.ResponseCode != ResponseCode.Success)
-                    {
-                        throw new Exception("Register broker to name server failed.");
-                    }
+                    _logger.ErrorFormat("Register broker to name server failed, brokerInfo: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.BrokerInfo, nameServerAddress, remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
                 }
-                else
+                else if (isFirstTime)
                 {
-                    remotingClient.InvokeOneway(remotingRequest);
+                    _logger.InfoFormat("Register broker to name server success, brokerInfo: {0}, nameServerAddress: {1}", request.BrokerInfo, nameServerAddress);
                 }
             }
             catch (Exception ex)
@@ -363,7 +360,7 @@ namespace EQueue.Broker
                 _logger.Error(string.Format("Register broker to name server has exception, brokerInfo: {0}, nameServerAddress: {1}", request.BrokerInfo, nameServerAddress), ex);
             }
         }
-        private void UnregisterBrokerToNameServer(BrokerUnRegistrationRequest request, SocketRemotingClient remotingClient)
+        private async void UnregisterBrokerToNameServer(BrokerUnRegistrationRequest request, SocketRemotingClient remotingClient)
         {
             if (!remotingClient.IsConnected)
             {
@@ -374,7 +371,7 @@ namespace EQueue.Broker
             {
                 var data = _binarySerializer.Serialize(request);
                 var remotingRequest = new RemotingRequest((int)NameServerRequestCode.UnregisterBroker, data);
-                var remotingResponse = remotingClient.InvokeSync(remotingRequest, 5 * 1000);
+                var remotingResponse = await remotingClient.InvokeAsync(remotingRequest, 10 * 1000);
                 if (remotingResponse.ResponseCode != ResponseCode.Success)
                 {
                     _logger.Error(string.Format("Unregister broker from name server failed, brokerInfo: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.BrokerInfo, nameServerAddress, remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody)));

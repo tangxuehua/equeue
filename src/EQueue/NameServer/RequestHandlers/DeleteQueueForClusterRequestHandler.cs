@@ -27,14 +27,11 @@ namespace EQueue.NameServer.RequestHandlers
             var request = _binarySerializer.Deserialize<DeleteQueueForClusterRequest>(remotingRequest.Body);
             var requestService = new BrokerRequestService(_nameServerController);
 
-            requestService.ExecuteActionToAllClusterBrokers(request.ClusterName, remotingClient =>
+            requestService.ExecuteActionToAllClusterBrokers(request.ClusterName, async remotingClient =>
             {
                 var requestData = _binarySerializer.Serialize(new DeleteQueueRequest(request.Topic, request.QueueId));
-                var remotingResponse = remotingClient.InvokeSync(new RemotingRequest((int)BrokerRequestCode.DeleteQueue, requestData), 30000);
-                if (remotingResponse.ResponseCode != ResponseCode.Success)
-                {
-                    throw new Exception(string.Format("DeleteQueue failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
-                }
+                var remotingResponse = await remotingClient.InvokeAsync(new RemotingRequest((int)BrokerRequestCode.DeleteQueue, requestData), 30000);
+                context.SendRemotingResponse(remotingResponse);
             });
 
             return RemotingResponseFactory.CreateResponse(remotingRequest);

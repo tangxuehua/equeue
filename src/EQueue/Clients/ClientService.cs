@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Extensions;
 using ECommon.Logging;
@@ -29,7 +30,7 @@ namespace EQueue.Clients
         #region Private Variables
 
         private static long _instanceNumber;
-        private readonly object _lockObj = new object();
+        private readonly AsyncLock _asyncLock = new AsyncLock();
         private readonly string _clientId;
         private readonly ClientSetting _setting;
         private readonly IList<SocketRemotingClient> _nameServerRemotingClientList;
@@ -87,10 +88,6 @@ namespace EQueue.Clients
         {
             StartAllNameServerClients();
             RefreshClusterBrokers();
-            if (_brokerConnectionDict.Count == 0)
-            {
-                throw new Exception("No available brokers found.");
-            }
             _scheduleService.StartTask("SendHeartbeatToAllBrokers", SendHeartbeatToAllBrokers, 1000, _setting.SendHeartbeatInterval);
             _scheduleService.StartTask("RefreshBrokerAndTopicRouteInfo", () =>
             {
@@ -131,15 +128,14 @@ namespace EQueue.Clients
             }
             return availableList.First();
         }
-        public IList<MessageQueue> GetTopicMessageQueues(string topic)
+        public async Task<IList<MessageQueue>> GetTopicMessageQueuesAsync(string topic)
         {
-            IList<MessageQueue> messageQueueList;
-            if (_topicMessageQueueDict.TryGetValue(topic, out messageQueueList))
+            if (_topicMessageQueueDict.TryGetValue(topic, out IList<MessageQueue> messageQueueList))
             {
                 return messageQueueList;
             }
 
-            lock (_lockObj)
+            using (await _asyncLock.LockAsync())
             {
                 if (_topicMessageQueueDict.TryGetValue(topic, out messageQueueList))
                 {
@@ -147,7 +143,7 @@ namespace EQueue.Clients
                 }
                 try
                 {
-                    var topicRouteInfoList = GetTopicRouteInfoList(topic);
+                    var topicRouteInfoList = await GetTopicRouteInfoListAsync(topic);
                     messageQueueList = new List<MessageQueue>();
 
                     foreach (var topicRouteInfo in topicRouteInfoList)
@@ -159,11 +155,15 @@ namespace EQueue.Clients
                         }
                     }
                     SortMessageQueues(messageQueueList);
+                    if (messageQueueList.IsEmpty())
+                    {
+                        _logger.WarnFormat("Topic route queue is empty, topic: {0}", topic);
+                    }
                     _topicMessageQueueDict[topic] = messageQueueList;
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("GetTopicRouteInfoList has exception, topic: {0}", topic), ex);
+                    _logger.Error(string.Format("GetTopicRouteInfoListAsync has exception, topic: {0}", topic), ex);
                 }
                 return messageQueueList;
             }
@@ -184,7 +184,7 @@ namespace EQueue.Clients
                 _consumer.SendHeartbeat();
             }
         }
-        private IList<BrokerInfo> GetClusterBrokerList()
+        private async Task<IList<BrokerInfo>> GetClusterBrokerListAsync()
         {
             var nameServerRemotingClient = GetAvailableNameServerRemotingClient();
             var request = new GetClusterBrokersRequest
@@ -194,7 +194,7 @@ namespace EQueue.Clients
             };
             var data = _binarySerializer.Serialize(request);
             var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetClusterBrokers, data);
-            var remotingResponse = nameServerRemotingClient.InvokeSync(remotingRequest, 5 * 1000);
+            var remotingResponse = await nameServerRemotingClient.InvokeAsync(remotingRequest, 5 * 1000);
             if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
                 throw new Exception(string.Format("Get cluster brokers from name server failed, clusterName: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.ClusterName, nameServerRemotingClient.ServerEndPoint.ToAddress(), remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
@@ -222,11 +222,11 @@ namespace EQueue.Clients
                 brokerService.Stop();
             }
         }
-        private void RefreshClusterBrokers()
+        private async void RefreshClusterBrokers()
         {
-            lock (_lockObj)
+            using (await _asyncLock.LockAsync())
             {
-                var newBrokerInfoList = GetClusterBrokerList();
+                var newBrokerInfoList = await GetClusterBrokerListAsync();
                 var oldBrokerInfoList = _brokerConnectionDict.Select(x => x.Value.BrokerInfo).ToList();
 
                 var newBrokerInfoJson = _jsonSerializer.Serialize(newBrokerInfoList);
@@ -247,8 +247,7 @@ namespace EQueue.Clients
                     }
                     foreach (var brokerConnection in removedBrokerServiceList)
                     {
-                        BrokerConnection removed;
-                        if (_brokerConnectionDict.TryRemove(brokerConnection.BrokerInfo.BrokerName, out removed))
+                        if (_brokerConnectionDict.TryRemove(brokerConnection.BrokerInfo.BrokerName, out BrokerConnection removed))
                         {
                             brokerConnection.Stop();
                             _logger.InfoFormat("Removed broker: " + brokerConnection.BrokerInfo);
@@ -257,15 +256,15 @@ namespace EQueue.Clients
                 }
             }
         }
-        private void RefreshTopicRouteInfo()
+        private async void RefreshTopicRouteInfo()
         {
-            lock (_lockObj)
+            using (await _asyncLock.LockAsync())
             {
                 foreach (var entry in _topicMessageQueueDict)
                 {
                     var topic = entry.Key;
                     var oldMessageQueueList = entry.Value;
-                    var topicRouteInfoList = GetTopicRouteInfoList(topic);
+                    var topicRouteInfoList = await GetTopicRouteInfoListAsync(topic);
                     var newMessageQueueList = new List<MessageQueue>();
 
                     foreach (var topicRouteInfo in topicRouteInfoList)
@@ -289,7 +288,7 @@ namespace EQueue.Clients
                 }
             }
         }
-        private IList<TopicRouteInfo> GetTopicRouteInfoList(string topic)
+        private async Task<IList<TopicRouteInfo>> GetTopicRouteInfoListAsync(string topic)
         {
             var nameServerRemotingClient = GetAvailableNameServerRemotingClient();
             var request = new GetTopicRouteInfoRequest
@@ -301,7 +300,7 @@ namespace EQueue.Clients
             };
             var data = _binarySerializer.Serialize(request);
             var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetTopicRouteInfo, data);
-            var remotingResponse = nameServerRemotingClient.InvokeSync(remotingRequest, 5 * 1000);
+            var remotingResponse = await nameServerRemotingClient.InvokeAsync(remotingRequest, 5 * 1000);
             if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
                 throw new Exception(string.Format("Get topic route info from name server failed, topic: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", topic, nameServerRemotingClient.ServerEndPoint.ToAddress(), remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
