@@ -101,7 +101,7 @@ namespace EQueue.Broker
             _producerSocketRemotingServer.RegisterConnectionEventListener(new ProducerConnectionEventListener(this));
             _consumerSocketRemotingServer.RegisterConnectionEventListener(new ConsumerConnectionEventListener(this));
             RegisterRequestHandlers();
-            _nameServerRemotingClientList = Setting.NameServerList.ToRemotingClientList(Setting.SocketSetting).ToList();
+            _nameServerRemotingClientList = Setting.NameServerList.ToRemotingClientList("EQueueBroker." + Setting.BrokerInfo.BrokerName, Setting.SocketSetting).ToList();
         }
 
         public static BrokerController Create(BrokerSetting setting = null)

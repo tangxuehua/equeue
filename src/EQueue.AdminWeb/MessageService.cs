@@ -552,7 +552,7 @@ namespace EQueue.AdminWeb
                 var brokerClientList = new List<BrokerClient>();
                 foreach (var brokerInfo in brokerInfoList)
                 {
-                    var client = new SocketRemotingClient(brokerInfo.AdminAddress.ToEndPoint(), Settings.SocketSetting).Start();
+                    var client = new SocketRemotingClient(brokerInfo.BrokerName, brokerInfo.AdminAddress.ToEndPoint(), Settings.SocketSetting).Start();
                     var brokerClient = new BrokerClient { BrokerInfo = brokerInfo, RemotingClient = client };
                     brokerClientList.Add(brokerClient);
                 }
@@ -615,7 +615,7 @@ namespace EQueue.AdminWeb
             var remotingClientList = new List<SocketRemotingClient>();
             foreach (var endpoint in endpointList)
             {
-                var remotingClient = new SocketRemotingClient(endpoint, Settings.SocketSetting);
+                var remotingClient = new SocketRemotingClient("EQueueWebAdminSocketRemotingClient", endpoint, Settings.SocketSetting);
                 remotingClientList.Add(remotingClient);
             }
             return remotingClientList;

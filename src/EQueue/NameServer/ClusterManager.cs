@@ -614,7 +614,7 @@ namespace EQueue.NameServer
         private async Task<IEnumerable<int>> CreateTopicOnBroker(string topic, Broker broker)
         {
             var brokerAdminEndpoint = broker.BrokerInfo.AdminAddress.ToEndPoint();
-            var adminRemotingClient = new SocketRemotingClient(brokerAdminEndpoint, _nameServerController.Setting.SocketSetting).Start();
+            var adminRemotingClient = new SocketRemotingClient(_nameServerController.Setting.Name, brokerAdminEndpoint, _nameServerController.Setting.SocketSetting).Start();
             var requestData = _binarySerializer.Serialize(new CreateTopicRequest(topic));
             var remotingRequest = new RemotingRequest((int)BrokerRequestCode.CreateTopic, requestData);
             var remotingResponse = await adminRemotingClient.InvokeAsync(remotingRequest, 30000);

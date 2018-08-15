@@ -35,8 +35,8 @@ namespace EQueue.Clients.Producers
             get { return _responseHandler; }
         }
 
-        public Producer(string name = null) : this(null, name) { }
-        public Producer(ProducerSetting setting = null, string name = null)
+        public Producer(string name = "DefaultProducer") : this(null, name) { }
+        public Producer(ProducerSetting setting = null, string name = "DefaultProducer")
         {
             Name = name;
             Setting = setting ?? new ProducerSetting();

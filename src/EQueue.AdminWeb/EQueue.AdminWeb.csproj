@@ -54,8 +54,8 @@
     <Reference Include="Autofac.Integration.Mvc, Version=4.0.0.0, Culture=neutral, PublicKeyToken=17863af14b0044da, processorArchitecture=MSIL">
       <HintPath>..\packages\Autofac.Mvc5.4.0.2\lib\net45\Autofac.Integration.Mvc.dll</HintPath>
     </Reference>
-    <Reference Include="ECommon, Version=2.5.8.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\ECommon.2.5.8\lib\netstandard2.0\ECommon.dll</HintPath>
+    <Reference Include="ECommon, Version=2.6.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ECommon.2.6.0\lib\netstandard2.0\ECommon.dll</HintPath>
     </Reference>
     <Reference Include="ECommon.Autofac, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\ECommon.Autofac.2.5.0\lib\netstandard2.0\ECommon.Autofac.dll</HintPath>

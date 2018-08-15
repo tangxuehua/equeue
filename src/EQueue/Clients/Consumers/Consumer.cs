@@ -45,16 +45,11 @@ namespace EQueue.Clients.Consumers
 
         #region Constructors
 
-        public Consumer(string groupName, string consumerName = null) : this(groupName, new ConsumerSetting(), consumerName) { }
-        public Consumer(string groupName, ConsumerSetting setting, string consumerName = null)
+        public Consumer(string groupName, string consumerName = "DefaultConsumer") : this(groupName, new ConsumerSetting(), consumerName) { }
+        public Consumer(string groupName, ConsumerSetting setting, string consumerName = "DefaultConsumer")
         {
-            if (groupName == null)
-            {
-                throw new ArgumentNullException("groupName");
-            }
-
             Name = consumerName;
-            GroupName = groupName;
+            GroupName = groupName ?? throw new ArgumentNullException("groupName");
             Setting = setting ?? new ConsumerSetting();
 
             if (Setting.NameServerList == null || Setting.NameServerList.Count() == 0)

@@ -5,6 +5,9 @@ namespace EQueue.NameServer
 {
     public class NameServerSetting
     {
+        /// <summary>名称
+        /// </summary>
+        public string Name { get; set; }
         /// <summary>服务端口号，默认为9493
         /// </summary>
         public IPEndPoint BindingAddress { get; set; }
@@ -21,8 +24,9 @@ namespace EQueue.NameServer
         /// </summary>
         public IPEndPoint LocalIPEndPoint { get; set; }
 
-        public NameServerSetting(int port = 9493)
+        public NameServerSetting(string name = "DefaultNameServer", int port = 9493)
         {
+            Name = name;
             BindingAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), port);
             BrokerInactiveMaxMilliseconds = 30 * 1000;
             AutoCreateTopic = true;

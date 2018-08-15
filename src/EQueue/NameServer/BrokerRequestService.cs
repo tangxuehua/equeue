@@ -23,7 +23,7 @@ namespace EQueue.NameServer
                 OnlyFindMaster = true
             };
             var endpointList = _nameServerController.ClusterManager.GetClusterBrokers(request).Select(x => x.AdminAddress.ToEndPoint());
-            var remotingClientList = endpointList.ToRemotingClientList(_nameServerController.Setting.SocketSetting);
+            var remotingClientList = endpointList.ToRemotingClientList(_nameServerController.Setting.Name, _nameServerController.Setting.SocketSetting);
 
             foreach (var remotingClient in remotingClientList)
             {

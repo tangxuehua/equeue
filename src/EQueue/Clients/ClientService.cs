@@ -70,7 +70,7 @@ namespace EQueue.Clients
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
-            _nameServerRemotingClientList = _setting.NameServerList.ToRemotingClientList(_setting.SocketSetting).ToList();
+            _nameServerRemotingClientList = _setting.NameServerList.ToRemotingClientList(_setting.ClientName, _setting.SocketSetting).ToList();
         }
 
         #region Public Methods
@@ -352,8 +352,8 @@ namespace EQueue.Clients
                 throw new Exception("ClientService must set producer or consumer.");
             }
             var brokerAdminEndpoint = brokerInfo.AdminAddress.ToEndPoint();
-            var remotingClient = new SocketRemotingClient(brokerEndpoint, _setting.SocketSetting);
-            var adminRemotingClient = new SocketRemotingClient(brokerAdminEndpoint, _setting.SocketSetting);
+            var remotingClient = new SocketRemotingClient(_setting.ClientName, brokerEndpoint, _setting.SocketSetting);
+            var adminRemotingClient = new SocketRemotingClient(_setting.ClientName, brokerAdminEndpoint, _setting.SocketSetting);
             var brokerConnection = new BrokerConnection(brokerInfo, remotingClient, adminRemotingClient);
 
             if (_producer != null && _producer.ResponseHandler != null)
