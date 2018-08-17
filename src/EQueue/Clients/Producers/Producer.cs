@@ -23,17 +23,13 @@ namespace EQueue.Clients.Producers
         private readonly ClientService _clientService;
         private readonly IQueueSelector _queueSelector;
         private readonly ILogger _logger;
-        private IResponseHandler _responseHandler;
         private bool _started;
 
         #endregion
 
         public string Name { get; private set; }
         public ProducerSetting Setting { get; private set; }
-        public IResponseHandler ResponseHandler
-        {
-            get { return _responseHandler; }
-        }
+        public IResponseHandler ResponseHandler { get; private set; }
 
         public Producer(string name = "DefaultProducer") : this(null, name) { }
         public Producer(ProducerSetting setting = null, string name = "DefaultProducer")
@@ -66,7 +62,7 @@ namespace EQueue.Clients.Producers
 
         public Producer RegisterResponseHandler(IResponseHandler responseHandler)
         {
-            _responseHandler = responseHandler;
+            ResponseHandler = responseHandler;
             return this;
         }
         public Producer Start()
@@ -320,6 +316,10 @@ namespace EQueue.Clients.Producers
             {
                 return new BatchSendResult(SendStatus.Failed, null, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
             }
+        }
+        public Task<IList<MessageQueue>> GetTopicMessageQueuesAsync(string topic)
+        {
+            return _clientService.GetTopicMessageQueuesAsync(topic);
         }
 
         #endregion
