@@ -317,9 +317,9 @@ namespace EQueue.Clients.Producers
                 return new BatchSendResult(SendStatus.Failed, null, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
             }
         }
-        public Task<IList<MessageQueue>> GetTopicMessageQueuesAsync(string topic)
+        public IList<MessageQueue> GetAvailableMessageQueues(string topic)
         {
-            return _clientService.GetTopicMessageQueuesAsync(topic);
+            return _clientService.GetAvailableMessageQueues(topic);
         }
 
         #endregion

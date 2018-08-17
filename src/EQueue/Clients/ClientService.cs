@@ -128,6 +128,14 @@ namespace EQueue.Clients
             }
             return availableList.First();
         }
+        public IList<MessageQueue> GetAvailableMessageQueues(string topic)
+        {
+            if (_topicMessageQueueDict.TryGetValue(topic, out IList<MessageQueue> messageQueueList))
+            {
+                return messageQueueList;
+            }
+            return null;
+        }
         public async Task<IList<MessageQueue>> GetTopicMessageQueuesAsync(string topic)
         {
             if (_topicMessageQueueDict.TryGetValue(topic, out IList<MessageQueue> messageQueueList))
