@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
@@ -25,6 +26,10 @@ namespace EQueue.NameServer
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
             _socketRemotingServer = new SocketRemotingServer("EQueue.NameServer.RemotingServer", Setting.BindingAddress, Setting.SocketSetting);
             RegisterRequestHandlers();
+            TaskScheduler.UnobservedTaskException += (sender, ex) =>
+            {
+                _logger.ErrorFormat("UnobservedTaskException occurred.", ex);
+            };
         }
 
         public NameServerController Start()

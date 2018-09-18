@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Logging;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Protocols;
 using EQueue.Protocols.Brokers;
-using System.Text;
 
 namespace EQueue.Clients.Consumers
 {
@@ -21,9 +22,7 @@ namespace EQueue.Clients.Consumers
         private readonly CommitConsumeOffsetService _commitConsumeOffsetService;
         private readonly RebalanceService _rebalanceService;
         private readonly IJsonSerializer _jsonSerializer;
-        private readonly IDictionary<string, HashSet<string>> _subscriptionTopics;
         private readonly ILogger _logger;
-        private bool _stopped;
 
         #endregion
 
@@ -32,14 +31,8 @@ namespace EQueue.Clients.Consumers
         public ConsumerSetting Setting { get; private set; }
         public string GroupName { get; private set; }
         public string Name { get; private set; }
-        public IDictionary<string, HashSet<string>> SubscriptionTopics
-        {
-            get { return _subscriptionTopics; }
-        }
-        public bool Stopped
-        {
-            get { return _stopped; }
-        }
+        public IDictionary<string, HashSet<string>> SubscriptionTopics { get; }
+        public bool Stopped { get; private set; }
 
         #endregion
 
@@ -57,7 +50,7 @@ namespace EQueue.Clients.Consumers
                 throw new Exception("Name server address is not specified.");
             }
 
-            _subscriptionTopics = new Dictionary<string, HashSet<string>>();
+            SubscriptionTopics = new Dictionary<string, HashSet<string>>();
             _jsonSerializer = ObjectContainer.Resolve<IJsonSerializer>();
             _logger = ObjectContainer.Resolve<ILoggerFactory>().Create(GetType().FullName);
 
@@ -75,6 +68,11 @@ namespace EQueue.Clients.Consumers
             _pullMessageService = new PullMessageService(this, _clientService);
             _commitConsumeOffsetService = new CommitConsumeOffsetService(this, _clientService);
             _rebalanceService = new RebalanceService(this, _clientService, _pullMessageService, _commitConsumeOffsetService);
+
+            TaskScheduler.UnobservedTaskException += (sender, ex) =>
+            {
+                _logger.ErrorFormat("UnobservedTaskException occurred.", ex);
+            };
         }
 
         #endregion
@@ -97,7 +95,7 @@ namespace EQueue.Clients.Consumers
         }
         public Consumer Stop()
         {
-            _stopped = true;
+            Stopped = true;
             _commitConsumeOffsetService.Stop();
             _rebalanceService.Stop();
             _pullMessageService.Stop();
@@ -107,13 +105,13 @@ namespace EQueue.Clients.Consumers
         }
         public Consumer Subscribe(string topic, params string[] tags)
         {
-            if (!_subscriptionTopics.ContainsKey(topic))
+            if (!SubscriptionTopics.ContainsKey(topic))
             {
-                _subscriptionTopics.Add(topic, tags == null ? new HashSet<string>() : new HashSet<string>(tags));
+                SubscriptionTopics.Add(topic, tags == null ? new HashSet<string>() : new HashSet<string>(tags));
             }
             else
             {
-                var tagSet = _subscriptionTopics[topic];
+                var tagSet = SubscriptionTopics[topic];
                 if (tags != null)
                 {
                     foreach (var tag in tags)
@@ -158,7 +156,7 @@ namespace EQueue.Clients.Consumers
                     {
                         messageQueues.AddRange(queueGroup);
                     }
-                    var heartbeatData = new ConsumerHeartbeatData(clientId, GroupName, _subscriptionTopics.Keys, messageQueues);
+                    var heartbeatData = new ConsumerHeartbeatData(clientId, GroupName, SubscriptionTopics.Keys, messageQueues);
                     var json = _jsonSerializer.Serialize(heartbeatData);
                     var data = Encoding.UTF8.GetBytes(json);
 

@@ -49,7 +49,7 @@ namespace EQueue.Clients.Consumers
 
         public void Start()
         {
-            _scheduleService.StartTask("Rebalance", Rebalance, 1000, _consumer.Setting.RebalanceInterval);
+            _scheduleService.StartTask("RebalanceAsync", async () => await RebalanceAsync(), 1000, _consumer.Setting.RebalanceInterval);
             if (_consumer.Setting.AutoPull)
             {
                 _scheduleService.StartTask("CommitOffsets", CommitOffsets, 1000, _consumer.Setting.CommitConsumerOffsetInterval);
@@ -81,22 +81,22 @@ namespace EQueue.Clients.Consumers
             }).ToList();
         }
 
-        private void Rebalance()
+        private async Task RebalanceAsync()
         {
             foreach (var pair in _consumer.SubscriptionTopics)
             {
                 var topic = pair.Key;
                 try
                 {
-                    RebalanceClustering(pair);
+                    await RebalanceClusteringAsync(pair);
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("RebalanceClustering has exception, consumerGroup: {0}, consumerId: {1}, topic: {2}", _consumer.GroupName, _clientId, topic), ex);
+                    _logger.Error(string.Format("RebalanceClusteringAsync has exception, consumerGroup: {0}, consumerId: {1}, topic: {2}", _consumer.GroupName, _clientId, topic), ex);
                 }
             }
         }
-        private async void RebalanceClustering(KeyValuePair<string, HashSet<string>> pair)
+        private async Task RebalanceClusteringAsync(KeyValuePair<string, HashSet<string>> pair)
         {
             var topic = pair.Key;
             try

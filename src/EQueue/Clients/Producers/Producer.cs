@@ -56,6 +56,11 @@ namespace EQueue.Clients.Producers
                 RefreshBrokerAndTopicRouteInfoInterval = Setting.RefreshBrokerAndTopicRouteInfoInterval
             };
             _clientService = new ClientService(clientSetting, this, null);
+
+            TaskScheduler.UnobservedTaskException += (sender, ex) =>
+            {
+                _logger.ErrorFormat("UnobservedTaskException occurred.", ex);
+            };
         }
 
         #region Public Methods

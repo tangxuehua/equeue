@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using ECommon.Components;
 using ECommon.Extensions;
 using ECommon.Logging;
@@ -102,6 +103,10 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.RegisterConnectionEventListener(new ConsumerConnectionEventListener(this));
             RegisterRequestHandlers();
             _nameServerRemotingClientList = Setting.NameServerList.ToRemotingClientList("EQueueBroker." + Setting.BrokerInfo.BrokerName, Setting.SocketSetting).ToList();
+            TaskScheduler.UnobservedTaskException += (sender, ex) =>
+            {
+                _logger.ErrorFormat("UnobservedTaskException occurred.", ex);
+            };
         }
 
         public static BrokerController Create(BrokerSetting setting = null)
@@ -190,8 +195,8 @@ namespace EQueue.Broker
 
             RemoveNotExistQueueConsumeOffsets();
             StartAllNameServerClients();
-            RegisterBrokerToAllNameServers(true);
-            _scheduleService.StartTask("RegisterBrokerToAllNameServers", () => RegisterBrokerToAllNameServers(), 1000, Setting.RegisterBrokerToNameServerInterval);
+            RegisterBrokerToAllNameServers().Wait();
+            _scheduleService.StartTask("RegisterBrokerToAllNameServers", async () => await RegisterBrokerToAllNameServers(), 1000, Setting.RegisterBrokerToNameServerInterval);
 
             Interlocked.Exchange(ref _isShuttingdown, 0);
             _logger.InfoFormat("Broker started, timeSpent:{0}ms, producer:[{1}], consumer:[{2}], admin:[{3}]", watch.ElapsedMilliseconds, Setting.BrokerInfo.ProducerAddress, Setting.BrokerInfo.ConsumerAddress, Setting.BrokerInfo.AdminAddress);
@@ -204,7 +209,7 @@ namespace EQueue.Broker
                 var watch = Stopwatch.StartNew();
                 _logger.InfoFormat("Broker starting to shutdown, producer:[{0}], consumer:[{1}], admin:[{2}]", Setting.BrokerInfo.ProducerAddress, Setting.BrokerInfo.ConsumerAddress, Setting.BrokerInfo.AdminAddress);
                 _scheduleService.StopTask("RegisterBrokerToAllNameServers");
-                UnregisterBrokerToAllNameServers();
+                UnregisterBrokerToAllNameServers().Wait();
                 StopAllNameServerClients();
                 _producerSocketRemotingServer.Shutdown();
                 _consumerSocketRemotingServer.Shutdown();
@@ -303,7 +308,7 @@ namespace EQueue.Broker
                 nameServerRemotingClient.Shutdown();
             }
         }
-        private void RegisterBrokerToAllNameServers(bool isFirstTime = false)
+        private async Task RegisterBrokerToAllNameServers()
         {
             var totalSendThroughput = _tpsStatisticService.GetTotalSendThroughput();
             var totalConsumeThroughput = _tpsStatisticService.GetTotalConsumeThroughput();
@@ -324,10 +329,10 @@ namespace EQueue.Broker
             };
             foreach (var remotingClient in _nameServerRemotingClientList)
             {
-                RegisterBrokerToNameServer(request, remotingClient, isFirstTime);
+                await RegisterBrokerToNameServer(request, remotingClient);
             }
         }
-        private void UnregisterBrokerToAllNameServers()
+        private async Task UnregisterBrokerToAllNameServers()
         {
             var request = new BrokerUnRegistrationRequest
             {
@@ -335,10 +340,10 @@ namespace EQueue.Broker
             };
             foreach (var remotingClient in _nameServerRemotingClientList)
             {
-                UnregisterBrokerToNameServer(request, remotingClient);
+                await UnregisterBrokerToNameServer(request, remotingClient);
             }
         }
-        private async void RegisterBrokerToNameServer(BrokerRegistrationRequest request, SocketRemotingClient remotingClient, bool isFirstTime = false)
+        private async Task RegisterBrokerToNameServer(BrokerRegistrationRequest request, SocketRemotingClient remotingClient)
         {
             var nameServerAddress = remotingClient.ServerEndPoint.ToAddress();
             try
@@ -350,7 +355,7 @@ namespace EQueue.Broker
                 {
                     _logger.ErrorFormat("Register broker to name server failed, brokerInfo: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.BrokerInfo, nameServerAddress, remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
                 }
-                else if (isFirstTime)
+                else
                 {
                     _logger.InfoFormat("Register broker to name server success, brokerInfo: {0}, nameServerAddress: {1}", request.BrokerInfo, nameServerAddress);
                 }
@@ -360,7 +365,7 @@ namespace EQueue.Broker
                 _logger.Error(string.Format("Register broker to name server has exception, brokerInfo: {0}, nameServerAddress: {1}", request.BrokerInfo, nameServerAddress), ex);
             }
         }
-        private async void UnregisterBrokerToNameServer(BrokerUnRegistrationRequest request, SocketRemotingClient remotingClient)
+        private async Task UnregisterBrokerToNameServer(BrokerUnRegistrationRequest request, SocketRemotingClient remotingClient)
         {
             if (!remotingClient.IsConnected)
             {

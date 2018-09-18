@@ -49,7 +49,7 @@ namespace EQueue.AdminWeb
 
             if (Settings.EnableMonitorMessageAccumulate)
             {
-                _scheduleService.StartTask("ScanAccumulateMessages", ScanAccumulateMessages, 1000, Settings.ScanMessageAccumulateIntervalSeconds * 1000);
+                _scheduleService.StartTask("ScanAccumulateMessages", async () => await ScanAccumulateMessages(), 1000, Settings.ScanMessageAccumulateIntervalSeconds * 1000);
             }
         }
         public async Task<IEnumerable<string>> GetAllClusters()
@@ -620,7 +620,7 @@ namespace EQueue.AdminWeb
             }
             return remotingClientList;
         }
-        private async void ScanAccumulateMessages()
+        private async Task ScanAccumulateMessages()
         {
             var topicAccumulateInfoList = await GetTopicAccumulateInfoList();
             if (topicAccumulateInfoList.Count() == 0)

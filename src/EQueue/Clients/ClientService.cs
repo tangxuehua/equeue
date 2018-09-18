@@ -87,12 +87,13 @@ namespace EQueue.Clients
         public virtual ClientService Start()
         {
             StartAllNameServerClients();
-            RefreshClusterBrokers();
+            RefreshClusterBrokers().Wait();
+            RefreshTopicRouteInfo().Wait();
             _scheduleService.StartTask("SendHeartbeatToAllBrokers", SendHeartbeatToAllBrokers, 1000, _setting.SendHeartbeatInterval);
-            _scheduleService.StartTask("RefreshBrokerAndTopicRouteInfo", () =>
+            _scheduleService.StartTask("RefreshBrokerAndTopicRouteInfo", async () =>
             {
-                RefreshClusterBrokers();
-                RefreshTopicRouteInfo();
+                await RefreshClusterBrokers();
+                await RefreshTopicRouteInfo();
             }, 1000, _setting.RefreshBrokerAndTopicRouteInfoInterval);
             _logger.InfoFormat("{0} startted.", GetType().Name);
             return this;
@@ -230,7 +231,7 @@ namespace EQueue.Clients
                 brokerService.Stop();
             }
         }
-        private async void RefreshClusterBrokers()
+        private async Task RefreshClusterBrokers()
         {
             using (await _asyncLock.LockAsync())
             {
@@ -264,7 +265,7 @@ namespace EQueue.Clients
                 }
             }
         }
-        private async void RefreshTopicRouteInfo()
+        private async Task RefreshTopicRouteInfo()
         {
             using (await _asyncLock.LockAsync())
             {
