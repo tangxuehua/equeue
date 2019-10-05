@@ -194,12 +194,12 @@ namespace QuickStart.ProducerClient
             }
             else if (_mode == "Callback")
             {
-                sendAction = index =>
+                sendAction = async index =>
                 {
                     if (batchSize == 1)
                     {
                         var message = new Message(topic, 100, payload);
-                        producer.SendWithCallback(message, index.ToString());
+                        await producer.SendWithCallback(message, index.ToString());
                     }
                     else
                     {
@@ -208,7 +208,7 @@ namespace QuickStart.ProducerClient
                         {
                             messages.Add(new Message(topic, 100, payload));
                         }
-                        producer.BatchSendWithCallback(messages, index.ToString());
+                        await producer.BatchSendWithCallback(messages, index.ToString());
                     }
                 };
             }     

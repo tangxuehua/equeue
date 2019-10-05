@@ -29,7 +29,7 @@
                         @item.Sequence
                     </td>
                     <td class="vertical-center">
-                        @Html.ActionLink(@item.MessageId, "Message", "Home", new { clusterName = ViewBag.ClusterName, searchMessageId = @item.MessageId }, null)
+                        @Html.ActionLink(@item.MessageId, "GetMessageById", "Home", new { clusterName = ViewBag.ClusterName, searchMessageId = @item.MessageId }, null)
                     </td>
                     <td class="vertical-center">
                         @item.CreateTime.ToString("yyyy-MM-dd HH:mm:ss.fff")
