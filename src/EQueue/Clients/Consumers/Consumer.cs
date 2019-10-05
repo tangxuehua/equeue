@@ -17,7 +17,6 @@ namespace EQueue.Clients.Consumers
     {
         #region Private Members
 
-        private readonly ClientService _clientService;
         private readonly PullMessageService _pullMessageService;
         private readonly CommitConsumeOffsetService _commitConsumeOffsetService;
         private readonly RebalanceService _rebalanceService;
@@ -32,6 +31,7 @@ namespace EQueue.Clients.Consumers
         public string GroupName { get; private set; }
         public string Name { get; private set; }
         public IDictionary<string, HashSet<string>> SubscriptionTopics { get; }
+        public ClientService ClientService { get; }
         public bool Stopped { get; private set; }
 
         #endregion
@@ -64,10 +64,10 @@ namespace EQueue.Clients.Consumers
                 SendHeartbeatInterval = Setting.HeartbeatBrokerInterval,
                 RefreshBrokerAndTopicRouteInfoInterval = Setting.RefreshBrokerAndTopicRouteInfoInterval
             };
-            _clientService = new ClientService(clientSetting, null, this);
-            _pullMessageService = new PullMessageService(this, _clientService);
-            _commitConsumeOffsetService = new CommitConsumeOffsetService(this, _clientService);
-            _rebalanceService = new RebalanceService(this, _clientService, _pullMessageService, _commitConsumeOffsetService);
+            ClientService = new ClientService(clientSetting, null, this);
+            _pullMessageService = new PullMessageService(this, ClientService);
+            _commitConsumeOffsetService = new CommitConsumeOffsetService(this, ClientService);
+            _rebalanceService = new RebalanceService(this, ClientService, _pullMessageService, _commitConsumeOffsetService);
 
             TaskScheduler.UnobservedTaskException += (sender, ex) =>
             {
@@ -86,7 +86,7 @@ namespace EQueue.Clients.Consumers
         }
         public Consumer Start()
         {
-            _clientService.Start();
+            ClientService.Start();
             _pullMessageService.Start();
             _rebalanceService.Start();
             _commitConsumeOffsetService.Start();
@@ -99,7 +99,7 @@ namespace EQueue.Clients.Consumers
             _commitConsumeOffsetService.Stop();
             _rebalanceService.Stop();
             _pullMessageService.Stop();
-            _clientService.Stop();
+            ClientService.Stop();
             _logger.InfoFormat("{0} stopped.", GetType().Name);
             return this;
         }
@@ -120,7 +120,7 @@ namespace EQueue.Clients.Consumers
                     }
                 }
             }
-            _clientService.RegisterSubscriptionTopic(topic);
+            ClientService.RegisterSubscriptionTopic(topic);
             return this;
         }
         public IEnumerable<MessageQueueEx> GetCurrentQueues()
@@ -140,13 +140,13 @@ namespace EQueue.Clients.Consumers
 
         internal void SendHeartbeat()
         {
-            var brokerConnections = _clientService.GetAllBrokerConnections();
+            var brokerConnections = ClientService.GetAllBrokerConnections();
             var queueGroups = GetCurrentQueues().GroupBy(x => x.BrokerName);
 
             foreach (var brokerConnection in brokerConnections)
             {
                 var remotingClient = brokerConnection.RemotingClient;
-                var clientId = _clientService.GetClientId();
+                var clientId = ClientService.GetClientId();
 
                 try
                 {

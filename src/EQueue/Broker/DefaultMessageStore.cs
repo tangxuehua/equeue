@@ -71,6 +71,7 @@ namespace EQueue.Broker
         }
         public void Start()
         {
+            _chunkManager.Start();
             _chunkWriter.Open();
             _scheduleService.StartTask("DeleteMessages", DeleteMessages, 5 * 1000, BrokerController.Instance.Setting.DeleteMessagesInterval);
         }
@@ -132,7 +133,7 @@ namespace EQueue.Broker
             if (record != null)
             {
                 return record.RecordBuffer;
-            }
+            }                               
             return null;
         }
         public QueueMessage GetMessage(long position)

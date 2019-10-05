@@ -152,30 +152,36 @@ namespace EQueue.Clients
                 }
                 try
                 {
-                    var topicRouteInfoList = await GetTopicRouteInfoListAsync(topic);
-                    messageQueueList = new List<MessageQueue>();
-
-                    foreach (var topicRouteInfo in topicRouteInfoList)
-                    {
-                        foreach (var queueId in topicRouteInfo.QueueInfo)
-                        {
-                            var messageQueue = new MessageQueue(topicRouteInfo.BrokerInfo.BrokerName, topic, queueId);
-                            messageQueueList.Add(messageQueue);
-                        }
-                    }
-                    SortMessageQueues(messageQueueList);
-                    if (messageQueueList.IsEmpty())
-                    {
-                        _logger.WarnFormat("Topic route queue is empty, topic: {0}", topic);
-                    }
-                    _topicMessageQueueDict[topic] = messageQueueList;
+                    messageQueueList = await LoadTopicMessageQueuesFromNameServerAsync(topic);
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(string.Format("GetTopicRouteInfoListAsync has exception, topic: {0}", topic), ex);
+                    _logger.Error(string.Format("LoadTopicMessageQueuesFromNameServerAsync has exception, topic: {0}", topic), ex);
                 }
                 return messageQueueList;
             }
+        }
+        public async Task<IList<MessageQueue>> LoadTopicMessageQueuesFromNameServerAsync(string topic)
+        {
+            var topicRouteInfoList = await GetTopicRouteInfoListAsync(topic);
+            var messageQueueList = new List<MessageQueue>();
+
+            foreach (var topicRouteInfo in topicRouteInfoList)
+            {
+                foreach (var queueId in topicRouteInfo.QueueInfo)
+                {
+                    var messageQueue = new MessageQueue(topicRouteInfo.BrokerInfo.BrokerName, topic, queueId);
+                    messageQueueList.Add(messageQueue);
+                }
+            }
+            SortMessageQueues(messageQueueList);
+            if (messageQueueList.IsEmpty())
+            {
+                _logger.WarnFormat("Topic route queue is empty, topic: {0}", topic);
+            }
+            _topicMessageQueueDict[topic] = messageQueueList;
+
+            return messageQueueList;
         }
 
         #endregion

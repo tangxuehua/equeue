@@ -20,7 +20,6 @@ namespace EQueue.Clients.Producers
         #region Private Variables
 
         private readonly object _lockObj = new object();
-        private readonly ClientService _clientService;
         private readonly IQueueSelector _queueSelector;
         private readonly ILogger _logger;
         private bool _started;
@@ -30,6 +29,7 @@ namespace EQueue.Clients.Producers
         public string Name { get; private set; }
         public ProducerSetting Setting { get; private set; }
         public IResponseHandler ResponseHandler { get; private set; }
+        public ClientService ClientService { get; }
 
         public Producer(string name = "DefaultProducer") : this(null, name) { }
         public Producer(ProducerSetting setting = null, string name = "DefaultProducer")
@@ -55,7 +55,7 @@ namespace EQueue.Clients.Producers
                 SendHeartbeatInterval = Setting.HeartbeatBrokerInterval,
                 RefreshBrokerAndTopicRouteInfoInterval = Setting.RefreshBrokerAndTopicRouteInfoInterval
             };
-            _clientService = new ClientService(clientSetting, this, null);
+            ClientService = new ClientService(clientSetting, this, null);
 
             TaskScheduler.UnobservedTaskException += (sender, ex) =>
             {
@@ -72,14 +72,14 @@ namespace EQueue.Clients.Producers
         }
         public Producer Start()
         {
-            _clientService.Start();
+            ClientService.Start();
             _started = true;
             _logger.InfoFormat("Producer startted.");
             return this;
         }
         public Producer Shutdown()
         {
-            _clientService.Stop();
+            ClientService.Stop();
             _logger.Info("Producer shutdown.");
             return this;
         }
@@ -324,19 +324,19 @@ namespace EQueue.Clients.Producers
         }
         public IList<MessageQueue> GetAvailableMessageQueues(string topic)
         {
-            return _clientService.GetAvailableMessageQueues(topic);
+            return ClientService.GetAvailableMessageQueues(topic);
         }
 
         #endregion
 
         internal void SendHeartbeat()
         {
-            var brokerConnections = _clientService.GetAllBrokerConnections();
+            var brokerConnections = ClientService.GetAllBrokerConnections();
 
             foreach (var brokerConnection in brokerConnections)
             {
                 var remotingClient = brokerConnection.RemotingClient;
-                var clientId = _clientService.GetClientId();
+                var clientId = ClientService.GetClientId();
 
                 try
                 {
@@ -365,7 +365,7 @@ namespace EQueue.Clients.Producers
             }
             else
             {
-                var brokerConnection = _clientService.GetBrokerConnection(messageQueue.BrokerName);
+                var brokerConnection = ClientService.GetBrokerConnection(messageQueue.BrokerName);
                 if (brokerConnection != null && brokerConnection.RemotingClient.IsConnected)
                 {
                     return new MessageQueueInfo
@@ -380,7 +380,7 @@ namespace EQueue.Clients.Producers
         }
         private async Task<MessageQueue> GetAvailableMessageQueueAsync(Message message, string routingKey)
         {
-            var messageQueueList = await _clientService.GetTopicMessageQueuesAsync(message.Topic);
+            var messageQueueList = await ClientService.GetTopicMessageQueuesAsync(message.Topic);
             if (messageQueueList == null || messageQueueList.IsEmpty())
             {
                 return null;

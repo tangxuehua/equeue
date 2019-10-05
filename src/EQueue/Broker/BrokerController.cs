@@ -44,7 +44,6 @@ namespace EQueue.Broker
         private readonly SocketRemotingServer _producerSocketRemotingServer;
         private readonly SocketRemotingServer _consumerSocketRemotingServer;
         private readonly SocketRemotingServer _adminSocketRemotingServer;
-        private readonly IChunkStatisticService _chunkReadStatisticService;
         private readonly ITpsStatisticService _tpsStatisticService;
         private readonly IList<SocketRemotingClient> _nameServerRemotingClientList;
         private string[] _latestMessageIds;
@@ -91,7 +90,6 @@ namespace EQueue.Broker
             _scheduleService = ObjectContainer.Resolve<IScheduleService>();
             _binarySerializer = ObjectContainer.Resolve<IBinarySerializer>();
             _suspendedPullRequestManager = ObjectContainer.Resolve<SuspendedPullRequestManager>();
-            _chunkReadStatisticService = ObjectContainer.Resolve<IChunkStatisticService>();
             _tpsStatisticService = ObjectContainer.Resolve<ITpsStatisticService>();
 
             _producerSocketRemotingServer = new SocketRemotingServer("EQueue.Broker.ProducerRemotingServer", Setting.BrokerInfo.ProducerAddress.ToEndPoint(), Setting.SocketSetting);
@@ -190,7 +188,6 @@ namespace EQueue.Broker
             _consumerSocketRemotingServer.Start();
             _producerSocketRemotingServer.Start();
             _adminSocketRemotingServer.Start();
-            _chunkReadStatisticService.Start();
             _tpsStatisticService.Start();
 
             RemoveNotExistQueueConsumeOffsets();
@@ -220,7 +217,6 @@ namespace EQueue.Broker
                 _messageStore.Shutdown();
                 _consumeOffsetStore.Shutdown();
                 _queueStore.Shutdown();
-                _chunkReadStatisticService.Shutdown();
                 _tpsStatisticService.Shutdown();
                 _logger.InfoFormat("Broker shutdown success, timeSpent:{0}ms", watch.ElapsedMilliseconds);
             }
