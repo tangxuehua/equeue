@@ -20,7 +20,7 @@ namespace EQueue.AdminWeb
                 .Create()
                 .UseAutofac()
                 .RegisterCommonComponents()
-                .UseLog4Net()
+                .UseSerilog()
                 .UseJsonNet()
                 .RegisterControllers()
                 .RegisterServices()
