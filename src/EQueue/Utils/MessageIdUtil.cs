@@ -38,8 +38,8 @@ namespace EQueue.Utils
             Buffer.BlockCopy(messageIdBytes, 4, portBytes, 0, 4);
             Buffer.BlockCopy(messageIdBytes, 8, messagePositionBytes, 0, 8);
 
-            var ip = BitConverter.ToInt32(ipBytes, 0);
-            var port = BitConverter.ToInt32(portBytes, 0);
+            var ip = BitConverter.ToUInt32(ipBytes, 0);
+            var port = BitConverter.ToUInt32(portBytes, 0);
             var messagePosition = BitConverter.ToInt64(messagePositionBytes, 0);
 
             return new MessageIdInfo
@@ -53,7 +53,7 @@ namespace EQueue.Utils
     public struct MessageIdInfo
     {
         public IPAddress IP;
-        public int Port;
+        public uint Port;
         public long MessagePosition;
     }
 }
