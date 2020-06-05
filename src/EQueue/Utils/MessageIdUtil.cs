@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
-using System.Net;
-using ECommon.Extensions;
+using System.Text;
 using ECommon.Utilities;
 using EQueue.Broker;
 
@@ -9,51 +7,46 @@ namespace EQueue.Utils
 {
     public class MessageIdUtil
     {
-        private static byte[] _ipBytes;
-        private static byte[] _portBytes;
+        private static byte[] _brokerNameBytes;
+        private static byte[] _brokerNameLengthBytes;
 
         public static string CreateMessageId(long messagePosition)
         {
-            if (_ipBytes == null)
+            if (_brokerNameBytes == null)
             {
-                _ipBytes = BrokerController.Instance.Setting.BrokerInfo.ProducerAddress.ToEndPoint().Address.GetAddressBytes();
-            }
-            if (_portBytes == null)
-            {
-                _portBytes = BitConverter.GetBytes(BrokerController.Instance.Setting.BrokerInfo.ProducerAddress.ToEndPoint().Port);
+                _brokerNameBytes = Encoding.UTF8.GetBytes(BrokerController.Instance.Setting.BrokerInfo.BrokerName);
+                _brokerNameLengthBytes = BitConverter.GetBytes(_brokerNameBytes.Length);
             }
             var positionBytes = BitConverter.GetBytes(messagePosition);
-            var messageIdBytes = ByteUtil.Combine(_ipBytes, _portBytes, positionBytes);
+            var messageIdBytes = ByteUtil.Combine(_brokerNameLengthBytes, _brokerNameBytes, positionBytes);
 
             return ObjectId.ToHexString(messageIdBytes);
         }
         public static MessageIdInfo ParseMessageId(string messageId)
         {
             var messageIdBytes = ObjectId.ParseHexString(messageId);
-            var ipBytes = new byte[4];
-            var portBytes = new byte[4];
+            var brokerNameLengthBytes = new byte[4];
             var messagePositionBytes = new byte[8];
 
-            Buffer.BlockCopy(messageIdBytes, 0, ipBytes, 0, 4);
-            Buffer.BlockCopy(messageIdBytes, 4, portBytes, 0, 4);
-            Buffer.BlockCopy(messageIdBytes, 8, messagePositionBytes, 0, 8);
+            Buffer.BlockCopy(messageIdBytes, 0, brokerNameLengthBytes, 0, 4);
+            var brokerNameLength = BitConverter.ToInt32(brokerNameLengthBytes, 0);
+            var brokerNameBytes = new byte[brokerNameLength];
+            Buffer.BlockCopy(messageIdBytes, 4, brokerNameBytes, 0, brokerNameLength);
+            Buffer.BlockCopy(messageIdBytes, 4 + brokerNameLength, messagePositionBytes, 0, 8);
 
-            var ip = BitConverter.ToUInt32(ipBytes, 0);
-            var port = BitConverter.ToUInt32(portBytes, 0);
+            var brokerName = Encoding.UTF8.GetString(brokerNameBytes);
             var messagePosition = BitConverter.ToInt64(messagePositionBytes, 0);
 
             return new MessageIdInfo
             {
-                IP = new IPAddress(ip),
-                Port = port,
+                BrokerName = brokerName,
                 MessagePosition = messagePosition
             };
         }
     }
     public struct MessageIdInfo
     {
-        public IPAddress IP;
-        public uint Port;
+        public string BrokerName;
         public long MessagePosition;
     }
 }

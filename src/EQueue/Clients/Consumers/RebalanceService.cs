@@ -132,12 +132,13 @@ namespace EQueue.Clients.Consumers
             var remotingResponse = await brokerConnection.AdminRemotingClient.InvokeAsync(remotingRequest, 1000 * 5);
             if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
-                throw new Exception(string.Format("GetConsumerIdsForTopic has exception, consumerGroup: {0}, topic: {1}, brokerAddress: {2}, remoting response code: {3}, errorMessage: {4}",
+                _logger.ErrorFormat("GetConsumerIdsForTopic has exception, consumerGroup: {0}, topic: {1}, brokerAddress: {2}, remoting response code: {3}, errorMessage: {4}",
                     _consumer.GroupName,
                     topic,
                     brokerConnection.AdminRemotingClient.ServerEndPoint.ToAddress(),
                     remotingResponse.ResponseCode,
-                    Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
+                    Encoding.UTF8.GetString(remotingResponse.ResponseBody));
+                return null;
             }
 
             var consumerIds = Encoding.UTF8.GetString(remotingResponse.ResponseBody);

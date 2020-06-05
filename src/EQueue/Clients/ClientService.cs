@@ -164,8 +164,12 @@ namespace EQueue.Clients
         public async Task<IList<MessageQueue>> LoadTopicMessageQueuesFromNameServerAsync(string topic)
         {
             var topicRouteInfoList = await GetTopicRouteInfoListAsync(topic);
-            var messageQueueList = new List<MessageQueue>();
+            if (topicRouteInfoList == null)
+            {
+                return null;
+            }
 
+            var messageQueueList = new List<MessageQueue>();
             foreach (var topicRouteInfo in topicRouteInfoList)
             {
                 foreach (var queueId in topicRouteInfo.QueueInfo)
@@ -202,6 +206,10 @@ namespace EQueue.Clients
         private async Task<IList<BrokerInfo>> GetClusterBrokerListAsync()
         {
             var nameServerRemotingClient = GetAvailableNameServerRemotingClient();
+            if (nameServerRemotingClient == null)
+            {
+                return null;
+            }
             var request = new GetClusterBrokersRequest
             {
                 ClusterName = _setting.ClusterName,
@@ -212,7 +220,8 @@ namespace EQueue.Clients
             var remotingResponse = await nameServerRemotingClient.InvokeAsync(remotingRequest, 5 * 1000);
             if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
-                throw new Exception(string.Format("Get cluster brokers from name server failed, clusterName: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.ClusterName, nameServerRemotingClient.ServerEndPoint.ToAddress(), remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
+                _logger.ErrorFormat("Get cluster brokers from name server failed, clusterName: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", request.ClusterName, nameServerRemotingClient.ServerEndPoint.ToAddress(), remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
+                return null;
             }
             return _binarySerializer.Deserialize<IList<BrokerInfo>>(remotingResponse.ResponseBody);
         }
@@ -242,6 +251,10 @@ namespace EQueue.Clients
             using (await _asyncLock.LockAsync())
             {
                 var newBrokerInfoList = await GetClusterBrokerListAsync();
+                if (newBrokerInfoList == null)
+                {
+                    return;
+                }
                 var oldBrokerInfoList = _brokerConnectionDict.Select(x => x.Value.BrokerInfo).ToList();
 
                 var newBrokerInfoJson = _jsonSerializer.Serialize(newBrokerInfoList);
@@ -281,6 +294,10 @@ namespace EQueue.Clients
                     var oldMessageQueueList = entry.Value;
                     var topicRouteInfoList = await GetTopicRouteInfoListAsync(topic);
                     var newMessageQueueList = new List<MessageQueue>();
+                    if (topicRouteInfoList == null)
+                    {
+                        return;
+                    }
 
                     foreach (var topicRouteInfo in topicRouteInfoList)
                     {
@@ -306,6 +323,10 @@ namespace EQueue.Clients
         private async Task<IList<TopicRouteInfo>> GetTopicRouteInfoListAsync(string topic)
         {
             var nameServerRemotingClient = GetAvailableNameServerRemotingClient();
+            if (nameServerRemotingClient == null)
+            {
+                return null;
+            }
             var request = new GetTopicRouteInfoRequest
             {
                 ClientRole = _producer != null ? ClientRole.Producer : ClientRole.Consumer,
@@ -318,7 +339,8 @@ namespace EQueue.Clients
             var remotingResponse = await nameServerRemotingClient.InvokeAsync(remotingRequest, 5 * 1000);
             if (remotingResponse.ResponseCode != ResponseCode.Success)
             {
-                throw new Exception(string.Format("Get topic route info from name server failed, topic: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", topic, nameServerRemotingClient.ServerEndPoint.ToAddress(), remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
+                _logger.ErrorFormat("Get topic route info from name server failed, topic: {0}, nameServerAddress: {1}, remoting response code: {2}, errorMessage: {3}", topic, nameServerRemotingClient.ServerEndPoint.ToAddress(), remotingResponse.ResponseCode, Encoding.UTF8.GetString(remotingResponse.ResponseBody));
+                return null;
             }
             return _binarySerializer.Deserialize<IList<TopicRouteInfo>>(remotingResponse.ResponseBody);
         }
@@ -327,7 +349,7 @@ namespace EQueue.Clients
             var availableList = _nameServerRemotingClientList.Where(x => x.IsConnected).ToList();
             if (availableList.Count == 0)
             {
-                throw new Exception("No available name server.");
+                return null;
             }
             return availableList[(int)(Interlocked.Increment(ref _nameServerIndex) % availableList.Count)];
         }

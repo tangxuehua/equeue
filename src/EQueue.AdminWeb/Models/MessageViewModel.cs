@@ -3,8 +3,8 @@
     public class MessageViewModel
     {
         public string ClusterName { get; set; }
+        public string BrokerName { get; set; }
         public string ProducerAddress { get; set; }
-        public string BrokerAddress { get; set; }
         public string SearchMessageId { get; set; }
         public string SearchTopic { get; set; }
         public string SearchQueueId { get; set; }

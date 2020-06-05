@@ -30,7 +30,14 @@ namespace EQueue.Broker.Client
         public void Start()
         {
             _producerInfoDict.Clear();
-            _scheduleService.StartTask("ScanNotActiveProducer", ScanNotActiveProducer, 1000, 1000);
+            _scheduleService.StartTask("ScanNotActiveProducer", () =>
+            {
+                if (BrokerController.Instance.Setting.IsDebugMode)
+                {
+                    return;
+                }
+                ScanNotActiveProducer();
+            }, 1000, 1000);
         }
         public void Shutdown()
         {

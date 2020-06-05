@@ -20,9 +20,9 @@ namespace EQueue.NameServer
         /// <summary>TCP通行层设置
         /// </summary>
         public SocketSetting SocketSetting { get; set; }
-        /// <summary>本地IP和端口
+        /// <summary>是否是调试模式，默认为False
         /// </summary>
-        public IPEndPoint LocalIPEndPoint { get; set; }
+        public bool IsDebugMode { get; set; }
 
         public NameServerSetting(string name = "DefaultNameServer", int port = 9493)
         {
@@ -30,6 +30,7 @@ namespace EQueue.NameServer
             BindingAddress = new IPEndPoint(SocketUtils.GetLocalIPV4(), port);
             BrokerInactiveMaxMilliseconds = 30 * 1000;
             AutoCreateTopic = true;
+            IsDebugMode = false;
         }
     }
 }

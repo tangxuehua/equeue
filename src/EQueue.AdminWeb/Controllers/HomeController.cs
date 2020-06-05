@@ -141,7 +141,7 @@ namespace EQueue.AdminWeb.Controllers
             if (message != null)
             {
                 model.ProducerAddress = message.ProducerAddress;
-                model.BrokerAddress = messageIdInfo.IP.ToString() + ":" + messageIdInfo.Port.ToString();
+                model.BrokerName = messageIdInfo.BrokerName;
                 model.MessageId = message.MessageId;
                 model.Topic = message.Topic;
                 model.QueueId = message.QueueId.ToString();
@@ -153,7 +153,7 @@ namespace EQueue.AdminWeb.Controllers
             }
             return View(model);
         }
-        public async Task<ActionResult> GetMessageByQueueOffset(string clusterName, string searchTopic, string searchQueueId, string searchQueueOffset)
+        public async Task<ActionResult> GetMessageByQueueOffset(string clusterName, string brokerName, string searchTopic, string searchQueueId, string searchQueueOffset)
         {
             ViewBag.ClusterName = clusterName;
             var model = new MessageViewModel
@@ -164,13 +164,14 @@ namespace EQueue.AdminWeb.Controllers
             };
 
             if (string.IsNullOrWhiteSpace(clusterName)
+             || string.IsNullOrWhiteSpace(brokerName)
              || string.IsNullOrWhiteSpace(searchTopic)
              || string.IsNullOrWhiteSpace(searchQueueId)
              || string.IsNullOrWhiteSpace(searchQueueOffset))
             {
                 return View(model);
             }
-            var message = await _messageService.GetMessageDetailByQueueOffset(clusterName, searchTopic, int.Parse(searchQueueId), long.Parse(searchQueueOffset));
+            var message = await _messageService.GetMessageDetailByQueueOffset(clusterName, brokerName, searchTopic, int.Parse(searchQueueId), long.Parse(searchQueueOffset));
             if (message != null)
             {
                 MessageIdInfo? messageIdInfo = null;
@@ -182,7 +183,7 @@ namespace EQueue.AdminWeb.Controllers
 
                 if (messageIdInfo != null)
                 {
-                    model.BrokerAddress = messageIdInfo.Value.IP.ToString() + ":" + messageIdInfo.Value.Port.ToString();
+                    model.BrokerName = messageIdInfo.Value.BrokerName;
                 }
                 model.ProducerAddress = message.ProducerAddress;
                 model.MessageId = message.MessageId;

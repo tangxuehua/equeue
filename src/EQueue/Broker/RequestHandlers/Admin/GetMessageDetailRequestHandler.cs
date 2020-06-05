@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using ECommon.Components;
+using ECommon.Extensions;
 using ECommon.Remoting;
 using ECommon.Serializing;
 using EQueue.Broker.Exceptions;
@@ -26,10 +27,16 @@ namespace EQueue.Broker.RequestHandlers.Admin
             {
                 throw new BrokerCleanningException();
             }
+            var messages = new List<QueueMessage>();
             var request = _binarySerializer.Deserialize<GetMessageDetailRequest>(remotingRequest.Body);
             var messageInfo = MessageIdUtil.ParseMessageId(request.MessageId);
+            var currentBrokerName = BrokerController.Instance.Setting.BrokerInfo.BrokerName;
+            if (currentBrokerName != messageInfo.BrokerName)
+            {
+                return RemotingResponseFactory.CreateResponse(remotingRequest, _binarySerializer.Serialize(messages));
+            }
+
             var message = _messageStore.GetMessage(messageInfo.MessagePosition);
-            var messages = new List<QueueMessage>();
             if (message != null)
             {
                 messages.Add(message);

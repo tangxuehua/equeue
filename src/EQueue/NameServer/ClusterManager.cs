@@ -47,7 +47,14 @@ namespace EQueue.NameServer
         public void Start()
         {
             _clusterDict.Clear();
-            _scheduleService.StartTask("ScanNotActiveBroker", ScanNotActiveBroker, 1000, 1000);
+            _scheduleService.StartTask("ScanNotActiveBroker", () =>
+            {
+                if (_nameServerController.Setting.IsDebugMode)
+                {
+                    return;
+                }
+                ScanNotActiveBroker();
+            }, 1000, 1000);
         }
         public void Shutdown()
         {

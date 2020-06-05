@@ -164,10 +164,7 @@ namespace EQueue.Clients.Consumers
                 }
                 catch (Exception ex)
                 {
-                    if (remotingClient.IsConnected)
-                    {
-                        _logger.Error(string.Format("Send consumer heartbeat has exception, brokerInfo: {0}", brokerConnection.BrokerInfo), ex);
-                    }
+                    _logger.Error(string.Format("Send consumer heartbeat has exception, brokerInfo: {0}", brokerConnection.BrokerInfo), ex);
                 }
             }
         }

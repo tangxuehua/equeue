@@ -21,7 +21,14 @@ namespace EQueue.Broker.Client
         public void Start()
         {
             _consumerGroupDict.Clear();
-            _scheduleService.StartTask("ScanNotActiveConsumer", ScanNotActiveConsumer, 1000, 1000);
+            _scheduleService.StartTask("ScanNotActiveConsumer", () =>
+            {
+                if (BrokerController.Instance.Setting.IsDebugMode)
+                {
+                    return;
+                }
+                ScanNotActiveConsumer();
+            }, 1000, 1000);
         }
         public void Shutdown()
         {

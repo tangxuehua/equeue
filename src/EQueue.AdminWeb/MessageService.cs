@@ -15,6 +15,7 @@ using EQueue.Protocols.Brokers;
 using EQueue.Protocols.Brokers.Requests;
 using EQueue.Protocols.NameServers;
 using EQueue.Protocols.NameServers.Requests;
+using EQueue.Utils;
 
 namespace EQueue.AdminWeb
 {
@@ -482,45 +483,44 @@ namespace EQueue.AdminWeb
         }
         public async Task<QueueMessage> GetMessageDetail(string clusterName, string messageId)
         {
+            var messageInfo = MessageIdUtil.ParseMessageId(messageId);
             var brokerClientList = await GetClusterBrokers(clusterName);
-
-            foreach (var brokerClient in brokerClientList)
+            var brokerClient = brokerClientList.SingleOrDefault(x => x.BrokerInfo.BrokerName == messageInfo.BrokerName);
+            if (brokerClient == null)
             {
-                var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageId));
-                var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetMessageDetail, requestData);
-                var remotingResponse = await brokerClient.RemotingClient.InvokeAsync(remotingRequest, 30000);
-                if (remotingResponse.ResponseCode == ResponseCode.Success)
-                {
-                    return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.ResponseBody).SingleOrDefault();
-                }
-                else
-                {
-                    throw new Exception(string.Format("GetMessageDetail failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
-                }
+                return null;
             }
-
-            return null;
+            var requestData = _binarySerializer.Serialize(new GetMessageDetailRequest(messageId));
+            var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetMessageDetail, requestData);
+            var remotingResponse = await brokerClient.RemotingClient.InvokeAsync(remotingRequest, 30000);
+            if (remotingResponse.ResponseCode == ResponseCode.Success)
+            {
+                return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.ResponseBody).SingleOrDefault();
+            }
+            else
+            {
+                throw new Exception(string.Format("GetMessageDetail failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
+            }
         }
-        public async Task<QueueMessage> GetMessageDetailByQueueOffset(string clusterName, string topic, int queueId, long queueOffset)
+        public async Task<QueueMessage> GetMessageDetailByQueueOffset(string clusterName, string borkerName, string topic, int queueId, long queueOffset)
         {
             var brokerClientList = await GetClusterBrokers(clusterName);
-
-            foreach (var brokerClient in brokerClientList)
+            var brokerClient = brokerClientList.SingleOrDefault(x => x.BrokerInfo.BrokerName == borkerName);
+            if (brokerClient == null)
             {
-                var requestData = _binarySerializer.Serialize(new GetMessageDetailByQueueOffsetRequest(topic, queueId, queueOffset));
-                var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetMessageDetailByQueueOffset, requestData);
-                var remotingResponse = await brokerClient.RemotingClient.InvokeAsync(remotingRequest, 30000);
-                if (remotingResponse.ResponseCode == ResponseCode.Success)
-                {
-                    return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.ResponseBody).SingleOrDefault();
-                }
-                else
-                {
-                    throw new Exception(string.Format("GetMessageDetailByQueueOffset failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
-                }
+                return null;
             }
-
-            return null;
+            var requestData = _binarySerializer.Serialize(new GetMessageDetailByQueueOffsetRequest(topic, queueId, queueOffset));
+            var remotingRequest = new RemotingRequest((int)BrokerRequestCode.GetMessageDetailByQueueOffset, requestData);
+            var remotingResponse = await brokerClient.RemotingClient.InvokeAsync(remotingRequest, 30000);
+            if (remotingResponse.ResponseCode == ResponseCode.Success)
+            {
+                return _binarySerializer.Deserialize<IEnumerable<QueueMessage>>(remotingResponse.ResponseBody).SingleOrDefault();
+            }
+            else
+            {
+                throw new Exception(string.Format("GetMessageDetailByQueueOffset failed, errorMessage: {0}", Encoding.UTF8.GetString(remotingResponse.ResponseBody)));
+            }
         }
 
         private void StartAllNameServerClients()

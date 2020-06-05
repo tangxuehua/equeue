@@ -12,6 +12,9 @@ namespace EQueue.Broker
 {
     public class BrokerSetting
     {
+        /// <summary>是否是调试模式，默认为False
+        /// </summary>
+        public bool IsDebugMode { get; set; }
         /// <summary>Broker基本配置信息
         /// </summary>
         public BrokerInfo BrokerInfo { get; set; }
@@ -105,6 +108,7 @@ namespace EQueue.Broker
                 new IPEndPoint(SocketUtils.GetLocalIPV4(), 9493)
             };
 
+            IsDebugMode = false;
             NotifyWhenMessageArrived = true;
             RegisterBrokerToNameServerInterval = 1000 * 5;
             DeleteMessagesInterval = 1000 * 10;

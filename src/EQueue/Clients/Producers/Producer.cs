@@ -345,10 +345,7 @@ namespace EQueue.Clients.Producers
                 }
                 catch (Exception ex)
                 {
-                    if (remotingClient.IsConnected)
-                    {
-                        _logger.Error(string.Format("Send producer heartbeat has exception, brokerInfo: {0}", brokerConnection.BrokerInfo), ex);
-                    }
+                    _logger.Error(string.Format("Send producer heartbeat has exception, brokerInfo: {0}", brokerConnection.BrokerInfo), ex);
                 }
             }
         }
