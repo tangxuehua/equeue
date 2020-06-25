@@ -4,7 +4,7 @@
     Layout = "~/Views/Shared/_BrokerLayout.cshtml";
 }
 <div>
-    @using (Html.BeginForm("ConsumerList", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
+    @using (Html.BeginForm("ConsumerList", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, null, new { @class = "form-inline", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="Group"></label>

@@ -3,7 +3,7 @@
     ViewBag.Title = "设置队列消费进度";
 }
 <div>
-    @using (Html.BeginForm("SetQueueNextConsumeOffset", "Home", new { clusterName = ViewBag.ClusterName }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+    @using (Html.BeginForm("SetQueueNextConsumeOffset", "Home", new { clusterName = ViewBag.ClusterName }, FormMethod.Post, null, new { @class = "form-horizontal", role = "form" }))
     {
         <div class="form-group">
             <label class="col-sm-2 control-label" for="ConsumerGroup">ClusterName：</label>

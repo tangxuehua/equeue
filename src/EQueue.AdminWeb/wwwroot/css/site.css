@@ -1,0 +1,23 @@
+﻿body {
+    padding-top: 50px;
+    padding-bottom: 20px;
+}
+
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-top: 15px;
+}
+
+.table {
+    margin-top: 20px;
+}
+
+.pager {
+    text-align: right;
+}
+
+.pager a {
+    text-align: right;
+    margin-left: 5px;
+}

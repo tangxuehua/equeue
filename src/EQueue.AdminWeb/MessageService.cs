@@ -32,12 +32,14 @@ namespace EQueue.AdminWeb
         private readonly ConcurrentDictionary<string /*clusterName*/, IList<BrokerClient>> _clusterBrokerDict;
         private readonly IBinarySerializer _binarySerializer;
         private readonly IScheduleService _scheduleService;
+        private readonly EQueueSettingService _eQueueSettingService;
         private readonly SendEmailService _sendEmailService;
         private long _nameServerIndex;
 
-        public MessageService(IBinarySerializer binarySerializer, IScheduleService scheduleService, SendEmailService sendEmailService)
+        public MessageService(IBinarySerializer binarySerializer, IScheduleService scheduleService, EQueueSettingService eQueueSettingService, SendEmailService sendEmailService)
         {
-            _nameServerRemotingClientList = CreateRemotingClientList(Settings.NameServerList);
+            _eQueueSettingService = eQueueSettingService;
+            _nameServerRemotingClientList = CreateRemotingClientList(_eQueueSettingService.NameServerList);
             _clusterBrokerDict = new ConcurrentDictionary<string, IList<BrokerClient>>();
             _binarySerializer = binarySerializer;
             _scheduleService = scheduleService;
@@ -48,9 +50,9 @@ namespace EQueue.AdminWeb
         {
             StartAllNameServerClients();
 
-            if (Settings.EnableMonitorMessageAccumulate)
+            if (_eQueueSettingService.EnableMonitorMessageAccumulate)
             {
-                _scheduleService.StartTask("ScanAccumulateMessages", async () => await ScanAccumulateMessages(), 1000, Settings.ScanMessageAccumulateIntervalSeconds * 1000);
+                _scheduleService.StartTask("ScanAccumulateMessages", async () => await ScanAccumulateMessages(), 1000, _eQueueSettingService.ScanMessageAccumulateIntervalSeconds * 1000);
             }
         }
         public async Task<IEnumerable<string>> GetAllClusters()
@@ -552,7 +554,7 @@ namespace EQueue.AdminWeb
                 var brokerClientList = new List<BrokerClient>();
                 foreach (var brokerInfo in brokerInfoList)
                 {
-                    var client = new SocketRemotingClient(brokerInfo.BrokerName, brokerInfo.AdminAddress.ToEndPoint(), Settings.SocketSetting).Start();
+                    var client = new SocketRemotingClient(brokerInfo.BrokerName, brokerInfo.AdminAddress.ToEndPoint(), _eQueueSettingService.SocketSetting).Start();
                     var brokerClient = new BrokerClient { BrokerInfo = brokerInfo, RemotingClient = client };
                     brokerClientList.Add(brokerClient);
                 }
@@ -615,7 +617,7 @@ namespace EQueue.AdminWeb
             var remotingClientList = new List<SocketRemotingClient>();
             foreach (var endpoint in endpointList)
             {
-                var remotingClient = new SocketRemotingClient("EQueueWebAdminSocketRemotingClient", endpoint, Settings.SocketSetting);
+                var remotingClient = new SocketRemotingClient("EQueueWebAdminSocketRemotingClient", endpoint, _eQueueSettingService.SocketSetting);
                 remotingClientList.Add(remotingClient);
             }
             return remotingClientList;
@@ -637,7 +639,7 @@ namespace EQueue.AdminWeb
             var remotingClient = GetAvailableNameServerRemotingClient();
             var requestData = _binarySerializer.Serialize(new GetTopicAccumulateInfoListRequest
             {
-                AccumulateThreshold = Settings.MessageAccumulateThreshold
+                AccumulateThreshold = _eQueueSettingService.MessageAccumulateThreshold
             });
             var remotingRequest = new RemotingRequest((int)NameServerRequestCode.GetTopicAccumulateInfoList, requestData);
             var remotingResponse = await remotingClient.InvokeAsync(remotingRequest, 30000);

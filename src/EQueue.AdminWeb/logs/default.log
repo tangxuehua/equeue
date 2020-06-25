@@ -1,5 +1,0 @@
-2019-10-05 17:08:49,914  INFO ECommon.Socketing.ClientSocket - Client socket connected, name: EQueueWebAdminSocketRemotingClient, remotingServerEndPoint: 192.168.31.91:9493, localEndPoint: 192.168.31.91:54930
-2019-10-05 17:10:53,308  INFO ECommon.Socketing.ClientSocket - Client socket connected, name: Broker1, remotingServerEndPoint: 192.168.31.91:5002, localEndPoint: 192.168.31.91:55131
-2019-10-05 17:10:53,312  INFO ECommon.Socketing.ClientSocket - Client socket connected, name: Broker2, remotingServerEndPoint: 192.168.31.91:6002, localEndPoint: 192.168.31.91:55132
-2019-10-05 17:34:08,184  INFO ECommon.Socketing.ClientSocket - Client socket connected, name: EQueueWebAdminSocketRemotingClient, remotingServerEndPoint: 192.168.31.91:9493, localEndPoint: 192.168.31.91:56191
-2019-10-05 17:34:40,413  INFO ECommon.Socketing.ClientSocket - Client socket connected, name: Broker1, remotingServerEndPoint: 192.168.31.91:5002, localEndPoint: 192.168.31.91:56212

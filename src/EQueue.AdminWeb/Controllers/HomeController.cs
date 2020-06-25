@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Mvc;
 using EQueue.AdminWeb.Models;
 using EQueue.Utils;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EQueue.AdminWeb.Controllers
 {
-    [HandleError]
     public class HomeController : Controller
     {
         private MessageService _messageService;
@@ -179,7 +178,7 @@ namespace EQueue.AdminWeb.Controllers
                 {
                     messageIdInfo = MessageIdUtil.ParseMessageId(message.MessageId);
                 }
-                catch {  }
+                catch { }
 
                 if (messageIdInfo != null)
                 {

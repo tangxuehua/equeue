@@ -13,7 +13,7 @@
     }
 </style>
 <div>
-    @using (Html.BeginForm("QueueInfoList", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline header-form", role = "form" }))
+    @using (Html.BeginForm("QueueInfoList", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, null, new { @class = "form-inline header-form", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="Topic"></label>
@@ -21,7 +21,7 @@
         </div>
         <button type="submit" class="btn btn-default">查询</button>
     }
-    @using (Html.BeginForm("CreateTopic", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline header-form next-form", role = "form" }))
+    @using (Html.BeginForm("CreateTopic", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, null, new { @class = "form-inline header-form next-form", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="topic"></label>
@@ -33,7 +33,7 @@
         </div>
         <button type="submit" class="btn btn-default">创建Topic</button>
     }
-    @using (Html.BeginForm("DeleteTopic", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, new { @class = "form-inline header-form next-form", role = "form" }))
+    @using (Html.BeginForm("DeleteTopic", "Broker", new { clusterName = ViewBag.ClusterName, brokerName = ViewBag.BrokerName }, FormMethod.Post, null, new { @class = "form-inline header-form next-form", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="topic"></label>

@@ -3,7 +3,7 @@
     ViewBag.Title = "Message";
 }
 <div>
-    @using (Html.BeginForm("GetMessageByQueueOffset", "Home", new { }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
+    @using (Html.BeginForm("GetMessageByQueueOffset", "Home", new { }, FormMethod.Post, null, new { @class = "form-inline", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="ClusterName"></label>

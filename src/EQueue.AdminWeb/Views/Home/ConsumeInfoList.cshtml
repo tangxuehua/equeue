@@ -3,7 +3,7 @@
     ViewBag.Title = "ConsumeInfoList";
 }
 <div>
-    @using (Html.BeginForm("ConsumeInfoList", "Home", new { clusterName = ViewBag.ClusterName }, FormMethod.Post, new { @class = "form-inline", role = "form" }))
+    @using (Html.BeginForm("ConsumeInfoList", "Home", new { clusterName = ViewBag.ClusterName }, FormMethod.Post, null, new { @class = "form-inline", role = "form" }))
     {
         <div class="form-group">
             <label class="sr-only" for="ClusterName"></label>
