@@ -6,10 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ecommon" Version="2.6.4" />
-    <PackageReference Include="ECommon.Autofac" Version="2.5.2" />
-    <PackageReference Include="ecommon.jsonnet" Version="2.5.1" />
-    <PackageReference Include="ECommon.Serilog" Version="1.0.2" />
+    <PackageReference Include="ECommon" Version="2.6.5" />
+    <PackageReference Include="ECommon.Autofac" Version="2.5.4" />
+    <PackageReference Include="ecommon.jsonnet" Version="2.5.2" />
+    <PackageReference Include="ECommon.Serilog" Version="1.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="3.1.5" />
   </ItemGroup>
 
