@@ -13,3 +13,4 @@ obj
 *.testsettings
 *.vsmdi
 TestResult.xml
+/src/.vs
